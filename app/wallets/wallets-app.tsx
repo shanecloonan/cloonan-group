@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
+import ArweaveWallet from "./arweave-wallet";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -124,6 +125,7 @@ function storageGet<T>(key: string, fallback: T): T {
 /* ================================================================== */
 
 export default function WalletsApp() {
+  const [chain, setChain] = useState<"ethereum" | "arweave">("ethereum");
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC), []);
 
   /* wallet state */
@@ -458,8 +460,40 @@ export default function WalletsApp() {
       className="min-h-screen flex justify-center items-start p-3 sm:p-6"
       style={{ background: "#0A0C1E", fontFamily: "'Manrope', sans-serif" }}
     >
+      <div className="w-full max-w-[800px]">
+        {/* ── Chain switcher ── */}
+        <div className="flex rounded-xl overflow-hidden mb-5 border border-[rgba(255,215,0,0.3)]">
+          <button
+            type="button"
+            onClick={() => setChain("ethereum")}
+            className={`flex-1 py-3.5 text-base font-bold transition-all ${
+              chain === "ethereum"
+                ? "bg-[#FFD700] text-[#0A0C1E]"
+                : "bg-[rgba(10,17,32,0.95)] text-[#A5F3FC] hover:bg-[rgba(255,255,255,0.05)]"
+            }`}
+          >
+            Ethereum Wallet
+          </button>
+          <button
+            type="button"
+            onClick={() => setChain("arweave")}
+            className={`flex-1 py-3.5 text-base font-bold transition-all ${
+              chain === "arweave"
+                ? "bg-[#6a0dad] text-white"
+                : "bg-[rgba(10,17,32,0.95)] text-[#b0b3b8] hover:bg-[rgba(255,255,255,0.05)]"
+            }`}
+          >
+            Arweave Wallet
+          </button>
+        </div>
+
+        {/* ── Arweave interface ── */}
+        {chain === "arweave" && <ArweaveWallet />}
+
+        {/* ── Ethereum interface ── */}
+        {chain === "ethereum" && (
       <div
-        className="w-full max-w-[800px] rounded-2xl p-3 sm:p-6"
+        className="w-full rounded-2xl p-3 sm:p-6"
         style={{
           background: "rgba(10,17,32,0.95)",
           border: "2px solid #FFD700",
@@ -802,6 +836,8 @@ export default function WalletsApp() {
               style={{ height: "clamp(300px, 50vh, 400px)", background: "rgba(17,24,39,0.9)" }}
             />
           </div>
+        )}
+      </div>
         )}
       </div>
     </div>
