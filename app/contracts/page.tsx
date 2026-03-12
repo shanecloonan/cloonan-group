@@ -38,7 +38,7 @@ const CONTRACTS: Contract[] = [
     address: "0xdf1ec23286333da4cc9d320369153c9bad1605f9",
     explorer:
       "https://etherscan.io/address/0xdf1ec23286333da4cc9d320369153c9bad1605f9",
-    go: "https://moneyfund.com/stake",
+    go: "/dividends",
   },
   {
     name: "Coin Launcher",
@@ -108,7 +108,7 @@ const CONTRACTS: Contract[] = [
     address: "0xab18bbaf4e7e04a120d031129a47e27be04b86bf",
     explorer:
       "https://etherscan.io/address/0xab18bbaf4e7e04a120d031129a47e27be04b86bf",
-    go: "https://moneyfund.com/dividends",
+    go: "/dividends",
   },
   {
     name: "MoneyFund Airdropper",
