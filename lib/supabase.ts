@@ -10,6 +10,19 @@ const supabaseAnonKey =
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export interface SkipHistoryRow {
+  id?: number;
+  created_at?: string;
+  date: string;
+  file: string;
+  slot: number;
+  upc: number;
+  top_slot: string;
+  top_upc: string;
+  top_slot_score: number;
+  top_upc_score: number;
+}
+
 export interface ShortsHistoryRow {
   id?: number;
   created_at?: string;
