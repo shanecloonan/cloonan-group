@@ -101,7 +101,7 @@ const CONTRACTS: Contract[] = [
     address: "0xc79c7dbf7ac78fd5307a4631131b0a4e98e902c7",
     explorer:
       "https://etherscan.io/address/0xc79c7dbf7ac78fd5307a4631131b0a4e98e902c7",
-    go: "https://moneyfund.com/dex",
+    go: "/dex",
   },
   {
     name: "MoneyFund Dividends",

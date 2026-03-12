@@ -1,0 +1,57 @@
+export const MONEYDEX_ADDRESS = "0xc79c7dbf7ac78fd5307a4631131b0a4e98e902c7";
+
+export const MONEYDEX_ABI = [
+  "constructor()",
+  "event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to)",
+  "event DivFeeAdded(address indexed token, uint256 amount)",
+  "event FeeAdded(address indexed token, address indexed pair, uint256 amount)",
+  "event Mint(address indexed sender, uint256 amount0, uint256 amount1)",
+  "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)",
+  "event PairCreated(address indexed token0, address indexed token1, address pair, uint256 pairCount)",
+  "event Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)",
+  "function DIVIDEND_FEE() view returns (uint256)",
+  "function DIVIDEND_POOL() view returns (address)",
+  "function FEE_DENOMINATOR() view returns (uint256)",
+  "function FEE_PERCENTAGE() view returns (uint256)",
+  "function LP_TOKEN_SCALING_FACTOR() view returns (uint256)",
+  "function MINIMUM_LIQUIDITY() view returns (uint256)",
+  "function SPECIAL_FEE_PERCENTAGE() view returns (uint256)",
+  "function SPECIAL_FEE_RECIPIENT() view returns (address)",
+  "function addLiquidity(address token0, address token1, uint256 amount0, uint256 amount1)",
+  "function allPairs(address) view returns (address)",
+  "function createPair(address token0, address token1) returns (address pair)",
+  "function getAllPairs() view returns (address[])",
+  "function getPair(address, address) view returns (address)",
+  "function getReserves(address token0, address token1) view returns (uint256 reserve0, uint256 reserve1)",
+  "function getTotalSwaps() view returns (uint256)",
+  "function owner() view returns (address)",
+  "function removeLiquidity(address token0, address token1, uint256 liquidity)",
+  "function renounceOwnership()",
+  "function swapToken0ForToken1(address token0, address token1, uint256 amount0In, uint256 minAmount1Out)",
+  "function swapToken1ForToken0(address token0, address token1, uint256 amount1In, uint256 minAmount0Out)",
+  "function totalPairs() view returns (uint256)",
+  "function totalSwaps() view returns (uint256)",
+  "function transferOwnership(address newOwner)",
+];
+
+export const PAIR_ABI = [
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+  "function getReserves() view returns (uint256, uint256)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function allowance(address, address) view returns (uint256)",
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+];
+
+export const ERC20_ABI = [
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function symbol() view returns (string)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+];
