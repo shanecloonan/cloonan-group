@@ -7,6 +7,7 @@ import { Download, Loader2 } from "lucide-react";
 const SUBSIDIARIES = [
   {
     name: "AntlerGear",
+    url: "https://antlergear.com",
     role: "Hunting Gear",
     desc: "Premium hunting apparel, equipment, and accessories for bowhunters.",
     accent: "text-gold",
@@ -16,6 +17,7 @@ const SUBSIDIARIES = [
   },
   {
     name: "PermaWrite",
+    url: "https://permawrite.com",
     role: "Permanent Storage",
     desc: "Decentralized permanent data storage solutions built on Arweave infrastructure.",
     accent: "text-sky-400",
@@ -25,6 +27,7 @@ const SUBSIDIARIES = [
   },
   {
     name: "ChipFab",
+    url: "https://chipfab.com",
     role: "Semiconductor Research",
     desc: "Semiconductor research company focused on next-generation chip design and fabrication processes.",
     accent: "text-violet-400",
@@ -34,6 +37,7 @@ const SUBSIDIARIES = [
   },
   {
     name: "FileDisplay",
+    url: "https://filedisplay.com",
     role: "Internal-Tooling SaaS",
     desc: "Internal tooling SaaS platform for operations across all subsidiaries.",
     accent: "text-emerald-400",
@@ -151,7 +155,12 @@ export default function CompanyChart() {
         >
           {/* Level 1: MoneyFund */}
           <div className="flex flex-col items-center">
-            <div className="relative w-full max-w-md border border-amber-500/50 bg-amber-500/5 rounded-sm pt-5 pb-5 px-5 sm:pt-7 sm:pb-6 sm:px-8 text-center">
+            <a
+              href="https://moneyfund.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative w-full max-w-md border border-amber-500/50 bg-amber-500/5 rounded-sm pt-5 pb-5 px-5 sm:pt-7 sm:pb-6 sm:px-8 text-center block transition-all hover:border-amber-400 hover:bg-amber-500/10"
+            >
               <p className="text-[9px] sm:text-[10px] tracking-[0.2em] uppercase font-semibold text-amber-500/70 mb-2">
                 Grandparent Vault
               </p>
@@ -163,12 +172,17 @@ export default function CompanyChart() {
                 and other long-term assets. Top-level entity and ultimate
                 beneficial owner.
               </p>
-            </div>
+            </a>
 
             <FlowConnector />
 
             {/* Level 2: DeltaMorph */}
-            <div className="relative w-full max-w-md border border-brand-400/40 bg-brand-400/5 rounded-sm pt-5 pb-5 px-5 sm:pt-7 sm:pb-6 sm:px-8 text-center">
+            <a
+              href="https://deltamorph.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative w-full max-w-md border border-brand-400/40 bg-brand-400/5 rounded-sm pt-5 pb-5 px-5 sm:pt-7 sm:pb-6 sm:px-8 text-center block transition-all hover:border-brand-300 hover:bg-brand-400/10"
+            >
               <p className="text-[9px] sm:text-[10px] tracking-[0.2em] uppercase font-semibold text-brand-400/70 mb-2">
                 Parent Nexus
               </p>
@@ -180,7 +194,7 @@ export default function CompanyChart() {
                 all subsidiary revenue and channels it upstream to the vault.
                 Holds 100% of every operating subsidiary.
               </p>
-            </div>
+            </a>
 
             <FlowConnector />
           </div>
@@ -198,9 +212,12 @@ export default function CompanyChart() {
           {/* Level 3: Subsidiaries */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3 max-w-4xl mx-auto mt-2 sm:mt-0">
             {SUBSIDIARIES.map((s) => (
-              <div
+              <a
                 key={s.name}
-                className={`relative border ${s.border} ${s.bg} rounded-sm p-3 sm:p-5 text-center flex flex-col`}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`relative border ${s.border} ${s.bg} rounded-sm p-3 sm:p-5 text-center flex flex-col transition-all hover:brightness-125 hover:scale-[1.02]`}
               >
                 <p className="text-[8px] sm:text-[9px] tracking-[0.15em] uppercase font-semibold text-brand-600 mb-1.5 sm:mb-2">
                   Subsidiary
@@ -218,7 +235,7 @@ export default function CompanyChart() {
                 <p className="text-brand-500 text-[10px] sm:text-xs leading-relaxed">
                   {s.desc}
                 </p>
-              </div>
+              </a>
             ))}
           </div>
         </div>
