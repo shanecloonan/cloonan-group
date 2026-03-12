@@ -6,7 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 
 const SUBSIDIARIES = [
   {
-    name: "Antler Gear",
+    name: "AntlerGear",
     role: "Hunting Gear",
     desc: "Premium hunting apparel, equipment, and accessories for bowhunters.",
     accent: "text-gold",

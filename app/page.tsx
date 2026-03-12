@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import CompanyChart from "./company-chart";
 
 export const metadata: Metadata = {
-  title: "MoneyFund | The World's Biggest Hedge Fund",
-  description: "MoneyFund — The World's Biggest Hedge Fund.",
+  title: "MoneyFund | The World's Biggest Hedge Fun",
+  description: "MoneyFund — The World's Biggest Hedge Fun.",
 };
 
 export default function Home() {
@@ -43,7 +43,7 @@ export default function Home() {
           <div className="w-16 h-px bg-gold/50 mb-6" />
 
           <p className="text-lg sm:text-xl md:text-2xl font-light tracking-[0.08em] text-brand-400 max-w-xl leading-relaxed">
-            The World&rsquo;s Biggest Hedge Fund
+            The World&rsquo;s Biggest Hedge Fun
           </p>
 
         </div>
