@@ -15,7 +15,7 @@ const SUBSIDIARIES = [
     tag: "bg-gold/15 text-gold",
   },
   {
-    name: "PermaState",
+    name: "PermaWrite",
     role: "Permanent Storage",
     desc: "Decentralized permanent data storage solutions built on Arweave infrastructure.",
     accent: "text-sky-400",
@@ -120,13 +120,6 @@ export default function CompanyChart() {
       <div className="relative px-5 sm:px-8 pt-20 pb-10 sm:pt-28 sm:pb-14">
         <div className="absolute inset-0 bg-gradient-to-b from-forest/20 to-transparent" />
         <div className="relative z-10 max-w-3xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <span className="h-px w-8 bg-brand-700" />
-            <span className="text-[10px] sm:text-[11px] tracking-[0.25em] uppercase font-semibold text-brand-500">
-              Corporate Overview
-            </span>
-            <span className="h-px w-8 bg-brand-700" />
-          </div>
           <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight uppercase mb-4 text-brand-200">
             Entity Structure
           </h2>
