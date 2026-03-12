@@ -31,7 +31,7 @@ const CONTRACTS: Contract[] = [
     address: "0x6b440adba6085b68e2677ce77dc65bbac39005d8",
     explorer:
       "https://etherscan.io/address/0x6b440adba6085b68e2677ce77dc65bbac39005d8",
-    go: "https://moneyfund.com/launcher",
+    go: "/etf",
   },
   {
     name: "Dividends Launcher",
