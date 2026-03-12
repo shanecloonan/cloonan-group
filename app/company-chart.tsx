@@ -115,15 +115,22 @@ export default function CompanyChart() {
   }, [exporting]);
 
   return (
-    <div className="min-h-screen">
-      {/* Hero */}
-      <section className="relative px-5 sm:px-8 pt-12 pb-10 sm:pt-20 sm:pb-14">
-        <div className="absolute inset-0 bg-gradient-to-b from-forest/30 to-brand-950" />
+    <section className="relative bg-brand-950 overflow-visible">
+      {/* Section header */}
+      <div className="relative px-5 sm:px-8 pt-20 pb-10 sm:pt-28 sm:pb-14">
+        <div className="absolute inset-0 bg-gradient-to-b from-forest/20 to-transparent" />
         <div className="relative z-10 max-w-3xl mx-auto text-center">
-          <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight uppercase mb-4">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <span className="h-px w-8 bg-brand-700" />
+            <span className="text-[10px] sm:text-[11px] tracking-[0.25em] uppercase font-semibold text-brand-500">
+              Corporate Overview
+            </span>
+            <span className="h-px w-8 bg-brand-700" />
+          </div>
+          <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight uppercase mb-4 text-brand-200">
             Entity Structure
-          </h1>
-          <p className="text-brand-500 text-sm max-w-lg mx-auto mb-6">
+          </h2>
+          <p className="text-brand-500 text-sm max-w-lg mx-auto mb-8">
             Three-tier holding structure — vault, nexus, and operating
             subsidiaries.
           </p>
@@ -141,10 +148,10 @@ export default function CompanyChart() {
             Export as PNG
           </button>
         </div>
-      </section>
+      </div>
 
-      {/* Chart (capture target) */}
-      <section className="px-5 sm:px-8 pb-24 sm:pb-32 overflow-visible">
+      {/* Chart */}
+      <div className="px-5 sm:px-8 pb-24 sm:pb-32 overflow-visible">
         <div
           ref={chartRef}
           className="max-w-5xl mx-auto py-4 px-2 overflow-visible"
@@ -155,9 +162,9 @@ export default function CompanyChart() {
               <p className="text-[9px] sm:text-[10px] tracking-[0.2em] uppercase font-semibold text-amber-500/70 mb-2">
                 Grandparent Vault
               </p>
-              <h2 className="font-heading text-2xl sm:text-4xl font-bold uppercase tracking-wide text-amber-400 mb-3">
+              <h3 className="font-heading text-2xl sm:text-4xl font-bold uppercase tracking-wide text-amber-400 mb-3">
                 MoneyFund
-              </h2>
+              </h3>
               <p className="text-brand-400 text-xs sm:text-sm leading-relaxed">
                 Protects capital and converts subsidiary profits into Arweave
                 and other long-term assets. Top-level entity and ultimate
@@ -172,9 +179,9 @@ export default function CompanyChart() {
               <p className="text-[9px] sm:text-[10px] tracking-[0.2em] uppercase font-semibold text-brand-400/70 mb-2">
                 Parent Nexus
               </p>
-              <h2 className="font-heading text-2xl sm:text-4xl font-bold uppercase tracking-wide text-brand-200 mb-3">
+              <h3 className="font-heading text-2xl sm:text-4xl font-bold uppercase tracking-wide text-brand-200 mb-3">
                 DeltaMorph
-              </h2>
+              </h3>
               <p className="text-brand-400 text-xs sm:text-sm leading-relaxed">
                 Parent holding company and profit-distribution nexus. Receives
                 all subsidiary revenue and channels it upstream to the vault.
@@ -205,11 +212,11 @@ export default function CompanyChart() {
                 <p className="text-[8px] sm:text-[9px] tracking-[0.15em] uppercase font-semibold text-brand-600 mb-1.5 sm:mb-2">
                   Subsidiary
                 </p>
-                <h3
+                <h4
                   className={`font-heading text-base sm:text-2xl font-bold uppercase tracking-wide ${s.accent} mb-1.5 sm:mb-2`}
                 >
                   {s.name}
-                </h3>
+                </h4>
                 <span
                   className={`inline-block self-center text-[8px] sm:text-[10px] tracking-[0.1em] sm:tracking-[0.12em] uppercase font-semibold px-2 py-0.5 rounded-full ${s.tag} mb-2 sm:mb-3`}
                 >
@@ -222,7 +229,7 @@ export default function CompanyChart() {
             ))}
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }

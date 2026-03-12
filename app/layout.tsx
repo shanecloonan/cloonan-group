@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Cloonan Group",
-    template: "%s | Cloonan Group",
+    default: "MoneyFund",
+    template: "%s | MoneyFund",
   },
-  description: "Entity structure and subsidiary overview.",
+  description: "MoneyFund — The World's Biggest Hedge Fund.",
 };
 
 export default function RootLayout({
