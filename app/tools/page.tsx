@@ -7,6 +7,7 @@ import { ChevronDown, Rocket } from "lucide-react";
 const TOOLS = [
   { name: "Shorts Tool", href: "/shorts", desc: "Excel-based shortage report generator" },
   { name: "Skip Tool", href: "/skips", desc: "Excel-based skip report generator & analytics" },
+  { name: "Returns Tool", href: "/returns", desc: "Truck error returns report generator" },
 ];
 
 export default function ToolsPage() {
