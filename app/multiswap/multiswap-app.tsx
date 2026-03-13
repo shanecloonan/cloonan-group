@@ -3,19 +3,13 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
 import { FACTORY_ADDRESS, RPC_URL, factoryAbi } from "./abis";
+import { useWallet } from "@/lib/wallet-context";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
-
-interface StoredWallet {
-  address: string;
-  privateKey?: string;
-  type?: string;
-  isMetaMask?: boolean;
-}
 
 interface LogEntry {
   msg: string;
@@ -45,15 +39,6 @@ function shorten(a: string) {
   return `${a.slice(0, 6)}...${a.slice(-4)}`;
 }
 
-function storageGet<T>(key: string, fb: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fb;
-  } catch {
-    return fb;
-  }
-}
-
 /* ================================================================== */
 /*  Design tokens                                                      */
 /* ================================================================== */
@@ -74,9 +59,7 @@ export default function MultiswapApp() {
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC_URL), []);
 
   /* wallet */
-  const [wallets, setWallets] = useState<StoredWallet[]>([]);
-  const [selIdx, setSelIdx] = useState<number | null>(null);
-  const selected = selIdx !== null && wallets[selIdx] ? wallets[selIdx] : null;
+  const { user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask, isLoading } = useWallet();
 
   /* deploy form */
   const [showCustomize, setShowCustomize] = useState(false);
@@ -100,55 +83,15 @@ export default function MultiswapApp() {
     logRef.current?.scrollTo(0, logRef.current.scrollHeight);
   }, [logs]);
 
-  /* ---- load wallets ---- */
-  useEffect(() => {
-    const w: StoredWallet[] = storageGet("wallets", []);
-    setWallets(w);
-    const si = parseInt(localStorage.getItem("selectedWalletIndex") ?? "0");
-    if (w.length > 0 && si >= 0 && si < w.length) setSelIdx(si);
-    else if (w.length > 0) setSelIdx(0);
-  }, []);
-
   /* ---- refresh deployed contracts on mount ---- */
   useEffect(() => {
     refreshContracts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ---- wallet select ---- */
-  const selectWallet = useCallback((idx: number | null) => {
-    setSelIdx(idx);
-    if (idx !== null) localStorage.setItem("selectedWalletIndex", String(idx));
-  }, []);
-
-  /* ---- connect metamask ---- */
-  const connectMetaMask = useCallback(async () => {
-    if (typeof window === "undefined" || !(window as any).ethereum) {
-      log("Please install MetaMask!", "error");
-      return;
-    }
-    try {
-      const accounts: string[] = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
-      const addr = accounts[0];
-      if (wallets.some((w) => w.address.toLowerCase() === addr.toLowerCase())) {
-        log(`MetaMask already connected: ${shorten(addr)}`, "success");
-        const idx = wallets.findIndex((w) => w.address.toLowerCase() === addr.toLowerCase());
-        setSelIdx(idx);
-        return;
-      }
-      const updated = [...wallets, { address: addr, type: "MetaMask", isMetaMask: true }];
-      setWallets(updated);
-      localStorage.setItem("wallets", JSON.stringify(updated));
-      setSelIdx(updated.length - 1);
-      log(`Connected MetaMask: ${shorten(addr)}`, "success");
-    } catch (e: any) {
-      log(`MetaMask failed: ${e.message}`, "error");
-    }
-  }, [wallets, log]);
-
   /* ---- deploy ---- */
   const handleDeploy = useCallback(async () => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     setBusy(true);
     try {
       const swapReceivers: string[] = [];
@@ -178,7 +121,7 @@ export default function MultiswapApp() {
       if (totalSwap > 300) { log("Total swap fees cannot exceed 3%.", "error"); setBusy(false); return; }
       if (totalDist > 300) { log("Total airdrop fees cannot exceed 3%.", "error"); setBusy(false); return; }
 
-      if (selected.isMetaMask) {
+      if (selectedEthWallet.type === "metamask") {
         const mmProvider = new ethers.providers.Web3Provider((window as any).ethereum);
         const mmSigner = mmProvider.getSigner();
         const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, mmSigner);
@@ -193,8 +136,8 @@ export default function MultiswapApp() {
         } else {
           log("Deploy reverted.", "error");
         }
-      } else if (selected.privateKey) {
-        const signer = new ethers.Wallet(selected.privateKey, provider);
+      } else if (selectedEthWallet.privateKey) {
+        const signer = new ethers.Wallet(selectedEthWallet.privateKey, provider);
         const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, signer);
         log("Estimating gas...");
         const gasEst = await factory.estimateGas.deploySwapAirdropSendContract(swapReceivers, swapBps, distReceivers, distBps);
@@ -219,7 +162,7 @@ export default function MultiswapApp() {
       log(`Deploy failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, provider, swapFees, airdropFees, log]);
+  }, [selectedEthWallet, busy, provider, swapFees, airdropFees, log]);
 
   /* ---- copy embed code ---- */
   const copyEmbed = useCallback(() => {
@@ -279,13 +222,13 @@ export default function MultiswapApp() {
           <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Wallet</span>
           <div className="flex gap-2">
             <select
-              value={selIdx ?? ""}
-              onChange={(e) => selectWallet(e.target.value === "" ? null : parseInt(e.target.value))}
+              value={selectedEthAddress ?? ""}
+              onChange={(e) => selectEthWallet(e.target.value)}
               className={`flex-1 ${selectCls}`}
             >
               <option value="">Select a wallet...</option>
-              {wallets.map((w, i) => (
-                <option key={i} value={i}>{w.type ? `${w.type}: ` : ""}{shorten(w.address)}</option>
+              {ethWallets.map((w) => (
+                <option key={w.address} value={w.address}>{w.type ? `${w.type}: ` : ""}{shorten(w.address)}</option>
               ))}
             </select>
             <button type="button" onClick={connectMetaMask} className={btnGhost}>MetaMask</button>
@@ -362,7 +305,7 @@ export default function MultiswapApp() {
             </div>
           )}
 
-          <button type="button" onClick={handleDeploy} disabled={!selected || busy} className={btnPrimary}>
+          <button type="button" onClick={handleDeploy} disabled={!selectedEthWallet || busy} className={btnPrimary}>
             Deploy Multiswap
           </button>
 

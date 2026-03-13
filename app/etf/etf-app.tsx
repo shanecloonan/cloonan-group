@@ -9,17 +9,12 @@ import {
   managerAbi,
   tokenAbi,
 } from "./abis";
+import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-
-interface StoredWallet {
-  address: string;
-  privateKey?: string;
-  type: string;
-  isMetaMask?: boolean;
-}
 
 interface StatusEntry {
   msg: string;
@@ -60,15 +55,6 @@ interface EtfData {
 function shorten(a: string) {
   if (!a || a.length < 10) return a;
   return `${a.slice(0, 6)}...${a.slice(-4)}`;
-}
-
-function storageGet<T>(key: string, fallback: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 function timestamp() {
@@ -113,10 +99,8 @@ export default function EtfApp() {
   const rpcIdx = useRef(0);
   const getProvider = useCallback(() => new ethers.providers.JsonRpcProvider(RPC_ENDPOINTS[rpcIdx.current]), []);
 
-  /* wallet state */
-  const [wallets, setWallets] = useState<StoredWallet[]>([]);
-  const [selIdx, setSelIdx] = useState<number | null>(null);
-  const selected = selIdx !== null && wallets[selIdx] ? wallets[selIdx] : null;
+  /* wallet (shared context) */
+  const { user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask, isLoading } = useWallet();
   const [metaSigner, setMetaSigner] = useState<ethers.Signer | null>(null);
 
   /* etf form state */
@@ -172,74 +156,21 @@ export default function EtfApp() {
     return Math.max(0, 100 - total).toFixed(2);
   }, [tokenRows]);
 
-  /* ================================================================ */
-  /*  Initialize wallets                                               */
-  /* ================================================================ */
-
-  useEffect(() => {
-    const w: StoredWallet[] = storageGet("wallets", []);
-    setWallets(w);
-    const idx = parseInt(localStorage.getItem("selectedWalletIndex") || "");
-    if (!isNaN(idx) && idx >= 0 && idx < w.length) setSelIdx(idx);
-  }, []);
-
   /* fetch ETFs when wallet changes */
   useEffect(() => {
     refreshETFs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.address]);
+  }, [selectedEthWallet?.address]);
 
-  /* ================================================================ */
-  /*  Connect wallet (MetaMask)                                        */
-  /* ================================================================ */
-
-  const connectWallet = useCallback(async () => {
-    setBusy("connect", true);
-    log("Connecting wallet...");
-    try {
-      const w = window as any;
-      if (!w.ethereum) { log("Please install MetaMask.", "error"); return; }
-      await w.ethereum.request({ method: "eth_requestAccounts" });
-      const p = new ethers.providers.Web3Provider(w.ethereum);
-      const s = p.getSigner();
-      const addr = await s.getAddress();
-      setMetaSigner(s);
-
-      let wList: StoredWallet[] = storageGet("wallets", []);
-      wList = wList.filter((wl) => wl.type !== "MetaMask");
-      wList.push({ address: addr, type: "MetaMask", isMetaMask: true });
-      setWallets(wList);
-      localStorage.setItem("wallets", JSON.stringify(wList));
-      const idx = wList.length - 1;
-      setSelIdx(idx);
-      localStorage.setItem("selectedWalletIndex", String(idx));
-      log(`Wallet connected: ${shorten(addr)}`, "success");
-    } catch (e: any) {
-      log(`Failed: ${e.message}`, "error");
-    } finally {
-      setBusy("connect", false);
+  /* set up MetaMask signer when a MetaMask wallet is selected */
+  useEffect(() => {
+    if (selectedEthWallet?.type === "metamask" && (window as any).ethereum) {
+      const p = new ethers.providers.Web3Provider((window as any).ethereum);
+      setMetaSigner(p.getSigner());
+    } else {
+      setMetaSigner(null);
     }
-  }, [log, setBusy]);
-
-  const selectWallet = useCallback(
-    (idx: number | null) => {
-      if (idx === null) {
-        setSelIdx(null);
-        setMetaSigner(null);
-        localStorage.removeItem("selectedWalletIndex");
-        return;
-      }
-      setSelIdx(idx);
-      localStorage.setItem("selectedWalletIndex", String(idx));
-      const w = wallets[idx];
-      if (w?.isMetaMask) {
-        connectWallet();
-      } else {
-        setMetaSigner(null);
-      }
-    },
-    [wallets, connectWallet],
-  );
+  }, [selectedEthWallet]);
 
   /* ================================================================ */
   /*  Refresh ETFs                                                     */
@@ -261,8 +192,8 @@ export default function EtfApp() {
         let name = "Unknown", symbol = "Unknown", balance = "0";
         try { name = await tok.name(); } catch {}
         try { symbol = await tok.symbol(); } catch {}
-        if (selected?.address) {
-          try { balance = (await tok.balanceOf(selected.address)).toString(); } catch {}
+        if (selectedEthWallet?.address) {
+          try { balance = (await tok.balanceOf(selectedEthWallet.address)).toString(); } catch {}
         }
         const tokenInfo: TokenInfo[] = [];
         for (let i = 0; i < etf.tokens.length; i++) {
@@ -295,18 +226,18 @@ export default function EtfApp() {
     } catch (e: any) {
       log(`Failed to refresh: ${e.message}`, "error");
     }
-  }, [log, withRetry, selected?.address, getProvider]);
+  }, [log, withRetry, selectedEthWallet?.address, getProvider]);
 
   /* ================================================================ */
   /*  Get signer for transactions                                      */
   /* ================================================================ */
 
   const getSigner = useCallback((): ethers.Signer | null => {
-    if (!selected) return null;
-    if (selected.isMetaMask && metaSigner) return metaSigner;
-    if (selected.privateKey) return new ethers.Wallet(selected.privateKey, getProvider());
+    if (!selectedEthWallet) return null;
+    if (selectedEthWallet.type === "metamask" && metaSigner) return metaSigner;
+    if (selectedEthWallet.privateKey) return new ethers.Wallet(selectedEthWallet.privateKey, getProvider());
     return null;
-  }, [selected, metaSigner, getProvider]);
+  }, [selectedEthWallet, metaSigner, getProvider]);
 
   /* ================================================================ */
   /*  Create ETF                                                       */
@@ -316,7 +247,7 @@ export default function EtfApp() {
     setBusy("launch", true);
     log("Creating ETF...");
     try {
-      if (!selected) { log("Select a wallet first.", "error"); return; }
+      if (!selectedEthWallet) { log("Select a wallet first.", "error"); return; }
       if (!etfName || !etfSymbol) { log("Name and ticker required.", "error"); return; }
       const tokens: string[] = [];
       const weights: number[] = [];
@@ -338,7 +269,7 @@ export default function EtfApp() {
       if (!signer) { log("No signer available.", "error"); return; }
 
       const mgr = new ethers.Contract(MANAGER_ADDRESS, managerAbi, signer);
-      log(selected.isMetaMask ? "Confirm in MetaMask..." : "Signing...");
+      log(selectedEthWallet?.type === "metamask" ? "Confirm in MetaMask..." : "Signing...");
       const tx = await mgr.createETF(etfName, etfSymbol.toUpperCase(), tokens, weights, feeReceiver, feeBpsNum, { gasLimit: 1500000 });
       await tx.wait();
       log(`ETF ${etfName} (${etfSymbol}) created! Tx: ${shorten(tx.hash)}`, "success");
@@ -353,7 +284,7 @@ export default function EtfApp() {
     } finally {
       setBusy("launch", false);
     }
-  }, [selected, etfName, etfSymbol, tokenRows, feeReceiver, feeBps, getSigner, log, setBusy, refreshETFs]);
+  }, [selectedEthWallet, etfName, etfSymbol, tokenRows, feeReceiver, feeBps, getSigner, log, setBusy, refreshETFs]);
 
   /* ================================================================ */
   /*  Mint                                                             */
@@ -366,7 +297,7 @@ export default function EtfApp() {
       setBusy(key, true);
       log(`Minting ${amt} ETF tokens...`);
       try {
-        if (!selected || !amt || parseFloat(amt) <= 0) { log("Invalid amount or wallet.", "error"); return; }
+        if (!selectedEthWallet || !amt || parseFloat(amt) <= 0) { log("Invalid amount or wallet.", "error"); return; }
         const signer = getSigner();
         if (!signer) { log("No signer.", "error"); return; }
         const prov = getProvider();
@@ -386,7 +317,7 @@ export default function EtfApp() {
         setBusy(key, false);
       }
     },
-    [etfAmounts, selected, getSigner, getProvider, log, setBusy, refreshETFs],
+    [etfAmounts, selectedEthWallet, getSigner, getProvider, log, setBusy, refreshETFs],
   );
 
   /* ================================================================ */
@@ -400,13 +331,13 @@ export default function EtfApp() {
       setBusy(key, true);
       log(`Burning ${amt} ETF tokens...`);
       try {
-        if (!selected || !amt || parseFloat(amt) <= 0) { log("Invalid amount or wallet.", "error"); return; }
+        if (!selectedEthWallet || !amt || parseFloat(amt) <= 0) { log("Invalid amount or wallet.", "error"); return; }
         const signer = getSigner();
         if (!signer) { log("No signer.", "error"); return; }
 
         const etfAmountWei = ethers.utils.parseEther(amt);
         const tokContract = new ethers.Contract(etfToken, tokenAbi, signer);
-        const allowance = await tokContract.allowance(selected.address, MANAGER_ADDRESS);
+        const allowance = await tokContract.allowance(selectedEthWallet.address, MANAGER_ADDRESS);
         if (allowance.lt(etfAmountWei)) {
           log("Approving...");
           const approveTx = await tokContract.approve(MANAGER_ADDRESS, etfAmountWei);
@@ -425,7 +356,7 @@ export default function EtfApp() {
         setBusy(key, false);
       }
     },
-    [etfAmounts, selected, getSigner, log, setBusy, refreshETFs],
+    [etfAmounts, selectedEthWallet, getSigner, log, setBusy, refreshETFs],
   );
 
   /* ================================================================ */
@@ -439,13 +370,13 @@ export default function EtfApp() {
       setBusy(key, true);
       log(`Withdrawing ${amt} ETF tokens...`);
       try {
-        if (!selected || !amt || parseFloat(amt) <= 0) { log("Invalid amount or wallet.", "error"); return; }
+        if (!selectedEthWallet || !amt || parseFloat(amt) <= 0) { log("Invalid amount or wallet.", "error"); return; }
         const signer = getSigner();
         if (!signer) { log("No signer.", "error"); return; }
 
         const etfAmountWei = ethers.utils.parseEther(amt);
         const tokContract = new ethers.Contract(etfToken, tokenAbi, signer);
-        const allowance = await tokContract.allowance(selected.address, MANAGER_ADDRESS);
+        const allowance = await tokContract.allowance(selectedEthWallet.address, MANAGER_ADDRESS);
         if (allowance.lt(etfAmountWei)) {
           log("Approving...");
           const approveTx = await tokContract.approve(MANAGER_ADDRESS, etfAmountWei);
@@ -464,7 +395,7 @@ export default function EtfApp() {
         setBusy(key, false);
       }
     },
-    [etfAmounts, selected, getSigner, log, setBusy, refreshETFs],
+    [etfAmounts, selectedEthWallet, getSigner, log, setBusy, refreshETFs],
   );
 
   /* ================================================================ */
@@ -526,36 +457,37 @@ export default function EtfApp() {
   /* ================================================================ */
 
   return (
-    <div className="min-h-screen p-5 sm:p-10 text-white/90" style={{ background: "#08090e", fontFamily: "'Manrope', sans-serif" }}>
-      <div className="max-w-[1100px] mx-auto flex flex-wrap gap-8">
+    <div className="min-h-screen px-4 py-6 sm:p-10 text-white/90" style={{ background: "#08090e", fontFamily: "'Manrope', sans-serif" }}>
+      <div className="max-w-[1100px] mx-auto flex flex-col gap-8">
         {/* ============================================================ */}
-        {/*  LEFT: Launch ETF                                            */}
+        {/*  Launch ETF                                                  */}
         {/* ============================================================ */}
-        <div className="flex-1 min-w-[45%]">
+        <div>
           {/* Wallet selector */}
-          <div className="flex gap-3 mb-8">
-            <select
-              value={selIdx ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                selectWallet(v === "" ? null : parseInt(v));
-              }}
-              className={`flex-1 min-w-0 ${selectCls}`}
-            >
-              <option value="">-- Select Wallet --</option>
-              {wallets.map((w, i) => (
-                <option key={i} value={i}>{w.type}: {shorten(w.address)}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={connectWallet}
-              disabled={busyBtns["connect"]}
-              className={btnPrimary}
-            >
-              {busyBtns["connect"] ? <Spinner /> : "Connect Wallet"}
-            </button>
-          </div>
+          {!user || !vaultUnlocked ? (
+            <div className="mb-8"><AuthPanel /></div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3 mb-8">
+              <select
+                value={selectedEthAddress ?? ""}
+                onChange={(e) => selectEthWallet(e.target.value || null)}
+                className={`flex-1 min-w-0 ${selectCls}`}
+              >
+                <option value="">Select wallet...</option>
+                {ethWallets.map((w) => (
+                  <option key={w.address} value={w.address}>{shorten(w.address)} ({w.type})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={connectMetaMask}
+                disabled={isLoading}
+                className={btnPrimary}
+              >
+                {isLoading ? <Spinner /> : "Connect Wallet"}
+              </button>
+            </div>
+          )}
 
           <h2 className="text-2xl font-bold text-white/90 mb-6">Launch an ETF</h2>
 
@@ -604,32 +536,34 @@ export default function EtfApp() {
                 >?</span>
               </div>
               {tokenRows.map((row, i) => (
-                <div key={i} className="flex gap-2 items-center mb-2">
+                <div key={i} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mb-2">
                   <input
                     value={row.address}
                     onChange={(e) => updateTokenRow(i, "address", e.target.value)}
                     placeholder="0xToken..."
-                    className={`flex-[3] ${inputCls}`}
+                    className={`sm:flex-[3] ${inputCls}`}
                   />
-                  <input
-                    type="number"
-                    value={row.weight}
-                    onChange={(e) => updateTokenRow(i, "weight", e.target.value)}
-                    placeholder="50"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    className={`flex-[1] ${inputCls}`}
-                  />
-                  {tokenRows.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTokenRow(i)}
-                      className={btnGhost}
-                    >
-                      ✕
-                    </button>
-                  )}
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      value={row.weight}
+                      onChange={(e) => updateTokenRow(i, "weight", e.target.value)}
+                      placeholder="Weight %"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className={`flex-1 sm:w-24 ${inputCls}`}
+                    />
+                    {tokenRows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTokenRow(i)}
+                        className={btnGhost}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               <div className="flex items-center gap-3 mt-2">
@@ -652,9 +586,9 @@ export default function EtfApp() {
                   className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] cursor-pointer bg-indigo-500/20 text-indigo-400 hover:scale-110 transition-transform"
                 >?</span>
               </div>
-              <div className="flex gap-2">
-                <input value={feeReceiver} onChange={(e) => setFeeReceiver(e.target.value)} placeholder="0xFeeReceiver..." className={`flex-[2] ${inputCls}`} />
-                <input type="number" value={feeBps} onChange={(e) => setFeeBps(e.target.value)} placeholder="1" min="0" max="100" step="0.01" className={`flex-[1] ${inputCls}`} />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input value={feeReceiver} onChange={(e) => setFeeReceiver(e.target.value)} placeholder="0xFeeReceiver..." className={`sm:flex-[2] ${inputCls}`} />
+                <input type="number" value={feeBps} onChange={(e) => setFeeBps(e.target.value)} placeholder="Fee %" min="0" max="100" step="0.01" className={`sm:flex-[1] ${inputCls}`} />
               </div>
               {activeHelp === "fee" && (
                 <div className="text-xs text-white/60 bg-white/[0.04] border border-white/[0.06] p-2 rounded-lg mt-2">
@@ -676,13 +610,13 @@ export default function EtfApp() {
         </div>
 
         {/* ============================================================ */}
-        {/*  RIGHT: All ETFs                                             */}
+        {/*  All ETFs                                                    */}
         {/* ============================================================ */}
-        <div className="flex-1 min-w-[45%]">
+        <div>
           <h2 className="text-2xl font-bold text-white/90 mb-6">All ETFs</h2>
 
           {/* ETF list */}
-          <div className={`${card} max-h-[600px] overflow-y-auto p-4 flex flex-col gap-3`}>
+          <div className={`${card} p-4 flex flex-col gap-3`}>
             {etfs.length === 0 ? (
               <p className="text-center text-sm text-white/30 py-8">No ETFs found. Connect a wallet or launch one.</p>
             ) : (
@@ -701,8 +635,8 @@ export default function EtfApp() {
                       <span className="text-xs text-indigo-400/80 font-mono">{shorten(etf.etfToken)}</span>
                     </div>
 
-                    {/* Details — 3-column grid */}
-                    <div className="grid grid-cols-3 gap-3 mb-3">
+                    {/* Details grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
                       <div>
                         <span className={labelCls}>Price</span>
                         <div className="text-xs text-white/90 flex items-center gap-1.5">
@@ -736,7 +670,7 @@ export default function EtfApp() {
                     </div>
 
                     {/* Token distribution + pie chart */}
-                    <div className="flex gap-3 items-start mb-3">
+                    <div className="flex flex-col-reverse sm:flex-row gap-3 items-start mb-3">
                       <div className="flex-1 min-w-0">
                         <span className={labelCls}>Token Distribution</span>
                         <div className="flex flex-wrap gap-1 max-h-[160px] overflow-y-auto">
@@ -772,23 +706,23 @@ export default function EtfApp() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2">
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="number"
-                          value={etfAmounts[etf.etfToken] || ""}
-                          onChange={(e) => setEtfAmounts((p) => ({ ...p, [etf.etfToken]: e.target.value }))}
-                          placeholder="Amount"
-                          min="0"
-                          step="0.00000001"
-                          className={`flex-1 ${inputCls}`}
-                        />
-                        <button type="button" onClick={() => mintETF(etf.etfToken)} disabled={busyBtns[`mint-${etf.etfToken}`]} className={btnGold}>
+                      <input
+                        type="number"
+                        value={etfAmounts[etf.etfToken] || ""}
+                        onChange={(e) => setEtfAmounts((p) => ({ ...p, [etf.etfToken]: e.target.value }))}
+                        placeholder="Amount"
+                        min="0"
+                        step="0.00000001"
+                        className={inputCls}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => mintETF(etf.etfToken)} disabled={busyBtns[`mint-${etf.etfToken}`]} className={`flex-1 min-w-[80px] ${btnGold}`}>
                           {busyBtns[`mint-${etf.etfToken}`] ? <Spinner /> : "Mint"}
                         </button>
-                        <button type="button" onClick={() => burnETF(etf.etfToken)} disabled={busyBtns[`burn-${etf.etfToken}`]} className={btnGold}>
+                        <button type="button" onClick={() => burnETF(etf.etfToken)} disabled={busyBtns[`burn-${etf.etfToken}`]} className={`flex-1 min-w-[80px] ${btnGold}`}>
                           {busyBtns[`burn-${etf.etfToken}`] ? <Spinner /> : "Burn"}
                         </button>
-                        <button type="button" onClick={() => withdrawETF(etf.etfToken)} disabled={busyBtns[`withdraw-${etf.etfToken}`]} className={btnGold}>
+                        <button type="button" onClick={() => withdrawETF(etf.etfToken)} disabled={busyBtns[`withdraw-${etf.etfToken}`]} className={`flex-1 min-w-[80px] ${btnGold}`}>
                           {busyBtns[`withdraw-${etf.etfToken}`] ? <Spinner /> : "Withdraw"}
                         </button>
                       </div>

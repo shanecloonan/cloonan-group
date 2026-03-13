@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useWallet } from "@/lib/wallet-context";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -8,7 +9,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 
 const HOST = "arweave.net";
 const PROTOCOL = "https";
-const STORAGE_KEY = "arweave_wallet_jwk";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -131,10 +131,12 @@ const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px
 /* ================================================================== */
 
 export default function ArweaveWallet() {
-  const [wallet, setWallet] = useState<JsonWebKey | null>(null);
+  const { arweaveWallet, setArweaveWallet: saveArweaveWallet } = useWallet();
+
   const [address, setAddress] = useState("");
   const [balance, setBalance] = useState("—");
   const [arTab, setArTab] = useState<"setup" | "info" | "send" | "upload">("setup");
+  const [localJwk, setLocalJwk] = useState<JsonWebKey | null>(null);
 
   const [importKey, setImportKey] = useState("");
   const [target, setTarget] = useState("");
@@ -159,60 +161,45 @@ export default function ArweaveWallet() {
     }
   }, []);
 
-  const loadWallet = useCallback(
-    async (jwk: JsonWebKey) => {
-      const addr = await jwkToAddress(jwk);
-      setWallet(jwk);
-      setAddress(addr);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(jwk));
-      setArTab("info");
-      refreshBalance(addr);
-    },
-    [refreshBalance],
-  );
-
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const jwk = JSON.parse(saved) as JsonWebKey;
-        (async () => {
-          const addr = await jwkToAddress(jwk);
-          setWallet(jwk);
-          setAddress(addr);
-          refreshBalance(addr);
-          setArTab("info");
-        })();
-      } catch { /* ignore */ }
+    if (arweaveWallet) {
+      setLocalJwk(arweaveWallet.jwk);
+      setAddress(arweaveWallet.address);
+      setArTab("info");
+      refreshBalance(arweaveWallet.address);
+    } else {
+      setLocalJwk(null);
+      setAddress("");
+      setBalance("—");
     }
-  }, [refreshBalance]);
+  }, [arweaveWallet, refreshBalance]);
 
   /* ---- actions ---- */
   const handleGenerate = useCallback(async () => {
     setGenStatus({ text: "Generating keypair... (2-3 sec)", type: "loading" });
     try {
       const jwk = await generateKey();
-      await loadWallet(jwk);
-      setGenStatus({ text: "Generated! Saved to browser.", type: "success" });
+      await saveArweaveWallet(jwk);
+      setGenStatus({ text: "Generated & encrypted in vault.", type: "success" });
     } catch (e: unknown) {
       setGenStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
     }
-  }, [loadWallet]);
+  }, [saveArweaveWallet]);
 
   const handleImport = useCallback(async () => {
     if (!importKey.trim()) { setImpStatus({ text: "Paste JWK", type: "error" }); return; }
     try {
       const jwk = JSON.parse(importKey.trim()) as JsonWebKey;
-      await loadWallet(jwk);
-      setImpStatus({ text: "Imported & Saved!", type: "success" });
+      await saveArweaveWallet(jwk);
+      setImpStatus({ text: "Imported & encrypted in vault!", type: "success" });
     } catch (e: unknown) {
       setImpStatus({ text: `Invalid JWK: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
     }
-  }, [importKey, loadWallet]);
+  }, [importKey, saveArweaveWallet]);
 
   const handleExport = useCallback(() => {
-    if (!wallet) { setExpStatus({ text: "No wallet loaded", type: "error" }); return; }
-    const blob = new Blob([JSON.stringify(wallet, null, 2)], { type: "application/json" });
+    if (!localJwk) { setExpStatus({ text: "No wallet loaded", type: "error" }); return; }
+    const blob = new Blob([JSON.stringify(localJwk, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -221,19 +208,16 @@ export default function ArweaveWallet() {
     URL.revokeObjectURL(url);
     setExpStatus({ text: "Downloaded! Check your downloads folder.", type: "success" });
     setTimeout(() => setExpStatus(null), 3000);
-  }, [wallet, address]);
+  }, [localJwk, address]);
 
-  const handleClear = useCallback(() => {
-    if (!confirm("Clear wallet from browser storage?")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    setWallet(null);
-    setAddress("");
-    setBalance("—");
+  const handleClear = useCallback(async () => {
+    if (!confirm("Remove Arweave wallet from your vault?")) return;
+    await saveArweaveWallet(null);
     setArTab("setup");
-  }, []);
+  }, [saveArweaveWallet]);
 
   const handleSend = useCallback(async () => {
-    if (!wallet) { setSendStatus({ text: "No wallet loaded", type: "error" }); return; }
+    if (!localJwk) { setSendStatus({ text: "No wallet loaded", type: "error" }); return; }
     if (!target || !amount) { setSendStatus({ text: "Fill fields", type: "error" }); return; }
     setSendStatus({ text: "Sending...", type: "loading" });
     try {
@@ -241,10 +225,10 @@ export default function ArweaveWallet() {
       const quantity = BigInt(Math.round(parseFloat(amount) * 10 ** 12)).toString();
       const reward = await getPrice(0, target);
       const tx: ArweaveTx = {
-        format: 2, owner: wallet.n, target, quantity, reward,
+        format: 2, owner: localJwk.n, target, quantity, reward,
         last_tx: anchor, tags: [], data_size: "0", data_root: "",
       };
-      await signTx(tx, wallet);
+      await signTx(tx, localJwk);
       const res = await postTx(tx);
       if (res.status === 200) {
         setSendStatus({ text: `Sent! TX ID: ${tx.id}`, type: "success" });
@@ -255,10 +239,10 @@ export default function ArweaveWallet() {
     } catch (e: unknown) {
       setSendStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
     }
-  }, [wallet, target, amount, address, refreshBalance]);
+  }, [localJwk, target, amount, address, refreshBalance]);
 
   const handleUpload = useCallback(async () => {
-    if (!wallet) { setUploadStatus({ text: "No wallet loaded", type: "error" }); return; }
+    if (!localJwk) { setUploadStatus({ text: "No wallet loaded", type: "error" }); return; }
     const file = fileRef.current?.files?.[0];
     if (!dataText && !file) { setUploadStatus({ text: "Add text or file", type: "error" }); return; }
     setUploadStatus({ text: "Preparing...", type: "loading" });
@@ -274,10 +258,10 @@ export default function ArweaveWallet() {
       const dataSize = data.byteLength.toString();
       const reward = await getPrice(dataSize);
       const tx: ArweaveTx = {
-        format: 2, owner: wallet.n, target: "", quantity: "0", reward,
+        format: 2, owner: localJwk.n, target: "", quantity: "0", reward,
         last_tx: anchor, tags: [], data_size: dataSize, data_root: b64urlEncode(dataRoot),
       };
-      await signTx(tx, wallet);
+      await signTx(tx, localJwk);
       await postTx(tx);
       const chunkSize = 256 * 1024;
       let offset = 0;
@@ -300,7 +284,7 @@ export default function ArweaveWallet() {
     } catch (e: unknown) {
       setUploadStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
     }
-  }, [wallet, dataText]);
+  }, [localJwk, dataText]);
 
   /* ---- status badge ---- */
   const renderStatus = (s: StatusMsg | null) => {
@@ -355,7 +339,7 @@ export default function ArweaveWallet() {
         <div className="space-y-4">
           <div className={`${card} p-5 space-y-4`}>
             <h3 className="text-sm font-semibold text-white/80">Generate New Wallet</h3>
-            <p className="text-xs text-white/30 -mt-2">Create a fresh RSA-4096 keypair stored in your browser.</p>
+            <p className="text-xs text-white/30 -mt-2">Create a fresh RSA-4096 keypair encrypted in your vault.</p>
             <button type="button" onClick={handleGenerate} className={btnPrimary}>Generate Keypair</button>
             {renderStatus(genStatus)}
           </div>
@@ -378,7 +362,6 @@ export default function ArweaveWallet() {
       {/* ── Info Tab ── */}
       {arTab === "info" && (
         <div className="space-y-4">
-          {/* Balance card */}
           <div className={`${card} p-5`}>
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Balance</span>
@@ -391,7 +374,6 @@ export default function ArweaveWallet() {
             </p>
           </div>
 
-          {/* Address */}
           <div className={`${card} p-5 space-y-3`}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Address</span>
@@ -408,18 +390,16 @@ export default function ArweaveWallet() {
             </p>
           </div>
 
-          {/* Key preview */}
           <div className={`${card} p-5 space-y-3`}>
             <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Key Preview</span>
             <pre className="bg-white/[0.03] rounded-lg p-3 overflow-auto text-[10px] max-h-[80px] text-white/30 font-mono leading-relaxed">
-              {wallet ? JSON.stringify(wallet, null, 2) : "No wallet loaded"}
+              {localJwk ? JSON.stringify(localJwk, null, 2) : "No wallet loaded"}
             </pre>
             <p className="text-[11px] text-amber-400/60 flex items-center gap-1">
               <span>⚠</span> Backup your key securely. Never share it.
             </p>
           </div>
 
-          {/* Actions */}
           <div className="grid grid-cols-2 gap-3">
             <button type="button" onClick={handleExport} className={btnPrimary}>Download Key</button>
             <button type="button" onClick={handleClear} className={btnGhost}>Clear Wallet</button>

@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
+import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 import ArweaveWallet from "./arweave-wallet";
 
 /* ------------------------------------------------------------------ */
@@ -82,7 +84,6 @@ const EXPLORER_ACTIONS = [
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface StoredWallet { address: string; privateKey: string; type: string; }
 interface StatusEntry { msg: string; status: "pending" | "success" | "error"; }
 interface CoinEntry { address: string; balance: string; }
 
@@ -93,15 +94,6 @@ interface CoinEntry { address: string; balance: string; }
 function shorten(a: string) {
   if (!a || a.length < 10) return a;
   return `${a.slice(0, 6)}...${a.slice(-4)}`;
-}
-
-function storageGet<T>(key: string, fallback: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 /* ================================================================== */
@@ -121,12 +113,15 @@ const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px
 /* ================================================================== */
 
 export default function WalletsApp() {
+  const {
+    user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress,
+    selectEthWallet, addEthWallet, removeEthWallet, signOut, isLoading,
+  } = useWallet();
+
   const [chain, setChain] = useState<"ethereum" | "arweave">("ethereum");
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC), []);
 
-  const [wallets, setWallets] = useState<StoredWallet[]>([]);
-  const [selIdx, setSelIdx] = useState<number | null>(null);
-  const selected = selIdx !== null && wallets[selIdx] ? wallets[selIdx] : null;
+  const selected = selectedEthWallet;
 
   const [ethBal, setEthBal] = useState("0.000000");
   const [moneyBal, setMoneyBal] = useState("0.00");
@@ -178,27 +173,18 @@ export default function WalletsApp() {
       const money = new ethers.Contract(MONEY_ADDRESS, ERC20_ABI, provider);
       const mBal = await money.balanceOf(selected.address);
       setMoneyBal(parseFloat(ethers.utils.formatEther(mBal)).toFixed(2));
-    } catch (e: any) {
-      addStatus(`Balance fetch failed: ${e.message}`, "error");
+    } catch (e: unknown) {
+      addStatus(`Balance fetch failed: ${e instanceof Error ? e.message : String(e)}`, "error");
     }
   }, [selected, provider, addStatus]);
 
   useEffect(() => {
-    const w: StoredWallet[] = storageGet("wallets", []);
-    setWallets(w);
-    if (w.length > 0) setSelIdx(0);
-    setCoinList(storageGet("coinList", []));
+    try { setCoinList(JSON.parse(localStorage.getItem("coinList") || "[]")); } catch {}
   }, []);
 
   useEffect(() => {
     if (selected) fetchBalance();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.address]);
-
-  const saveWallets = useCallback((w: StoredWallet[]) => {
-    setWallets(w);
-    localStorage.setItem("wallets", JSON.stringify(w));
-  }, []);
+  }, [selected?.address, fetchBalance]);
 
   /* ================================================================ */
   /*  Wallet actions                                                   */
@@ -219,48 +205,48 @@ export default function WalletsApp() {
       } else {
         wallet = ethers.Wallet.createRandom();
       }
-      const entry: StoredWallet = { address: wallet.address, privateKey: wallet.privateKey, type: "moneyfund" };
-      const newW = [...wallets, entry];
-      saveWallets(newW);
-      setSelIdx(newW.length - 1);
+      await addEthWallet({ address: wallet.address, privateKey: wallet.privateKey, type: "moneyfund" });
+      selectEthWallet(wallet.address);
       addStatus(`Wallet created: ${shorten(wallet.address)}`, "success");
-    } catch (e: any) {
-      addStatus(`Failed: ${e.message}`, "error");
+    } catch (e: unknown) {
+      addStatus(`Failed: ${e instanceof Error ? e.message : String(e)}`, "error");
     }
-  }, [wallets, vanityMode, saveWallets, addStatus]);
+  }, [vanityMode, addEthWallet, selectEthWallet, addStatus]);
 
   const exportWallets = useCallback(() => {
-    if (wallets.length === 0) { addStatus("No wallets to export", "error"); return; }
-    const blob = new Blob([JSON.stringify(wallets, null, 2)], { type: "application/json" });
+    if (ethWallets.length === 0) { addStatus("No wallets to export", "error"); return; }
+    const data = ethWallets.map((w) => ({ address: w.address, privateKey: w.privateKey, type: w.type }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "wallets.json";
     a.click();
     URL.revokeObjectURL(a.href);
     addStatus("Wallets exported", "success");
-  }, [wallets, addStatus]);
+  }, [ethWallets, addStatus]);
 
   const importWallets = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const data = JSON.parse(ev.target?.result as string);
-          if (!Array.isArray(data)) throw new Error("Invalid format");
-          const valid = data.filter((w: any) => w.address && w.privateKey && w.type);
-          saveWallets(valid);
-          if (valid.length > 0) setSelIdx(0);
-          addStatus(`Imported ${valid.length} wallets`, "success");
-        } catch (err: any) {
-          addStatus(`Import failed: ${err.message}`, "error");
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error("Invalid format");
+        const valid = data.filter((w: Record<string, unknown>) => w.address && w.privateKey && w.type);
+        let count = 0;
+        for (const w of valid) {
+          await addEthWallet({ address: w.address as string, privateKey: w.privateKey as string, type: (w.type as "moneyfund") || "moneyfund" });
+          count++;
         }
-      };
-      reader.readAsText(file);
+        if (count > 0) selectEthWallet(valid[0].address as string);
+        addStatus(`Imported ${count} wallets`, "success");
+      } catch (err: unknown) {
+        addStatus(`Import failed: ${err instanceof Error ? err.message : String(err)}`, "error");
+      }
       e.target.value = "";
     },
-    [saveWallets, addStatus],
+    [addEthWallet, selectEthWallet, addStatus],
   );
 
   const copyAddress = useCallback(() => {
@@ -269,12 +255,19 @@ export default function WalletsApp() {
     addStatus("Address copied", "success");
   }, [selected, addStatus]);
 
+  const deleteWallet = useCallback(async () => {
+    if (!selected) return;
+    if (!confirm(`Remove wallet ${shorten(selected.address)} from your vault?`)) return;
+    await removeEthWallet(selected.address);
+    addStatus("Wallet removed", "success");
+  }, [selected, removeEthWallet, addStatus]);
+
   /* ================================================================ */
   /*  Send                                                             */
   /* ================================================================ */
 
   const handleSend = useCallback(async () => {
-    if (!selected) { addStatus("No wallet selected", "error"); return; }
+    if (!selected?.privateKey) { addStatus("No wallet with private key selected", "error"); return; }
     if (!recipient || !sendAmt) { addStatus("Recipient and amount required", "error"); return; }
     addStatus(`Sending ${sendAmt} ${sendType}...`);
     try {
@@ -293,8 +286,8 @@ export default function WalletsApp() {
         addStatus(`Token sent! Tx: ${shorten(receipt.transactionHash)}`, "success");
       }
       await fetchBalance();
-    } catch (e: any) {
-      addStatus(`Transfer failed: ${e.message}`, "error");
+    } catch (e: unknown) {
+      addStatus(`Transfer failed: ${e instanceof Error ? e.message : String(e)}`, "error");
     }
   }, [selected, recipient, sendAmt, sendType, sendTokenAddr, provider, addStatus, fetchBalance]);
 
@@ -303,7 +296,7 @@ export default function WalletsApp() {
   /* ================================================================ */
 
   const handleSwap = useCallback(async () => {
-    if (!selected) { addStatus("No wallet selected", "error"); return; }
+    if (!selected?.privateKey) { addStatus("No wallet with private key selected", "error"); return; }
     if (!ethers.utils.isAddress(swapTokenAddr) || !swapAmt || parseFloat(swapAmt) <= 0) {
       addStatus("Valid token address and amount required", "error"); return;
     }
@@ -335,8 +328,8 @@ export default function WalletsApp() {
         addStatus(`Swap success! Tx: ${shorten(r.transactionHash)}`, "success");
       }
       await fetchBalance();
-    } catch (e: any) {
-      addStatus(`Swap failed: ${e.message}`, "error");
+    } catch (e: unknown) {
+      addStatus(`Swap failed: ${e instanceof Error ? e.message : String(e)}`, "error");
     }
   }, [selected, swapTokenAddr, swapAmt, swapDir, slippage, gasLimit, provider, addStatus, fetchBalance]);
 
@@ -356,8 +349,8 @@ export default function WalletsApp() {
       setCoinList(newList);
       localStorage.setItem("coinList", JSON.stringify(newList));
       addStatus(`Coin imported: ${shorten(coinImportAddr)}`, "success");
-    } catch (e: any) {
-      addStatus(`Import failed: ${e.message}`, "error");
+    } catch (e: unknown) {
+      addStatus(`Import failed: ${e instanceof Error ? e.message : String(e)}`, "error");
     }
   }, [selected, coinImportAddr, coinList, provider, addStatus]);
 
@@ -396,9 +389,10 @@ export default function WalletsApp() {
         setExpResult(`Error: ${data.message || "Unknown"}`);
         addStatus(`Failed: ${data.message}`, "error");
       }
-    } catch (e: any) {
-      setExpResult(`Error: ${e.message}`);
-      addStatus(`Failed: ${e.message}`, "error");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setExpResult(`Error: ${msg}`);
+      addStatus(`Failed: ${msg}`, "error");
     }
   }, [expAction, expAddress, expTxHash, expTimestamp, expContract, expLogAddr, expFromBlock, expToBlock, addStatus]);
 
@@ -418,6 +412,28 @@ export default function WalletsApp() {
   /*  RENDER                                                           */
   /* ================================================================ */
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#08090e" }}>
+        <p className="text-white/30 text-sm animate-pulse">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user || !vaultUnlocked) {
+    return (
+      <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-[720px] mx-auto space-y-5">
+          <div className="text-center pt-4 pb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">Wallets</h1>
+            <p className="text-xs text-white/30 mt-1">Sign in to access your encrypted wallet vault</p>
+          </div>
+          <AuthPanel inline />
+        </div>
+      </div>
+    );
+  }
+
   const ethTabs: { id: "home" | "apps" | "explorer"; label: string; icon: string }[] = [
     { id: "home", label: "Home", icon: "⬡" },
     { id: "apps", label: "Apps", icon: "◫" },
@@ -434,10 +450,13 @@ export default function WalletsApp() {
     <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
       <div className="w-full max-w-[720px] mx-auto space-y-5">
 
-        {/* ── Page title ── */}
+        {/* ── Page title + account ── */}
         <div className="text-center pt-4 pb-2">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">Wallets</h1>
-          <p className="text-xs text-white/30 mt-1">Manage your Ethereum & Arweave wallets</p>
+          <p className="text-xs text-white/30 mt-1">
+            {user.email}
+            <button type="button" onClick={signOut} className="ml-2 text-red-400/60 hover:text-red-400 transition-colors">Sign out</button>
+          </p>
         </div>
 
         {/* ── Chain switcher ── */}
@@ -520,17 +539,17 @@ export default function WalletsApp() {
                   </div>
                   <div className="flex gap-2">
                     <select
-                      value={selIdx ?? ""}
+                      value={selectedEthAddress ?? ""}
                       onChange={(e) => {
                         const v = e.target.value;
-                        if (v === "") { setSelIdx(null); setEthBal("0.000000"); setMoneyBal("0.00"); }
-                        else setSelIdx(parseInt(v));
+                        if (!v) { selectEthWallet(null); setEthBal("0.000000"); setMoneyBal("0.00"); }
+                        else selectEthWallet(v);
                       }}
                       className={`flex-1 ${selectCls}`}
                     >
                       <option value="">Select a wallet...</option>
-                      {wallets.map((w, i) => (
-                        <option key={i} value={i}>{shorten(w.address)} ({w.type})</option>
+                      {ethWallets.map((w) => (
+                        <option key={w.address} value={w.address}>{shorten(w.address)} ({w.type})</option>
                       ))}
                     </select>
                     <button type="button" onClick={copyAddress} className={btnSmall}>Copy</button>
@@ -542,6 +561,9 @@ export default function WalletsApp() {
                       <input ref={fileRef} type="file" accept=".json" onChange={importWallets} className="hidden" />
                     </label>
                     <button type="button" onClick={exportWallets} className={`flex-1 ${btnSmall}`}>Export</button>
+                    {selected && (
+                      <button type="button" onClick={deleteWallet} className={`flex-1 ${btnSmall} text-red-400/60 hover:text-red-400`}>Delete</button>
+                    )}
                   </div>
                 </div>
 
@@ -585,7 +607,7 @@ export default function WalletsApp() {
                     <h3 className="text-sm font-semibold text-white/80">Send ETH or Tokens</h3>
                     <div>
                       <label className={labelCls}>Transfer Type</label>
-                      <select value={sendType} onChange={(e) => setSendType(e.target.value as any)} className={selectCls}>
+                      <select value={sendType} onChange={(e) => setSendType(e.target.value as "ETH" | "Token")} className={selectCls}>
                         <option value="ETH">Send ETH</option>
                         <option value="Token">Send Token</option>
                       </select>
@@ -606,7 +628,7 @@ export default function WalletsApp() {
                     )}
                     <div>
                       <label className={labelCls}>Gas Price</label>
-                      <select value={gasPriceOpt} onChange={(e) => setGasPriceOpt(e.target.value as any)} className={selectCls}>
+                      <select value={gasPriceOpt} onChange={(e) => setGasPriceOpt(e.target.value as "auto" | "manual")} className={selectCls}>
                         <option value="auto">Auto Estimate</option>
                         <option value="manual">Manual</option>
                       </select>
@@ -627,7 +649,7 @@ export default function WalletsApp() {
                     <h3 className="text-sm font-semibold text-white/80">Swap Tokens</h3>
                     <div>
                       <label className={labelCls}>Direction</label>
-                      <select value={swapDir} onChange={(e) => setSwapDir(e.target.value as any)} className={selectCls}>
+                      <select value={swapDir} onChange={(e) => setSwapDir(e.target.value as "ethToToken" | "tokenToEth")} className={selectCls}>
                         <option value="ethToToken">ETH → Token</option>
                         <option value="tokenToEth">Token → ETH</option>
                       </select>

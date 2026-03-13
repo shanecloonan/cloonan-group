@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
 import { FACTORY_ADDRESS, RPC_URL, factoryAbi, lockerAbi, erc721Abi, erc20Abi } from "./abis";
+import { useWallet } from "@/lib/wallet-context";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -10,13 +11,6 @@ import { FACTORY_ADDRESS, RPC_URL, factoryAbi, lockerAbi, erc721Abi, erc20Abi } 
 
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 const REQUIRED_SHARES = 9960;
-
-interface StoredWallet {
-  address: string;
-  privateKey?: string;
-  type?: string;
-  isMetaMask?: boolean;
-}
 
 interface LogEntry {
   msg: string;
@@ -63,15 +57,6 @@ function shorten(a: string) {
   return `${a.slice(0, 6)}...${a.slice(-4)}`;
 }
 
-function storageGet<T>(key: string, fb: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fb;
-  } catch {
-    return fb;
-  }
-}
-
 /* ================================================================== */
 /*  Design tokens                                                      */
 /* ================================================================== */
@@ -95,9 +80,7 @@ export default function StorefrontApp() {
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC_URL), []);
 
   /* wallet */
-  const [wallets, setWallets] = useState<StoredWallet[]>([]);
-  const [selIdx, setSelIdx] = useState<number | null>(null);
-  const selected = selIdx !== null && wallets[selIdx] ? wallets[selIdx] : null;
+  const { user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask, isLoading } = useWallet();
 
   /* create storefront form */
   const [shareholders, setShareholders] = useState<ShareholderRow[]>([
@@ -131,68 +114,28 @@ export default function StorefrontApp() {
 
   /* ---- getSigner ---- */
   const getSigner = useCallback(() => {
-    if (!selected) return null;
-    if (selected.isMetaMask && typeof window !== "undefined" && (window as any).ethereum) {
+    if (!selectedEthWallet) return null;
+    if (selectedEthWallet.type === "metamask" && typeof window !== "undefined" && (window as any).ethereum) {
       return new ethers.providers.Web3Provider((window as any).ethereum).getSigner();
     }
-    if (selected.privateKey) {
-      return new ethers.Wallet(selected.privateKey, provider);
+    if (selectedEthWallet.privateKey) {
+      return new ethers.Wallet(selectedEthWallet.privateKey, provider);
     }
     return null;
-  }, [selected, provider]);
-
-  /* ---- load wallets ---- */
-  useEffect(() => {
-    const w: StoredWallet[] = storageGet("wallets", []);
-    setWallets(w);
-    const si = parseInt(localStorage.getItem("selectedWalletIndex") ?? "0");
-    if (w.length > 0 && si >= 0 && si < w.length) setSelIdx(si);
-    else if (w.length > 0) setSelIdx(0);
-  }, []);
+  }, [selectedEthWallet, provider]);
 
   /* ---- refresh lockers when wallet changes ---- */
   useEffect(() => {
-    if (selected) refreshLockers();
+    if (selectedEthWallet) refreshLockers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selIdx]);
-
-  /* ---- wallet select ---- */
-  const selectWallet = useCallback((idx: number | null) => {
-    setSelIdx(idx);
-    if (idx !== null) localStorage.setItem("selectedWalletIndex", String(idx));
-  }, []);
-
-  /* ---- connect metamask ---- */
-  const connectMetaMask = useCallback(async () => {
-    if (typeof window === "undefined" || !(window as any).ethereum) {
-      log("Please install MetaMask!", "error");
-      return;
-    }
-    try {
-      const accounts: string[] = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
-      const addr = accounts[0];
-      if (wallets.some((w) => w.address.toLowerCase() === addr.toLowerCase())) {
-        log(`MetaMask already connected: ${shorten(addr)}`, "success");
-        const idx = wallets.findIndex((w) => w.address.toLowerCase() === addr.toLowerCase());
-        setSelIdx(idx);
-        return;
-      }
-      const updated = [...wallets, { address: addr, type: "MetaMask", isMetaMask: true }];
-      setWallets(updated);
-      localStorage.setItem("wallets", JSON.stringify(updated));
-      setSelIdx(updated.length - 1);
-      log(`Connected MetaMask: ${shorten(addr)}`, "success");
-    } catch (e: any) {
-      log(`MetaMask failed: ${e.message}`, "error");
-    }
-  }, [wallets, log]);
+  }, [selectedEthAddress]);
 
   /* ---- total shares ---- */
   const totalShares = shareholders.reduce((s, r) => s + (parseInt(r.shares) || 0), 0);
 
   /* ---- create storefront ---- */
   const handleCreate = useCallback(async () => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     setBusy(true);
     try {
       const payees: string[] = [];
@@ -247,14 +190,14 @@ export default function StorefrontApp() {
       log(`Create failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, shareholders, getSigner, log]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedEthWallet, busy, shareholders, getSigner, log]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---- refresh lockers ---- */
   const refreshLockers = useCallback(async () => {
-    if (!selected) return;
+    if (!selectedEthWallet) return;
     try {
       const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, provider);
-      const addrs: string[] = await factory.getUserLockers(selected.address);
+      const addrs: string[] = await factory.getUserLockers(selectedEthAddress);
       if (addrs.length === 0) { setLockers([]); return; }
       const results: LockerData[] = [];
       for (const addr of addrs) {
@@ -302,11 +245,11 @@ export default function StorefrontApp() {
     } catch (e: any) {
       log(`Failed to load storefronts: ${e.message}`, "error");
     }
-  }, [selected, provider, log]);
+  }, [selectedEthWallet, provider, log]);
 
   /* ---- deposit NFT ---- */
   const handleDeposit = useCallback(async (lockerAddr: string) => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     const form = depositForms[lockerAddr];
     if (!form) return;
     setBusy(true);
@@ -316,7 +259,7 @@ export default function StorefrontApp() {
 
       const signer = getSigner();
       if (!signer) { log("No signer available.", "error"); setBusy(false); return; }
-      const signerAddr = selected.address;
+      const signerAddr = selectedEthAddress!;
 
       const nft = new ethers.Contract(nftContract, erc721Abi, signer);
       const owner = await nft.ownerOf(tokenId);
@@ -350,11 +293,11 @@ export default function StorefrontApp() {
       log(`Deposit failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, depositForms, getSigner, log, refreshLockers]);
+  }, [selectedEthWallet, busy, depositForms, getSigner, log, refreshLockers]);
 
   /* ---- list NFT ---- */
   const handleList = useCallback(async (lockerAddr: string) => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     const form = listForms[lockerAddr];
     if (!form) return;
     setBusy(true);
@@ -407,11 +350,11 @@ export default function StorefrontApp() {
       log(`List failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, listForms, getSigner, log, refreshLockers]);
+  }, [selectedEthWallet, busy, listForms, getSigner, log, refreshLockers]);
 
   /* ---- cancel listing ---- */
   const handleCancel = useCallback(async (lockerAddr: string, listingId: number) => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     setBusy(true);
     try {
       const signer = getSigner();
@@ -426,11 +369,11 @@ export default function StorefrontApp() {
       log(`Cancel failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, getSigner, log, refreshLockers]);
+  }, [selectedEthWallet, busy, getSigner, log, refreshLockers]);
 
   /* ---- buy NFT ---- */
   const handleBuy = useCallback(async (lockerAddr: string, listingId: number) => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     setBusy(true);
     try {
       const locker = new ethers.Contract(lockerAddr, lockerAbi, provider);
@@ -442,7 +385,7 @@ export default function StorefrontApp() {
 
       if (listing.tokenContract !== ZERO_ADDR) {
         const token = new ethers.Contract(listing.tokenContract, erc20Abi, signer);
-        const allowance = await token.allowance(selected.address, lockerAddr);
+        const allowance = await token.allowance(selectedEthAddress, lockerAddr);
         if (allowance.lt(listing.price)) {
           log("Approving token...");
           const appTx = await token.approve(lockerAddr, listing.price);
@@ -463,7 +406,7 @@ export default function StorefrontApp() {
       log(`Buy failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, provider, getSigner, log, refreshLockers]);
+  }, [selectedEthWallet, busy, provider, getSigner, log, refreshLockers]);
 
   /* ---- deposit form helpers ---- */
   const getDepositForm = (addr: string) => depositForms[addr] || { nftContract: "", tokenId: "" };
@@ -496,13 +439,13 @@ export default function StorefrontApp() {
           <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Wallet</span>
           <div className="flex gap-2">
             <select
-              value={selIdx ?? ""}
-              onChange={(e) => selectWallet(e.target.value === "" ? null : parseInt(e.target.value))}
+              value={selectedEthAddress ?? ""}
+              onChange={(e) => selectEthWallet(e.target.value || null)}
               className={`flex-1 ${selectCls}`}
             >
               <option value="">Select a wallet...</option>
-              {wallets.map((w, i) => (
-                <option key={i} value={i}>{w.type ? `${w.type}: ` : ""}{shorten(w.address)}</option>
+              {ethWallets.map((w) => (
+                <option key={w.address} value={w.address}>{w.type ? `${w.type}: ` : ""}{shorten(w.address)}</option>
               ))}
             </select>
             <button type="button" onClick={connectMetaMask} className={btnGhost}>MetaMask</button>
@@ -544,7 +487,7 @@ export default function StorefrontApp() {
             </p>
           </div>
 
-          <button type="button" onClick={handleCreate} disabled={!selected || busy || totalShares !== REQUIRED_SHARES} className={btnPrimary}>
+          <button type="button" onClick={handleCreate} disabled={!selectedEthWallet || busy || totalShares !== REQUIRED_SHARES} className={btnPrimary}>
             Launch Storefront
           </button>
         </div>
@@ -553,17 +496,17 @@ export default function StorefrontApp() {
         <div className={`${card} p-5 space-y-3`}>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white/80">Your Storefronts</h2>
-            <button type="button" onClick={refreshLockers} disabled={!selected} className="text-[11px] text-white/30 hover:text-white/60 transition-colors cursor-pointer">Refresh</button>
+            <button type="button" onClick={refreshLockers} disabled={!selectedEthWallet} className="text-[11px] text-white/30 hover:text-white/60 transition-colors cursor-pointer">Refresh</button>
           </div>
 
-          {!selected ? (
+          {!selectedEthWallet ? (
             <p className="text-xs text-white/25 py-4 text-center">Connect a wallet to view storefronts.</p>
           ) : lockers.length === 0 ? (
             <p className="text-xs text-white/25 py-4 text-center">No storefronts found. Create one to get started.</p>
           ) : (
             <div className="space-y-3">
               {lockers.map((lk) => {
-                const isOwner = lk.owner.toLowerCase() === selected.address.toLowerCase();
+                const isOwner = lk.owner.toLowerCase() === selectedEthAddress!.toLowerCase();
                 const isExpanded = expandedLocker === lk.address;
                 const df = getDepositForm(lk.address);
                 const lf = getListForm(lk.address);

@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
+import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 import { FACTORY_ADDRESS, RPC_URL, factoryAbi, auctionAbi, erc20Abi } from "./abis";
 
 /* ------------------------------------------------------------------ */
@@ -10,11 +12,6 @@ import { FACTORY_ADDRESS, RPC_URL, factoryAbi, auctionAbi, erc20Abi } from "./ab
 
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
-interface StoredWallet {
-  address: string;
-  privateKey: string;
-  type?: string;
-}
 
 interface LogEntry {
   msg: string;
@@ -50,14 +47,6 @@ function shorten(a: string) {
   return `${a.slice(0, 6)}...${a.slice(-4)}`;
 }
 
-function storageGet<T>(key: string, fb: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fb;
-  } catch {
-    return fb;
-  }
-}
 
 async function toTokenWei(amount: string, tokenAddr: string, provider: ethers.providers.Provider): Promise<ethers.BigNumber> {
   if (!amount || parseFloat(amount) <= 0) return ethers.BigNumber.from(0);
@@ -83,9 +72,7 @@ export default function AuctionApp() {
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC_URL), []);
 
   /* wallet */
-  const [wallets, setWallets] = useState<StoredWallet[]>([]);
-  const [selIdx, setSelIdx] = useState<number | null>(null);
-  const selected = selIdx !== null && wallets[selIdx] ? wallets[selIdx] : null;
+  const { user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask, isLoading } = useWallet();
 
   /* deploy form */
   const [showCustomize, setShowCustomize] = useState(false);
@@ -124,14 +111,6 @@ export default function AuctionApp() {
     logRef.current?.scrollTo(0, logRef.current.scrollHeight);
   }, [logs]);
 
-  /* ---- load wallets ---- */
-  useEffect(() => {
-    const w: StoredWallet[] = storageGet("wallets", []);
-    setWallets(w);
-    const si = parseInt(localStorage.getItem("selectedWalletIndex") ?? "0");
-    if (w.length > 0 && si >= 0 && si < w.length) setSelIdx(si);
-    else if (w.length > 0) setSelIdx(0);
-  }, []);
 
   /* ---- refresh auctions on mount ---- */
   useEffect(() => {
@@ -142,30 +121,6 @@ export default function AuctionApp() {
   /* ---- fee total ---- */
   const feeTotal = feeRows.reduce((s, r) => s + (parseInt(r.percent) || 0), 0) + (parseInt(refundPct) || 0);
 
-  /* ---- wallet actions ---- */
-  const selectWallet = useCallback((idx: number | null) => {
-    setSelIdx(idx);
-    if (idx !== null) localStorage.setItem("selectedWalletIndex", String(idx));
-  }, []);
-
-  const addWallet = useCallback(() => {
-    const pk = prompt("Enter your private key (starts with 0x):");
-    if (!pk) return;
-    try {
-      const w = new ethers.Wallet(pk);
-      if (wallets.some((x) => x.address.toLowerCase() === w.address.toLowerCase())) {
-        log("Wallet already exists.", "error");
-        return;
-      }
-      const updated = [...wallets, { address: w.address, privateKey: pk, type: "moneyfund" }];
-      setWallets(updated);
-      localStorage.setItem("wallets", JSON.stringify(updated));
-      setSelIdx(updated.length - 1);
-      log(`Added wallet: ${shorten(w.address)}`, "success");
-    } catch (e: any) {
-      log(`Invalid key: ${e.message}`, "error");
-    }
-  }, [wallets, log]);
 
   /* ---- add fee row ---- */
   const addFeeRow = useCallback(() => {
@@ -174,10 +129,10 @@ export default function AuctionApp() {
 
   /* ---- deploy ---- */
   const handleDeploy = useCallback(async () => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selected.privateKey, provider);
+      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
       const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, signer);
 
       const receivers: string[] = [];
@@ -235,17 +190,17 @@ export default function AuctionApp() {
       log(`Deploy failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, provider, refundPct, feeRows, startingBid, minIncrement, signFee, maxSignerLen, bidToken, adlockDur, log]);
+  }, [selectedEthWallet, busy, provider, refundPct, feeRows, startingBid, minIncrement, signFee, maxSignerLen, bidToken, adlockDur, log]);
 
   /* ---- place bid ---- */
   const handlePlaceBid = useCallback(async () => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     if (!ethers.utils.isAddress(auctionAddr)) { log("Invalid auction address.", "error"); return; }
     if (!bidAmount || parseFloat(bidAmount) <= 0) { log("Invalid bid amount.", "error"); return; }
     if (!adURI || adURI.length > 280) { log("Ad URI required (max 280 chars).", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selected.privateKey, provider);
+      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       const payToken: string = await auction.bidPaymentToken();
       const bidWei = await toTokenWei(bidAmount, payToken, provider);
@@ -258,7 +213,7 @@ export default function AuctionApp() {
         r.status === 1 ? log("Bid placed!", "success") : log("Bid reverted.", "error");
       } else {
         const tok = new ethers.Contract(payToken, erc20Abi, signer);
-        const allowance: ethers.BigNumber = await tok.allowance(selected.address, auctionAddr);
+        const allowance: ethers.BigNumber = await tok.allowance(selectedEthAddress!, auctionAddr);
         if (allowance.lt(bidWei)) {
           log("Approving token...");
           const appTx = await tok.approve(auctionAddr, bidWei);
@@ -276,16 +231,16 @@ export default function AuctionApp() {
       log(`Bid failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, provider, auctionAddr, bidAmount, adURI, log]);
+  }, [selectedEthWallet, selectedEthAddress, busy, provider, auctionAddr, bidAmount, adURI, log]);
 
   /* ---- sign ad ---- */
   const handleSignAd = useCallback(async () => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     if (!ethers.utils.isAddress(auctionAddr)) { log("Invalid auction address.", "error"); return; }
     if (!signerName.trim()) { log("Signer name required.", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selected.privateKey, provider);
+      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       const sfWei: ethers.BigNumber = await auction.signFeeWei();
       const spToken: string = await auction.signPaymentToken();
@@ -297,7 +252,7 @@ export default function AuctionApp() {
         r.status === 1 ? log("Ad signed!", "success") : log("Sign reverted.", "error");
       } else {
         const tok = new ethers.Contract(spToken, erc20Abi, signer);
-        const allowance: ethers.BigNumber = await tok.allowance(selected.address, auctionAddr);
+        const allowance: ethers.BigNumber = await tok.allowance(selectedEthAddress!, auctionAddr);
         if (allowance.lt(sfWei)) {
           log("Approving token...");
           const appTx = await tok.approve(auctionAddr, sfWei);
@@ -313,15 +268,15 @@ export default function AuctionApp() {
       log(`Sign failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, provider, auctionAddr, signerName, log]);
+  }, [selectedEthWallet, selectedEthAddress, busy, provider, auctionAddr, signerName, log]);
 
   /* ---- update sign params ---- */
   const handleUpdateSignParams = useCallback(async () => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     if (!ethers.utils.isAddress(auctionAddr)) { log("Invalid auction address.", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selected.privateKey, provider);
+      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       const spToken: string = await auction.signPaymentToken();
       const feeWei = await toTokenWei(newSignFee, spToken, provider);
@@ -335,17 +290,17 @@ export default function AuctionApp() {
       log(`Update failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, provider, auctionAddr, newSignFee, newMaxLen, log]);
+  }, [selectedEthWallet, busy, provider, auctionAddr, newSignFee, newMaxLen, log]);
 
   /* ---- update sign payment token ---- */
   const handleUpdateSignToken = useCallback(async () => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     if (!ethers.utils.isAddress(auctionAddr)) { log("Invalid auction address.", "error"); return; }
     const tokenVal = newSignToken.trim() === "0x0" ? ZERO_ADDR : newSignToken.trim();
     if (tokenVal !== ZERO_ADDR && !ethers.utils.isAddress(tokenVal)) { log("Invalid token address.", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selected.privateKey, provider);
+      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       log("Updating sign payment token...");
       const tx = await auction.updateSignPaymentToken(tokenVal, { gasLimit: 200000 });
@@ -356,15 +311,15 @@ export default function AuctionApp() {
       log(`Update failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, provider, auctionAddr, newSignToken, log]);
+  }, [selectedEthWallet, busy, provider, auctionAddr, newSignToken, log]);
 
   /* ---- delete all signers ---- */
   const handleDeleteSigners = useCallback(async () => {
-    if (!selected || busy) return;
+    if (!selectedEthWallet || busy) return;
     if (!ethers.utils.isAddress(auctionAddr)) { log("Invalid auction address.", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selected.privateKey, provider);
+      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       log("Deleting all signers...");
       const tx = await auction.deleteAllSigners({ gasLimit: 300000 });
@@ -375,7 +330,7 @@ export default function AuctionApp() {
       log(`Delete failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selected, busy, provider, auctionAddr, log]);
+  }, [selectedEthWallet, busy, provider, auctionAddr, log]);
 
   /* ---- refresh auctions ---- */
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -447,19 +402,16 @@ export default function AuctionApp() {
           <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Wallet</span>
           <div className="flex gap-2">
             <select
-              value={selIdx ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                selectWallet(v === "" ? null : parseInt(v));
-              }}
+              value={selectedEthAddress ?? ""}
+              onChange={(e) => selectEthWallet(e.target.value)}
               className={`flex-1 ${selectCls}`}
             >
               <option value="">Select a wallet...</option>
-              {wallets.map((w, i) => (
-                <option key={i} value={i}>{shorten(w.address)}</option>
+              {ethWallets.map((w) => (
+                <option key={w.address} value={w.address}>{shorten(w.address)}</option>
               ))}
             </select>
-            <button type="button" onClick={addWallet} className={btnGhost}>+ Add</button>
+            <button type="button" onClick={connectMetaMask} className={btnGhost}>MetaMask</button>
           </div>
         </div>
 
@@ -541,7 +493,7 @@ export default function AuctionApp() {
             </div>
           )}
 
-          <button type="button" onClick={handleDeploy} disabled={!selected || busy} className={btnPrimary}>
+          <button type="button" onClick={handleDeploy} disabled={!selectedEthWallet || busy} className={btnPrimary}>
             Deploy Auction
           </button>
         </div>
@@ -568,7 +520,7 @@ export default function AuctionApp() {
                 <input value={adURI} onChange={(e) => setAdURI(e.target.value)} placeholder="https://..." maxLength={280} className={inputCls} />
               </div>
             </div>
-            <button type="button" onClick={handlePlaceBid} disabled={!selected || busy} className={btnPrimary}>
+            <button type="button" onClick={handlePlaceBid} disabled={!selectedEthWallet || busy} className={btnPrimary}>
               Place Bid
             </button>
           </div>
@@ -580,7 +532,7 @@ export default function AuctionApp() {
               <label className={labelCls}>Signer Name</label>
               <input value={signerName} onChange={(e) => setSignerName(e.target.value)} placeholder="Your name" className={inputCls} />
             </div>
-            <button type="button" onClick={handleSignAd} disabled={!selected || busy} className={btnPrimary}>
+            <button type="button" onClick={handleSignAd} disabled={!selectedEthWallet || busy} className={btnPrimary}>
               Sign Ad
             </button>
           </div>
@@ -598,7 +550,7 @@ export default function AuctionApp() {
                 <input type="number" value={newMaxLen} onChange={(e) => setNewMaxLen(e.target.value)} placeholder="32" min="1" className={inputCls} />
               </div>
             </div>
-            <button type="button" onClick={handleUpdateSignParams} disabled={!selected || busy} className={btnPrimary}>
+            <button type="button" onClick={handleUpdateSignParams} disabled={!selectedEthWallet || busy} className={btnPrimary}>
               Update Sign Parameters
             </button>
 
@@ -606,11 +558,11 @@ export default function AuctionApp() {
               <label className={labelCls}>New Sign Payment Token (0x0 for ETH)</label>
               <input value={newSignToken} onChange={(e) => setNewSignToken(e.target.value)} placeholder="0x0 for ETH" className={inputCls} />
             </div>
-            <button type="button" onClick={handleUpdateSignToken} disabled={!selected || busy} className={btnPrimary}>
+            <button type="button" onClick={handleUpdateSignToken} disabled={!selectedEthWallet || busy} className={btnPrimary}>
               Update Sign Payment Token
             </button>
 
-            <button type="button" onClick={handleDeleteSigners} disabled={!selected || busy} className={`${btnPrimary} !from-red-600 !to-red-700`}>
+            <button type="button" onClick={handleDeleteSigners} disabled={!selectedEthWallet || busy} className={`${btnPrimary} !from-red-600 !to-red-700`}>
               Delete All Signers
             </button>
           </div>

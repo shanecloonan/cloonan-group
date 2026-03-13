@@ -33,6 +33,7 @@ const POOL_BRANCHES = [
   { label: "Storefronts", pct: "0.2%", icon: "🛍", layer: "profit" as const },
   { label: "Ad Space", pct: "0.2%", icon: "📰", layer: "profit" as const },
   { label: "Multiswaps", pct: "0.05%", icon: "🔄", layer: "profit" as const },
+  { label: "Airdrops", pct: "0.1%", icon: "🎁", layer: "utility" as const },
 ];
 
 const FEE_DATA = [
@@ -44,6 +45,7 @@ const FEE_DATA = [
   { contract: "Ad Space Launcher", feeType: "0.4% Platform", wallet: "0.2%", dividends: "0.2%", notes: "$1 USD comment fee to highest bidder", layer: "profit" as const },
   { contract: "Multiswap Launcher", feeType: "0.1% Primary", wallet: "0.05%", dividends: "0.05%", notes: "Optional: Up to 3% to custom receivers", layer: "profit" as const },
   { contract: "MoneyFund DEX", feeType: "0.5% Swap", wallet: "0.1%", dividends: "0.1%", notes: "0.3% to liquidity providers", layer: "dex" as const },
+  { contract: "MoneyFund Airdrop", feeType: "0.2% Airdrop", wallet: "0.1%", dividends: "0.1%", notes: "Per batch distribution", layer: "utility" as const },
 ];
 
 const FAQ_ITEMS = [
@@ -56,6 +58,8 @@ const FAQ_ITEMS = [
   { q: "How do Ad Space comments and refunds work?", a: "Users comment by paying a fee (minimum $1 USD equivalent) to the bidder, with 0.4% split equally to MoneyFund Wallet and MONEY Dividends. Bids are refunded (0-100%) when outbid, with non-refunded portions to fee receivers.", layer: "profit" as const },
   { q: "What makes Multiswap unique?", a: "Multiswap supports batch swaps (ETH-to-tokens, token-to-token, multi-token swaps) and batch distributions (tokens/ETH to single/multiple recipients) in one transaction. A 0.1% fee splits equally to MoneyFund Wallet and MONEY Dividends, with optional fees up to 3%.", layer: "profit" as const },
   { q: "How does the MoneyFund DEX differ from Multiswap?", a: "MoneyFund DEX is our own AMM built from scratch with a 0.5% swap fee (0.3% to LP, 0.1% each to MoneyFund Wallet and MONEY Dividends). Multiswap is built on top of Uniswap, allowing unique batch swaps and distributions.", layer: "dex" as const },
+  { q: "How does the Multisig Launcher work?", a: "The Multisig Launcher deploys multi-signature wallets that require M-of-N signers to approve any transaction. Creators specify the signer addresses and the confirmation threshold. Supported operations include ETH transfers, ERC-20 transfers, and arbitrary contract calls. This enables teams, DAOs, or any group to manage shared assets securely without a single point of failure.", layer: "distribution" as const },
+  { q: "How does the MoneyFund Airdrop work?", a: "The Airdrop contract allows batch distribution of ERC-20 tokens to multiple recipients in a single transaction. Users choose between uniform mode (same amount to everyone) or individual mode (custom amounts per recipient). It includes a master contact list, custom lists, leaderboard tracking, and full airdrop history. A 0.2% fee applies per batch, split between MoneyFund Wallet and MONEY Dividends.", layer: "utility" as const },
   { q: "Is MoneyFund open-source?", a: "MoneyFund's smart contracts will be open-sourced once the platform reaches a $1 million market cap, releasing all 62,000 lines of code for public audit. Until then, all contract actions are transparent on-chain via public functions and event logs.", layer: undefined },
   { q: "Is MoneyFund secure?", a: "Yes, MoneyFund uses non-custodial wallets where users retain full control of their private keys. Contracts use ReentrancyGuard and follow best practices for secure execution.", layer: undefined },
   { q: "Who created MoneyFund?", a: "My name is Shane — I'm the owner & only employee.", layer: undefined },
@@ -66,10 +70,12 @@ const CONTRACT_SECTIONS = [
   { title: "ETF Launcher", layer: "asset" as const, creator: "Build an ETF fund by selecting ERC-20 tokens and setting their percentage allocations (summing to 100%). Choose a name, ticker, and optional transaction fee. The fund uses Uniswap V2 for swaps and Chainlink for ETH/USD pricing. 0.35% transaction fee with 0.125% each to MoneyFund Wallet and MONEY Dividends, 0.1% to burn MONEY tokens.", user: "Deposit ETH to mint ETF shares, burn shares to get ETH back, or withdraw underlying tokens. Check fund details, token balances, share prices, and performance metrics." },
   { title: "Dividend Launcher", layer: "distribution" as const, creator: "Set up a staking pool for an ERC-20 token, defining lock duration, initial penalty for early withdrawal, and daily penalty reduction (up to 365 days). Each stake issues a unique NFT (ERC-721) for tracking. A 0.5% fee applies to staking, unstaking, and reward claims.", user: "Deposit tokens to stake and receive a unique NFT. Claim dividends in ETH or ERC-20 tokens based on your share of the pool. Unstake tokens after the lock period, or earlier with a penalty." },
   { title: "DAO Launcher", layer: "distribution" as const, creator: "Launch a DAO with an ERC-20 token for voting, setting voting period, mode (Rape or Standard), locked token percentage, approval threshold, daily proposal limit, and slippage for swaps. 0.5% fee on executed swaps splits equally between MoneyFund Wallet and MONEY Dividends.", user: "Propose token swaps (ETH-to-ERC20 or ERC20-to-ETH), vote on proposals with locked tokens, reclaim tokens after voting, and execute approved proposals." },
+  { title: "Multisig Launcher", layer: "distribution" as const, creator: "Deploy a multi-signature wallet by specifying required signers and confirmation threshold (M-of-N). Choose which addresses can propose, confirm, and execute transactions. Supports ETH transfers, ERC-20 token transfers, and arbitrary contract calls — all requiring the configured number of approvals before execution.", user: "Submit transactions for group approval, confirm or revoke pending transactions, and execute once the required threshold is met. View pending and executed transaction history, check signer status, and manage shared treasury assets securely without any single point of failure." },
   { title: "Storefront Launcher", layer: "profit" as const, creator: "Create an NFT marketplace by setting shareholder wallets and profit shares (up to 99.6%). Deposit and list ERC-721 NFTs with price in ETH or ERC-20 tokens, with timelock for listings. 0.4% sale fee splits equally between MoneyFund Wallet and MONEY Dividends.", user: "Buy NFTs from the marketplace using ETH or ERC-20 tokens. Check listing details, sales statistics, and profit distributions." },
   { title: "Ad Space Launcher", layer: "profit" as const, creator: "Launch a continuous ad auction by setting refund percentage (0-100%), fee receivers, starting bid, minimum bid increment, ad lock duration, comment fee, and payment token. 0.4% bid fee splits equally between MoneyFund Wallet and MONEY Dividends.", user: "Bid on ad space with ETH or ERC-20 tokens. If highest bidder, adjust comment fees, message length, or payment token. Comment on ads by paying a fee (minimum $1 USD)." },
   { title: "Multiswap Launcher", layer: "profit" as const, creator: "Build a trading platform for swapping and distributing tokens/ETH, with optional fees up to 3%. 0.1% platform fee splits equally between MoneyFund Wallet and MONEY Dividends. Embed as a widget on any website.", user: "Swap ETH for tokens, tokens for ETH/tokens, including batch swaps. Distribute tokens/ETH to one or multiple recipients in a single transaction." },
-  { title: "MoneyFund DEX", layer: "dex" as const, creator: "", user: "An automated market maker (AMM) for swapping ETH and ERC-20 tokens. Users add or remove liquidity to earn 0.3% swap fees. 0.5% swap fee with 0.3% to LPs, 0.1% each to MoneyFund Wallet and MONEY Dividends." },
+  { title: "MoneyFund DEX", layer: "dex" as const, creator: "", user: "A custom-built automated market maker (AMM) for swapping ETH and ERC-20 tokens. Unlike Multiswap (which routes through Uniswap), the DEX maintains its own liquidity pools and constant-product pricing. Users add or remove liquidity to earn 0.3% swap fees. Total 0.5% swap fee: 0.3% to LPs, 0.1% each to MoneyFund Wallet and MONEY Dividends." },
+  { title: "MoneyFund Airdrop", layer: "utility" as const, creator: "", user: "A batch token distribution tool for sending ERC-20 tokens to multiple recipients in a single transaction. Supports uniform amounts (same amount to everyone) and individual amounts (custom per-recipient). Includes a master contact list, custom lists, leaderboard tracking, and airdrop history. A 0.2% fee applies to each airdrop." },
 ];
 
 /* ================================================================== */
@@ -108,6 +114,7 @@ function layerBg(l?: string) {
   if (l === "distribution") return "bg-gradient-to-br from-[#8B3A2B] to-[#A65343]";
   if (l === "profit") return "bg-gradient-to-br from-[#3F2A6D] to-[#4B367E]";
   if (l === "dex") return "bg-gradient-to-br from-[#3A3A3A] to-[#4A4A4A]";
+  if (l === "utility") return "bg-gradient-to-br from-[#2A3A5C] to-[#354A6E]";
   return "bg-white/[0.04]";
 }
 
@@ -116,6 +123,7 @@ function layerDot(l?: string) {
   if (l === "distribution") return "bg-orange-400";
   if (l === "profit") return "bg-purple-400";
   if (l === "dex") return "bg-gray-400";
+  if (l === "utility") return "bg-sky-400";
   return "bg-white/30";
 }
 
@@ -141,7 +149,7 @@ function UDiagram({ label, boxes, desc, pathEnd, descSize }: {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-[320px]">
+    <div className="flex flex-col items-center w-full max-w-[320px] mx-auto">
       <p className="text-base font-bold text-white mb-2 text-center">{label}</p>
       <div className={`${card} p-4 w-full`}>
         <svg viewBox="0 0 320 260" className="w-full h-auto" aria-label={`${label} U Diagram`}>
@@ -186,8 +194,8 @@ function UDiagram({ label, boxes, desc, pathEnd, descSize }: {
 /*  ANIMATED COIN COMPONENT for Dividend Pool                          */
 /* ================================================================== */
 
-function AnimatedCoins({ branchIndex }: { branchIndex: number }) {
-  const angle = (branchIndex * Math.PI * 2) / 8;
+function AnimatedCoins({ branchIndex, total }: { branchIndex: number; total: number }) {
+  const angle = (branchIndex * Math.PI * 2) / total;
   const r = 220;
   const sx = 300 + r * Math.cos(angle);
   const sy = 300 + r * Math.sin(angle);
@@ -288,10 +296,10 @@ export default function AboutApp() {
     feeChartInst.current = new Chart(feeChartRef.current, {
       type: "bar",
       data: {
-        labels: ["Coin", "ETF", "Dividend", "DAO", "Storefront", "Ad Space", "Multiswap", "DEX"],
+        labels: ["Coin", "ETF", "Dividend", "DAO", "Storefront", "Ad Space", "Multiswap", "DEX", "Airdrop"],
         datasets: [
-          { label: "MoneyFund Wallet (%)", data: [0.1, 0.125, 0.5, 0.25, 0.2, 0.2, 0.05, 0.1], backgroundColor: "rgba(0,139,139,0.8)", borderColor: "#008B8B", borderWidth: 1 },
-          { label: "MONEY Dividends (%)", data: [0.1, 0.125, 0, 0.25, 0.2, 0.2, 0.05, 0.1], backgroundColor: "rgba(199,21,133,0.8)", borderColor: "#C71585", borderWidth: 1 },
+          { label: "MoneyFund Wallet (%)", data: [0.1, 0.125, 0.5, 0.25, 0.2, 0.2, 0.05, 0.1, 0.1], backgroundColor: "rgba(0,139,139,0.8)", borderColor: "#008B8B", borderWidth: 1 },
+          { label: "MONEY Dividends (%)", data: [0.1, 0.125, 0, 0.25, 0.2, 0.2, 0.05, 0.1, 0.1], backgroundColor: "rgba(199,21,133,0.8)", borderColor: "#C71585", borderWidth: 1 },
         ],
       },
       options: {
@@ -407,7 +415,7 @@ export default function AboutApp() {
 
           <div className={`${card} p-6 sm:p-8`}>
             <p className="text-[13px] text-white/60 leading-relaxed">
-              The MoneyFund protocol consists of seven interconnected factory smart contracts that are divided into three categories and collectively referred to as the tri-layer launchpad. Smart contracts are digital agreements that run on the blockchain and automatically execute when conditions are met. A factory smart contract is like a vending machine for vending machines — a contract that creates contracts. The tri-layer launchpad enables anyone to codelessly deploy custom smart contracts by filling out simple forms.
+              The MoneyFund protocol consists of eight interconnected factory smart contracts that are divided into three categories and collectively referred to as the tri-layer launchpad. Smart contracts are digital agreements that run on the blockchain and automatically execute when conditions are met. A factory smart contract is like a vending machine for vending machines — a contract that creates contracts. The tri-layer launchpad enables anyone to codelessly deploy custom smart contracts by filling out simple forms. In addition to the eight factories, the protocol includes standalone utility contracts such as the MoneyFund DEX (a custom AMM), an Airdrop tool for batch token distributions, and a dedicated MONEY Dividends staking contract — all of which feed into the unified fee ecosystem.
             </p>
           </div>
 
@@ -424,7 +432,7 @@ export default function AboutApp() {
         {/* ═══════════ U-DIAGRAMS ═══════════ */}
         <section id="diagrams" className="space-y-8 scroll-mt-28">
           <SectionHeading sub="How MoneyFund compares to equities and shitcoins">Value Flow Diagrams</SectionHeading>
-          <div className="flex flex-col lg:flex-row items-start justify-center gap-8 lg:gap-6">
+          <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-6">
             <UDiagram label="Equities" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Shares", layer: "profit" }, right: { label: "Dividends", layer: "distribution" } }} desc="Unlike crypto, equities rely on fundamentals more than speculative degeneracy. While that tends to be positive, existing systems & structures are perhaps equally flawed in their own ways. Equity is made up out of thin air and thus carries ever-present risks like dilution and centralized control. There are basically two types: private equity + stocks. Private equity often requires you to be an accredited investor which is basically a rich person. This means poor people cant buy companies until they get listed on a public ponzi at massively inflated valuations. It's also difficult to fund many risky business endeavors with traditional systems because they're gatekept by boomers and regulators. For instance an IPO costs about 25 million dollars. The stock market has a number of familiar flaws like restricted trading hours. Due to the aforementioned inferiorities both of these analog asset types will be replaced by ERC-20 tokens. Summary of downsides: high friction, mutable supply, mutable dividends." />
             <UDiagram label="Shitcoins" boxes={{ left: { label: "Tokens", layer: "profit" }, bottom: { label: "Nothing", layer: "none" }, right: { label: "Nothing", layer: "none" } }} desc="This diagram represents 99% of cryptocurrencies & the larger problem MoneyFund seeks to solve. These are pointless nonsense coins which is only sustainable for top-quality memes. Certain cartoons are great for short-term gambling but the space has become predictably oversaturated with fagcoins that are resented by normal people. The main barrier to shitcoin adoption is their vapid uselessness. Besides coordinated wealth transfers, shitcoins are purposeless and thus automatically dismissed from the conversations of productive society. Despite significant shortcomings, tokens still outshine equities in many key ways. ERC-20 tokens operate on a decentralized network that ensures trustless & permissionless transacting 24/7 globally. The Ethereum blockchain is the oldest + largest smart contract platform in the world. This network effect, as well as the inherent composability of ERC-20 tokens, has allowed them to gain widespread adoption as the global standard for tokenized assets like stablecoins. Summary of downsides: people are tired of gay nonsense." />
             <UDiagram label="MoneyFunds" pathEnd="275" descSize="text-[7px]" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Dividends", layer: "distribution" }, right: { label: "Tokens", layer: "profit" } }} desc="MoneyFund combines the sustainability of traditional business with the transparency + decentralization of the Ethereum blockchain. No more expensive IPOs, no more scam ICOs- the future is IMOs. Initial Money Offerings are the gold standard for tokenized asset deployment and all coins launched elsewhere should be dismissed & discredited. MFTL tokens allow for unlimited customization within secure parameters. This constrained flexibility allows MoneyFund infrastructure to facilitate the creation + management of uniquely productive assets. In addition to the benefits of being built on the largest defi network in the world, MF offers additional advantages over traditional equities- the largest two being transparency and immutability. For instance walmart can delist or change prices at any time whereas the storefronts produced by our factory include a listing timelock mechanism to enhance operational transparency. This is beneficial to users who are considering investing in some MFTL token thats connected to an NFT storefront for example. Users can view the store's inventory and timelocks to know the minimum duration that items will be locked in the storefront + listed at their current price for. This allows auditors to know how long the MFTL token will be backed by listings. Similarly, dividend immutability is a significant upgrade to the offchain tradfi model. Once a dividend pool is deployed nobody can make changes. Same thing for tokens- once a coin is launched the company it represents cannot dilute shareholders unless something like a mintable function is explicitly written in the contract. Summary of downsides: none." />
@@ -444,19 +452,19 @@ export default function AboutApp() {
                   <filter id="coinGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                 </defs>
                 {POOL_BRANCHES.map((_, i) => {
-                  const angle = (i * Math.PI * 2) / 8;
+                  const angle = (i * Math.PI * 2) / POOL_BRANCHES.length;
                   const r = 220;
                   const ex = 300 + r * Math.cos(angle);
                   const ey = 300 + r * Math.sin(angle);
                   const strokeColor = i % 3 === 0 ? "rgba(52,211,153,0.12)" : i % 3 === 1 ? "rgba(251,146,60,0.12)" : "rgba(167,139,250,0.12)";
                   return <line key={`line-${i}`} x1="300" y1="300" x2={ex} y2={ey} stroke={strokeColor} strokeWidth="10" />;
                 })}
-                {POOL_BRANCHES.map((_, i) => <AnimatedCoins key={`coins-${i}`} branchIndex={i} />)}
+                {POOL_BRANCHES.map((_, i) => <AnimatedCoins key={`coins-${i}`} branchIndex={i} total={POOL_BRANCHES.length} />)}
               </svg>
 
               {/* Branch orbs */}
               {POOL_BRANCHES.map((b, i) => {
-                const angle = (i * Math.PI * 2) / 8;
+                const angle = (i * Math.PI * 2) / POOL_BRANCHES.length;
                 const r = 220;
                 const x = 320 + r * Math.cos(angle) - 48;
                 const y = 320 + r * Math.sin(angle) - 48;
@@ -510,7 +518,7 @@ export default function AboutApp() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {([
               { key: "asset" as const, title: "Asset Layer", desc: "The Asset Layer enables creation of ERC-20 tokens and ETFs. Fed by distribution contracts, this is the destination for value in MF's trilayer model." },
-              { key: "distribution" as const, title: "Distribution Layer", desc: "The Distribution Layer manages token allocations through custom staking pools and DAOs, serving as the vehicle that connects assets to profit layer contracts." },
+              { key: "distribution" as const, title: "Distribution Layer", desc: "The Distribution Layer manages token allocations and governance through custom staking pools, DAOs, and multisig wallets, serving as the vehicle that connects assets to profit layer contracts." },
               { key: "profit" as const, title: "Profit Layer", desc: "The Profit Layer generates external cashflow via contracts like Multiswap, Storefront, and Auction factories — giving tokens sustainable life through on-chain business." },
             ]).map((l) => (
               <div key={l.key} className={`${layerBg(l.key)} rounded-2xl p-5 border border-white/[0.06] hover:border-white/[0.12] transition-all`}>
@@ -669,7 +677,7 @@ export default function AboutApp() {
               <button type="button" onClick={() => { setOpType(""); setFuncType(""); setGasResult(null); setNumTokens(2); setNumRecipients(2); }} className="h-11 px-6 rounded-xl font-semibold text-sm border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">Reset</button>
             </div>
             {gasResult && (
-              <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 text-center">
                   <p className="text-[10px] text-white/30 uppercase tracking-wider">Bundled</p>
                   <p className="text-sm font-bold text-white/80 mt-1">{gasResult.bundled.toLocaleString()}</p>

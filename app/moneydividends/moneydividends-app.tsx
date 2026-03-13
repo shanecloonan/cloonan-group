@@ -3,17 +3,11 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESS, MONEY_ADDRESS, RPC_URL, dividendsAbi, erc20Abi } from "./abis";
+import { useWallet } from "@/lib/wallet-context";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-
-interface StoredWallet {
-  address: string;
-  privateKey?: string;
-  type?: string;
-  isMetaMask?: boolean;
-}
 
 interface LogEntry {
   msg: string;
@@ -60,13 +54,6 @@ function shorten(a: string) {
   return `${a.slice(0, 6)}...${a.slice(-4)}`;
 }
 
-function storageGet<T>(key: string, fb: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fb;
-  } catch { return fb; }
-}
-
 function now() {
   return new Date().toLocaleTimeString();
 }
@@ -91,9 +78,7 @@ export default function MoneyDividendsApp() {
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC_URL), []);
 
   /* wallet */
-  const [wallets, setWallets] = useState<StoredWallet[]>([]);
-  const [selIdx, setSelIdx] = useState<number | null>(null);
-  const selected = selIdx !== null && wallets[selIdx] ? wallets[selIdx] : null;
+  const { user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask, isLoading } = useWallet();
 
   /* form */
   const [stakeAmount, setStakeAmount] = useState("");
@@ -115,66 +100,24 @@ export default function MoneyDividendsApp() {
     setLogs((p) => [{ msg, type, ts: now() }, ...p].slice(0, 50));
   }, []);
 
-  /* ---- load wallets ---- */
-  useEffect(() => {
-    const stored: StoredWallet[] = storageGet("wallets", []);
-    setWallets(stored);
-    const savedIdx = parseInt(localStorage.getItem("selectedWalletIndex") || "0");
-    if (stored.length > 0 && savedIdx >= 0 && savedIdx < stored.length) {
-      setSelIdx(savedIdx);
-    }
-  }, []);
-
-  const selectWallet = useCallback((idx: number) => {
-    setSelIdx(idx);
-    localStorage.setItem("selectedWalletIndex", String(idx));
-  }, []);
-
-  /* ---- connect MetaMask ---- */
-  const connectMetaMask = useCallback(async () => {
-    const w = window as unknown as { ethereum?: { request: (a: { method: string }) => Promise<string[]> } };
-    if (!w.ethereum) { addLog("Please install MetaMask!", "error"); return; }
-    try {
-      const p = new ethers.providers.Web3Provider(w.ethereum as unknown as ethers.providers.ExternalProvider);
-      await w.ethereum.request({ method: "eth_requestAccounts" });
-      const net = await p.getNetwork();
-      if (net.chainId !== 1) throw new Error("Switch to Ethereum Mainnet");
-      const s = p.getSigner();
-      const addr = await s.getAddress();
-      const mmWallet: StoredWallet = { address: addr, type: "MetaMask", isMetaMask: true };
-      setWallets((prev) => {
-        const exists = prev.some((wl) => wl.address.toLowerCase() === addr.toLowerCase());
-        const next = exists ? prev : [...prev, mmWallet];
-        localStorage.setItem("wallets", JSON.stringify(next));
-        const newIdx = exists ? prev.findIndex((wl) => wl.address.toLowerCase() === addr.toLowerCase()) : next.length - 1;
-        setSelIdx(newIdx);
-        localStorage.setItem("selectedWalletIndex", String(newIdx));
-        return next;
-      });
-      addLog(`MetaMask connected: ${shorten(addr)}`, "success");
-    } catch (e: unknown) {
-      addLog(`MetaMask error: ${(e as Error).message}`, "error");
-    }
-  }, [addLog]);
-
   /* ---- get signer ---- */
   const getSigner = useCallback(async () => {
-    if (!selected) throw new Error("No wallet selected");
-    if (selected.isMetaMask) {
+    if (!selectedEthWallet) throw new Error("No wallet selected");
+    if (selectedEthWallet.type === "metamask") {
       const w = window as unknown as { ethereum: ethers.providers.ExternalProvider };
       return new ethers.providers.Web3Provider(w.ethereum).getSigner();
     }
-    if (!selected.privateKey) throw new Error("Wallet has no private key");
-    return new ethers.Wallet(selected.privateKey, provider);
-  }, [selected, provider]);
+    if (!selectedEthWallet.privateKey) throw new Error("Wallet has no private key");
+    return new ethers.Wallet(selectedEthWallet.privateKey, provider);
+  }, [selectedEthWallet, provider]);
 
   /* ---- fetch info ---- */
   const fetchInfo = useCallback(async () => {
-    if (!selected) return;
+    if (!selectedEthWallet) return;
     try {
       const readContract = new ethers.Contract(CONTRACT_ADDRESS, dividendsAbi, provider);
       const moneyToken = new ethers.Contract(MONEY_ADDRESS, erc20Abi, provider);
-      const addr = selected.address;
+      const addr = selectedEthWallet.address;
 
       const [stake, bal, total, ethBal, token, factory, creator, owner, feePct, feeDen, feeRec, lockDur, initPen, penDecay, minStk] = await Promise.all([
         readContract.stakes(addr),
@@ -238,7 +181,7 @@ export default function MoneyDividendsApp() {
     } catch (e: unknown) {
       addLog(`Failed to fetch info: ${(e as Error).message}`, "error");
     }
-  }, [selected, provider, addLog]);
+  }, [selectedEthWallet, provider, addLog]);
 
   useEffect(() => { fetchInfo(); }, [fetchInfo]);
 
@@ -252,7 +195,7 @@ export default function MoneyDividendsApp() {
       const moneyToken = new ethers.Contract(MONEY_ADDRESS, erc20Abi, signer);
 
       addLog("Checking allowance...", "pending");
-      const allowance = await moneyToken.allowance(selected!.address, CONTRACT_ADDRESS);
+      const allowance = await moneyToken.allowance(selectedEthWallet!.address, CONTRACT_ADDRESS);
       if (allowance.lt(amountWei)) {
         addLog("Approving MONEY tokens...", "pending");
         const approveTx = await moneyToken.approve(CONTRACT_ADDRESS, amountWei.mul(110).div(100));
@@ -270,7 +213,7 @@ export default function MoneyDividendsApp() {
     } catch (e: unknown) {
       addLog(`Stake failed: ${(e as Error).message}`, "error");
     } finally { setBusy(false); }
-  }, [stakeAmount, getSigner, selected, fetchInfo, addLog]);
+  }, [stakeAmount, getSigner, selectedEthWallet, fetchInfo, addLog]);
 
   /* ---- unstake ---- */
   const handleUnstake = useCallback(async () => {
@@ -358,15 +301,15 @@ export default function MoneyDividendsApp() {
         <div className={`${card} p-5 space-y-3`}>
           <p className={labelCls}>Wallet</p>
           <div className="flex gap-3">
-            <select value={selIdx ?? ""} onChange={(e) => selectWallet(parseInt(e.target.value))} className={`${selectCls} flex-1`}>
+            <select value={selectedEthAddress ?? ""} onChange={(e) => selectEthWallet(e.target.value || null)} className={`${selectCls} flex-1`}>
               <option value="">-- Select Wallet --</option>
-              {wallets.map((w, i) => (
-                <option key={i} value={i}>{w.type}: {shorten(w.address)}</option>
+              {ethWallets.map((w) => (
+                <option key={w.address} value={w.address}>{w.type}: {shorten(w.address)}</option>
               ))}
             </select>
             <button type="button" onClick={connectMetaMask} className={btnGhost}>MetaMask</button>
           </div>
-          {selected && <p className="text-xs text-white/30 font-mono text-center">{selected.address}</p>}
+          {selectedEthWallet && <p className="text-xs text-white/30 font-mono text-center">{selectedEthWallet.address}</p>}
         </div>
 
         {/* ═══ Staking Actions ═══ */}
@@ -382,9 +325,9 @@ export default function MoneyDividendsApp() {
             className={inputCls}
           />
           <div className="flex gap-3 flex-wrap justify-center">
-            <button type="button" onClick={handleStake} disabled={busy || !selected} className={btnPrimary}>Stake</button>
-            <button type="button" onClick={handleUnstake} disabled={busy || !selected} className={btnPrimary}>Unstake</button>
-            <button type="button" onClick={handleClaim} disabled={busy || !selected} className={btnGold}>Claim Dividends</button>
+            <button type="button" onClick={handleStake} disabled={busy || !selectedEthWallet} className={btnPrimary}>Stake</button>
+            <button type="button" onClick={handleUnstake} disabled={busy || !selectedEthWallet} className={btnPrimary}>Unstake</button>
+            <button type="button" onClick={handleClaim} disabled={busy || !selectedEthWallet} className={btnGold}>Claim Dividends</button>
           </div>
         </div>
 
@@ -404,7 +347,7 @@ export default function MoneyDividendsApp() {
           </div>
 
           <div className="p-5 space-y-3">
-            {!selected ? (
+            {!selectedEthWallet ? (
               <p className="text-xs text-white/20 text-center py-4">Connect wallet to see information</p>
             ) : infoTab === "user" ? (
               <>
@@ -469,8 +412,8 @@ export default function MoneyDividendsApp() {
             className={inputCls}
           />
           <div className="flex gap-3 justify-center">
-            <button type="button" onClick={handleRegister} disabled={busy || !selected} className={btnPrimary}>Register</button>
-            <button type="button" onClick={handleUnregister} disabled={busy || !selected} className={`${btnPrimary} !from-red-600 !to-red-500`}>Unregister</button>
+            <button type="button" onClick={handleRegister} disabled={busy || !selectedEthWallet} className={btnPrimary}>Register</button>
+            <button type="button" onClick={handleUnregister} disabled={busy || !selectedEthWallet} className={`${btnPrimary} !from-red-600 !to-red-500`}>Unregister</button>
           </div>
         </div>
 

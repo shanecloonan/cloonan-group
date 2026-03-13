@@ -9,6 +9,8 @@ import {
   poolAbi,
   erc20Abi,
 } from "./abis";
+import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 
 declare global {
   interface Window {
@@ -49,13 +51,6 @@ interface LogEntry {
   error?: boolean;
 }
 
-interface StoredWallet {
-  address: string;
-  type: "MetaMask" | "MoneyFund";
-  isMetaMask: boolean;
-  privateKey?: string;
-}
-
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -80,10 +75,8 @@ const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
 /* ------------------------------------------------------------------ */
 
 export default function DividendsApp() {
-  /* wallet state */
-  const [account, setAccount] = useState<string | null>(null);
-  const [wallets, setWallets] = useState<StoredWallet[]>([]);
-  const [selectedWalletIdx, setSelectedWalletIdx] = useState<number | null>(null);
+  /* wallet context */
+  const { user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask, isLoading } = useWallet();
   const signerRef = useRef<ethers.Signer | null>(null);
 
   /* pool state */
@@ -163,109 +156,43 @@ export default function DividendsApp() {
     [],
   );
 
-  /* ---- selected wallet ---- */
-  const selectedWallet = useMemo(
-    () =>
-      selectedWalletIdx !== null && wallets[selectedWalletIdx]
-        ? wallets[selectedWalletIdx]
-        : null,
-    [wallets, selectedWalletIdx],
-  );
-
-  /* ================================================================ */
-  /*  Wallet management                                                */
-  /* ================================================================ */
-
-  const connectWallet = useCallback(async () => {
-    if (!window.ethereum) {
-      log("Please install MetaMask to use this feature.", true);
-      return;
-    }
-    log("Connecting MetaMask...");
-    try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-      const net = await provider.getNetwork();
-      if (net.chainId !== 1) throw new Error("Switch to Ethereum Mainnet (chainId: 1)");
-      const signer = provider.getSigner();
-      const addr = await signer.getAddress();
-      signerRef.current = signer;
-      setAccount(addr);
-      log(`Wallet connected: ${shorten(addr)}`);
-
-      setWallets((prev) => {
-        const filtered = prev.filter(
-          (w) => !(w.type === "MetaMask" && w.address.toLowerCase() !== addr.toLowerCase()),
-        );
-        if (!filtered.some((w) => w.address.toLowerCase() === addr.toLowerCase() && w.type === "MetaMask")) {
-          return [...filtered, { address: addr, type: "MetaMask", isMetaMask: true }];
-        }
-        return filtered;
-      });
-    } catch (e: any) {
-      log(`Connection failed: ${e.message}`, true);
-    }
-  }, [log]);
-
-  const selectWallet = useCallback(
-    async (idx: number) => {
-      if (idx < 0 || idx >= wallets.length) {
-        setSelectedWalletIdx(null);
-        setAccount(null);
+  /* ---- signer setup ---- */
+  useEffect(() => {
+    async function setupSigner() {
+      if (!selectedEthWallet) {
         signerRef.current = null;
-        localStorage.removeItem("selectedWalletIndex");
         return;
       }
-      const w = wallets[idx];
-      setSelectedWalletIdx(idx);
-      localStorage.setItem("selectedWalletIndex", String(idx));
-      setAccount(w.address);
-      log(`Selected wallet: ${shorten(w.address)} (${w.type})`);
-
-      if (w.isMetaMask && window.ethereum) {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" });
-        if (!accounts?.length || accounts[0].toLowerCase() !== w.address.toLowerCase()) {
-          await connectWallet();
-        } else {
+      if (selectedEthWallet.type === "metamask" && window.ethereum) {
+        try {
           const provider = new ethers.providers.Web3Provider(window.ethereum);
-          signerRef.current = provider.getSigner();
+          const accounts: string[] = await window.ethereum.request({ method: "eth_accounts" });
+          if (accounts?.length && accounts[0].toLowerCase() === selectedEthWallet.address.toLowerCase()) {
+            signerRef.current = provider.getSigner();
+          } else {
+            signerRef.current = null;
+          }
+        } catch {
+          signerRef.current = null;
         }
+      } else if (selectedEthWallet.privateKey) {
+        signerRef.current = new ethers.Wallet(selectedEthWallet.privateKey, readProvider);
       } else {
         signerRef.current = null;
       }
-    },
-    [wallets, connectWallet, log],
-  );
-
-  /* persist wallets */
-  useEffect(() => {
-    if (wallets.length > 0) {
-      localStorage.setItem("wallets", JSON.stringify(wallets));
     }
-  }, [wallets]);
-
-  /* initialize wallets on mount */
-  useEffect(() => {
-    const stored: StoredWallet[] = JSON.parse(localStorage.getItem("wallets") || "[]");
-    if (stored.length > 0) setWallets(stored);
-    const idx = parseInt(localStorage.getItem("selectedWalletIndex") || "");
-    if (!isNaN(idx) && idx >= 0 && idx < stored.length) {
-      setSelectedWalletIdx(idx);
-      setAccount(stored[idx].address);
-    }
-  }, []);
+    setupSigner();
+  }, [selectedEthWallet, readProvider]);
 
   /* listen for MetaMask events */
   useEffect(() => {
     if (!window.ethereum) return;
     const onAccountsChanged = (accounts: string[]) => {
       if (accounts.length === 0) {
-        setAccount(null);
         signerRef.current = null;
-        setSelectedWalletIdx(null);
         log("MetaMask disconnected.", true);
-      } else if (selectedWallet?.isMetaMask && accounts[0].toLowerCase() !== account?.toLowerCase()) {
-        setAccount(accounts[0]);
+      } else if (selectedEthWallet?.type === "metamask" && accounts[0].toLowerCase() !== selectedEthAddress?.toLowerCase()) {
+        signerRef.current = null;
         log(`MetaMask account changed to ${shorten(accounts[0])}`);
       }
     };
@@ -273,9 +200,7 @@ export default function DividendsApp() {
       const id = parseInt(chainId, 16);
       if (id !== 1) {
         log(`Wrong network (chainId: ${id}). Switch to Ethereum Mainnet.`, true);
-        setAccount(null);
         signerRef.current = null;
-        setSelectedWalletIdx(null);
       }
     };
     window.ethereum.on("accountsChanged", onAccountsChanged);
@@ -284,7 +209,7 @@ export default function DividendsApp() {
       window.ethereum?.removeListener("accountsChanged", onAccountsChanged);
       window.ethereum?.removeListener("chainChanged", onChainChanged);
     };
-  }, [account, selectedWallet, log]);
+  }, [selectedEthAddress, selectedEthWallet, log]);
 
   /* ================================================================ */
   /*  Fetch reward tokens for a pool                                   */
@@ -358,11 +283,11 @@ export default function DividendsApp() {
 
           const userTokenIds: { id: string; amount: string }[] = [];
           let userStake = 0;
-          if (account) {
+          if (selectedEthAddress) {
             try {
-              const bal = await pool.balanceOf(account);
+              const bal = await pool.balanceOf(selectedEthAddress);
               for (let i = 0; i < Number(bal); i++) {
-                const tid = await pool.tokenOfOwnerByIndex(account, i);
+                const tid = await pool.tokenOfOwnerByIndex(selectedEthAddress, i);
                 const info = await pool.stakesByTokenId(tid);
                 if (info.amount.gt(0)) {
                   const amt = ethers.utils.formatUnits(info.amount, decimals);
@@ -400,7 +325,7 @@ export default function DividendsApp() {
     } finally {
       setLoading(false);
     }
-  }, [account, readProvider, log, fetchRewardTokens]);
+  }, [selectedEthAddress, readProvider, log, fetchRewardTokens]);
 
   useEffect(() => {
     refreshPools();
@@ -411,7 +336,7 @@ export default function DividendsApp() {
   /* ================================================================ */
 
   const createPool = useCallback(async () => {
-    if (!signerRef.current || !account) {
+    if (!signerRef.current || !selectedEthAddress) {
       log("Connect and select a wallet first.", true);
       return;
     }
@@ -474,7 +399,7 @@ export default function DividendsApp() {
     } finally {
       setLaunching(false);
     }
-  }, [tokenAddr, hardLock, initPenalty, decayPct, account, log, refreshPools]);
+  }, [tokenAddr, hardLock, initPenalty, decayPct, selectedEthAddress, log, refreshPools]);
 
   /* ================================================================ */
   /*  Stake                                                            */
@@ -482,7 +407,7 @@ export default function DividendsApp() {
 
   const doStake = useCallback(
     async (poolAddr: string) => {
-      if (!signerRef.current || !account) { log("Connect wallet first.", true); return; }
+      if (!signerRef.current || !selectedEthAddress) { log("Connect wallet first.", true); return; }
       const amt = stakeAmts[poolAddr];
       if (!amt || parseFloat(amt) <= 0) { log("Enter a valid amount.", true); return; }
 
@@ -495,12 +420,12 @@ export default function DividendsApp() {
           const dec = await tok.decimals();
           const wei = ethers.utils.parseUnits(amt, dec);
 
-          const balance = await tok.balanceOf(account);
+          const balance = await tok.balanceOf(selectedEthAddress);
           if (balance.lt(wei)) {
             throw new Error(`Insufficient balance: have ${ethers.utils.formatUnits(balance, dec)}, need ${amt}`);
           }
 
-          const allowance = await tok.allowance(account, poolAddr);
+          const allowance = await tok.allowance(selectedEthAddress, poolAddr);
           if (allowance.lt(wei)) {
             log("Approving tokens...");
             const txA = await tok.approve(poolAddr, wei);
@@ -518,7 +443,7 @@ export default function DividendsApp() {
         }
       });
     },
-    [stakeAmts, account, log, refreshPools, withBusy],
+    [stakeAmts, selectedEthAddress, log, refreshPools, withBusy],
   );
 
   /* ================================================================ */
@@ -527,7 +452,7 @@ export default function DividendsApp() {
 
   const doUnstake = useCallback(
     async (poolAddr: string) => {
-      if (!signerRef.current || !account) { log("Connect wallet first.", true); return; }
+      if (!signerRef.current || !selectedEthAddress) { log("Connect wallet first.", true); return; }
       const tid = unstakeIds[poolAddr];
       if (!tid) { log("Select a token ID.", true); return; }
 
@@ -544,7 +469,7 @@ export default function DividendsApp() {
         }
       });
     },
-    [unstakeIds, account, log, refreshPools, withBusy],
+    [unstakeIds, selectedEthAddress, log, refreshPools, withBusy],
   );
 
   /* ================================================================ */
@@ -553,7 +478,7 @@ export default function DividendsApp() {
 
   const doClaim = useCallback(
     async (poolAddr: string) => {
-      if (!signerRef.current || !account) { log("Connect wallet first.", true); return; }
+      if (!signerRef.current || !selectedEthAddress) { log("Connect wallet first.", true); return; }
       const tid = claimIds[poolAddr];
       if (!tid) { log("Select a token ID.", true); return; }
 
@@ -570,7 +495,7 @@ export default function DividendsApp() {
         }
       });
     },
-    [claimIds, account, log, refreshPools, withBusy],
+    [claimIds, selectedEthAddress, log, refreshPools, withBusy],
   );
 
   /* ================================================================ */
@@ -579,7 +504,7 @@ export default function DividendsApp() {
 
   const doRegister = useCallback(
     async (poolAddr: string) => {
-      if (!signerRef.current || !account) { log("Connect wallet first.", true); return; }
+      if (!signerRef.current || !selectedEthAddress) { log("Connect wallet first.", true); return; }
       const rt = regTokens[poolAddr];
       if (!rt || !ethers.utils.isAddress(rt)) { log("Enter a valid reward token address.", true); return; }
 
@@ -596,7 +521,7 @@ export default function DividendsApp() {
         }
       });
     },
-    [regTokens, account, log, refreshPools, withBusy],
+    [regTokens, selectedEthAddress, log, refreshPools, withBusy],
   );
 
   /* ================================================================ */
@@ -605,7 +530,7 @@ export default function DividendsApp() {
 
   const doUnregister = useCallback(
     async (poolAddr: string) => {
-      if (!signerRef.current || !account) { log("Connect wallet first.", true); return; }
+      if (!signerRef.current || !selectedEthAddress) { log("Connect wallet first.", true); return; }
       const rt = unregTokens[poolAddr];
       if (!rt || !ethers.utils.isAddress(rt)) { log("Enter a valid reward token address.", true); return; }
 
@@ -622,7 +547,7 @@ export default function DividendsApp() {
         }
       });
     },
-    [unregTokens, account, log, refreshPools, withBusy],
+    [unregTokens, selectedEthAddress, log, refreshPools, withBusy],
   );
 
   /* ================================================================ */
@@ -668,40 +593,42 @@ export default function DividendsApp() {
         {/* ────────────────────────────────────────────────── */}
         {/*  WALLET BAR                                        */}
         {/* ────────────────────────────────────────────────── */}
-        <div className={`${card} p-5`}>
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            <button type="button" onClick={connectWallet} className={btnGhost}>
-              Connect Wallet
-            </button>
-            <select
-              value={selectedWalletIdx ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === "") {
-                  setSelectedWalletIdx(null);
-                  setAccount(null);
-                  signerRef.current = null;
-                  localStorage.removeItem("selectedWalletIndex");
-                } else {
-                  selectWallet(parseInt(v));
+        {!user || !vaultUnlocked ? (
+          <AuthPanel inline />
+        ) : (
+          <div className={`${card} p-5`}>
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <button
+                type="button"
+                onClick={() =>
+                  connectMetaMask()
+                    .then((addr) => log(`MetaMask connected: ${shorten(addr)}`))
+                    .catch((e: any) => log(e.message, true))
                 }
-              }}
-              className={selectCls}
-            >
-              <option value="">-- Select Wallet --</option>
-              {wallets.map((w, i) => (
-                <option key={i} value={i}>
-                  {w.type}: {shorten(w.address)}
-                </option>
-              ))}
-            </select>
-            {account && (
-              <span className="text-white/50 text-xs truncate">
-                {shorten(account)}
-              </span>
-            )}
+                className={btnGhost}
+              >
+                Connect MetaMask
+              </button>
+              <select
+                value={selectedEthAddress ?? ""}
+                onChange={(e) => selectEthWallet(e.target.value || null)}
+                className={selectCls}
+              >
+                <option value="">-- Select Wallet --</option>
+                {ethWallets.map((w) => (
+                  <option key={w.address} value={w.address}>
+                    {w.type}: {shorten(w.address)}
+                  </option>
+                ))}
+              </select>
+              {selectedEthAddress && (
+                <span className="text-white/50 text-xs truncate">
+                  {shorten(selectedEthAddress)}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ────────────────────────────────────────────────── */}
         {/*  LAUNCH FORM                                       */}
@@ -772,7 +699,7 @@ export default function DividendsApp() {
 
           <div className="flex items-center justify-between">
             {launchStatus && <p className="text-sm text-white/50">{launchStatus}</p>}
-            <button type="button" onClick={createPool} disabled={!account || launching} className={`${btnGold} ml-auto`}>
+            <button type="button" onClick={createPool} disabled={!selectedEthAddress || launching} className={`${btnGold} ml-auto`}>
               {launching ? <Spinner /> : "Launch Dividends"}
             </button>
           </div>
@@ -861,7 +788,7 @@ export default function DividendsApp() {
           {pools.length === 0 && !loading && (
             <div className={`${card} p-10`}>
               <p className="text-center text-white/40">
-                {account ? "No pools found." : "Please connect a wallet to view pools."}
+                {selectedEthAddress ? "No pools found." : "Please connect a wallet to view pools."}
               </p>
             </div>
           )}

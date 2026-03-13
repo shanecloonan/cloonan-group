@@ -3,17 +3,11 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESS, RPC_URL, airdropAbi, erc20Abi } from "./abis";
+import { useWallet } from "@/lib/wallet-context";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-
-interface StoredWallet {
-  address: string;
-  privateKey?: string;
-  type?: string;
-  isMetaMask?: boolean;
-}
 
 interface LogEntry {
   msg: string;
@@ -84,11 +78,7 @@ const tabInactive = "text-white/30 hover:text-white/60 hover:bg-white/[0.03]";
 
 export default function AirdropApp() {
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC_URL), []);
-
-  /* wallet */
-  const [wallets, setWallets] = useState<StoredWallet[]>([]);
-  const [selIdx, setSelIdx] = useState<number | null>(null);
-  const selected = selIdx !== null && wallets[selIdx] ? wallets[selIdx] : null;
+  const { ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask } = useWallet();
 
   /* form */
   const [tokenAddress, setTokenAddress] = useState("");
@@ -120,65 +110,24 @@ export default function AirdropApp() {
     setLogs((p) => [{ msg, type, ts: now() }, ...p].slice(0, 50));
   }, []);
 
-  /* ---- load wallets ---- */
+  /* ---- load persisted data ---- */
   useEffect(() => {
-    const stored: StoredWallet[] = storageGet("wallets", []);
-    setWallets(stored);
-    const savedIdx = parseInt(localStorage.getItem("selectedWalletIndex") || "0");
-    if (stored.length > 0 && savedIdx >= 0 && savedIdx < stored.length) {
-      setSelIdx(savedIdx);
-    }
     setMasterContacts(storageGet("masterContacts", []));
     setCustomLists(storageGet("airdrop_customLists", {}));
     setAirdropLogs(storageGet("airdrop_logs", []));
   }, []);
 
-  const selectWallet = useCallback((idx: number) => {
-    setSelIdx(idx);
-    localStorage.setItem("selectedWalletIndex", String(idx));
-  }, []);
-
-  /* ---- connect MetaMask ---- */
-  const connectMetaMask = useCallback(async () => {
-    if (!(window as unknown as { ethereum?: { request: (a: { method: string }) => Promise<string[]> } }).ethereum) {
-      addLog("Please install MetaMask!", "error");
-      return;
-    }
-    try {
-      const ethereum = (window as unknown as { ethereum: { request: (a: { method: string }) => Promise<string[]> } }).ethereum;
-      const p = new ethers.providers.Web3Provider(ethereum as unknown as ethers.providers.ExternalProvider);
-      await ethereum.request({ method: "eth_requestAccounts" });
-      const net = await p.getNetwork();
-      if (net.chainId !== 1) throw new Error("Please switch to Ethereum Mainnet");
-      const s = p.getSigner();
-      const addr = await s.getAddress();
-      const mmWallet: StoredWallet = { address: addr, type: "MetaMask", isMetaMask: true };
-      setWallets((prev) => {
-        const exists = prev.some((w) => w.address.toLowerCase() === addr.toLowerCase());
-        const next = exists ? prev : [...prev, mmWallet];
-        storageSet("wallets", next);
-        const newIdx = exists ? prev.findIndex((w) => w.address.toLowerCase() === addr.toLowerCase()) : next.length - 1;
-        setSelIdx(newIdx);
-        localStorage.setItem("selectedWalletIndex", String(newIdx));
-        return next;
-      });
-      addLog(`MetaMask connected: ${shorten(addr)}`, "success");
-    } catch (e: unknown) {
-      addLog(`MetaMask error: ${(e as Error).message}`, "error");
-    }
-  }, [addLog]);
-
   /* ---- get signer ---- */
   const getSigner = useCallback(async () => {
-    if (!selected) throw new Error("No wallet selected");
-    if (selected.isMetaMask) {
+    if (!selectedEthWallet) throw new Error("No wallet selected");
+    if (selectedEthWallet.type === "metamask") {
       const ethereum = (window as unknown as { ethereum: ethers.providers.ExternalProvider }).ethereum;
       const p = new ethers.providers.Web3Provider(ethereum);
       return p.getSigner();
     }
-    if (!selected.privateKey) throw new Error("Wallet has no private key");
-    return new ethers.Wallet(selected.privateKey, provider);
-  }, [selected, provider]);
+    if (!selectedEthWallet.privateKey) throw new Error("Wallet has no private key");
+    return new ethers.Wallet(selectedEthWallet.privateKey, provider);
+  }, [selectedEthWallet, provider]);
 
   /* ---- recipient count ---- */
   const recipientList = useMemo(() => recipients.split("\n").map((r) => r.trim()).filter(Boolean), [recipients]);
@@ -201,7 +150,7 @@ export default function AirdropApp() {
 
   /* ---- execute airdrop ---- */
   const executeAirdrop = useCallback(async () => {
-    if (!selected) { addLog("Select a wallet first", "error"); return; }
+    if (!selectedEthWallet) { addLog("Select a wallet first", "error"); return; }
     if (!ethers.utils.isAddress(tokenAddress)) { addLog("Invalid token address", "error"); return; }
 
     const addrs = recipientList;
@@ -215,7 +164,7 @@ export default function AirdropApp() {
     setBusy(true);
     try {
       const signer = await getSigner();
-      const signerAddr = selected.address;
+      const signerAddr = selectedEthWallet.address;
       const token = new ethers.Contract(tokenAddress, erc20Abi, signer);
       const decimals = await token.decimals();
       const amountsWei = amounts.map((a) => ethers.utils.parseUnits(a, decimals));
@@ -272,7 +221,7 @@ export default function AirdropApp() {
     } finally {
       setBusy(false);
     }
-  }, [selected, tokenAddress, recipientList, getAmounts, getSigner, estimatedGas, addLog]);
+  }, [selectedEthWallet, tokenAddress, recipientList, getAmounts, getSigner, estimatedGas, addLog]);
 
   /* ---- master contacts ---- */
   const addToMaster = useCallback(() => {
@@ -361,19 +310,19 @@ export default function AirdropApp() {
           <p className={labelCls}>Wallet</p>
           <div className="flex gap-3">
             <select
-              value={selIdx ?? ""}
-              onChange={(e) => selectWallet(parseInt(e.target.value))}
+              value={selectedEthAddress ?? ""}
+              onChange={(e) => selectEthWallet(e.target.value || null)}
               className={`${selectCls} flex-1`}
             >
               <option value="">-- Select Wallet --</option>
-              {wallets.map((w, i) => (
-                <option key={i} value={i}>{w.type}: {shorten(w.address)}</option>
+              {ethWallets.map((w) => (
+                <option key={w.address} value={w.address}>{w.type}: {shorten(w.address)}</option>
               ))}
             </select>
-            <button type="button" onClick={connectMetaMask} className={btnSecondary}>MetaMask</button>
+            <button type="button" onClick={() => connectMetaMask().catch(() => {})} className={btnSecondary}>MetaMask</button>
           </div>
-          {selected && (
-            <p className="text-xs text-white/30 font-mono text-center">{selected.address}</p>
+          {selectedEthWallet && (
+            <p className="text-xs text-white/30 font-mono text-center">{selectedEthWallet.address}</p>
           )}
         </div>
 
@@ -450,7 +399,7 @@ export default function AirdropApp() {
         <button
           type="button"
           onClick={executeAirdrop}
-          disabled={busy || !selected || !tokenAddress || recipientCount === 0}
+          disabled={busy || !selectedEthWallet || !tokenAddress || recipientCount === 0}
           className={btnPrimary}
         >
           {busy ? "Sending..." : "Send Airdrop"}
