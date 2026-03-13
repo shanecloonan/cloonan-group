@@ -32,11 +32,7 @@ const ROUTER_ABI = [
 /*  Apps grid data                                                     */
 /* ------------------------------------------------------------------ */
 
-interface AppTile {
-  icon: string;
-  title: string;
-  url: string;
-}
+interface AppTile { icon: string; title: string; url: string; }
 
 const APPS: AppTile[] = [
   { icon: "🐙", title: "Multiswap", url: "https://moneyfund.com/moneyswap" },
@@ -65,7 +61,7 @@ const APPS: AppTile[] = [
 /* ------------------------------------------------------------------ */
 
 const EXPLORER_ACTIONS = [
-  { value: "", label: "-- Choose an action --" },
+  { value: "", label: "Choose an action..." },
   { value: "balance", label: "Get ETH Balance" },
   { value: "txlist", label: "List Transactions" },
   { value: "tokentx", label: "List Token Transactions" },
@@ -86,21 +82,9 @@ const EXPLORER_ACTIONS = [
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface StoredWallet {
-  address: string;
-  privateKey: string;
-  type: string;
-}
-
-interface StatusEntry {
-  msg: string;
-  status: "pending" | "success" | "error";
-}
-
-interface CoinEntry {
-  address: string;
-  balance: string;
-}
+interface StoredWallet { address: string; privateKey: string; type: string; }
+interface StatusEntry { msg: string; status: "pending" | "success" | "error"; }
+interface CoinEntry { address: string; balance: string; }
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -121,6 +105,18 @@ function storageGet<T>(key: string, fallback: T): T {
 }
 
 /* ================================================================== */
+/*  Shared design tokens                                               */
+/* ================================================================== */
+
+const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-blue-400/60 focus:ring-1 focus:ring-blue-400/30 transition-all";
+const selectCls = `${inputCls} appearance-none cursor-pointer`;
+const btnPrimary = "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center";
+const btnSmall = "h-9 px-4 rounded-xl font-medium text-xs bg-white/[0.06] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.1] active:scale-95 transition-all cursor-pointer";
+const labelCls = "block text-white/40 text-xs font-medium uppercase tracking-wider mb-1.5";
+const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
+
+/* ================================================================== */
 /*  COMPONENT                                                          */
 /* ================================================================== */
 
@@ -128,16 +124,13 @@ export default function WalletsApp() {
   const [chain, setChain] = useState<"ethereum" | "arweave">("ethereum");
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC), []);
 
-  /* wallet state */
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   const [selIdx, setSelIdx] = useState<number | null>(null);
   const selected = selIdx !== null && wallets[selIdx] ? wallets[selIdx] : null;
 
-  /* balances */
   const [ethBal, setEthBal] = useState("0.000000");
   const [moneyBal, setMoneyBal] = useState("0.00");
 
-  /* ui state */
   const [tab, setTab] = useState<"home" | "apps" | "explorer" | "iframe">("home");
   const [vanityMode, setVanityMode] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
@@ -145,7 +138,6 @@ export default function WalletsApp() {
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   const [iframeTitle, setIframeTitle] = useState("");
 
-  /* send form */
   const [sendType, setSendType] = useState<"ETH" | "Token">("ETH");
   const [recipient, setRecipient] = useState("");
   const [sendAmt, setSendAmt] = useState("");
@@ -153,18 +145,15 @@ export default function WalletsApp() {
   const [gasPriceOpt, setGasPriceOpt] = useState<"auto" | "manual">("auto");
   const [gasPriceManual, setGasPriceManual] = useState("");
 
-  /* swap form */
   const [swapDir, setSwapDir] = useState<"ethToToken" | "tokenToEth">("ethToToken");
   const [swapTokenAddr, setSwapTokenAddr] = useState("");
   const [swapAmt, setSwapAmt] = useState("");
   const [slippage, setSlippage] = useState("1");
   const [gasLimit, setGasLimit] = useState("500000");
 
-  /* my crypto */
   const [coinList, setCoinList] = useState<CoinEntry[]>([]);
   const [coinImportAddr, setCoinImportAddr] = useState("");
 
-  /* explorer */
   const [expAction, setExpAction] = useState("");
   const [expAddress, setExpAddress] = useState("");
   const [expTxHash, setExpTxHash] = useState("");
@@ -177,12 +166,10 @@ export default function WalletsApp() {
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  /* ---- status log ---- */
   const addStatus = useCallback((msg: string, status: StatusEntry["status"] = "pending") => {
     setStatuses((p) => [{ msg, status }, ...p].slice(0, 10));
   }, []);
 
-  /* ---- fetch balances ---- */
   const fetchBalance = useCallback(async () => {
     if (!selected) return;
     try {
@@ -196,7 +183,6 @@ export default function WalletsApp() {
     }
   }, [selected, provider, addStatus]);
 
-  /* ---- load wallets on mount ---- */
   useEffect(() => {
     const w: StoredWallet[] = storageGet("wallets", []);
     setWallets(w);
@@ -204,13 +190,11 @@ export default function WalletsApp() {
     setCoinList(storageGet("coinList", []));
   }, []);
 
-  /* ---- fetch balance on wallet change ---- */
   useEffect(() => {
     if (selected) fetchBalance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.address]);
 
-  /* ---- persist wallets ---- */
   const saveWallets = useCallback((w: StoredWallet[]) => {
     setWallets(w);
     localStorage.setItem("wallets", JSON.stringify(w));
@@ -230,10 +214,7 @@ export default function WalletsApp() {
           attempts++;
           wallet = ethers.Wallet.createRandom();
           if (wallet.address.toLowerCase().startsWith("0x100")) break;
-          if (attempts > 10000) {
-            addStatus("Failed after 10000 attempts for 0x100 prefix", "error");
-            return;
-          }
+          if (attempts > 10000) { addStatus("Failed after 10000 attempts for 0x100 prefix", "error"); return; }
         }
       } else {
         wallet = ethers.Wallet.createRandom();
@@ -332,16 +313,12 @@ export default function WalletsApp() {
       const router = new ethers.Contract(UNISWAP_ROUTER, ROUTER_ABI, signer);
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
       const slip = parseFloat(slippage) / 100;
-
       if (swapDir === "ethToToken") {
         const path = [WETH, swapTokenAddr];
         const amtIn = ethers.utils.parseEther(swapAmt);
         const amounts = await router.getAmountsOut(amtIn, path);
         const minOut = amounts[1].mul(Math.floor((1 - slip) * 10000)).div(10000);
-        const tx = await router.swapExactETHForTokens(minOut, path, selected.address, deadline, {
-          value: amtIn,
-          gasLimit: parseInt(gasLimit),
-        });
+        const tx = await router.swapExactETHForTokens(minOut, path, selected.address, deadline, { value: amtIn, gasLimit: parseInt(gasLimit) });
         const r = await tx.wait();
         addStatus(`Swap success! Tx: ${shorten(r.transactionHash)}`, "success");
       } else {
@@ -353,9 +330,7 @@ export default function WalletsApp() {
         const path = [swapTokenAddr, WETH];
         const amounts = await router.getAmountsOut(amtIn, path);
         const minOut = amounts[1].mul(Math.floor((1 - slip) * 10000)).div(10000);
-        const tx = await router.swapExactTokensForETH(amtIn, minOut, path, selected.address, deadline, {
-          gasLimit: parseInt(gasLimit),
-        });
+        const tx = await router.swapExactTokensForETH(amtIn, minOut, path, selected.address, deadline, { gasLimit: parseInt(gasLimit) });
         const r = await tx.wait();
         addStatus(`Swap success! Tx: ${shorten(r.transactionHash)}`, "success");
       }
@@ -427,14 +402,12 @@ export default function WalletsApp() {
     }
   }, [expAction, expAddress, expTxHash, expTimestamp, expContract, expLogAddr, expFromBlock, expToBlock, addStatus]);
 
-  /* ---- explorer field visibility ---- */
   const needsAddr = ["balance", "txlist", "tokentx", "tokennfttx", "txlistinternal", "tokenbalance"].includes(expAction);
   const needsTx = expAction === "gettxreceiptstatus";
   const needsTime = expAction === "getblockbytime";
   const needsContract = ["getabi", "tokensupply", "tokenbalance"].includes(expAction);
   const needsLogs = expAction === "getlogs";
 
-  /* ---- open app in iframe ---- */
   const openApp = useCallback((app: AppTile) => {
     setIframeUrl(app.url);
     setIframeTitle(app.title);
@@ -442,402 +415,403 @@ export default function WalletsApp() {
   }, []);
 
   /* ================================================================ */
-  /*  CSS classes                                                      */
-  /* ================================================================ */
-
-  const btnCls = "w-full py-3 px-4 rounded-lg font-semibold text-base bg-[#4F46E5] text-[#F9FAFB] hover:bg-[#6366F1] hover:scale-[1.02] disabled:bg-gray-600/60 disabled:cursor-not-allowed transition-all flex justify-center items-center min-h-[44px]";
-  const btnSmCls = "flex-1 py-2 px-3 rounded-lg font-semibold text-xs bg-[#4F46E5] text-[#F9FAFB] hover:bg-[#6366F1] hover:scale-[1.02] transition-all flex justify-center items-center min-h-[36px]";
-  const inputCls = "w-full py-3 px-3 rounded-lg bg-[rgba(17,24,39,0.9)] text-[#E5E7EB] text-base border border-[rgba(99,102,241,0.2)] focus:border-[#6366F1] focus:shadow-[0_0_8px_rgba(99,102,241,0.5)] outline-none transition-all placeholder:text-[#9CA3AF]";
-  const selectCls = `${inputCls} appearance-none pr-8`;
-  const labelCls = "block text-[#A5F3FC] text-sm font-medium mb-1";
-
-  /* ================================================================ */
   /*  RENDER                                                           */
   /* ================================================================ */
 
+  const ethTabs: { id: "home" | "apps" | "explorer"; label: string; icon: string }[] = [
+    { id: "home", label: "Home", icon: "⬡" },
+    { id: "apps", label: "Apps", icon: "◫" },
+    { id: "explorer", label: "Explorer", icon: "◎" },
+  ];
+
+  const actionBtns = [
+    { id: "send", label: "Send", icon: "↑" },
+    { id: "swap", label: "Swap", icon: "⇄" },
+    { id: "crypto", label: "My Crypto", icon: "◈" },
+  ];
+
   return (
-    <div
-      className="min-h-screen flex justify-center items-start p-3 sm:p-6"
-      style={{ background: "#0A0C1E", fontFamily: "'Manrope', sans-serif" }}
-    >
-      <div className="w-full max-w-[800px]">
+    <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+      <div className="w-full max-w-[720px] mx-auto space-y-5">
+
+        {/* ── Page title ── */}
+        <div className="text-center pt-4 pb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">Wallets</h1>
+          <p className="text-xs text-white/30 mt-1">Manage your Ethereum & Arweave wallets</p>
+        </div>
+
         {/* ── Chain switcher ── */}
-        <div className="flex rounded-xl overflow-hidden mb-5 border border-[rgba(255,215,0,0.3)]">
+        <div className={`${card} p-1.5 flex gap-1`}>
           <button
             type="button"
             onClick={() => setChain("ethereum")}
-            className={`flex-1 py-3.5 text-base font-bold transition-all ${
+            className={`flex-1 h-11 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
               chain === "ethereum"
-                ? "bg-[#FFD700] text-[#0A0C1E]"
-                : "bg-[rgba(10,17,32,0.95)] text-[#A5F3FC] hover:bg-[rgba(255,255,255,0.05)]"
+                ? "bg-blue-500/15 text-blue-400 shadow-[inset_0_1px_0_rgba(59,130,246,0.2)]"
+                : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"
             }`}
           >
-            Ethereum Wallet
+            <span className="w-2 h-2 rounded-full bg-blue-400" style={{ opacity: chain === "ethereum" ? 1 : 0.3 }} />
+            Ethereum
           </button>
           <button
             type="button"
             onClick={() => setChain("arweave")}
-            className={`flex-1 py-3.5 text-base font-bold transition-all ${
+            className={`flex-1 h-11 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
               chain === "arweave"
-                ? "bg-[#6a0dad] text-white"
-                : "bg-[rgba(10,17,32,0.95)] text-[#b0b3b8] hover:bg-[rgba(255,255,255,0.05)]"
+                ? "bg-purple-500/15 text-purple-400 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]"
+                : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"
             }`}
           >
-            Arweave Wallet
+            <span className="w-2 h-2 rounded-full bg-purple-400" style={{ opacity: chain === "arweave" ? 1 : 0.3 }} />
+            Arweave
           </button>
         </div>
 
-        {/* ── Arweave interface ── */}
+        {/* ── Arweave ── */}
         {chain === "arweave" && <ArweaveWallet />}
 
-        {/* ── Ethereum interface ── */}
+        {/* ── Ethereum ── */}
         {chain === "ethereum" && (
-      <div
-        className="w-full rounded-2xl p-3 sm:p-6"
-        style={{
-          background: "rgba(10,17,32,0.95)",
-          border: "2px solid #FFD700",
-          boxShadow: "0 0 10px rgba(255,215,0,0.3), 0 6px 20px rgba(0,0,0,0.3)",
-        }}
-      >
-        {/* ── Header ── */}
-        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">MoneyFund Wallets</h1>
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-sm text-[#F1F5F9]">0x100 Mode</span>
-            <label className="relative w-12 h-6 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={vanityMode}
-                onChange={(e) => { setVanityMode(e.target.checked); addStatus(`0x100 Mode ${e.target.checked ? "Enabled" : "Disabled"}`, "success"); }}
-                className="sr-only peer"
-              />
-              <span className="absolute inset-0 bg-[#475569] rounded-full peer-checked:bg-[#10B981] transition-all" />
-              <span className="absolute left-[3px] bottom-[3px] w-[18px] h-[18px] bg-white rounded-full peer-checked:translate-x-6 transition-all" />
-            </label>
-          </div>
-        </div>
+          <div className="space-y-5">
 
-        {/* ── Tab nav (desktop) ── */}
-        <div className="hidden sm:flex gap-2 mb-5">
-          {(["home", "apps", "explorer"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={`flex-1 py-3.5 px-4 rounded-t-lg text-lg font-semibold text-center transition-all ${
-                tab === t ? "bg-[#FFD700] text-[#0A0C1E]" : "bg-white/5 text-[#A5F3FC] hover:bg-white/10"
-              }`}
-            >
-              {t === "home" ? "Home" : t === "apps" ? "Apps" : "Explorer"}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Mobile dropdown ── */}
-        <select
-          value={tab}
-          onChange={(e) => setTab(e.target.value as any)}
-          className="sm:hidden w-full mb-4 py-2.5 px-3 rounded-lg text-base bg-[rgba(17,24,39,0.9)] text-[#E5E7EB] border-2 border-[#FFD700] outline-none appearance-none pr-10"
-          style={{ backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23E5E7EB%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "12px" }}
-        >
-          <option value="home">🏠 Home</option>
-          <option value="apps">📱 Apps</option>
-          <option value="explorer">🔍 Explorer</option>
-        </select>
-
-        {/* ================================================================ */}
-        {/*  HOME TAB                                                        */}
-        {/* ================================================================ */}
-        {tab === "home" && (
-          <div>
-            {/* Wallet selector */}
-            <div className="flex items-center gap-2 mb-4">
-              <select
-                value={selIdx ?? ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "") { setSelIdx(null); setEthBal("0.000000"); setMoneyBal("0.00"); }
-                  else setSelIdx(parseInt(v));
-                }}
-                className={`flex-[9] ${selectCls}`}
-              >
-                <option value="">-- Select Wallet --</option>
-                {wallets.map((w, i) => (
-                  <option key={i} value={i}>{w.address} ({w.type})</option>
-                ))}
-              </select>
-              <button type="button" onClick={copyAddress} className="flex-[1] py-3 px-2 rounded-lg font-semibold text-sm bg-[#4F46E5] text-[#F9FAFB] hover:bg-[#6366F1] transition-all min-h-[44px]">
-                Copy
-              </button>
-            </div>
-
-            {/* Create / Import / Export */}
-            <div className="flex gap-3 flex-wrap mb-4">
-              <button type="button" onClick={createWallet} className={btnSmCls}>Create New Wallet</button>
-              <label className={`${btnSmCls} cursor-pointer`}>
-                Import Wallets
-                <input ref={fileRef} type="file" accept=".json" onChange={importWallets} className="hidden" />
-              </label>
-              <button type="button" onClick={exportWallets} className={btnSmCls}>Export Wallets</button>
-            </div>
-
-            {/* Balance box */}
-            <div className="rounded-lg p-4 my-4 border border-[rgba(99,102,241,0.2)]" style={{ background: "rgba(17,24,39,0.9)" }}>
-              <div className="flex justify-between items-center my-2 text-base">
-                <strong className="text-white font-medium">Money Balance:</strong>
-                <span className="text-[#A5F3FC]">{moneyBal} MONEY</span>
-              </div>
-              <div className="flex justify-between items-center my-2 text-base">
-                <strong className="text-white font-medium">Ethereum Balance:</strong>
-                <span className="text-[#A5F3FC]">{ethBal} ETH</span>
-              </div>
-            </div>
-
-            {/* Send / Swap / My Crypto toggles */}
-            <div className="flex gap-2 flex-wrap mt-4">
-              {[
-                { id: "send", label: "Send" },
-                { id: "swap", label: "Swap" },
-                { id: "crypto", label: "My Crypto" },
-              ].map((s) => (
+            {/* Tab bar */}
+            <div className={`${card} p-1.5 flex gap-1`}>
+              {ethTabs.map((t) => (
                 <button
-                  key={s.id}
+                  key={t.id}
                   type="button"
-                  onClick={() => setOpenSection(openSection === s.id ? null : s.id)}
-                  className={`flex-1 py-2 px-3 rounded-lg font-semibold text-xs transition-all min-h-[36px] ${
-                    openSection === s.id ? "bg-[#6366F1] text-white" : "bg-[#4F46E5] text-[#F9FAFB] hover:bg-[#6366F1]"
+                  onClick={() => setTab(t.id)}
+                  className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    tab === t.id
+                      ? "bg-blue-500/15 text-blue-400 shadow-[inset_0_1px_0_rgba(59,130,246,0.2)]"
+                      : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
                   }`}
                 >
-                  {s.label}
+                  <span className="text-xs opacity-60">{t.icon}</span>
+                  {t.label}
                 </button>
               ))}
             </div>
 
-            {/* ── Send section ── */}
-            {openSection === "send" && (
-              <div className="mt-2 p-4 rounded-lg border border-[rgba(99,102,241,0.2)]" style={{ background: "rgba(17,24,39,0.9)" }}>
-                <h3 className="text-xl font-semibold text-white mb-4">Send ETH or Coins</h3>
-                <div className="mb-4">
-                  <label className={labelCls}>Transfer Type</label>
-                  <select value={sendType} onChange={(e) => setSendType(e.target.value as any)} className={selectCls}>
-                    <option value="ETH">Send ETH</option>
-                    <option value="Token">Send Coin</option>
-                  </select>
+            {/* ================================================================ */}
+            {/*  HOME TAB                                                        */}
+            {/* ================================================================ */}
+            {tab === "home" && (
+              <div className="space-y-4">
+
+                {/* Wallet selector */}
+                <div className={`${card} p-4 space-y-3`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Active Wallet</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-white/25">0x100</span>
+                      <label className="relative w-9 h-5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={vanityMode}
+                          onChange={(e) => { setVanityMode(e.target.checked); addStatus(`0x100 Mode ${e.target.checked ? "ON" : "OFF"}`, "success"); }}
+                          className="sr-only peer"
+                        />
+                        <span className="absolute inset-0 bg-white/[0.08] rounded-full peer-checked:bg-blue-500/40 transition-all" />
+                        <span className="absolute left-[2px] top-[2px] w-4 h-4 bg-white/60 rounded-full peer-checked:translate-x-4 peer-checked:bg-blue-400 transition-all" />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <select
+                      value={selIdx ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "") { setSelIdx(null); setEthBal("0.000000"); setMoneyBal("0.00"); }
+                        else setSelIdx(parseInt(v));
+                      }}
+                      className={`flex-1 ${selectCls}`}
+                    >
+                      <option value="">Select a wallet...</option>
+                      {wallets.map((w, i) => (
+                        <option key={i} value={i}>{shorten(w.address)} ({w.type})</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={copyAddress} className={btnSmall}>Copy</button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={createWallet} className={`flex-1 ${btnSmall}`}>Create</button>
+                    <label className={`flex-1 ${btnSmall} flex items-center justify-center cursor-pointer`}>
+                      Import
+                      <input ref={fileRef} type="file" accept=".json" onChange={importWallets} className="hidden" />
+                    </label>
+                    <button type="button" onClick={exportWallets} className={`flex-1 ${btnSmall}`}>Export</button>
+                  </div>
                 </div>
-                <div className="mb-4">
-                  <label className={labelCls}>Recipient Address or ENS</label>
-                  <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Enter address or ENS" className={inputCls} />
+
+                {/* Balance */}
+                <div className={`${card} p-5`}>
+                  <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Balances</span>
+                  <div className="mt-3 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-2xl font-bold text-white tracking-tight">{ethBal}</p>
+                      <p className="text-xs text-white/30 mt-0.5">ETH</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-white tracking-tight">{moneyBal}</p>
+                      <p className="text-xs text-white/30 mt-0.5">MONEY</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="mb-4">
-                  <label className={labelCls}>Amount to Transfer</label>
-                  <input type="number" value={sendAmt} onChange={(e) => setSendAmt(e.target.value)} placeholder="Enter amount" step="0.0001" className={inputCls} />
+
+                {/* Action buttons */}
+                <div className={`${card} p-1.5 flex gap-1`}>
+                  {actionBtns.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setOpenSection(openSection === s.id ? null : s.id)}
+                      className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        openSection === s.id
+                          ? "bg-blue-500/15 text-blue-400"
+                          : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
+                      }`}
+                    >
+                      <span className="text-xs opacity-60">{s.icon}</span>
+                      {s.label}
+                    </button>
+                  ))}
                 </div>
-                {sendType === "Token" && (
-                  <div className="mb-4">
-                    <label className={labelCls}>Token Address</label>
-                    <input value={sendTokenAddr} onChange={(e) => setSendTokenAddr(e.target.value)} placeholder="Enter token address" className={inputCls} />
+
+                {/* ── Send ── */}
+                {openSection === "send" && (
+                  <div className={`${card} p-5 space-y-4`}>
+                    <h3 className="text-sm font-semibold text-white/80">Send ETH or Tokens</h3>
+                    <div>
+                      <label className={labelCls}>Transfer Type</label>
+                      <select value={sendType} onChange={(e) => setSendType(e.target.value as any)} className={selectCls}>
+                        <option value="ETH">Send ETH</option>
+                        <option value="Token">Send Token</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Recipient</label>
+                      <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Address or ENS" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Amount</label>
+                      <input type="number" value={sendAmt} onChange={(e) => setSendAmt(e.target.value)} placeholder="0.00" step="0.0001" className={inputCls} />
+                    </div>
+                    {sendType === "Token" && (
+                      <div>
+                        <label className={labelCls}>Token Address</label>
+                        <input value={sendTokenAddr} onChange={(e) => setSendTokenAddr(e.target.value)} placeholder="0x..." className={inputCls} />
+                      </div>
+                    )}
+                    <div>
+                      <label className={labelCls}>Gas Price</label>
+                      <select value={gasPriceOpt} onChange={(e) => setGasPriceOpt(e.target.value as any)} className={selectCls}>
+                        <option value="auto">Auto Estimate</option>
+                        <option value="manual">Manual</option>
+                      </select>
+                    </div>
+                    {gasPriceOpt === "manual" && (
+                      <div>
+                        <label className={labelCls}>Gas Price (Gwei)</label>
+                        <input type="number" value={gasPriceManual} onChange={(e) => setGasPriceManual(e.target.value)} placeholder="e.g. 20" className={inputCls} />
+                      </div>
+                    )}
+                    <button type="button" onClick={handleSend} className={btnPrimary}>Transfer</button>
                   </div>
                 )}
-                <div className="mb-4">
-                  <label className={labelCls}>Gas Price Option</label>
-                  <select value={gasPriceOpt} onChange={(e) => setGasPriceOpt(e.target.value as any)} className={selectCls}>
-                    <option value="auto">Auto Estimate</option>
-                    <option value="manual">Manual</option>
-                  </select>
-                </div>
-                {gasPriceOpt === "manual" && (
-                  <div className="mb-4">
-                    <label className={labelCls}>Gas Price (Gwei)</label>
-                    <input type="number" value={gasPriceManual} onChange={(e) => setGasPriceManual(e.target.value)} placeholder="Enter gas price" className={inputCls} />
+
+                {/* ── Swap ── */}
+                {openSection === "swap" && (
+                  <div className={`${card} p-5 space-y-4`}>
+                    <h3 className="text-sm font-semibold text-white/80">Swap Tokens</h3>
+                    <div>
+                      <label className={labelCls}>Direction</label>
+                      <select value={swapDir} onChange={(e) => setSwapDir(e.target.value as any)} className={selectCls}>
+                        <option value="ethToToken">ETH → Token</option>
+                        <option value="tokenToEth">Token → ETH</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Token Address</label>
+                      <input value={swapTokenAddr} onChange={(e) => setSwapTokenAddr(e.target.value)} placeholder="0x..." className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Amount</label>
+                      <input type="number" value={swapAmt} onChange={(e) => setSwapAmt(e.target.value)} placeholder="0.00" step="0.0001" className={inputCls} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>Slippage</label>
+                        <select value={slippage} onChange={(e) => setSlippage(e.target.value)} className={selectCls}>
+                          {["0.1", "0.5", "1", "3", "5", "10"].map((s) => (
+                            <option key={s} value={s}>{s}%</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>Gas Limit</label>
+                        <select value={gasLimit} onChange={(e) => setGasLimit(e.target.value)} className={selectCls}>
+                          {["200000", "300000", "400000", "500000"].map((g) => (
+                            <option key={g} value={g}>{parseInt(g).toLocaleString()}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <button type="button" onClick={handleSwap} className={btnPrimary}>Swap</button>
                   </div>
                 )}
-                <button type="button" onClick={handleSend} className={btnCls}>Transfer Funds</button>
-              </div>
-            )}
 
-            {/* ── Swap section ── */}
-            {openSection === "swap" && (
-              <div className="mt-2 p-4 rounded-lg border border-[rgba(99,102,241,0.2)]" style={{ background: "rgba(17,24,39,0.9)" }}>
-                <h3 className="text-xl font-semibold text-white mb-4">Swap Coins</h3>
-                <div className="mb-4">
-                  <label className={labelCls}>Swap Direction</label>
-                  <select value={swapDir} onChange={(e) => setSwapDir(e.target.value as any)} className={selectCls}>
-                    <option value="ethToToken">ETH to Coin</option>
-                    <option value="tokenToEth">Coin to ETH</option>
-                  </select>
-                </div>
-                <div className="mb-4">
-                  <label className={labelCls}>Coin Contract Address</label>
-                  <input value={swapTokenAddr} onChange={(e) => setSwapTokenAddr(e.target.value)} placeholder="Enter coin CA" className={inputCls} />
-                </div>
-                <div className="mb-4">
-                  <label className={labelCls}>Amount to Swap</label>
-                  <input type="number" value={swapAmt} onChange={(e) => setSwapAmt(e.target.value)} placeholder="Enter amount" step="0.0001" className={inputCls} />
-                </div>
-                <div className="mb-4">
-                  <label className={labelCls}>Slippage Tolerance</label>
-                  <select value={slippage} onChange={(e) => setSlippage(e.target.value)} className={selectCls}>
-                    {["0.1", "0.5", "1", "3", "5", "10"].map((s) => (
-                      <option key={s} value={s}>{s}%</option>
+                {/* ── My Crypto ── */}
+                {openSection === "crypto" && (
+                  <div className={`${card} p-5 space-y-4`}>
+                    <h3 className="text-sm font-semibold text-white/80">My Crypto</h3>
+                    <div>
+                      <label className={labelCls}>Token Contract</label>
+                      <input value={coinImportAddr} onChange={(e) => setCoinImportAddr(e.target.value)} placeholder="0x..." className={inputCls} />
+                    </div>
+                    <button type="button" onClick={importCoin} className={btnPrimary}>Import</button>
+                    {coinList.length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                        {coinList.map((c, i) => (
+                          <div key={i} className="flex justify-between items-center text-sm">
+                            <span className="text-white/50 font-mono text-xs">{shorten(c.address)}</span>
+                            <span className="text-white/80">{c.balance}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {coinList.length === 0 && <p className="text-xs text-white/25">No tokens imported yet.</p>}
+                  </div>
+                )}
+
+                {/* ── Status log ── */}
+                {statuses.length > 0 && (
+                  <div className={`${card} p-4 max-h-[240px] overflow-y-auto space-y-1`} style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.08) transparent" }}>
+                    {statuses.map((s, i) => (
+                      <div
+                        key={i}
+                        className={`text-xs py-2 px-3 rounded-lg ${
+                          s.status === "success"
+                            ? "text-emerald-400 bg-emerald-500/5"
+                            : s.status === "error"
+                              ? "text-red-400 bg-red-500/5"
+                              : "text-white/50 bg-white/[0.02]"
+                        }`}
+                      >
+                        {s.msg}
+                      </div>
                     ))}
-                  </select>
-                </div>
-                <div className="mb-4">
-                  <label className={labelCls}>Gas Limit</label>
-                  <select value={gasLimit} onChange={(e) => setGasLimit(e.target.value)} className={selectCls}>
-                    {["200000", "300000", "400000", "500000"].map((g) => (
-                      <option key={g} value={g}>{parseInt(g).toLocaleString()}</option>
-                    ))}
-                  </select>
-                </div>
-                <button type="button" onClick={handleSwap} className={btnCls}>Swap</button>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* ── My Crypto section ── */}
-            {openSection === "crypto" && (
-              <div className="mt-2 p-4 rounded-lg border border-[rgba(99,102,241,0.2)]" style={{ background: "rgba(17,24,39,0.9)" }}>
-                <h3 className="text-xl font-semibold text-white mb-4">My Crypto</h3>
-                <div className="mb-4">
-                  <label className={labelCls}>Token Contract Address</label>
-                  <input value={coinImportAddr} onChange={(e) => setCoinImportAddr(e.target.value)} placeholder="Enter token address" className={inputCls} />
-                </div>
-                <button type="button" onClick={importCoin} className={btnCls}>Import Coin</button>
-                <div className="mt-4 text-sm text-[#E5E7EB]">
-                  {coinList.length === 0 ? (
-                    <p>No coins imported yet.</p>
-                  ) : (
-                    coinList.map((c, i) => (
-                      <p key={i} className="my-1"><strong className="text-white">{shorten(c.address)}</strong>: {c.balance} tokens</p>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── Status list ── */}
-            {statuses.length > 0 && (
-              <ul className="mt-5 max-h-[300px] overflow-y-auto pr-2" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(99,102,241,0.4) transparent" }}>
-                {statuses.map((s, i) => (
-                  <li
-                    key={i}
-                    className={`relative py-3 px-4 text-sm border-b-[3px] border-white/10 transition-colors hover:bg-white/5 ${
-                      s.status === "success" ? "text-[#10B981]" : s.status === "error" ? "text-[#F87171]" : "text-[#F1F5F9]"
-                    }`}
+            {/* ================================================================ */}
+            {/*  APPS TAB                                                        */}
+            {/* ================================================================ */}
+            {tab === "apps" && (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {APPS.map((app) => (
+                  <button
+                    key={app.title}
+                    type="button"
+                    onClick={() => openApp(app)}
+                    className={`${card} group p-3 flex flex-col items-center justify-center h-[90px] text-center cursor-pointer hover:bg-white/[0.05] hover:border-white/[0.12] active:scale-95 transition-all`}
                   >
-                    {s.msg}
-                  </li>
+                    <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">{app.icon}</span>
+                    <span className="text-[10px] font-medium text-white/50 group-hover:text-white/70 transition-colors leading-tight">{app.title}</span>
+                  </button>
                 ))}
-              </ul>
+              </div>
             )}
-          </div>
-        )}
 
-        {/* ================================================================ */}
-        {/*  APPS TAB                                                        */}
-        {/* ================================================================ */}
-        {tab === "apps" && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 my-5">
-            {APPS.map((app) => (
-              <button
-                key={app.title}
-                type="button"
-                onClick={() => openApp(app)}
-                className="rounded-xl p-4 flex flex-col items-center justify-center h-[100px] text-center cursor-pointer transition-all hover:scale-105 hover:shadow-[0_6px_16px_rgba(0,0,0,0.3)]"
-                style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))", boxShadow: "0 4px 10px rgba(0,0,0,0.2)" }}
-              >
-                <span className="text-5xl text-[#6366F1] mb-2">{app.icon}</span>
-                <span className="text-[10px] font-semibold text-white">{app.title}</span>
-              </button>
-            ))}
-          </div>
-        )}
+            {/* ================================================================ */}
+            {/*  EXPLORER TAB                                                    */}
+            {/* ================================================================ */}
+            {tab === "explorer" && (
+              <div className={`${card} p-5 space-y-4`}>
+                <h3 className="text-sm font-semibold text-white/80">Block Explorer</h3>
+                <div>
+                  <label className={labelCls}>Action</label>
+                  <select value={expAction} onChange={(e) => setExpAction(e.target.value)} className={selectCls}>
+                    {EXPLORER_ACTIONS.map((a) => (
+                      <option key={a.value} value={a.value}>{a.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {needsAddr && (
+                  <div>
+                    <label className={labelCls}>Address</label>
+                    <input value={expAddress} onChange={(e) => setExpAddress(e.target.value)} placeholder="0x..." className={inputCls} />
+                  </div>
+                )}
+                {needsTx && (
+                  <div>
+                    <label className={labelCls}>Transaction Hash</label>
+                    <input value={expTxHash} onChange={(e) => setExpTxHash(e.target.value)} placeholder="0x..." className={inputCls} />
+                  </div>
+                )}
+                {needsTime && (
+                  <div>
+                    <label className={labelCls}>Timestamp (UNIX)</label>
+                    <input type="number" value={expTimestamp} onChange={(e) => setExpTimestamp(e.target.value)} placeholder="1677654321" className={inputCls} />
+                  </div>
+                )}
+                {needsContract && (
+                  <div>
+                    <label className={labelCls}>Contract Address</label>
+                    <input value={expContract} onChange={(e) => setExpContract(e.target.value)} placeholder="0x..." className={inputCls} />
+                  </div>
+                )}
+                {needsLogs && (
+                  <>
+                    <div>
+                      <label className={labelCls}>Contract Address</label>
+                      <input value={expLogAddr} onChange={(e) => setExpLogAddr(e.target.value)} placeholder="0x..." className={inputCls} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>From Block</label>
+                        <input type="number" value={expFromBlock} onChange={(e) => setExpFromBlock(e.target.value)} placeholder="0" className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>To Block</label>
+                        <input type="number" value={expToBlock} onChange={(e) => setExpToBlock(e.target.value)} placeholder="99999999" className={inputCls} />
+                      </div>
+                    </div>
+                  </>
+                )}
+                <button type="button" onClick={searchExplorer} className={btnPrimary}>Search</button>
+                <pre className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-white/40 max-h-[360px] overflow-auto whitespace-pre-wrap break-all font-mono" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                  {expResult}
+                </pre>
+              </div>
+            )}
 
-        {/* ================================================================ */}
-        {/*  EXPLORER TAB                                                    */}
-        {/* ================================================================ */}
-        {tab === "explorer" && (
-          <div>
-            <h3 className="text-xl font-semibold text-white mb-4">Block Explorer</h3>
-            <div className="mb-4">
-              <label className={labelCls}>Select Action</label>
-              <select value={expAction} onChange={(e) => setExpAction(e.target.value)} className={selectCls}>
-                {EXPLORER_ACTIONS.map((a) => (
-                  <option key={a.value} value={a.value}>{a.label}</option>
-                ))}
-              </select>
-            </div>
-            {needsAddr && (
-              <div className="mb-4">
-                <label className={labelCls}>Address</label>
-                <input value={expAddress} onChange={(e) => setExpAddress(e.target.value)} placeholder="e.g., 0xde0b..." className={inputCls} />
-              </div>
-            )}
-            {needsTx && (
-              <div className="mb-4">
-                <label className={labelCls}>Transaction Hash</label>
-                <input value={expTxHash} onChange={(e) => setExpTxHash(e.target.value)} placeholder="e.g., 0x..." className={inputCls} />
-              </div>
-            )}
-            {needsTime && (
-              <div className="mb-4">
-                <label className={labelCls}>Timestamp (UNIX)</label>
-                <input type="number" value={expTimestamp} onChange={(e) => setExpTimestamp(e.target.value)} placeholder="e.g., 1677654321" className={inputCls} />
-              </div>
-            )}
-            {needsContract && (
-              <div className="mb-4">
-                <label className={labelCls}>Contract Address</label>
-                <input value={expContract} onChange={(e) => setExpContract(e.target.value)} placeholder="e.g., 0xdac17f..." className={inputCls} />
-              </div>
-            )}
-            {needsLogs && (
-              <>
-                <div className="mb-4">
-                  <label className={labelCls}>Contract Address</label>
-                  <input value={expLogAddr} onChange={(e) => setExpLogAddr(e.target.value)} placeholder="e.g., 0xdac17f..." className={inputCls} />
+            {/* ================================================================ */}
+            {/*  IFRAME TAB                                                      */}
+            {/* ================================================================ */}
+            {tab === "iframe" && iframeUrl && (
+              <div className={`${card} p-4 space-y-3`}>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => { setTab("apps"); setIframeUrl(null); }} className={btnSmall}>
+                    ← Back
+                  </button>
+                  <span className="text-sm font-medium text-white/70">{iframeTitle}</span>
+                  <a href={iframeUrl} target="_blank" rel="noopener noreferrer" className="ml-auto text-xs text-blue-400/60 hover:text-blue-400 transition-colors">
+                    Open ↗
+                  </a>
                 </div>
-                <div className="mb-4">
-                  <label className={labelCls}>From Block</label>
-                  <input type="number" value={expFromBlock} onChange={(e) => setExpFromBlock(e.target.value)} placeholder="e.g., 0" className={inputCls} />
-                </div>
-                <div className="mb-4">
-                  <label className={labelCls}>To Block</label>
-                  <input type="number" value={expToBlock} onChange={(e) => setExpToBlock(e.target.value)} placeholder="e.g., 99999999" className={inputCls} />
-                </div>
-              </>
+                <iframe
+                  src={iframeUrl}
+                  title={iframeTitle}
+                  className="w-full rounded-xl border border-white/[0.06]"
+                  style={{ height: "clamp(300px, 50vh, 420px)", background: "rgba(0,0,0,0.3)" }}
+                />
+              </div>
             )}
-            <button type="button" onClick={searchExplorer} className={btnCls}>Search</button>
-            <pre className="mt-5 p-3 rounded-lg bg-[rgba(17,24,39,0.9)] border border-[rgba(99,102,241,0.2)] text-sm text-[#E5E7EB] max-h-[400px] overflow-auto whitespace-pre-wrap break-all" style={{ scrollbarWidth: "thin" }}>
-              {expResult}
-            </pre>
           </div>
-        )}
-
-        {/* ================================================================ */}
-        {/*  IFRAME TAB                                                      */}
-        {/* ================================================================ */}
-        {tab === "iframe" && iframeUrl && (
-          <div>
-            <div className="flex items-center gap-3 mb-3">
-              <button type="button" onClick={() => { setTab("apps"); setIframeUrl(null); }} className="py-2 px-4 rounded-lg text-sm font-semibold bg-[#4F46E5] text-[#F9FAFB] hover:bg-[#6366F1] transition-all">
-                ← Back
-              </button>
-              <span className="text-white font-semibold">{iframeTitle}</span>
-              <a href={iframeUrl} target="_blank" rel="noopener noreferrer" className="ml-auto text-[#6366F1] text-sm hover:underline">
-                Open in new tab ↗
-              </a>
-            </div>
-            <iframe
-              src={iframeUrl}
-              title={iframeTitle}
-              className="w-full rounded-lg border-none"
-              style={{ height: "clamp(300px, 50vh, 400px)", background: "rgba(17,24,39,0.9)" }}
-            />
-          </div>
-        )}
-      </div>
         )}
       </div>
     </div>

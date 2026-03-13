@@ -94,15 +94,9 @@ async function getAnchor(): Promise<string> {
 
 async function signTx(tx: ArweaveTx, jwk: JsonWebKey) {
   const msg = JSON.stringify({
-    owner: tx.owner,
-    target: tx.target,
-    data: tx.data,
-    quantity: tx.quantity,
-    reward: tx.reward,
-    last_tx: tx.last_tx,
-    tags: tx.tags || [],
-    data_root: tx.data_root,
-    data_size: tx.data_size,
+    owner: tx.owner, target: tx.target, data: tx.data, quantity: tx.quantity,
+    reward: tx.reward, last_tx: tx.last_tx, tags: tx.tags || [],
+    data_root: tx.data_root, data_size: tx.data_size,
   });
   const msgBuffer = new TextEncoder().encode(msg);
   const privKey = await crypto.subtle.importKey("jwk", jwk, { name: "RSA-PSS", hash: "SHA-256" }, false, ["sign"]);
@@ -121,6 +115,18 @@ async function postTx(tx: ArweaveTx): Promise<Response> {
 }
 
 /* ================================================================== */
+/*  Shared design tokens (must match wallets-app.tsx)                   */
+/* ================================================================== */
+
+const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+const input = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/30 transition-all";
+const textarea = `${input} h-auto py-3`;
+const btnPrimary = "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+const btnGhost = "w-full h-11 rounded-xl font-medium text-sm border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06] active:scale-[0.98] transition-all cursor-pointer";
+const label = "block text-white/40 text-xs font-medium uppercase tracking-wider mb-1.5";
+const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
+
+/* ================================================================== */
 /*  COMPONENT                                                          */
 /* ================================================================== */
 
@@ -130,14 +136,12 @@ export default function ArweaveWallet() {
   const [balance, setBalance] = useState("—");
   const [arTab, setArTab] = useState<"setup" | "info" | "send" | "upload">("setup");
 
-  /* form state */
   const [importKey, setImportKey] = useState("");
   const [target, setTarget] = useState("");
   const [amount, setAmount] = useState("");
   const [dataText, setDataText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  /* status per-section */
   const [genStatus, setGenStatus] = useState<StatusMsg | null>(null);
   const [impStatus, setImpStatus] = useState<StatusMsg | null>(null);
   const [expStatus, setExpStatus] = useState<StatusMsg | null>(null);
@@ -167,7 +171,6 @@ export default function ArweaveWallet() {
     [refreshBalance],
   );
 
-  /* ---- load saved wallet on mount ---- */
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -180,9 +183,7 @@ export default function ArweaveWallet() {
           refreshBalance(addr);
           setArTab("info");
         })();
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
     }
   }, [refreshBalance]);
 
@@ -240,15 +241,8 @@ export default function ArweaveWallet() {
       const quantity = BigInt(Math.round(parseFloat(amount) * 10 ** 12)).toString();
       const reward = await getPrice(0, target);
       const tx: ArweaveTx = {
-        format: 2,
-        owner: wallet.n,
-        target,
-        quantity,
-        reward,
-        last_tx: anchor,
-        tags: [],
-        data_size: "0",
-        data_root: "",
+        format: 2, owner: wallet.n, target, quantity, reward,
+        last_tx: anchor, tags: [], data_size: "0", data_root: "",
       };
       await signTx(tx, wallet);
       const res = await postTx(tx);
@@ -280,19 +274,11 @@ export default function ArweaveWallet() {
       const dataSize = data.byteLength.toString();
       const reward = await getPrice(dataSize);
       const tx: ArweaveTx = {
-        format: 2,
-        owner: wallet.n,
-        target: "",
-        quantity: "0",
-        reward,
-        last_tx: anchor,
-        tags: [],
-        data_size: dataSize,
-        data_root: b64urlEncode(dataRoot),
+        format: 2, owner: wallet.n, target: "", quantity: "0", reward,
+        last_tx: anchor, tags: [], data_size: dataSize, data_root: b64urlEncode(dataRoot),
       };
       await signTx(tx, wallet);
       await postTx(tx);
-
       const chunkSize = 256 * 1024;
       let offset = 0;
       while (offset < data.byteLength) {
@@ -304,11 +290,8 @@ export default function ArweaveWallet() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            data_root: tx.data_root,
-            data_size: tx.data_size,
-            data_path: "",
-            offset: offset - chunk.byteLength,
-            chunk: chunkB64,
+            data_root: tx.data_root, data_size: tx.data_size,
+            data_path: "", offset: offset - chunk.byteLength, chunk: chunkB64,
           }),
         });
         setUploadStatus({ text: `Uploading: ${pct}%`, type: "loading" });
@@ -319,34 +302,27 @@ export default function ArweaveWallet() {
     }
   }, [wallet, dataText]);
 
-  /* ---- style helpers ---- */
-  const sectionCls = "mb-4 p-3 rounded-xl border border-[rgba(106,13,173,0.2)] bg-[rgba(255,255,255,0.05)]";
-  const sectionH3 = "text-[0.95rem] font-medium mb-2.5 text-[#00ff88] flex items-center gap-1.5";
-  const inputCls =
-    "w-full py-2.5 px-3 rounded-lg bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.2)] text-white font-mono text-xs mb-2 outline-none focus:border-[#00ff88] focus:shadow-[0_0_0_2px_rgba(0,255,136,0.2)] placeholder:text-[#b0b3b8]";
-  const btnCls =
-    "w-full py-3 rounded-lg text-sm font-medium text-white bg-[#6a0dad] hover:bg-[#8b00ff] hover:-translate-y-px disabled:bg-[rgba(255,255,255,0.1)] disabled:cursor-not-allowed transition-all mb-2 cursor-pointer";
-  const btnSecCls =
-    "w-full py-3 rounded-lg text-sm font-medium text-[#00ff88] bg-[rgba(0,255,136,0.2)] hover:bg-[rgba(0,255,136,0.3)] transition-all mb-2 cursor-pointer";
-  const copyBtnCls =
-    "inline-block py-1 px-3 text-xs rounded-lg text-[#00ff88] bg-[rgba(0,255,136,0.2)] hover:bg-[rgba(0,255,136,0.3)] cursor-pointer ml-2 transition-all";
-
+  /* ---- status badge ---- */
   const renderStatus = (s: StatusMsg | null) => {
     if (!s) return null;
-    const colors =
+    const cls =
       s.type === "success"
-        ? "bg-[rgba(0,255,136,0.2)] text-[#00ff88] border-[rgba(0,255,136,0.3)]"
+        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
         : s.type === "error"
-          ? "bg-[rgba(255,0,0,0.2)] text-[#ff6b6b] border-[rgba(255,0,0,0.3)]"
-          : "bg-[rgba(106,13,173,0.3)] text-white border-[rgba(106,13,173,0.5)]";
-    return <div className={`py-2 px-3 my-2 rounded-md text-xs font-medium border ${colors}`}>{s.text}</div>;
+          ? "bg-red-500/10 text-red-400 border-red-500/20"
+          : "bg-purple-500/10 text-purple-300 border-purple-500/20";
+    return (
+      <div className={`mt-3 py-2.5 px-3.5 rounded-xl text-xs font-medium border ${cls} break-all`}>
+        {s.text}
+      </div>
+    );
   };
 
-  const tabs: { id: typeof arTab; label: string }[] = [
-    { id: "setup", label: "Setup" },
-    { id: "info", label: "Info" },
-    { id: "send", label: "Send AR" },
-    { id: "upload", label: "Upload" },
+  const tabs: { id: typeof arTab; label: string; icon: string }[] = [
+    { id: "setup", label: "Setup", icon: "+" },
+    { id: "info", label: "Info", icon: "i" },
+    { id: "send", label: "Send", icon: "↑" },
+    { id: "upload", label: "Upload", icon: "☁" },
   ];
 
   /* ================================================================ */
@@ -354,175 +330,172 @@ export default function ArweaveWallet() {
   /* ================================================================ */
 
   return (
-    <div
-      className="w-full max-w-[500px] mx-auto rounded-xl overflow-hidden"
-      style={{
-        background: "#16213e",
-        boxShadow: "0 4px 20px rgba(106,13,173,0.3)",
-      }}
-    >
-      {/* Header */}
-      <div className="bg-[#6a0dad] py-5 px-5 text-center">
-        <h2 className="text-xl font-semibold text-white">Arweave Wallet</h2>
-      </div>
-
+    <div className="space-y-5">
       {/* Tabs */}
-      <div className="flex border-b border-[rgba(255,255,255,0.1)] bg-[rgba(106,13,173,0.2)]">
+      <div className={`${card} p-1.5 flex gap-1`}>
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setArTab(t.id)}
-            className={`flex-1 py-3 text-sm font-medium border-none cursor-pointer transition-all ${
+            className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               arTab === t.id
-                ? "text-[#00ff88] bg-[rgba(0,255,136,0.1)] border-b-2 border-b-[#00ff88]"
-                : "text-[#b0b3b8] bg-transparent"
+                ? "bg-purple-500/20 text-purple-300 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]"
+                : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
             }`}
           >
+            <span className="text-xs opacity-60">{t.icon}</span>
             {t.label}
           </button>
         ))}
       </div>
 
-      <div className="p-5">
-        {/* ── Setup Tab ── */}
-        {arTab === "setup" && (
-          <>
-            <div className={sectionCls}>
-              <h3 className={sectionH3}>Generate New Wallet</h3>
-              <button type="button" onClick={handleGenerate} className={btnCls}>
-                Generate Keypair
-              </button>
-              {renderStatus(genStatus)}
-            </div>
-            <div className={sectionCls}>
-              <h3 className={sectionH3}>Import JWK</h3>
-              <textarea
-                rows={3}
-                value={importKey}
-                onChange={(e) => setImportKey(e.target.value)}
-                placeholder="Paste JWK JSON here"
-                className={inputCls}
-                style={{ resize: "vertical" }}
-              />
-              <button type="button" onClick={handleImport} className={btnCls}>
-                Import Key
-              </button>
-              {renderStatus(impStatus)}
-            </div>
-          </>
-        )}
+      {/* ── Setup Tab ── */}
+      {arTab === "setup" && (
+        <div className="space-y-4">
+          <div className={`${card} p-5 space-y-4`}>
+            <h3 className="text-sm font-semibold text-white/80">Generate New Wallet</h3>
+            <p className="text-xs text-white/30 -mt-2">Create a fresh RSA-4096 keypair stored in your browser.</p>
+            <button type="button" onClick={handleGenerate} className={btnPrimary}>Generate Keypair</button>
+            {renderStatus(genStatus)}
+          </div>
+          <div className={`${card} p-5 space-y-3`}>
+            <h3 className="text-sm font-semibold text-white/80">Import Existing Key</h3>
+            <textarea
+              rows={3}
+              value={importKey}
+              onChange={(e) => setImportKey(e.target.value)}
+              placeholder="Paste JWK JSON here..."
+              className={textarea}
+              style={{ resize: "vertical", fontFamily: "monospace", fontSize: "11px" }}
+            />
+            <button type="button" onClick={handleImport} className={btnPrimary}>Import Key</button>
+            {renderStatus(impStatus)}
+          </div>
+        </div>
+      )}
 
-        {/* ── Info Tab ── */}
-        {arTab === "info" && (
-          <>
-            <div className={sectionCls}>
-              <h3 className={sectionH3}>Wallet Details</h3>
-              <p className="text-sm mb-1 break-all">
-                <strong className="text-white">Address:</strong>{" "}
-                <span className="text-[#b0b3b8]">{address || "—"}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (address) navigator.clipboard.writeText(address);
-                  }}
-                  className={copyBtnCls}
-                >
-                  Copy
-                </button>
-              </p>
-              <p className="text-sm mb-2">
-                <strong className="text-white">Balance:</strong>{" "}
-                <span className="text-[#b0b3b8]">{balance} AR</span>
-                <button
-                  type="button"
-                  onClick={() => { if (address) refreshBalance(address); }}
-                  className={copyBtnCls}
-                >
-                  Refresh
-                </button>
-              </p>
-              <pre className="bg-[rgba(0,0,0,0.3)] p-3 rounded-md overflow-auto text-[10px] max-h-[80px] text-[#b0b3b8] border border-[rgba(255,255,255,0.1)]">
-                {wallet ? JSON.stringify(wallet, null, 2) : "No wallet loaded"}
-              </pre>
-              <p className="text-[11px] text-[#b0b3b8] mt-1">
-                Warning: Backup your key securely. Never share it.
-              </p>
-            </div>
-            <div className={sectionCls}>
-              <h3 className={sectionH3}>Backup</h3>
-              <button type="button" onClick={handleExport} className={btnCls}>
-                Download Key (.json)
-              </button>
-              {renderStatus(expStatus)}
-            </div>
-            <div className={sectionCls}>
-              <button type="button" onClick={handleClear} className={btnSecCls}>
-                Clear Wallet (Local)
+      {/* ── Info Tab ── */}
+      {arTab === "info" && (
+        <div className="space-y-4">
+          {/* Balance card */}
+          <div className={`${card} p-5`}>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Balance</span>
+              <button type="button" onClick={() => { if (address) refreshBalance(address); }} className={pillBtn}>
+                Refresh
               </button>
             </div>
-          </>
-        )}
+            <p className="text-3xl font-bold text-white tracking-tight">
+              {balance} <span className="text-lg font-normal text-white/30">AR</span>
+            </p>
+          </div>
 
-        {/* ── Send Tab ── */}
-        {arTab === "send" && (
-          <div className={sectionCls}>
-            <h3 className={sectionH3}>Send AR</h3>
-            <div className="flex gap-2 items-center mb-2">
+          {/* Address */}
+          <div className={`${card} p-5 space-y-3`}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Address</span>
+              <button
+                type="button"
+                onClick={() => { if (address) navigator.clipboard.writeText(address); }}
+                className={pillBtn}
+              >
+                Copy
+              </button>
+            </div>
+            <p className="text-xs font-mono text-white/50 break-all leading-relaxed bg-white/[0.03] rounded-lg p-3">
+              {address || "No wallet loaded"}
+            </p>
+          </div>
+
+          {/* Key preview */}
+          <div className={`${card} p-5 space-y-3`}>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Key Preview</span>
+            <pre className="bg-white/[0.03] rounded-lg p-3 overflow-auto text-[10px] max-h-[80px] text-white/30 font-mono leading-relaxed">
+              {wallet ? JSON.stringify(wallet, null, 2) : "No wallet loaded"}
+            </pre>
+            <p className="text-[11px] text-amber-400/60 flex items-center gap-1">
+              <span>⚠</span> Backup your key securely. Never share it.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={handleExport} className={btnPrimary}>Download Key</button>
+            <button type="button" onClick={handleClear} className={btnGhost}>Clear Wallet</button>
+          </div>
+          {renderStatus(expStatus)}
+        </div>
+      )}
+
+      {/* ── Send Tab ── */}
+      {arTab === "send" && (
+        <div className={`${card} p-5 space-y-4`}>
+          <h3 className="text-sm font-semibold text-white/80">Send AR</h3>
+          <div>
+            <label className={label}>Recipient</label>
+            <div className="flex gap-2">
               <input
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                placeholder="Recipient address"
-                className={`${inputCls} flex-1 !mb-0`}
+                placeholder="Arweave address"
+                className={`${input} flex-1`}
               />
               <button
                 type="button"
                 onClick={() => navigator.clipboard.readText().then((t) => setTarget(t.trim()))}
-                className={copyBtnCls}
+                className={pillBtn}
+                style={{ height: 44 }}
               >
                 Paste
               </button>
             </div>
+          </div>
+          <div>
+            <label className={label}>Amount</label>
             <input
               type="number"
               step="0.000000000001"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="Amount (AR)"
-              className={inputCls}
+              placeholder="0.00 AR"
+              className={input}
             />
-            <button type="button" onClick={handleSend} className={btnCls}>
-              Send Transaction
-            </button>
-            {renderStatus(sendStatus)}
           </div>
-        )}
+          <button type="button" onClick={handleSend} className={btnPrimary}>Send Transaction</button>
+          {renderStatus(sendStatus)}
+        </div>
+      )}
 
-        {/* ── Upload Tab ── */}
-        {arTab === "upload" && (
-          <div className={sectionCls}>
-            <h3 className={sectionH3}>Upload Data</h3>
+      {/* ── Upload Tab ── */}
+      {arTab === "upload" && (
+        <div className={`${card} p-5 space-y-4`}>
+          <h3 className="text-sm font-semibold text-white/80">Upload to Arweave</h3>
+          <p className="text-xs text-white/30 -mt-2">Permanently store text or a file on the permaweb.</p>
+          <div>
+            <label className={label}>Text Data</label>
             <textarea
-              rows={2}
+              rows={3}
               value={dataText}
               onChange={(e) => setDataText(e.target.value)}
-              placeholder="Text data..."
-              className={inputCls}
+              placeholder="Enter text to upload..."
+              className={textarea}
               style={{ resize: "vertical" }}
             />
+          </div>
+          <div>
+            <label className={label}>Or choose a file</label>
             <input
               ref={fileRef}
               type="file"
               accept="*/*"
-              className="block w-full text-sm text-[#b0b3b8] my-2 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[rgba(106,13,173,0.4)] file:text-white hover:file:bg-[rgba(106,13,173,0.6)]"
+              className="block w-full text-sm text-white/40 file:mr-3 file:h-9 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-medium file:bg-white/[0.06] file:text-white/60 hover:file:bg-white/[0.1] file:cursor-pointer file:transition-all"
             />
-            <button type="button" onClick={handleUpload} className={btnCls}>
-              Upload to Arweave
-            </button>
-            {renderStatus(uploadStatus)}
           </div>
-        )}
-      </div>
+          <button type="button" onClick={handleUpload} className={btnPrimary}>Upload</button>
+          {renderStatus(uploadStatus)}
+        </div>
+      )}
     </div>
   );
 }
