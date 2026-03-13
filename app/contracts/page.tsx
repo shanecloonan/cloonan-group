@@ -80,7 +80,7 @@ const CONTRACTS: Contract[] = [
     address: "0x20c855f8cf408ee3a481409993e4d3ce04c2e509",
     explorer:
       "https://etherscan.io/address/0x20c855f8cf408ee3a481409993e4d3ce04c2e509",
-    go: "https://moneyfund.com/locker",
+    go: "/storefront",
   },
   {
     name: "MoneyFund Multiswap",
