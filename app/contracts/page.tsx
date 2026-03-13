@@ -59,7 +59,7 @@ const CONTRACTS: Contract[] = [
     address: "0xe01fe1c2a22736da756bdc2c9144464e8a73fcd7",
     explorer:
       "https://etherscan.io/address/0xe01fe1c2a22736da756bdc2c9144464e8a73fcd7",
-    go: "https://moneyfund.com/widget",
+    go: "/multiswap",
   },
   {
     name: "Ad-space Launcher",
