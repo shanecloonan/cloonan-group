@@ -115,7 +115,7 @@ const CONTRACTS: Contract[] = [
     address: "0x6785cd86a65f3d8336fdc3b0e54c78215501dca2",
     explorer:
       "https://etherscan.io/address/0x6785cd86a65f3d8336fdc3b0e54c78215501dca2",
-    go: "https://moneyfund.com/airdrop",
+    go: "/airdrop",
   },
   {
     name: "Solana Wormhole",
