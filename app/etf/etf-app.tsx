@@ -94,29 +94,16 @@ function PieChart({ tokens }: { tokens: TokenInfo[] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Help icon                                                          */
+/*  Design tokens                                                      */
 /* ------------------------------------------------------------------ */
 
-function HelpIcon({ id, active, toggle }: { id: string; active: string | null; toggle: (id: string) => void }) {
-  return (
-    <span
-      onClick={() => toggle(id)}
-      className="inline-flex items-center justify-center w-[14px] h-[14px] rounded-full text-[0.6em] cursor-pointer text-[#E5E7EB] transition-all hover:scale-110"
-      style={{ background: "linear-gradient(45deg, #5B21B6, #7C3AED)" }}
-    >
-      ?
-    </span>
-  );
-}
-
-function HelpNote({ id, active, text }: { id: string; active: string | null; text: string }) {
-  if (active !== id) return null;
-  return (
-    <div className="text-xs text-[#E5E7EB] bg-[#1E293B] p-1.5 rounded-md mt-1 shadow-lg animate-[slideDown_0.3s_ease-out]">
-      {text}
-    </div>
-  );
-}
+const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-400/30 transition-all";
+const selectCls = `${inputCls} appearance-none cursor-pointer`;
+const btnPrimary = "h-11 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-2";
+const btnGold = "h-11 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-black hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-2";
+const btnGhost = "h-10 px-4 rounded-xl font-medium text-xs border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
+const labelCls = "block text-white/40 text-[10px] font-bold uppercase tracking-wider mb-1.5";
 
 /* ================================================================== */
 /*  COMPONENT                                                          */
@@ -527,19 +514,11 @@ export default function EtfApp() {
   }, []);
 
   /* ================================================================ */
-  /*  CSS classes                                                      */
+  /*  Spinner                                                          */
   /* ================================================================ */
 
-  const inputCls = "w-full max-w-[600px] py-2.5 px-2.5 rounded-[10px] bg-[#E5E7EB] text-[#1F2937] text-sm border-none outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] focus:shadow-[0_0_12px_rgba(91,33,182,0.5)] hover:bg-[#D1D5DB] placeholder:text-[#9CA3AF] placeholder:opacity-70 my-0.5";
-  const labelCls = "text-sm font-medium text-[#E5E7EB] mb-1.5 block";
-  const btnPurple = "w-full py-4 my-3 rounded-[10px] text-lg font-semibold text-[#E5E7EB] border-none cursor-pointer transition-all overflow-hidden relative flex justify-center items-center disabled:bg-gray-600/70 disabled:cursor-not-allowed disabled:transform-none";
-  const btnPurpleGrad = "bg-gradient-to-r from-[#5B21B6] to-[#7C3AED] hover:from-[#7C3AED] hover:to-[#A5B4FC] hover:-translate-y-0.5 hover:shadow-[0_0_12px_rgba(91,33,182,0.5)]";
-  const goldBtn = "bg-gradient-to-r from-[#E4A11B] to-[#F4B85C] text-[#1F2937] hover:from-[#D97706] hover:to-[#FBCF8B] hover:-translate-y-0.5 hover:shadow-[0_0_16px_rgba(228,161,27,0.6)]";
-  const smallGoldBtn = "inline-flex items-center justify-center py-1.5 px-3 text-xs min-h-[28px] rounded-[10px] font-semibold border border-[rgba(228,161,27,0.6)] cursor-pointer transition-all bg-gradient-to-r from-[#E4A11B] to-[#F4B85C] text-[#1F2937] hover:from-[#D97706] hover:to-[#FBCF8B] hover:-translate-y-0.5 disabled:bg-gray-600/70 disabled:cursor-not-allowed";
-  const smallPurpleBtn = "inline-flex items-center justify-center py-1.5 px-3 text-xs min-h-[28px] rounded-[10px] font-semibold border border-[rgba(91,33,182,0.6)] cursor-pointer transition-all bg-gradient-to-br from-[#5B21B6] to-[#7C3AED] text-[#E5E7EB] hover:from-[#7C3AED] hover:to-[#A5B4FC] hover:-translate-y-0.5 disabled:bg-gray-600/70 disabled:cursor-not-allowed";
-
   const Spinner = () => (
-    <span className="inline-block w-4 h-4 border-2 border-[#E5E7EB] border-t-transparent rounded-full animate-spin" />
+    <span className="inline-block w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
   );
 
   /* ================================================================ */
@@ -547,22 +526,21 @@ export default function EtfApp() {
   /* ================================================================ */
 
   return (
-    <div className="min-h-screen p-5 sm:p-10" style={{ background: "#1E293B", fontFamily: "'Manrope', sans-serif", color: "#E5E7EB" }}>
-      <div className="max-w-[1400px] mx-auto flex flex-wrap gap-6">
+    <div className="min-h-screen p-5 sm:p-10 text-white/90" style={{ background: "#08090e", fontFamily: "'Manrope', sans-serif" }}>
+      <div className="max-w-[1100px] mx-auto flex flex-wrap gap-8">
         {/* ============================================================ */}
         {/*  LEFT: Launch ETF                                            */}
         {/* ============================================================ */}
-        <div className="flex-1 min-w-[45%] p-4 sm:p-8">
+        <div className="flex-1 min-w-[45%]">
           {/* Wallet selector */}
-          <div className="flex gap-4 max-w-[600px] mb-6">
+          <div className="flex gap-3 mb-8">
             <select
               value={selIdx ?? ""}
               onChange={(e) => {
                 const v = e.target.value;
                 selectWallet(v === "" ? null : parseInt(v));
               }}
-              className="flex-1 min-w-0 py-3.5 px-3.5 rounded-[10px] text-base text-center text-[#E5E7EB] border-none transition-all outline-none"
-              style={{ background: "linear-gradient(45deg, #475569, #64748B)", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3)" }}
+              className={`flex-1 min-w-0 ${selectCls}`}
             >
               <option value="">-- Select Wallet --</option>
               {wallets.map((w, i) => (
@@ -573,105 +551,124 @@ export default function EtfApp() {
               type="button"
               onClick={connectWallet}
               disabled={busyBtns["connect"]}
-              className="flex-1 min-w-0 py-3.5 px-3.5 rounded-[10px] text-base font-semibold text-[#E5E7EB] border-none cursor-pointer transition-all hover:-translate-y-0.5 disabled:bg-gray-600/70 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(45deg, #5B21B6, #7C3AED)" }}
+              className={btnPrimary}
             >
               {busyBtns["connect"] ? <Spinner /> : "Connect Wallet"}
             </button>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-bold text-center text-[#E5E7EB] mb-5">Launch an ETF</h2>
+          <h2 className="text-2xl font-bold text-white/90 mb-6">Launch an ETF</h2>
 
-          {/* Name */}
-          <div className="mb-3">
-            <div className="flex items-center gap-1.5">
-              <label className={labelCls}>Name</label>
-              <HelpIcon id="name" active={activeHelp} toggle={toggleHelp} />
-            </div>
-            <input value={etfName} onChange={(e) => setEtfName(e.target.value)} placeholder="e.g., MoneyFund ETF" className={inputCls} />
-            <HelpNote id="name" active={activeHelp} text="The full name of the ETF (e.g., MoneyFund ETF)." />
-          </div>
-
-          {/* Symbol */}
-          <div className="mb-3">
-            <div className="flex items-center gap-1.5">
-              <label className={labelCls}>Ticker</label>
-              <HelpIcon id="symbol" active={activeHelp} toggle={toggleHelp} />
-            </div>
-            <input value={etfSymbol} onChange={(e) => setEtfSymbol(e.target.value)} placeholder="e.g., METF" className={inputCls} />
-            <HelpNote id="symbol" active={activeHelp} text="The ticker symbol for the ETF (e.g., METF)." />
-          </div>
-
-          {/* Token rows */}
-          <div className="mb-3">
-            <div className="flex items-center gap-1.5">
-              <label className={labelCls}>Token Addresses &amp; Weights (Sum to 100%)</label>
-              <HelpIcon id="tokens" active={activeHelp} toggle={toggleHelp} />
-            </div>
-            {tokenRows.map((row, i) => (
-              <div key={i} className="flex gap-2 items-center mb-2 max-w-[600px]">
-                <input
-                  value={row.address}
-                  onChange={(e) => updateTokenRow(i, "address", e.target.value)}
-                  placeholder="e.g., 0xToken"
-                  className={`flex-[3] max-w-[400px] ${inputCls}`}
-                />
-                <input
-                  type="number"
-                  value={row.weight}
-                  onChange={(e) => updateTokenRow(i, "weight", e.target.value)}
-                  placeholder="e.g., 50"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  className={`flex-[1.5] max-w-[150px] ${inputCls}`}
-                />
-                {tokenRows.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeTokenRow(i)}
-                    className="w-10 h-10 p-0 text-xl rounded-lg flex items-center justify-center border-none cursor-pointer text-[#E5E7EB] transition-all hover:-translate-y-0.5"
-                    style={{ background: "linear-gradient(45deg, #5B21B6, #7C3AED)" }}
-                  >
-                    X
-                  </button>
-                )}
+          <div className={`${card} p-6 space-y-5`}>
+            {/* Name */}
+            <div>
+              <div className="flex items-center gap-2">
+                <label className={labelCls}>Name</label>
+                <span
+                  onClick={() => toggleHelp("name")}
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] cursor-pointer bg-indigo-500/20 text-indigo-400 hover:scale-110 transition-transform"
+                >?</span>
               </div>
-            ))}
-            <div className="flex items-center gap-2 mb-3 max-w-[600px]">
-              <button
-                type="button"
-                onClick={addTokenRow}
-                className="w-6 h-6 p-0 text-sm rounded-md flex items-center justify-center border-none cursor-pointer text-[#E5E7EB] transition-all hover:-translate-y-0.5"
-                style={{ background: "linear-gradient(45deg, #5B21B6, #7C3AED)" }}
-              >
-                +
-              </button>
-              <span className="text-xs text-[#E4A11B]">Remaining: {remaining}%</span>
+              <input value={etfName} onChange={(e) => setEtfName(e.target.value)} placeholder="e.g., MoneyFund ETF" className={inputCls} />
+              {activeHelp === "name" && (
+                <div className="text-xs text-white/60 bg-white/[0.04] border border-white/[0.06] p-2 rounded-lg mt-2">
+                  The full name of the ETF (e.g., MoneyFund ETF).
+                </div>
+              )}
             </div>
-            <HelpNote id="tokens" active={activeHelp} text="Enter ERC20 token addresses and their percentage weights, summing to 100%." />
-          </div>
 
-          {/* Fee */}
-          <div className="mb-3">
-            <div className="flex items-center gap-1.5">
-              <label className={labelCls}>Fee Receiver Address &amp; Fee Amount (%)</label>
-              <HelpIcon id="fee" active={activeHelp} toggle={toggleHelp} />
+            {/* Symbol */}
+            <div>
+              <div className="flex items-center gap-2">
+                <label className={labelCls}>Ticker</label>
+                <span
+                  onClick={() => toggleHelp("symbol")}
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] cursor-pointer bg-indigo-500/20 text-indigo-400 hover:scale-110 transition-transform"
+                >?</span>
+              </div>
+              <input value={etfSymbol} onChange={(e) => setEtfSymbol(e.target.value)} placeholder="e.g., METF" className={inputCls} />
+              {activeHelp === "symbol" && (
+                <div className="text-xs text-white/60 bg-white/[0.04] border border-white/[0.06] p-2 rounded-lg mt-2">
+                  The ticker symbol for the ETF (e.g., METF).
+                </div>
+              )}
             </div>
-            <div className="flex gap-2 max-w-[600px]">
-              <input value={feeReceiver} onChange={(e) => setFeeReceiver(e.target.value)} placeholder="e.g., 0xFeeReceiver" className={`flex-1 ${inputCls}`} />
-              <input type="number" value={feeBps} onChange={(e) => setFeeBps(e.target.value)} placeholder="e.g., 1" min="0" max="100" step="0.01" className={`flex-1 ${inputCls}`} />
-            </div>
-            <HelpNote id="fee" active={activeHelp} text="Enter the address to receive ETF management fees and the percentage fee (0-100%)." />
-          </div>
 
-          {/* Launch button */}
-          <div className="flex gap-3 max-w-[600px]">
+            {/* Token rows */}
+            <div>
+              <div className="flex items-center gap-2">
+                <label className={labelCls}>Token Addresses &amp; Weights (Sum to 100%)</label>
+                <span
+                  onClick={() => toggleHelp("tokens")}
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] cursor-pointer bg-indigo-500/20 text-indigo-400 hover:scale-110 transition-transform"
+                >?</span>
+              </div>
+              {tokenRows.map((row, i) => (
+                <div key={i} className="flex gap-2 items-center mb-2">
+                  <input
+                    value={row.address}
+                    onChange={(e) => updateTokenRow(i, "address", e.target.value)}
+                    placeholder="0xToken..."
+                    className={`flex-[3] ${inputCls}`}
+                  />
+                  <input
+                    type="number"
+                    value={row.weight}
+                    onChange={(e) => updateTokenRow(i, "weight", e.target.value)}
+                    placeholder="50"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    className={`flex-[1] ${inputCls}`}
+                  />
+                  {tokenRows.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeTokenRow(i)}
+                      className={btnGhost}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+              <div className="flex items-center gap-3 mt-2">
+                <button type="button" onClick={addTokenRow} className={btnGhost}>+ Add</button>
+                <span className="text-xs text-amber-400/80">Remaining: {remaining}%</span>
+              </div>
+              {activeHelp === "tokens" && (
+                <div className="text-xs text-white/60 bg-white/[0.04] border border-white/[0.06] p-2 rounded-lg mt-2">
+                  Enter ERC20 token addresses and their percentage weights, summing to 100%.
+                </div>
+              )}
+            </div>
+
+            {/* Fee */}
+            <div>
+              <div className="flex items-center gap-2">
+                <label className={labelCls}>Fee Receiver Address &amp; Fee Amount (%)</label>
+                <span
+                  onClick={() => toggleHelp("fee")}
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] cursor-pointer bg-indigo-500/20 text-indigo-400 hover:scale-110 transition-transform"
+                >?</span>
+              </div>
+              <div className="flex gap-2">
+                <input value={feeReceiver} onChange={(e) => setFeeReceiver(e.target.value)} placeholder="0xFeeReceiver..." className={`flex-[2] ${inputCls}`} />
+                <input type="number" value={feeBps} onChange={(e) => setFeeBps(e.target.value)} placeholder="1" min="0" max="100" step="0.01" className={`flex-[1] ${inputCls}`} />
+              </div>
+              {activeHelp === "fee" && (
+                <div className="text-xs text-white/60 bg-white/[0.04] border border-white/[0.06] p-2 rounded-lg mt-2">
+                  Enter the address to receive ETF management fees and the percentage fee (0-100%).
+                </div>
+              )}
+            </div>
+
+            {/* Launch button */}
             <button
               type="button"
               onClick={createETF}
               disabled={busyBtns["launch"]}
-              className={`${btnPurple} ${goldBtn} max-w-[180px] py-3 text-base`}
+              className={`w-full ${btnGold}`}
             >
               {busyBtns["launch"] ? <Spinner /> : "Launch ETF"}
             </button>
@@ -681,22 +678,13 @@ export default function EtfApp() {
         {/* ============================================================ */}
         {/*  RIGHT: All ETFs                                             */}
         {/* ============================================================ */}
-        <div className="flex-1 min-w-[45%] p-4 sm:p-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center text-[#E5E7EB] mb-5">All ETFs</h2>
+        <div className="flex-1 min-w-[45%]">
+          <h2 className="text-2xl font-bold text-white/90 mb-6">All ETFs</h2>
 
           {/* ETF list */}
-          <div
-            className="max-h-[600px] overflow-y-auto p-3 rounded-[10px] flex flex-col gap-2 relative"
-            style={{
-              background: "rgba(10,14,43,0.9)",
-              boxShadow: "0 0 15px rgba(128,90,213,0.4), 0 0 10px rgba(255,255,255,0.2)",
-              border: "2px solid #E4A11B",
-              scrollbarWidth: "thin",
-              scrollbarColor: "#E4A11B rgba(10,14,43,0.5)",
-            }}
-          >
+          <div className={`${card} max-h-[600px] overflow-y-auto p-4 flex flex-col gap-3`}>
             {etfs.length === 0 ? (
-              <p className="text-center text-sm text-[#9CA3AF] py-8">No ETFs found. Connect a wallet or launch one.</p>
+              <p className="text-center text-sm text-white/30 py-8">No ETFs found. Connect a wallet or launch one.</p>
             ) : (
               etfs.map((etf) => {
                 const price = parseFloat(ethers.utils.formatEther(etf.currentPrice)).toFixed(6);
@@ -706,62 +694,52 @@ export default function EtfApp() {
                 const expanded = expandedToken[etf.etfToken];
 
                 return (
-                  <div
-                    key={etf.etfToken}
-                    className="rounded-[10px] p-2.5 flex flex-col gap-1.5 transition-all hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(91,33,182,0.6),0_0_10px_rgba(255,215,0,0.4)]"
-                    style={{ background: "rgba(10,14,43,0.9)", border: "1px solid #ffd700" }}
-                  >
+                  <div key={etf.etfToken} className={`${card} p-4`}>
                     {/* Header */}
-                    <div className="flex justify-between items-center pb-1 border-b border-[rgba(91,33,182,0.2)]">
-                      <h3 className="text-[0.95rem] font-semibold text-[#E5E7EB] m-0">{etf.name} ({etf.symbol})</h3>
-                      <span className="text-xs text-[#9F7AEA] font-medium">{shorten(etf.etfToken)}</span>
+                    <div className="flex justify-between items-center pb-3 mb-3 border-b border-white/[0.06]">
+                      <h3 className="text-sm font-semibold text-white/90">{etf.name} ({etf.symbol})</h3>
+                      <span className="text-xs text-indigo-400/80 font-mono">{shorten(etf.etfToken)}</span>
                     </div>
 
-                    {/* Details */}
-                    <div
-                      className="flex flex-wrap gap-2 text-[0.7rem] my-1 rounded-md p-1.5"
-                      style={{ background: "rgba(30,41,59,0.6)", border: "1px solid rgba(255,215,0,0.3)" }}
-                    >
-                      <div className="flex-1 basis-[45%] flex flex-col gap-0.5">
-                        <label className="font-medium text-[#9CA3AF] text-[0.6rem]">Price</label>
-                        <span className="text-[#e6e6fa] text-[0.65rem] flex items-center gap-1">
+                    {/* Details — 3-column grid */}
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div>
+                        <span className={labelCls}>Price</span>
+                        <div className="text-xs text-white/90 flex items-center gap-1.5">
                           {price} ETH
                           <button
                             type="button"
                             onClick={() => updatePrice(etf.etfToken)}
                             disabled={busyBtns[`price-${etf.etfToken}`]}
-                            className={smallPurpleBtn}
+                            className={btnGhost}
                           >
-                            {busyBtns[`price-${etf.etfToken}`] ? <Spinner /> : "Update Price"}
+                            {busyBtns[`price-${etf.etfToken}`] ? <Spinner /> : "Update"}
                           </button>
-                        </span>
+                        </div>
                       </div>
-                      <div className="flex-1 basis-[45%] flex flex-col gap-0.5">
-                        <label className="font-medium text-[#9CA3AF] text-[0.6rem]">% Appreciation</label>
-                        <span className="text-[#e6e6fa] text-[0.65rem]">{appreciation}%</span>
+                      <div>
+                        <span className={labelCls}>Appreciation</span>
+                        <div className="text-xs text-white/90">{appreciation}%</div>
                       </div>
-                      <div className="flex-1 basis-[45%] flex flex-col gap-0.5">
-                        <label className="font-medium text-[#9CA3AF] text-[0.6rem]">Your Balance</label>
-                        <span className="text-[#e6e6fa] text-[0.65rem]">{balance} {etf.symbol}</span>
+                      <div>
+                        <span className={labelCls}>Your Balance</span>
+                        <div className="text-xs text-white/90">{balance} {etf.symbol}</div>
                       </div>
-                      <div className="flex-1 basis-[45%] flex flex-col gap-0.5">
-                        <label className="font-medium text-[#9CA3AF] text-[0.6rem]">Fee Receiver</label>
-                        <span className="text-[#e6e6fa] text-[0.65rem] break-all">{shorten(etf.thirdFeeReceiver)}</span>
+                      <div>
+                        <span className={labelCls}>Fee Receiver</span>
+                        <div className="text-xs text-white/60 break-all">{shorten(etf.thirdFeeReceiver)}</div>
                       </div>
-                      <div className="flex-1 basis-[45%] flex flex-col gap-0.5">
-                        <label className="font-medium text-[#9CA3AF] text-[0.6rem]">Fee</label>
-                        <span className="text-[#e6e6fa] text-[0.65rem]">{fee}%</span>
+                      <div>
+                        <span className={labelCls}>Fee</span>
+                        <div className="text-xs text-white/90">{fee}%</div>
                       </div>
                     </div>
 
                     {/* Token distribution + pie chart */}
-                    <div className="flex gap-2 items-start my-1">
+                    <div className="flex gap-3 items-start mb-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-[#E5E7EB] m-0 mb-1">Token Distribution</h3>
-                        <div
-                          className="p-1 rounded-md flex flex-wrap gap-[3px] max-h-[200px] overflow-y-auto"
-                          style={{ background: "rgba(10,14,43,0.9)", border: "1px solid #ffd700", scrollbarWidth: "thin", scrollbarColor: "#7C3AED rgba(10,14,43,0.5)" }}
-                        >
+                        <span className={labelCls}>Token Distribution</span>
+                        <div className="flex flex-wrap gap-1 max-h-[160px] overflow-y-auto">
                           {etf.tokenInfo.map((t) => (
                             <button
                               key={t.address}
@@ -772,19 +750,19 @@ export default function EtfApp() {
                                   [etf.etfToken]: prev[etf.etfToken] === t.address ? null : t.address,
                                 }))
                               }
-                              className="flex items-center py-0.5 px-1 rounded text-[0.65rem] text-[#E5E7EB] hover:bg-[rgba(91,33,182,0.1)] transition-colors bg-transparent border-none cursor-pointer text-left"
+                              className="flex items-center py-1 px-2 rounded-lg text-xs text-white/60 hover:bg-white/[0.06] transition-colors bg-transparent border-none cursor-pointer text-left"
                             >
-                              <span className="w-[5px] h-[5px] rounded-full mr-1 flex-shrink-0" style={{ background: t.color }} />
+                              <span className="w-1.5 h-1.5 rounded-full mr-1.5 flex-shrink-0" style={{ background: t.color }} />
                               <a
                                 href={`https://etherscan.io/address/${t.address}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[#9F7AEA] no-underline hover:underline"
+                                className="text-indigo-400 no-underline hover:underline"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {expanded === t.address ? shorten(t.address) : t.symbol}
                               </a>
-                              <span className="ml-1 text-[#7C3AED] font-medium">({t.weight}%)</span>
+                              <span className="ml-1 text-white/30 font-medium">({t.weight}%)</span>
                             </button>
                           ))}
                         </div>
@@ -793,8 +771,8 @@ export default function EtfApp() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-1 mt-1">
-                      <div className="flex gap-1 items-center w-full">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2 items-center">
                         <input
                           type="number"
                           value={etfAmounts[etf.etfToken] || ""}
@@ -802,22 +780,22 @@ export default function EtfApp() {
                           placeholder="Amount"
                           min="0"
                           step="0.00000001"
-                          className="flex-1 py-1.5 px-1.5 rounded-[10px] bg-[#E5E7EB] text-[#1F2937] text-xs border-none outline-none min-h-[28px]"
+                          className={`flex-1 ${inputCls}`}
                         />
-                        <button type="button" onClick={() => mintETF(etf.etfToken)} disabled={busyBtns[`mint-${etf.etfToken}`]} className={smallGoldBtn}>
+                        <button type="button" onClick={() => mintETF(etf.etfToken)} disabled={busyBtns[`mint-${etf.etfToken}`]} className={btnGold}>
                           {busyBtns[`mint-${etf.etfToken}`] ? <Spinner /> : "Mint"}
                         </button>
-                        <button type="button" onClick={() => burnETF(etf.etfToken)} disabled={busyBtns[`burn-${etf.etfToken}`]} className={smallGoldBtn}>
+                        <button type="button" onClick={() => burnETF(etf.etfToken)} disabled={busyBtns[`burn-${etf.etfToken}`]} className={btnGold}>
                           {busyBtns[`burn-${etf.etfToken}`] ? <Spinner /> : "Burn"}
                         </button>
-                        <button type="button" onClick={() => withdrawETF(etf.etfToken)} disabled={busyBtns[`withdraw-${etf.etfToken}`]} className={smallGoldBtn}>
+                        <button type="button" onClick={() => withdrawETF(etf.etfToken)} disabled={busyBtns[`withdraw-${etf.etfToken}`]} className={btnGold}>
                           {busyBtns[`withdraw-${etf.etfToken}`] ? <Spinner /> : "Withdraw"}
                         </button>
                       </div>
                       <button
                         type="button"
                         onClick={() => { navigator.clipboard.writeText(etf.etfToken); log(`Copied: ${shorten(etf.etfToken)}`, "success"); }}
-                        className={smallPurpleBtn}
+                        className={btnGhost}
                       >
                         Copy Contract Address
                       </button>
@@ -831,24 +809,20 @@ export default function EtfApp() {
           {/* Status log */}
           <div
             ref={logRef}
-            className="w-full mt-4 rounded-lg p-2 max-h-[120px] overflow-y-auto"
-            style={{
-              background: "rgba(10,14,43,0.95)",
-              border: "1px solid #E4A11B",
-              boxShadow: "0 0 10px rgba(128,90,213,0.3)",
-              scrollbarWidth: "thin",
-              scrollbarColor: "#E4A11B rgba(10,14,43,0.5)",
-            }}
+            className={`${card} mt-4 p-3 max-h-[140px] overflow-y-auto`}
           >
+            {statuses.length === 0 && (
+              <p className="text-xs text-white/30 text-center py-2">No activity yet.</p>
+            )}
             {statuses.map((s, i) => (
               <div
                 key={i}
-                className={`text-[0.7rem] mb-1.5 flex items-center gap-1.5 ${
-                  s.status === "success" ? "text-[#34D399]" : s.status === "error" ? "text-[#F87171]" : "text-[#FBBF24]"
+                className={`text-xs mb-1.5 flex items-center gap-2 ${
+                  s.status === "success" ? "text-emerald-400" : s.status === "error" ? "text-red-400" : "text-amber-400"
                 }`}
               >
-                <span className="text-[#9CA3AF] text-[0.65rem] min-w-[60px]">[{s.time}]</span>
-                <span>{s.status === "success" ? "🚀" : s.status === "error" ? "🌈" : ""} {s.msg}</span>
+                <span className="text-white/30 text-[11px] font-mono min-w-[60px]">[{s.time}]</span>
+                <span>{s.status === "success" ? "✓" : s.status === "error" ? "✗" : "⋯"} {s.msg}</span>
               </div>
             ))}
           </div>

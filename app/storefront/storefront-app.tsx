@@ -84,6 +84,7 @@ const btnGhost = "h-11 px-5 rounded-xl font-medium text-sm border border-white/[
 const btnSmall = "h-9 px-4 rounded-lg font-medium text-xs border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
 const btnDanger = "h-9 px-4 rounded-lg font-medium text-xs bg-red-500/10 border border-red-400/20 text-red-400 hover:bg-red-500/20 hover:text-red-300 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
 const btnSuccess = "h-9 px-4 rounded-lg font-medium text-xs bg-emerald-500/10 border border-emerald-400/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
+const labelCls = "block text-white/40 text-[10px] font-bold uppercase tracking-wider mb-1.5";
 const sectionTitle = "text-sm font-semibold text-white/80 mb-3 pb-2 border-b border-white/[0.06]";
 
 /* ================================================================== */
