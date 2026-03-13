@@ -1,20 +1,39 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
 
 Chart.register(...registerables);
 
 /* ================================================================== */
-/*  CONSTANTS                                                          */
+/*  SECTION MENU DEFINITIONS                                           */
 /* ================================================================== */
 
-const LAYER_COLORS = {
-  asset: "bg-gradient-to-br from-[#1A3C34] to-[#1F4A40]",
-  distribution: "bg-gradient-to-br from-[#8B3A2B] to-[#A65343]",
-  profit: "bg-gradient-to-br from-[#3F2A6D] to-[#4B367E]",
-  dex: "bg-gradient-to-br from-[#3A3A3A] to-[#4A4A4A]",
-};
+const SECTIONS = [
+  { id: "overview", label: "Overview" },
+  { id: "diagrams", label: "U-Diagrams" },
+  { id: "dividends", label: "Dividend Pool" },
+  { id: "trilayer", label: "Tri-Layer" },
+  { id: "contracts", label: "Contracts" },
+  { id: "fees", label: "Fee Structure" },
+  { id: "faq", label: "FAQ" },
+  { id: "gas", label: "Gas Calculator" },
+];
+
+/* ================================================================== */
+/*  DATA                                                                */
+/* ================================================================== */
+
+const POOL_BRANCHES = [
+  { label: "Coin Launches", pct: "0.1%", icon: "🚀", layer: "asset" as const },
+  { label: "Optional fees", pct: "15%", icon: "🪙", layer: "distribution" as const },
+  { label: "ETFs", pct: "0.125%", icon: "📈", layer: "asset" as const },
+  { label: "DEX swaps", pct: "0.1%", icon: "💰", layer: "profit" as const },
+  { label: "DAOs", pct: "0.25%", icon: "🏛", layer: "distribution" as const },
+  { label: "Storefronts", pct: "0.2%", icon: "🛍", layer: "profit" as const },
+  { label: "Ad Space", pct: "0.2%", icon: "📰", layer: "profit" as const },
+  { label: "Multiswaps", pct: "0.05%", icon: "🔄", layer: "profit" as const },
+];
 
 const FEE_DATA = [
   { contract: "Coin Launcher", feeType: "0.2% Launch", wallet: "0.1%", dividends: "0.1%", notes: "Optional: Up to 3% tx fee; MF takes 30% (15% each)", layer: "asset" as const },
@@ -25,17 +44,6 @@ const FEE_DATA = [
   { contract: "Ad Space Launcher", feeType: "0.4% Platform", wallet: "0.2%", dividends: "0.2%", notes: "$1 USD comment fee to highest bidder", layer: "profit" as const },
   { contract: "Multiswap Launcher", feeType: "0.1% Primary", wallet: "0.05%", dividends: "0.05%", notes: "Optional: Up to 3% to custom receivers", layer: "profit" as const },
   { contract: "MoneyFund DEX", feeType: "0.5% Swap", wallet: "0.1%", dividends: "0.1%", notes: "0.3% to liquidity providers", layer: "dex" as const },
-];
-
-const POOL_BRANCHES = [
-  { label: "Coin Launches", pct: "0.1%", icon: "🚀" },
-  { label: "Optional fees", pct: "15%", icon: "🪙" },
-  { label: "ETFs", pct: "0.125%", icon: "📈" },
-  { label: "DEX swaps", pct: "0.1%", icon: "💰" },
-  { label: "DAOs", pct: "0.25%", icon: "🏛" },
-  { label: "Storefronts", pct: "0.2%", icon: "🛍" },
-  { label: "Ad Space", pct: "0.2%", icon: "📰" },
-  { label: "Multiswaps", pct: "0.05%", icon: "🔄" },
 ];
 
 const FAQ_ITEMS = [
@@ -54,82 +62,36 @@ const FAQ_ITEMS = [
 ];
 
 const CONTRACT_SECTIONS = [
-  {
-    title: "Coin Launcher", layer: "asset" as const,
-    creator: "Set name, ticker, total supply, and optional transaction fees (up to 3%), with 70% going to your chosen wallets and 30% split equally between MoneyFund Wallet and MONEY Dividends. A 0.2% launch fee applies, also split equally.",
-    user: "Send tokens, approve spending, and check balances. All standard ERC-20 functions supported.",
-  },
-  {
-    title: "ETF Launcher", layer: "asset" as const,
-    creator: "Build an ETF fund by selecting ERC-20 tokens and setting their percentage allocations (summing to 100%). Choose a name, ticker, and optional transaction fee. The fund uses Uniswap V2 for swaps and Chainlink for ETH/USD pricing. 0.35% transaction fee with 0.125% each to MoneyFund Wallet and MONEY Dividends, 0.1% to burn MONEY tokens.",
-    user: "Deposit ETH to mint ETF shares, burn shares to get ETH back, or withdraw underlying tokens. Check fund details, token balances, share prices, and performance metrics.",
-  },
-  {
-    title: "Dividend Launcher", layer: "distribution" as const,
-    creator: "Set up a staking pool for an ERC-20 token, defining lock duration, initial penalty for early withdrawal, and daily penalty reduction (up to 365 days). Each stake issues a unique NFT (ERC-721) for tracking. A 0.5% fee applies to staking, unstaking, and reward claims.",
-    user: "Deposit tokens to stake and receive a unique NFT. Claim dividends in ETH or ERC-20 tokens based on your share of the pool. Unstake tokens after the lock period, or earlier with a penalty.",
-  },
-  {
-    title: "DAO Launcher", layer: "distribution" as const,
-    creator: "Launch a DAO with an ERC-20 token for voting, setting voting period, mode (Rape or Standard), locked token percentage, approval threshold, daily proposal limit, and slippage for swaps. 0.5% fee on executed swaps splits equally between MoneyFund Wallet and MONEY Dividends.",
-    user: "Propose token swaps (ETH-to-ERC20 or ERC20-to-ETH), vote on proposals with locked tokens, reclaim tokens after voting, and execute approved proposals.",
-  },
-  {
-    title: "Storefront Launcher", layer: "profit" as const,
-    creator: "Create an NFT marketplace by setting shareholder wallets and profit shares (up to 99.6%). Deposit and list ERC-721 NFTs with price in ETH or ERC-20 tokens, with timelock for listings. 0.4% sale fee splits equally between MoneyFund Wallet and MONEY Dividends.",
-    user: "Buy NFTs from the marketplace using ETH or ERC-20 tokens. Check listing details, sales statistics, and profit distributions.",
-  },
-  {
-    title: "Ad Space Launcher", layer: "profit" as const,
-    creator: "Launch a continuous ad auction by setting refund percentage (0-100%), fee receivers, starting bid, minimum bid increment, ad lock duration, comment fee, and payment token. 0.4% bid fee splits equally between MoneyFund Wallet and MONEY Dividends.",
-    user: "Bid on ad space with ETH or ERC-20 tokens. If highest bidder, adjust comment fees, message length, or payment token. Comment on ads by paying a fee (minimum $1 USD).",
-  },
-  {
-    title: "Multiswap Launcher", layer: "profit" as const,
-    creator: "Build a trading platform for swapping and distributing tokens/ETH, with optional fees up to 3%. 0.1% platform fee splits equally between MoneyFund Wallet and MONEY Dividends. Embed as a widget on any website.",
-    user: "Swap ETH for tokens, tokens for ETH/tokens, including batch swaps. Distribute tokens/ETH to one or multiple recipients in a single transaction.",
-  },
-  {
-    title: "MoneyFund DEX", layer: "dex" as const,
-    creator: "",
-    user: "An automated market maker (AMM) for swapping ETH and ERC-20 tokens. Users add or remove liquidity to earn 0.3% swap fees. 0.5% swap fee with 0.3% to LPs, 0.1% each to MoneyFund Wallet and MONEY Dividends.",
-  },
+  { title: "Coin Launcher", layer: "asset" as const, creator: "Set name, ticker, total supply, and optional transaction fees (up to 3%), with 70% going to your chosen wallets and 30% split equally between MoneyFund Wallet and MONEY Dividends. A 0.2% launch fee applies, also split equally.", user: "Send tokens, approve spending, and check balances. All standard ERC-20 functions supported." },
+  { title: "ETF Launcher", layer: "asset" as const, creator: "Build an ETF fund by selecting ERC-20 tokens and setting their percentage allocations (summing to 100%). Choose a name, ticker, and optional transaction fee. The fund uses Uniswap V2 for swaps and Chainlink for ETH/USD pricing. 0.35% transaction fee with 0.125% each to MoneyFund Wallet and MONEY Dividends, 0.1% to burn MONEY tokens.", user: "Deposit ETH to mint ETF shares, burn shares to get ETH back, or withdraw underlying tokens. Check fund details, token balances, share prices, and performance metrics." },
+  { title: "Dividend Launcher", layer: "distribution" as const, creator: "Set up a staking pool for an ERC-20 token, defining lock duration, initial penalty for early withdrawal, and daily penalty reduction (up to 365 days). Each stake issues a unique NFT (ERC-721) for tracking. A 0.5% fee applies to staking, unstaking, and reward claims.", user: "Deposit tokens to stake and receive a unique NFT. Claim dividends in ETH or ERC-20 tokens based on your share of the pool. Unstake tokens after the lock period, or earlier with a penalty." },
+  { title: "DAO Launcher", layer: "distribution" as const, creator: "Launch a DAO with an ERC-20 token for voting, setting voting period, mode (Rape or Standard), locked token percentage, approval threshold, daily proposal limit, and slippage for swaps. 0.5% fee on executed swaps splits equally between MoneyFund Wallet and MONEY Dividends.", user: "Propose token swaps (ETH-to-ERC20 or ERC20-to-ETH), vote on proposals with locked tokens, reclaim tokens after voting, and execute approved proposals." },
+  { title: "Storefront Launcher", layer: "profit" as const, creator: "Create an NFT marketplace by setting shareholder wallets and profit shares (up to 99.6%). Deposit and list ERC-721 NFTs with price in ETH or ERC-20 tokens, with timelock for listings. 0.4% sale fee splits equally between MoneyFund Wallet and MONEY Dividends.", user: "Buy NFTs from the marketplace using ETH or ERC-20 tokens. Check listing details, sales statistics, and profit distributions." },
+  { title: "Ad Space Launcher", layer: "profit" as const, creator: "Launch a continuous ad auction by setting refund percentage (0-100%), fee receivers, starting bid, minimum bid increment, ad lock duration, comment fee, and payment token. 0.4% bid fee splits equally between MoneyFund Wallet and MONEY Dividends.", user: "Bid on ad space with ETH or ERC-20 tokens. If highest bidder, adjust comment fees, message length, or payment token. Comment on ads by paying a fee (minimum $1 USD)." },
+  { title: "Multiswap Launcher", layer: "profit" as const, creator: "Build a trading platform for swapping and distributing tokens/ETH, with optional fees up to 3%. 0.1% platform fee splits equally between MoneyFund Wallet and MONEY Dividends. Embed as a widget on any website.", user: "Swap ETH for tokens, tokens for ETH/tokens, including batch swaps. Distribute tokens/ETH to one or multiple recipients in a single transaction." },
+  { title: "MoneyFund DEX", layer: "dex" as const, creator: "", user: "An automated market maker (AMM) for swapping ETH and ERC-20 tokens. Users add or remove liquidity to earn 0.3% swap fees. 0.5% swap fee with 0.3% to LPs, 0.1% each to MoneyFund Wallet and MONEY Dividends." },
 ];
 
 /* ================================================================== */
-/*  GAS CALCULATOR LOGIC                                               */
+/*  GAS CALCULATOR                                                     */
 /* ================================================================== */
 
-function calcGas(numItems: number, type: string) {
-  let bundled: number, individual: number;
+function calcGas(n: number, type: string) {
+  let b: number, ind: number;
   switch (type) {
-    case "ethToTokens":
-    case "tokensToEth":
-    case "tokensToTokens":
-      bundled = 21000 + 3500 + 6500 + numItems * 85000 + (numItems - 1) * 1000;
-      individual = numItems * (21000 + 85000);
-      break;
+    case "ethToTokens": case "tokensToEth": case "tokensToTokens":
+      b = 21000 + 3500 + 6500 + n * 85000 + (n - 1) * 1000; ind = n * (21000 + 85000); break;
     case "singleToken":
-      bundled = 21000 + 3500 + numItems * 35000 + (numItems - 1) * 1000;
-      individual = numItems * (21000 + 35000);
-      break;
+      b = 21000 + 3500 + n * 35000 + (n - 1) * 1000; ind = n * (21000 + 35000); break;
     case "multipleTokens":
-      bundled = 21000 + 3500 + numItems * numItems * 35000 + (numItems * numItems - 1) * 1000;
-      individual = numItems * numItems * (21000 + 35000);
-      break;
+      b = 21000 + 3500 + n * n * 35000 + (n * n - 1) * 1000; ind = n * n * (21000 + 35000); break;
     case "multipleTokensSingle":
-      bundled = 21000 + 3500 + numItems * 35000 + (numItems - 1) * 1000;
-      individual = numItems * (21000 + 35000);
-      break;
+      b = 21000 + 3500 + n * 35000 + (n - 1) * 1000; ind = n * (21000 + 35000); break;
     case "eth":
-      bundled = 21000 + 3500 + numItems * 16000 + (numItems - 1) * 1000;
-      individual = numItems * (21000 + 16000);
-      break;
-    default:
-      return { bundled: 0, individual: 0, savings: "0" };
+      b = 21000 + 3500 + n * 16000 + (n - 1) * 1000; ind = n * (21000 + 16000); break;
+    default: return { bundled: 0, individual: 0, savings: "0" };
   }
-  const savings = individual > 0 ? ((individual - bundled) / individual * 100).toFixed(2) : "0";
-  return { bundled, individual, savings };
+  return { bundled: b, individual: ind, savings: ind > 0 ? ((ind - b) / ind * 100).toFixed(2) : "0" };
 }
 
 /* ================================================================== */
@@ -139,7 +101,7 @@ function calcGas(numItems: number, type: string) {
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-400/30 transition-all";
 const selectCls = `${inputCls} appearance-none cursor-pointer`;
-const btnPrimary = "h-11 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer";
+const btnCalc = "h-11 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer";
 
 function layerBg(l?: string) {
   if (l === "asset") return "bg-gradient-to-br from-[#1A3C34] to-[#1F4A40]";
@@ -149,8 +111,16 @@ function layerBg(l?: string) {
   return "bg-white/[0.04]";
 }
 
+function layerDot(l?: string) {
+  if (l === "asset") return "bg-emerald-400";
+  if (l === "distribution") return "bg-orange-400";
+  if (l === "profit") return "bg-purple-400";
+  if (l === "dex") return "bg-gray-400";
+  return "bg-white/30";
+}
+
 /* ================================================================== */
-/*  U-DIAGRAM SVG COMPONENT                                            */
+/*  U-DIAGRAM                                                          */
 /* ================================================================== */
 
 function UDiagram({ label, boxes, desc, pathEnd }: {
@@ -162,7 +132,6 @@ function UDiagram({ label, boxes, desc, pathEnd }: {
   const rightDollar = boxes.right.layer !== "none";
   const xEnd = pathEnd === "275" ? 275 : 260;
   const pathD = `M60,60 V210 H${xEnd} V60`;
-
   const boxFill = (layer: string) => {
     if (layer === "asset") return "url(#al-grad)";
     if (layer === "distribution") return "url(#dl-grad)";
@@ -172,44 +141,78 @@ function UDiagram({ label, boxes, desc, pathEnd }: {
 
   return (
     <div className="flex flex-col items-center w-full max-w-[320px]">
-      <p className="text-lg font-bold text-white mt-16 -mb-12 text-center">{label}</p>
-      <svg viewBox="0 0 320 260" className="w-[320px] h-[260px]" aria-label={`${label} U Diagram`}>
-        <defs>
-          <marker id="ae" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
-          <marker id="ai" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
-          <linearGradient id="al-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#3F2A6D" /><stop offset="100%" stopColor="#4B367E" /></linearGradient>
-          <linearGradient id="dl-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B3A2B" /><stop offset="100%" stopColor="#A65343" /></linearGradient>
-          <linearGradient id="pl-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#1A3C34" /><stop offset="100%" stopColor="#1F4A40" /></linearGradient>
-        </defs>
-        <path d={pathD} fill="none" stroke="white" strokeWidth="3" markerEnd="url(#ae)" />
-        <circle r="6" fill="gold"><animateMotion dur="3s" repeatCount="indefinite" path={pathD} /></circle>
-        {rightDollar && <circle r="6" fill="gold"><animateMotion dur="3s" repeatCount="indefinite" path={pathD} begin="1.5s" /></circle>}
-        <rect x="30" y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.left.layer)} stroke="#fff" strokeWidth="2" />
-        <text x="60" y="130" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.left.label}</text>
-        <line x1="60" y1="60" x2="60" y2="110" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
-        <rect x="130" y="190" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.bottom.layer)} stroke="#fff" strokeWidth="2" />
-        <text x="160" y="210" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.bottom.label}</text>
-        <line x1="110" y1="210" x2="130" y2="210" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
-        <rect x={xEnd - 30} y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.right.layer)} stroke="#fff" strokeWidth="2" />
-        <text x={xEnd} y="130" fill="white" fontSize={boxes.right.label.length > 7 ? "8" : "10"} fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.right.label}</text>
-        <line x1={xEnd} y1="170" x2={xEnd} y2="150" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
-        <circle cx="60" cy="60" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
-        <text x="60" y="60" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
-        {rightDollar ? (
-          <>
+      <p className="text-base font-bold text-white mb-2 text-center">{label}</p>
+      <div className={`${card} p-4 w-full`}>
+        <svg viewBox="0 0 320 260" className="w-full h-auto" aria-label={`${label} U Diagram`}>
+          <defs>
+            <marker id="ae" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
+            <marker id="ai" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
+            <linearGradient id="al-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#3F2A6D" /><stop offset="100%" stopColor="#4B367E" /></linearGradient>
+            <linearGradient id="dl-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B3A2B" /><stop offset="100%" stopColor="#A65343" /></linearGradient>
+            <linearGradient id="pl-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#1A3C34" /><stop offset="100%" stopColor="#1F4A40" /></linearGradient>
+          </defs>
+          <path d={pathD} fill="none" stroke="white" strokeWidth="3" markerEnd="url(#ae)" />
+          <circle r="6" fill="gold"><animateMotion dur="3s" repeatCount="indefinite" path={pathD} /></circle>
+          {rightDollar && <circle r="6" fill="gold"><animateMotion dur="3s" repeatCount="indefinite" path={pathD} begin="1.5s" /></circle>}
+          <rect x="30" y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.left.layer)} stroke="#fff" strokeWidth="2" />
+          <text x="60" y="130" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.left.label}</text>
+          <line x1="60" y1="60" x2="60" y2="110" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
+          <rect x="130" y="190" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.bottom.layer)} stroke="#fff" strokeWidth="2" />
+          <text x="160" y="210" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.bottom.label}</text>
+          <line x1="110" y1="210" x2="130" y2="210" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
+          <rect x={xEnd - 30} y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.right.layer)} stroke="#fff" strokeWidth="2" />
+          <text x={xEnd} y="130" fill="white" fontSize={boxes.right.label.length > 7 ? "8" : "10"} fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.right.label}</text>
+          <line x1={xEnd} y1="170" x2={xEnd} y2="150" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
+          <circle cx="60" cy="60" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
+          <text x="60" y="60" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
+          {rightDollar ? (<>
             <circle cx="260" cy="36" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
             <text x="260" y="36" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
             <circle cx="290" cy="36" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
             <text x="290" y="36" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
-          </>
-        ) : (
-          <>
+          </>) : (<>
             <circle cx="260" cy="42" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
             <text x="260" y="42" fill="white" fontSize="18" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">?</text>
-          </>
-        )}
-      </svg>
-      <p className="max-w-[300px] text-center text-[11px] text-white/50 leading-relaxed mt-2">{desc}</p>
+          </>)}
+        </svg>
+      </div>
+      <p className="max-w-[300px] text-center text-[11px] text-white/40 leading-relaxed mt-3">{desc}</p>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  ANIMATED COIN COMPONENT for Dividend Pool                          */
+/* ================================================================== */
+
+function AnimatedCoins({ branchIndex }: { branchIndex: number }) {
+  const angle = (branchIndex * Math.PI * 2) / 8;
+  const r = 220;
+  const sx = 300 + r * Math.cos(angle);
+  const sy = 300 + r * Math.sin(angle);
+  const delays = useMemo(() => [0, 1.2, 2.5, 3.8], []);
+
+  return (<>
+    {delays.map((d, ci) => (
+      <circle key={ci} r="8" fill="gold" opacity="0.9" filter="url(#coinGlow)">
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin={`${d}s`} fill="freeze" path={`M${sx - 300},${sy - 300} L0,0`} />
+        <animate attributeName="opacity" values="0.9;0.9;0" keyTimes="0;0.7;1" dur="2.5s" repeatCount="indefinite" begin={`${d}s`} />
+        <animate attributeName="r" values="8;6;2" keyTimes="0;0.8;1" dur="2.5s" repeatCount="indefinite" begin={`${d}s`} />
+      </circle>
+    ))}
+  </>);
+}
+
+/* ================================================================== */
+/*  SECTION HEADING                                                    */
+/* ================================================================== */
+
+function SectionHeading({ children, sub }: { children: React.ReactNode; sub?: string }) {
+  return (
+    <div className="text-center space-y-1 pt-4">
+      <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{children}</h2>
+      {sub && <p className="text-xs text-white/30">{sub}</p>}
+      <div className="mx-auto mt-3 w-16 h-[2px] rounded-full bg-gradient-to-r from-cyan-500/60 to-purple-500/60" />
     </div>
   );
 }
@@ -219,25 +222,42 @@ function UDiagram({ label, boxes, desc, pathEnd }: {
 /* ================================================================== */
 
 export default function AboutApp() {
+  const [activeSection, setActiveSection] = useState("overview");
   const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
   const [divCount, setDivCount] = useState(0);
+  const [orbScale, setOrbScale] = useState(1);
   const feeChartRef = useRef<HTMLCanvasElement>(null);
   const feeChartInst = useRef<Chart | null>(null);
 
-  /* gas calculator state */
+  /* gas calc */
   const [opType, setOpType] = useState("");
   const [funcType, setFuncType] = useState("");
   const [numTokens, setNumTokens] = useState(2);
   const [numRecipients, setNumRecipients] = useState(2);
   const [gasResult, setGasResult] = useState<{ bundled: number; individual: number; savings: string } | null>(null);
-
-  /* gas charts refs */
   const gasChartRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const gasChartInsts = useRef<Record<string, Chart>>({});
 
   const toggleFaq = useCallback((i: number) => setFaqOpen((p) => ({ ...p, [i]: !p[i] })), []);
 
-  /* ---- dividend counter ---- */
+  /* ---- intersection observer for active section ---- */
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActiveSection(entry.target.id);
+        }
+      },
+      { rootMargin: "-40% 0px -55% 0px", threshold: 0 }
+    );
+    SECTIONS.forEach(({ id }) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  /* ---- dividend counter + breathing ---- */
   useEffect(() => {
     const saved = parseInt(localStorage.getItem("divCounter") || "0");
     setDivCount(saved);
@@ -248,10 +268,19 @@ export default function AboutApp() {
         return next;
       });
     }, 600);
-    return () => clearInterval(interval);
+    let dir = 1, sc = 1;
+    const breathe = () => {
+      sc += 0.002 * dir;
+      if (sc >= 1.08) dir = -1;
+      if (sc <= 0.96) dir = 1;
+      setOrbScale(sc);
+      rafId = requestAnimationFrame(breathe);
+    };
+    let rafId = requestAnimationFrame(breathe);
+    return () => { clearInterval(interval); cancelAnimationFrame(rafId); };
   }, []);
 
-  /* ---- fee structure chart ---- */
+  /* ---- fee chart ---- */
   useEffect(() => {
     if (!feeChartRef.current) return;
     if (feeChartInst.current) feeChartInst.current.destroy();
@@ -260,83 +289,79 @@ export default function AboutApp() {
       data: {
         labels: ["Coin", "ETF", "Dividend", "DAO", "Storefront", "Ad Space", "Multiswap", "DEX"],
         datasets: [
-          { label: "MoneyFund Wallet Fee (%)", data: [0.1, 0.125, 0.5, 0.25, 0.2, 0.2, 0.05, 0.1], backgroundColor: "rgba(0,139,139,0.8)", borderColor: "#008B8B", borderWidth: 1 },
-          { label: "MONEY Dividends Fee (%)", data: [0.1, 0.125, 0, 0.25, 0.2, 0.2, 0.05, 0.1], backgroundColor: "rgba(199,21,133,0.8)", borderColor: "#C71585", borderWidth: 1 },
+          { label: "MoneyFund Wallet (%)", data: [0.1, 0.125, 0.5, 0.25, 0.2, 0.2, 0.05, 0.1], backgroundColor: "rgba(0,139,139,0.8)", borderColor: "#008B8B", borderWidth: 1 },
+          { label: "MONEY Dividends (%)", data: [0.1, 0.125, 0, 0.25, 0.2, 0.2, 0.05, 0.1], backgroundColor: "rgba(199,21,133,0.8)", borderColor: "#C71585", borderWidth: 1 },
         ],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         scales: {
-          x: { grid: { display: false }, ticks: { color: "#F5F5F5" } },
-          y: { beginAtZero: true, max: 0.6, grid: { color: "rgba(168,181,194,0.2)" }, ticks: { color: "#F5F5F5", stepSize: 0.1 } },
+          x: { grid: { display: false }, ticks: { color: "#999" } },
+          y: { beginAtZero: true, max: 0.6, grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#999", stepSize: 0.1 } },
         },
-        plugins: { legend: { labels: { color: "#F5F5F5" } } },
+        plugins: { legend: { labels: { color: "#ccc", font: { size: 11 } } } },
       },
     });
     return () => { feeChartInst.current?.destroy(); };
   }, []);
 
-  /* ---- gas comparison charts ---- */
+  /* ---- gas charts ---- */
   useEffect(() => {
-    const chartConfigs: { id: string; label: string; type: string; xLabel: string }[] = [
-      { id: "cEth2T", label: "Swap ETH → Multiple Tokens", type: "ethToTokens", xLabel: "Number of Tokens" },
-      { id: "cT2Eth", label: "Swap Multiple Tokens → ETH", type: "tokensToEth", xLabel: "Number of Tokens" },
-      { id: "cT2T", label: "Swap Multiple Tokens → Tokens", type: "tokensToTokens", xLabel: "Number of Tokens" },
-      { id: "cSingle", label: "Distribute Single Token to Multiple Addresses", type: "singleToken", xLabel: "Number of Recipients" },
-      { id: "cMulti", label: "Distribute Multiple Tokens to Multiple Addresses", type: "multipleTokens", xLabel: "Number of Tokens" },
-      { id: "cMultiS", label: "Distribute Multiple Tokens to Single Address", type: "multipleTokensSingle", xLabel: "Number of Tokens" },
-      { id: "cEthD", label: "Distribute ETH to Multiple Addresses", type: "eth", xLabel: "Number of Recipients" },
+    const cfgs = [
+      { id: "cEth2T", type: "ethToTokens", x: "Tokens" },
+      { id: "cT2Eth", type: "tokensToEth", x: "Tokens" },
+      { id: "cT2T", type: "tokensToTokens", x: "Tokens" },
+      { id: "cSingle", type: "singleToken", x: "Recipients" },
+      { id: "cMulti", type: "multipleTokens", x: "Tokens" },
+      { id: "cMultiS", type: "multipleTokensSingle", x: "Tokens" },
+      { id: "cEthD", type: "eth", x: "Recipients" },
     ];
-    chartConfigs.forEach(({ id, type, xLabel }) => {
-      const canvas = gasChartRefs.current[id];
-      if (!canvas) return;
+    cfgs.forEach(({ id, type, x }) => {
+      const cv = gasChartRefs.current[id];
+      if (!cv) return;
       if (gasChartInsts.current[id]) gasChartInsts.current[id].destroy();
-      const labels = Array.from({ length: 9 }, (_, i) => String(i + 1));
-      gasChartInsts.current[id] = new Chart(canvas, {
+      const ls = Array.from({ length: 9 }, (_, i) => String(i + 1));
+      gasChartInsts.current[id] = new Chart(cv, {
         type: "bar",
-        data: {
-          labels,
-          datasets: [
-            { label: "Bundled", data: labels.map((_, i) => calcGas(i + 1, type).bundled), backgroundColor: "#4CAF50" },
-            { label: "Individual", data: labels.map((_, i) => calcGas(i + 1, type).individual), backgroundColor: "#F44336" },
-          ],
-        },
+        data: { labels: ls, datasets: [
+          { label: "Bundled", data: ls.map((_, i) => calcGas(i + 1, type).bundled), backgroundColor: "#4CAF50" },
+          { label: "Individual", data: ls.map((_, i) => calcGas(i + 1, type).individual), backgroundColor: "#F44336" },
+        ]},
         options: {
           responsive: true, maintainAspectRatio: false,
           scales: {
-            x: { title: { display: true, text: xLabel, color: "#F5F5F5" }, ticks: { color: "#F5F5F5" } },
-            y: { title: { display: true, text: "Gas Used (Units)", color: "#F5F5F5" }, ticks: { color: "#F5F5F5" }, beginAtZero: true },
+            x: { title: { display: true, text: x, color: "#999" }, ticks: { color: "#999" } },
+            y: { title: { display: true, text: "Gas", color: "#999" }, ticks: { color: "#999" }, beginAtZero: true },
           },
-          plugins: { legend: { labels: { color: "#F5F5F5" } } },
+          plugins: { legend: { labels: { color: "#ccc", font: { size: 11 } } } },
         },
       });
     });
     return () => { Object.values(gasChartInsts.current).forEach((c) => c.destroy()); };
   }, []);
 
-  /* ---- gas calculator ---- */
   const handleCalc = useCallback(() => {
     if (!funcType) return;
-    const items = ["singleToken", "eth"].includes(funcType) ? numRecipients : numTokens;
-    setGasResult(calcGas(items, funcType));
+    setGasResult(calcGas(["singleToken", "eth"].includes(funcType) ? numRecipients : numTokens, funcType));
   }, [funcType, numTokens, numRecipients]);
 
   const funcOptions: Record<string, { value: string; label: string }[]> = {
     swap: [
-      { value: "ethToTokens", label: "Swap ETH for Multiple Tokens" },
-      { value: "tokensToEth", label: "Swap Multiple Tokens for ETH" },
-      { value: "tokensToTokens", label: "Swap Multiple Tokens for Tokens" },
+      { value: "ethToTokens", label: "ETH → Multiple Tokens" },
+      { value: "tokensToEth", label: "Multiple Tokens → ETH" },
+      { value: "tokensToTokens", label: "Multiple Tokens → Tokens" },
     ],
     send: [
-      { value: "singleToken", label: "Distribute Single Token to Multiple Addresses" },
-      { value: "multipleTokens", label: "Distribute Multiple Tokens to Multiple Addresses" },
-      { value: "multipleTokensSingle", label: "Distribute Multiple Tokens to Single Address" },
-      { value: "eth", label: "Distribute ETH to Multiple Addresses" },
+      { value: "singleToken", label: "Single Token → Multiple Addresses" },
+      { value: "multipleTokens", label: "Multiple Tokens → Multiple Addresses" },
+      { value: "multipleTokensSingle", label: "Multiple Tokens → Single Address" },
+      { value: "eth", label: "ETH → Multiple Addresses" },
     ],
   };
 
-  const showTokens = funcType && !["eth"].includes(funcType);
-  const showRecipients = ["singleToken", "multipleTokens", "eth"].includes(funcType);
+  const scrollTo = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   /* ================================================================ */
   /*  RENDER                                                           */
@@ -344,262 +369,343 @@ export default function AboutApp() {
 
   return (
     <div className="min-h-screen" style={{ background: "#08090e" }}>
-      <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 py-10 space-y-16">
 
-        {/* ═══════════ WHITEPAPER TITLE ═══════════ */}
-        <div className="text-center">
-          <h1 className="text-3xl sm:text-[40px] font-bold text-white uppercase tracking-wide">MoneyFund Whitepaper</h1>
+      {/* ═══════════ STICKY SECTION NAV ═══════════ */}
+      <div className="sticky top-14 z-40 border-b border-white/[0.04]" style={{ background: "rgba(8,9,14,0.92)", backdropFilter: "blur(12px)" }}>
+        <div className="max-w-[1100px] mx-auto px-4 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-0.5 py-2 min-w-max">
+            {SECTIONS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => scrollTo(s.id)}
+                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-semibold tracking-wide uppercase whitespace-nowrap transition-all cursor-pointer ${
+                  activeSection === s.id
+                    ? "text-cyan-400 bg-cyan-400/10"
+                    : "text-white/30 hover:text-white/60 hover:bg-white/[0.03]"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
 
-        {/* ═══════════ LAYER KEY ═══════════ */}
-        <div className="flex flex-wrap justify-center gap-4">
-          {[["Asset Layer", "asset"], ["Distribution Layer", "distribution"], ["Profit Layer", "profit"]].map(([label, key]) => (
-            <div key={key} className={`${layerBg(key)} px-5 py-2 rounded-lg text-sm font-bold text-white text-center`}>{label}</div>
-          ))}
-        </div>
+      <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 pt-8 pb-16 space-y-20">
+
+        {/* ═══════════ OVERVIEW ═══════════ */}
+        <section id="overview" className="space-y-8 scroll-mt-28">
+          <div className="text-center space-y-3 pt-6">
+            <h1 className="text-3xl sm:text-[42px] font-extrabold text-white uppercase tracking-wider">MoneyFund</h1>
+            <p className="text-sm text-white/40 max-w-lg mx-auto leading-relaxed">
+              The tri-layer launchpad for codelessly deploying custom smart contracts on Ethereum.
+            </p>
+            <div className="mx-auto mt-4 w-24 h-[2px] rounded-full bg-gradient-to-r from-cyan-500/40 via-purple-500/40 to-amber-500/40" />
+          </div>
+
+          <div className={`${card} p-6 sm:p-8`}>
+            <p className="text-[13px] text-white/60 leading-relaxed">
+              The MoneyFund protocol consists of seven interconnected factory smart contracts divided into three categories. Smart contracts are digital agreements that run on the blockchain and automatically execute when conditions are met. A factory smart contract is like a vending machine for vending machines — a contract that creates contracts. The tri-layer launchpad enables anyone to codelessly deploy custom smart contracts by filling out simple forms.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3">
+            {([["Asset Layer", "asset", "Creates tokens & ETFs"], ["Distribution Layer", "distribution", "Staking pools & DAOs"], ["Profit Layer", "profit", "Revenue-generating contracts"]] as const).map(([label, key, sub]) => (
+              <div key={key} className={`${layerBg(key)} px-5 py-3 rounded-xl text-center min-w-[160px]`}>
+                <p className="text-sm font-bold text-white">{label}</p>
+                <p className="text-[10px] text-white/50 mt-0.5">{sub}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* ═══════════ U-DIAGRAMS ═══════════ */}
-        <div className="flex flex-col lg:flex-row items-start justify-center gap-12">
-          <UDiagram
-            label="Equities"
-            boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Shares", layer: "profit" }, right: { label: "Dividends", layer: "distribution" } }}
-            desc="Unlike crypto, equities rely on fundamentals more than speculative degeneracy. Equity is made up out of thin air and thus carries ever-present risks like dilution and centralized control. Summary of downsides: high friction, mutable supply, mutable dividends."
-          />
-          <UDiagram
-            label="Shitcoins"
-            boxes={{ left: { label: "Tokens", layer: "profit" }, bottom: { label: "Nothing", layer: "none" }, right: { label: "Nothing", layer: "none" } }}
-            desc="This diagram represents 99% of cryptocurrencies & the larger problem MoneyFund seeks to solve. Despite significant shortcomings, tokens still outshine equities in many key ways — ERC-20 tokens operate on a decentralized network ensuring trustless & permissionless transacting 24/7 globally. Summary of downsides: people are tired of gay nonsense."
-          />
-          <UDiagram
-            label="MoneyFunds"
-            pathEnd="275"
-            boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Dividends", layer: "distribution" }, right: { label: "Tokens", layer: "profit" } }}
-            desc="MoneyFund combines the sustainability of traditional business with the transparency + decentralization of the Ethereum blockchain. No more expensive IPOs, no more scam ICOs — the future is IMOs. Initial Money Offerings are the gold standard for tokenized asset deployment. Dividend immutability is a significant upgrade to the offchain tradfi model. Summary of downsides: none."
-          />
-        </div>
-
-        {/* ═══════════ WHERE DOES THE MONEY COME FROM ═══════════ */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-white uppercase">Where does the MONEY come from?</h2>
-        </div>
-
-        <div className="hidden md:flex justify-center">
-          <div className="relative w-[600px] h-[600px] rounded-3xl flex items-center justify-center" style={{ background: "radial-gradient(circle at center, #1a1a1a, #0A0E13)" }}>
-            {POOL_BRANCHES.map((b, i) => {
-              const angle = (i * Math.PI * 2) / 8;
-              const r = 230;
-              const x = 300 + r * Math.cos(angle) - 48;
-              const y = 300 + r * Math.sin(angle) - 48;
-              const bgClass = i % 3 === 0 ? LAYER_COLORS.asset : i % 3 === 1 ? LAYER_COLORS.distribution : LAYER_COLORS.profit;
-              return (
-                <div key={i} className={`absolute w-24 h-24 rounded-full flex flex-col items-center justify-center text-center text-white text-[10px] font-bold ${bgClass} shadow-lg`} style={{ left: x, top: y }}>
-                  <span className="text-xl mb-0.5">{b.icon}</span>
-                  <span className="leading-tight">{b.label}</span>
-                  <span className="text-[9px] font-normal text-white/60 mt-0.5">{b.pct}</span>
-                </div>
-              );
-            })}
-            <div className="w-40 h-40 rounded-full flex flex-col items-center justify-center text-center z-10 animate-pulse" style={{ background: "radial-gradient(circle at 30% 30%, #00f7ff, #004466 60%, #001a33)", boxShadow: "0 0 40px #00f7ff, inset 0 0 20px #003344" }}>
-              <span className="text-[22px] font-bold text-amber-400 leading-tight uppercase" style={{ fontFamily: "'Orbitron', sans-serif" }}>MONEY<br />Dividends</span>
-              <span className="bg-white text-black font-bold text-xs px-2 py-0.5 rounded mt-1">{divCount}</span>
-            </div>
+        <section id="diagrams" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="How MoneyFund compares to equities and shitcoins">Value Flow Diagrams</SectionHeading>
+          <div className="flex flex-col lg:flex-row items-start justify-center gap-8 lg:gap-6">
+            <UDiagram label="Equities" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Shares", layer: "profit" }, right: { label: "Dividends", layer: "distribution" } }} desc="Equities rely on fundamentals but carry risks like dilution, centralized control, restricted trading hours, and expensive IPOs (~$25M). Summary: high friction, mutable supply, mutable dividends." />
+            <UDiagram label="Shitcoins" boxes={{ left: { label: "Tokens", layer: "profit" }, bottom: { label: "Nothing", layer: "none" }, right: { label: "Nothing", layer: "none" } }} desc="99% of cryptocurrencies. Despite shortcomings, tokens outshine equities with decentralized, trustless, permissionless 24/7 global transacting on Ethereum. Summary: vapid uselessness." />
+            <UDiagram label="MoneyFunds" pathEnd="275" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Dividends", layer: "distribution" }, right: { label: "Tokens", layer: "profit" } }} desc="Combines traditional business sustainability with blockchain transparency + decentralization. Immutable dividends, immutable supply, no IPOs, no ICOs — the future is IMOs. Summary: none." />
           </div>
-        </div>
+        </section>
 
-        {/* mobile pool */}
-        <div className="md:hidden grid grid-cols-2 gap-3">
-          {POOL_BRANCHES.map((b, i) => {
-            const bgClass = i % 3 === 0 ? LAYER_COLORS.asset : i % 3 === 1 ? LAYER_COLORS.distribution : LAYER_COLORS.profit;
-            return (
-              <div key={i} className={`${bgClass} rounded-xl p-3 text-center text-white text-xs font-bold`}>
-                <span className="text-lg">{b.icon}</span>
-                <p className="mt-1">{b.label}</p>
-                <p className="text-[10px] font-normal text-white/50">{b.pct}</p>
-              </div>
-            );
-          })}
-        </div>
+        {/* ═══════════ DIVIDEND POOL ═══════════ */}
+        <section id="dividends" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="Every contract feeds revenue into the MONEY dividend pool">Where Does the MONEY Come From?</SectionHeading>
 
-        {/* ═══════════ INTRO TEXT ═══════════ */}
-        <div className={`${card} p-6 sm:p-8 space-y-4`}>
-          <p className="text-sm text-white/70 leading-relaxed">
-            The MoneyFund protocol consists of seven interconnected factory smart contracts that are divided into three categories and collectively referred to as the tri-layer launchpad. Smart contracts are digital agreements that run on the blockchain and automatically execute when conditions are met. A factory smart contract is like a vending machine for vending machines — a contract that creates contracts. The tri-layer launchpad enables anyone to codelessly deploy custom smart contracts by filling out simple forms.
-          </p>
-        </div>
+          {/* Desktop: full animated visualization */}
+          <div className="hidden md:flex justify-center">
+            <div className="relative w-[640px] h-[640px] rounded-3xl" style={{ background: "radial-gradient(circle at center, #111318, #08090e)" }}>
+              {/* SVG layer for paths + animated coins */}
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 600 600">
+                <defs>
+                  <filter id="coinGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                </defs>
+                {POOL_BRANCHES.map((_, i) => {
+                  const angle = (i * Math.PI * 2) / 8;
+                  const r = 220;
+                  const ex = 300 + r * Math.cos(angle);
+                  const ey = 300 + r * Math.sin(angle);
+                  const strokeColor = i % 3 === 0 ? "rgba(52,211,153,0.12)" : i % 3 === 1 ? "rgba(251,146,60,0.12)" : "rgba(167,139,250,0.12)";
+                  return <line key={`line-${i}`} x1="300" y1="300" x2={ex} y2={ey} stroke={strokeColor} strokeWidth="10" />;
+                })}
+                {POOL_BRANCHES.map((_, i) => <AnimatedCoins key={`coins-${i}`} branchIndex={i} />)}
+              </svg>
 
-        {/* ═══════════ LAYER CARDS ═══════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className={`${LAYER_COLORS.asset} rounded-xl p-5 text-sm text-white/80 leading-relaxed`}>
-            The Asset Layer enables creation of ERC-20 tokens and ETFs. Fed by distribution contracts, this is the destination for value in MF&apos;s trilayer model.
-          </div>
-          <div className={`${LAYER_COLORS.distribution} rounded-xl p-5 text-sm text-white/80 leading-relaxed`}>
-            The Distribution Layer manages token allocations through custom staking pools and DAOs, serving as the vehicle that connects assets to profit layer contracts.
-          </div>
-          <div className={`${LAYER_COLORS.profit} rounded-xl p-5 text-sm text-white/80 leading-relaxed`}>
-            The Profit Layer generates external cashflow via contracts like Multiswap, Storefront, and Auction factories — giving tokens sustainable life through on-chain business.
-          </div>
-        </div>
+              {/* Branch orbs */}
+              {POOL_BRANCHES.map((b, i) => {
+                const angle = (i * Math.PI * 2) / 8;
+                const r = 220;
+                const x = 320 + r * Math.cos(angle) - 48;
+                const y = 320 + r * Math.sin(angle) - 48;
+                return (
+                  <div key={i} className={`absolute w-24 h-24 rounded-full flex flex-col items-center justify-center text-center text-white text-[10px] font-bold ${layerBg(b.layer)} shadow-lg shadow-black/30 border border-white/[0.08]`} style={{ left: x, top: y }}>
+                    <span className="text-xl mb-0.5">{b.icon}</span>
+                    <span className="leading-tight">{b.label}</span>
+                    <span className="text-[9px] font-normal text-white/50 mt-0.5">{b.pct}</span>
+                  </div>
+                );
+              })}
 
-        {/* ═══════════ CONTRACT SECTIONS ═══════════ */}
-        {CONTRACT_SECTIONS.map((c) => (
-          <div key={c.title} className={`${layerBg(c.layer)} rounded-2xl p-6 sm:p-8 space-y-4`}>
-            <h3 className="text-xl sm:text-2xl font-bold text-white text-center">{c.title}</h3>
-            <div className={`grid ${c.creator ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"} gap-4`}>
-              {c.creator && (
-                <div className="bg-black/20 rounded-xl p-4">
-                  <p className="text-xs font-bold text-white/50 uppercase mb-2">Creator</p>
-                  <p className="text-xs text-white/70 leading-relaxed">{c.creator}</p>
-                </div>
-              )}
-              <div className="bg-black/20 rounded-xl p-4">
-                <p className="text-xs font-bold text-white/50 uppercase mb-2">User</p>
-                <p className="text-xs text-white/70 leading-relaxed">{c.user}</p>
+              {/* Center orb */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center text-center z-10 transition-transform" style={{
+                background: "radial-gradient(circle at 30% 30%, #00f7ff, #004466 60%, #001a33)",
+                boxShadow: "0 0 50px rgba(0,247,255,0.5), 0 0 100px rgba(0,247,255,0.15), inset 0 0 25px #003344",
+                transform: `scale(${orbScale})`,
+              }}>
+                <span className="text-[20px] font-extrabold text-amber-400 leading-tight uppercase" style={{ fontFamily: "'Orbitron', sans-serif" }}>MONEY<br />Dividends</span>
+                <span className="bg-white text-black font-bold text-xs px-2.5 py-0.5 rounded-md mt-1.5 shadow">{divCount}</span>
               </div>
             </div>
           </div>
-        ))}
+
+          {/* Mobile grid */}
+          <div className="md:hidden space-y-4">
+            <div className="flex justify-center">
+              <div className="w-28 h-28 rounded-full flex flex-col items-center justify-center text-center" style={{
+                background: "radial-gradient(circle at 30% 30%, #00f7ff, #004466 60%, #001a33)",
+                boxShadow: "0 0 30px rgba(0,247,255,0.4)",
+              }}>
+                <span className="text-sm font-extrabold text-amber-400 uppercase" style={{ fontFamily: "'Orbitron', sans-serif" }}>MONEY</span>
+                <span className="bg-white text-black font-bold text-[10px] px-2 py-0.5 rounded mt-1">{divCount}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {POOL_BRANCHES.map((b, i) => (
+                <div key={i} className={`${layerBg(b.layer)} rounded-xl p-3 text-center text-white text-xs font-bold border border-white/[0.06]`}>
+                  <span className="text-lg">{b.icon}</span>
+                  <p className="mt-1">{b.label}</p>
+                  <p className="text-[10px] font-normal text-white/40">{b.pct}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ TRI-LAYER ═══════════ */}
+        <section id="trilayer" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="Three interconnected layers that power the MoneyFund ecosystem">Tri-Layer Architecture</SectionHeading>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {([
+              { key: "asset" as const, title: "Asset Layer", desc: "Enables creation of ERC-20 tokens and ETFs. Fed by distribution contracts, this is the destination for value in MoneyFund's trilayer model. Limited scope for expansion." },
+              { key: "distribution" as const, title: "Distribution Layer", desc: "Manages token allocations through custom staking pools and DAOs, connecting assets to profit layer contracts. Supports some growth with upcoming contracts like Multisig Launcher." },
+              { key: "profit" as const, title: "Profit Layer", desc: "Generates external cashflow via Multiswap, Storefront, and Auction factories — giving tokens sustainable life through on-chain business rather than pointless scams. Enormous growth potential." },
+            ]).map((l) => (
+              <div key={l.key} className={`${layerBg(l.key)} rounded-2xl p-5 border border-white/[0.06] hover:border-white/[0.12] transition-all`}>
+                <div className={`w-2 h-2 rounded-full ${layerDot(l.key)} mb-3`} />
+                <h3 className="text-sm font-bold text-white mb-2">{l.title}</h3>
+                <p className="text-xs text-white/60 leading-relaxed">{l.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════ CONTRACTS ═══════════ */}
+        <section id="contracts" className="space-y-6 scroll-mt-28">
+          <SectionHeading sub="Detailed breakdown of each factory contract">Smart Contracts</SectionHeading>
+          {CONTRACT_SECTIONS.map((c) => (
+            <div key={c.title} className={`${layerBg(c.layer)} rounded-2xl border border-white/[0.06] overflow-hidden`}>
+              <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${layerDot(c.layer)}`} />
+                <h3 className="text-base sm:text-lg font-bold text-white">{c.title}</h3>
+              </div>
+              <div className={`grid ${c.creator ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"} divide-y md:divide-y-0 md:divide-x divide-white/[0.06]`}>
+                {c.creator && (
+                  <div className="p-5">
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">Creator</p>
+                    <p className="text-xs text-white/60 leading-relaxed">{c.creator}</p>
+                  </div>
+                )}
+                <div className="p-5">
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">User</p>
+                  <p className="text-xs text-white/60 leading-relaxed">{c.user}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
 
         {/* ═══════════ FEE STRUCTURE ═══════════ */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-white uppercase">Fee Structure</h2>
-        </div>
+        <section id="fees" className="space-y-6 scroll-mt-28">
+          <SectionHeading sub="How fees are distributed across the platform">Fee Structure</SectionHeading>
 
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-xs text-white/80 border-collapse rounded-xl overflow-hidden" style={{ background: "#1F1F1F" }}>
-            <thead>
-              <tr className="bg-gradient-to-r from-[#4A4A4A] to-[#6B6B6B] text-white text-[11px] uppercase">
-                <th className="p-3 text-left">Contract</th>
-                <th className="p-3 text-left">Fee Type</th>
-                <th className="p-3 text-left">MF Wallet</th>
-                <th className="p-3 text-left">MONEY Dividends</th>
-                <th className="p-3 text-left">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {FEE_DATA.map((r, i) => (
-                <tr key={i} className={`${layerBg(r.layer)} border-b border-white/[0.06] hover:brightness-110 transition-all`}>
-                  <td className="p-3 font-semibold">{r.contract}</td>
-                  <td className="p-3">{r.feeType}</td>
-                  <td className="p-3">{r.wallet}</td>
-                  <td className="p-3">{r.dividends}</td>
-                  <td className="p-3 text-white/50">{r.notes}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* mobile fee cards */}
-        <div className="md:hidden space-y-2">
-          {FEE_DATA.map((r, i) => (
-            <div key={i} className={`${layerBg(r.layer)} rounded-xl p-4 text-xs space-y-1`}>
-              <p className="font-bold text-white">{r.contract}</p>
-              <p className="text-white/60">{r.feeType} — Wallet: {r.wallet}, Dividends: {r.dividends}</p>
+          <div className="hidden md:block overflow-x-auto">
+            <div className={`${card} overflow-hidden`}>
+              <table className="w-full text-xs text-white/70">
+                <thead>
+                  <tr className="border-b border-white/[0.08]">
+                    <th className="p-3.5 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Contract</th>
+                    <th className="p-3.5 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Fee Type</th>
+                    <th className="p-3.5 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">MF Wallet</th>
+                    <th className="p-3.5 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">MONEY Dividends</th>
+                    <th className="p-3.5 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FEE_DATA.map((r, i) => (
+                    <tr key={i} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                      <td className="p-3.5 font-semibold text-white/80 flex items-center gap-2">
+                        <span className={`w-1.5 h-1.5 rounded-full ${layerDot(r.layer)}`} />{r.contract}
+                      </td>
+                      <td className="p-3.5">{r.feeType}</td>
+                      <td className="p-3.5 text-teal-400/80">{r.wallet}</td>
+                      <td className="p-3.5 text-pink-400/80">{r.dividends}</td>
+                      <td className="p-3.5 text-white/35">{r.notes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          </div>
 
-        <div className={`${card} p-5`} style={{ height: 320 }}>
-          <canvas ref={feeChartRef} />
-        </div>
+          <div className="md:hidden space-y-2">
+            {FEE_DATA.map((r, i) => (
+              <div key={i} className={`${card} p-4 text-xs space-y-1.5`}>
+                <div className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${layerDot(r.layer)}`} />
+                  <span className="font-bold text-white/80">{r.contract}</span>
+                </div>
+                <p className="text-white/40">{r.feeType}</p>
+                <div className="flex gap-3">
+                  <span className="text-teal-400/70">Wallet: {r.wallet}</span>
+                  <span className="text-pink-400/70">Dividends: {r.dividends}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className={`${card} p-5`} style={{ height: 320 }}>
+            <canvas ref={feeChartRef} />
+          </div>
+        </section>
 
         {/* ═══════════ FAQ ═══════════ */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-white uppercase">Frequently Asked Questions</h2>
-        </div>
+        <section id="faq" className="space-y-6 scroll-mt-28">
+          <SectionHeading sub="Common questions about MoneyFund contracts">Frequently Asked Questions</SectionHeading>
+          <div className="space-y-2">
+            {FAQ_ITEMS.map((item, i) => (
+              <div key={i} className={`${card} overflow-hidden`}>
+                <button
+                  type="button"
+                  onClick={() => toggleFaq(i)}
+                  className="w-full flex items-center justify-between text-left px-5 py-3.5 cursor-pointer transition-all hover:bg-white/[0.02]"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${layerDot(item.layer)}`} />
+                    <span className="text-[13px] font-medium text-white/70">{item.q}</span>
+                  </div>
+                  <span className={`text-white/20 text-sm ml-3 flex-shrink-0 transition-transform ${faqOpen[i] ? "rotate-45" : ""}`}>+</span>
+                </button>
+                {faqOpen[i] && (
+                  <div className="px-5 pb-4 pt-0 ml-6 border-t border-white/[0.04]">
+                    <p className="text-xs text-white/50 leading-relaxed pt-3">{item.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
 
-        <div className={`${card} p-5 space-y-2`}>
-          {FAQ_ITEMS.map((item, i) => (
-            <div key={i}>
-              <button
-                type="button"
-                onClick={() => toggleFaq(i)}
-                className={`w-full flex items-center justify-between text-left px-4 py-3 rounded-lg text-sm font-semibold text-white/80 cursor-pointer transition-all hover:brightness-110 ${layerBg(item.layer)}`}
-              >
-                <span>{item.q}</span>
-                <span className="text-cyan-400 ml-2">{faqOpen[i] ? "−" : "+"}</span>
-              </button>
-              {faqOpen[i] && (
-                <div className="bg-[#333] rounded-lg p-4 mt-1 text-xs text-white/70 leading-relaxed">
-                  {item.a}
+        {/* ═══════════ GAS CALCULATOR ═══════════ */}
+        <section id="gas" className="space-y-6 scroll-mt-28">
+          <SectionHeading sub="Compare bundled vs individual transaction gas costs">Multiswap Gas Calculator</SectionHeading>
+
+          <div className={`${card} p-6 sm:p-8 space-y-5`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider block mb-1.5">Operation</label>
+                <select value={opType} onChange={(e) => { setOpType(e.target.value); setFuncType(""); setGasResult(null); }} className={selectCls}>
+                  <option value="">Select type...</option>
+                  <option value="swap">Swap</option>
+                  <option value="send">Send</option>
+                </select>
+              </div>
+              {opType && (
+                <div>
+                  <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider block mb-1.5">Function</label>
+                  <select value={funcType} onChange={(e) => { setFuncType(e.target.value); setGasResult(null); }} className={selectCls}>
+                    <option value="">Select function...</option>
+                    {(funcOptions[opType] || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              )}
+              {funcType && !["eth"].includes(funcType) && (
+                <div>
+                  <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider block mb-1.5">Tokens</label>
+                  <input type="number" value={numTokens} onChange={(e) => setNumTokens(parseInt(e.target.value) || 1)} min={1} className={inputCls} />
+                </div>
+              )}
+              {["singleToken", "multipleTokens", "eth"].includes(funcType) && (
+                <div>
+                  <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider block mb-1.5">Recipients</label>
+                  <input type="number" value={numRecipients} onChange={(e) => setNumRecipients(parseInt(e.target.value) || 1)} min={1} className={inputCls} />
                 </div>
               )}
             </div>
-          ))}
-        </div>
-
-        {/* ═══════════ GAS CALCULATOR ═══════════ */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-white uppercase">Multiswap Gas Usage Comparison</h2>
-        </div>
-
-        <div className={`${LAYER_COLORS.profit} rounded-2xl p-6 sm:p-8 space-y-5`}>
-          <h3 className="text-lg font-bold text-white text-center">Gas Cost Calculator</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-cyan-300 font-medium block mb-1">Operation Type</label>
-              <select value={opType} onChange={(e) => { setOpType(e.target.value); setFuncType(""); setGasResult(null); }} className={selectCls}>
-                <option value="">-- Select --</option>
-                <option value="swap">Swap</option>
-                <option value="send">Send</option>
-              </select>
+            <div className="flex gap-3 justify-center pt-2">
+              <button type="button" onClick={handleCalc} disabled={!funcType} className={`${btnCalc} disabled:opacity-30 disabled:cursor-not-allowed`}>Calculate</button>
+              <button type="button" onClick={() => { setOpType(""); setFuncType(""); setGasResult(null); setNumTokens(2); setNumRecipients(2); }} className="h-11 px-6 rounded-xl font-semibold text-sm border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">Reset</button>
             </div>
-            {opType && (
-              <div>
-                <label className="text-xs text-cyan-300 font-medium block mb-1">Function</label>
-                <select value={funcType} onChange={(e) => { setFuncType(e.target.value); setGasResult(null); }} className={selectCls}>
-                  <option value="">-- Select --</option>
-                  {(funcOptions[opType] || []).map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {showTokens && (
-              <div>
-                <label className="text-xs text-cyan-300 font-medium block mb-1">Number of Tokens</label>
-                <input type="number" value={numTokens} onChange={(e) => setNumTokens(parseInt(e.target.value) || 1)} min={1} className={inputCls} />
-              </div>
-            )}
-            {showRecipients && (
-              <div>
-                <label className="text-xs text-cyan-300 font-medium block mb-1">Number of Recipients</label>
-                <input type="number" value={numRecipients} onChange={(e) => setNumRecipients(parseInt(e.target.value) || 1)} min={1} className={inputCls} />
+            {gasResult && (
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 text-center">
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider">Bundled</p>
+                  <p className="text-sm font-bold text-white/80 mt-1">{gasResult.bundled.toLocaleString()}</p>
+                </div>
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 text-center">
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider">Individual</p>
+                  <p className="text-sm font-bold text-white/80 mt-1">{gasResult.individual.toLocaleString()}</p>
+                </div>
+                <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/10 p-4 text-center">
+                  <p className="text-[10px] text-emerald-400/50 uppercase tracking-wider">Savings</p>
+                  <p className="text-sm font-bold text-emerald-400 mt-1">{gasResult.savings}%</p>
+                </div>
               </div>
             )}
           </div>
-          <div className="flex gap-3 justify-center">
-            <button type="button" onClick={handleCalc} disabled={!funcType} className={btnPrimary}>Calculate</button>
-            <button type="button" onClick={() => { setOpType(""); setFuncType(""); setGasResult(null); setNumTokens(2); setNumRecipients(2); }} className="h-11 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-red-600 to-red-500 text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer">Reset</button>
-          </div>
-          {gasResult && (
-            <div className="bg-black/30 rounded-xl p-4 text-xs text-white/70 space-y-1">
-              <p>Bundled Gas: <span className="text-white font-semibold">{gasResult.bundled.toLocaleString()}</span> units</p>
-              <p>Individual Gas: <span className="text-white font-semibold">{gasResult.individual.toLocaleString()}</span> units</p>
-              <p>Gas Savings: <span className="text-emerald-400 font-semibold">{gasResult.savings}%</span></p>
-            </div>
-          )}
-        </div>
 
-        {/* Gas comparison charts */}
-        {[
-          { id: "cEth2T", label: "Swap ETH for Multiple Tokens" },
-          { id: "cT2Eth", label: "Swap Multiple Tokens for ETH" },
-          { id: "cT2T", label: "Swap Multiple Tokens for Tokens" },
-          { id: "cSingle", label: "Distribute Single Token to Multiple Addresses" },
-          { id: "cMulti", label: "Distribute Multiple Tokens to Multiple Addresses" },
-          { id: "cMultiS", label: "Distribute Multiple Tokens to Single Address" },
-          { id: "cEthD", label: "Distribute ETH to Multiple Addresses" },
-        ].map(({ id, label }) => (
-          <div key={id} className={`${card} p-5 space-y-2`}>
-            <h3 className="text-sm font-bold text-white/70 text-center">{label}</h3>
-            <div style={{ height: 280 }}>
-              <canvas ref={(el) => { gasChartRefs.current[id] = el; }} />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { id: "cEth2T", label: "ETH → Multiple Tokens" },
+              { id: "cT2Eth", label: "Tokens → ETH" },
+              { id: "cT2T", label: "Tokens → Tokens" },
+              { id: "cSingle", label: "Token → Multiple Addresses" },
+              { id: "cMulti", label: "Tokens → Multiple Addresses" },
+              { id: "cMultiS", label: "Tokens → Single Address" },
+              { id: "cEthD", label: "ETH → Multiple Addresses" },
+            ].map(({ id, label }) => (
+              <div key={id} className={`${card} p-4`}>
+                <p className="text-[11px] font-semibold text-white/40 mb-2 text-center">{label}</p>
+                <div style={{ height: 220 }}>
+                  <canvas ref={(el) => { gasChartRefs.current[id] = el; }} />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </section>
 
-        <p className="text-center text-[11px] text-white/20 pb-4">Powered by MoneyFund</p>
+        <p className="text-center text-[11px] text-white/15 pt-8 pb-4">Powered by MoneyFund</p>
       </div>
     </div>
   );
