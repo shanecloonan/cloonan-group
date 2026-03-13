@@ -66,7 +66,7 @@ const CONTRACTS: Contract[] = [
     address: "0x346a4f3bb3582396eb62624d25c03568ceb8c94c",
     explorer:
       "https://etherscan.io/address/0x346a4f3bb3582396eb62624d25c03568ceb8c94c",
-    go: "https://moneyfund.com/auction",
+    go: "/auction",
   },
   {
     name: "Multisig Launcher",
