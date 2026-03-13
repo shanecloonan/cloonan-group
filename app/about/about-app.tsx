@@ -195,7 +195,7 @@ function AnimatedCoins({ branchIndex }: { branchIndex: number }) {
   return (<>
     {delays.map((d, ci) => (
       <circle key={ci} r="8" fill="gold" opacity="0.9" filter="url(#coinGlow)">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin={`${d}s`} fill="freeze" path={`M${sx - 300},${sy - 300} L0,0`} />
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin={`${d}s`} fill="freeze" path={`M${sx},${sy} L300,300`} />
         <animate attributeName="opacity" values="0.9;0.9;0" keyTimes="0;0.7;1" dur="2.5s" repeatCount="indefinite" begin={`${d}s`} />
         <animate attributeName="r" values="8;6;2" keyTimes="0;0.8;1" dur="2.5s" repeatCount="indefinite" begin={`${d}s`} />
       </circle>
