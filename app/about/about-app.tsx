@@ -406,7 +406,7 @@ export default function AboutApp() {
 
           <div className={`${card} p-6 sm:p-8`}>
             <p className="text-[13px] text-white/60 leading-relaxed">
-              The MoneyFund protocol consists of seven interconnected factory smart contracts divided into three categories. Smart contracts are digital agreements that run on the blockchain and automatically execute when conditions are met. A factory smart contract is like a vending machine for vending machines — a contract that creates contracts. The tri-layer launchpad enables anyone to codelessly deploy custom smart contracts by filling out simple forms.
+              The MoneyFund protocol consists of seven interconnected factory smart contracts that are divided into three categories and collectively referred to as the tri-layer launchpad. Smart contracts are digital agreements that run on the blockchain and automatically execute when conditions are met. A factory smart contract is like a vending machine for vending machines — a contract that creates contracts. The tri-layer launchpad enables anyone to codelessly deploy custom smart contracts by filling out simple forms.
             </p>
           </div>
 
@@ -424,9 +424,9 @@ export default function AboutApp() {
         <section id="diagrams" className="space-y-8 scroll-mt-28">
           <SectionHeading sub="How MoneyFund compares to equities and shitcoins">Value Flow Diagrams</SectionHeading>
           <div className="flex flex-col lg:flex-row items-start justify-center gap-8 lg:gap-6">
-            <UDiagram label="Equities" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Shares", layer: "profit" }, right: { label: "Dividends", layer: "distribution" } }} desc="Equities rely on fundamentals but carry risks like dilution, centralized control, restricted trading hours, and expensive IPOs (~$25M). Summary: high friction, mutable supply, mutable dividends." />
-            <UDiagram label="Shitcoins" boxes={{ left: { label: "Tokens", layer: "profit" }, bottom: { label: "Nothing", layer: "none" }, right: { label: "Nothing", layer: "none" } }} desc="99% of cryptocurrencies. Despite shortcomings, tokens outshine equities with decentralized, trustless, permissionless 24/7 global transacting on Ethereum. Summary: vapid uselessness." />
-            <UDiagram label="MoneyFunds" pathEnd="275" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Dividends", layer: "distribution" }, right: { label: "Tokens", layer: "profit" } }} desc="Combines traditional business sustainability with blockchain transparency + decentralization. Immutable dividends, immutable supply, no IPOs, no ICOs — the future is IMOs. Summary: none." />
+            <UDiagram label="Equities" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Shares", layer: "profit" }, right: { label: "Dividends", layer: "distribution" } }} desc="Unlike crypto, equities rely on fundamentals more than speculative degeneracy. Equity is made up out of thin air and thus carries ever-present risks like dilution and centralized control. Summary of downsides: high friction, mutable supply, mutable dividends." />
+            <UDiagram label="Shitcoins" boxes={{ left: { label: "Tokens", layer: "profit" }, bottom: { label: "Nothing", layer: "none" }, right: { label: "Nothing", layer: "none" } }} desc="This diagram represents 99% of cryptocurrencies & the larger problem MoneyFund seeks to solve. Despite significant shortcomings, tokens still outshine equities in many key ways — ERC-20 tokens operate on a decentralized network ensuring trustless & permissionless transacting 24/7 globally. Summary of downsides: people are tired of gay nonsense." />
+            <UDiagram label="MoneyFunds" pathEnd="275" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Dividends", layer: "distribution" }, right: { label: "Tokens", layer: "profit" } }} desc="MoneyFund combines the sustainability of traditional business with the transparency + decentralization of the Ethereum blockchain. No more expensive IPOs, no more scam ICOs — the future is IMOs. Initial Money Offerings are the gold standard for tokenized asset deployment. Dividend immutability is a significant upgrade to the offchain tradfi model. Summary of downsides: none." />
           </div>
         </section>
 
@@ -508,9 +508,9 @@ export default function AboutApp() {
           <SectionHeading sub="Three interconnected layers that power the MoneyFund ecosystem">Tri-Layer Architecture</SectionHeading>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {([
-              { key: "asset" as const, title: "Asset Layer", desc: "Enables creation of ERC-20 tokens and ETFs. Fed by distribution contracts, this is the destination for value in MoneyFund's trilayer model. Limited scope for expansion." },
-              { key: "distribution" as const, title: "Distribution Layer", desc: "Manages token allocations through custom staking pools and DAOs, connecting assets to profit layer contracts. Supports some growth with upcoming contracts like Multisig Launcher." },
-              { key: "profit" as const, title: "Profit Layer", desc: "Generates external cashflow via Multiswap, Storefront, and Auction factories — giving tokens sustainable life through on-chain business rather than pointless scams. Enormous growth potential." },
+              { key: "asset" as const, title: "Asset Layer", desc: "The Asset Layer enables creation of ERC-20 tokens and ETFs. Fed by distribution contracts, this is the destination for value in MF's trilayer model." },
+              { key: "distribution" as const, title: "Distribution Layer", desc: "The Distribution Layer manages token allocations through custom staking pools and DAOs, serving as the vehicle that connects assets to profit layer contracts." },
+              { key: "profit" as const, title: "Profit Layer", desc: "The Profit Layer generates external cashflow via contracts like Multiswap, Storefront, and Auction factories — giving tokens sustainable life through on-chain business." },
             ]).map((l) => (
               <div key={l.key} className={`${layerBg(l.key)} rounded-2xl p-5 border border-white/[0.06] hover:border-white/[0.12] transition-all`}>
                 <div className={`w-2 h-2 rounded-full ${layerDot(l.key)} mb-3`} />
