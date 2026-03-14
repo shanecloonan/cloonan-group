@@ -128,7 +128,7 @@ export default function CompanyChart() {
             Entity Structure
           </h2>
           <p className="text-brand-500 text-sm max-w-lg mx-auto mb-8">
-            Three-tier holding structure — vault, nexus, and operating
+            Three-tier holding structure — vault, nexus, and
             subsidiaries.
           </p>
           <button
