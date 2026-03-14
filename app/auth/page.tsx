@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { Suspense, useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useWallet } from "@/lib/wallet-context";
@@ -27,6 +27,20 @@ function passwordStrength(pw: string): { score: number; label: string; color: st
 }
 
 export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[80vh] flex items-center justify-center" style={{ background: "#08090e" }}>
+          <div className="w-6 h-6 border-2 border-white/10 border-t-indigo-400 rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <AuthPageInner />
+    </Suspense>
+  );
+}
+
+function AuthPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, vaultUnlocked, signUp, signIn, resetPassword, unlockVault, isLoading } = useWallet();
