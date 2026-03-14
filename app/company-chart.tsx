@@ -9,7 +9,7 @@ const SUBSIDIARIES = [
     name: "AntlerGear",
     url: "https://antlergear.com",
     role: "Hunting Gear",
-    desc: "Premium hunting apparel, equipment, and accessories for bowhunters.",
+    desc: "Premium bowhunting equipment.",
     accent: "text-gold",
     border: "border-gold/40",
     bg: "bg-gold/5",
@@ -168,8 +168,7 @@ export default function CompanyChart() {
                 MoneyFund
               </h3>
               <p className="text-brand-400 text-xs sm:text-sm leading-relaxed">
-                Protects capital and converts subsidiary profits into Arweave
-                and other long-term assets. Top-level entity and ultimate
+                Protects capital and converts subsidiary profits into Arweave, MONEY, and other high-upside assets. Top-level entity and ultimate
                 beneficial owner.
               </p>
             </a>
