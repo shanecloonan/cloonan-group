@@ -191,7 +191,7 @@ export default function CompanyChart() {
               <p className="text-brand-400 text-xs sm:text-sm leading-relaxed">
                 Parent holding company and profit-distribution nexus. Receives
                 all subsidiary revenue and channels it upstream to the vault.
-                Holds 100% of every operating subsidiary.
+                Holds 100% of every subsidiary.
               </p>
             </a>
 
