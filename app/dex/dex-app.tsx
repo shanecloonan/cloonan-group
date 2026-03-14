@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ethers } from "ethers";
 import { MONEYDEX_ADDRESS, MONEYDEX_ABI, PAIR_ABI, ERC20_ABI } from "./abis";
+import { logTx } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -313,6 +314,7 @@ export default function DexApp() {
       const tx = await dexRef.current.createPair(cpToken0, cpToken1);
       const receipt = await tx.wait();
       setCpStatus({ msg: "Pair created", state: "success", txHash: receipt.transactionHash });
+      if (account) logTx({ walletAddress: account, txHash: receipt.transactionHash, dapp: "dex", action: "create_pair", contractAddress: MONEYDEX_ADDRESS, details: { token0: cpToken0, token1: cpToken1 } });
       await updateStats();
     } catch (e: any) {
       setCpStatus({ msg: `Failed: ${e.message}`, state: "error" });
@@ -352,6 +354,7 @@ export default function DexApp() {
       );
       const receipt = await tx.wait();
       setAlStatus({ msg: "Liquidity added", state: "success", txHash: receipt.transactionHash });
+      if (account) logTx({ walletAddress: account, txHash: receipt.transactionHash, dapp: "dex", action: "add_liquidity", amount: `${alAmt0} / ${alAmt1}`, contractAddress: MONEYDEX_ADDRESS });
       loadPair();
       await updateStats();
     } catch (e: any) {
@@ -385,6 +388,7 @@ export default function DexApp() {
       );
       const receipt = await tx.wait();
       setRlStatus({ msg: "Liquidity removed", state: "success", txHash: receipt.transactionHash });
+      if (account) logTx({ walletAddress: account, txHash: receipt.transactionHash, dapp: "dex", action: "remove_liquidity", amount: rlAmt, contractAddress: MONEYDEX_ADDRESS });
       loadPair();
       await updateStats();
     } catch (e: any) {
@@ -438,6 +442,7 @@ export default function DexApp() {
         );
         const receipt = await tx.wait();
         setSwapStatus({ msg: "Swap completed", state: "success", txHash: receipt.transactionHash });
+        if (account) logTx({ walletAddress: account, txHash: receipt.transactionHash, dapp: "dex", action: "swap_token", amount: swapAmt, contractAddress: MONEYDEX_ADDRESS });
         loadPair();
         await updateStats();
       } catch (e: any) {

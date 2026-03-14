@@ -5,6 +5,14 @@ import { ethers } from "ethers";
 import { useWallet } from "@/lib/wallet-context";
 import AuthPanel from "@/components/auth-panel";
 import ArweaveWallet from "./arweave-wallet";
+import {
+  logTransaction,
+  fetchActivity,
+  DAPP_META,
+  ACTION_LABELS,
+  type TxRecord,
+  type DApp,
+} from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -109,6 +117,207 @@ const labelCls = "block text-white/40 text-xs font-medium uppercase tracking-wid
 const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
 
 /* ================================================================== */
+/*  ACTIVITY TAB COMPONENT                                             */
+/* ================================================================== */
+
+function ActivityTab({
+  user,
+  activities,
+  actTotal,
+  actLoading,
+  actDapp,
+  actSearch,
+  actFrom,
+  actTo,
+  actPage,
+  perPage,
+  setActDapp,
+  setActSearch,
+  setActFrom,
+  setActTo,
+  loadActivity,
+  card,
+  selectCls,
+  inputCls,
+}: {
+  user: { id: string } | null;
+  activities: TxRecord[];
+  actTotal: number;
+  actLoading: boolean;
+  actDapp: DApp | "";
+  actSearch: string;
+  actFrom: string;
+  actTo: string;
+  actPage: number;
+  perPage: number;
+  setActDapp: (v: DApp | "") => void;
+  setActSearch: (v: string) => void;
+  setActFrom: (v: string) => void;
+  setActTo: (v: string) => void;
+  loadActivity: (page?: number) => void;
+  card: string;
+  selectCls: string;
+  inputCls: string;
+}) {
+  useEffect(() => {
+    if (user) loadActivity(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const totalPages = Math.max(1, Math.ceil(actTotal / perPage));
+
+  const dappOptions: { value: DApp | ""; label: string }[] = [
+    { value: "", label: "All dApps" },
+    ...Object.entries(DAPP_META).map(([key, meta]) => ({
+      value: key as DApp,
+      label: `${meta.icon} ${meta.label}`,
+    })),
+  ];
+
+  function relativeTime(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(iso).toLocaleDateString();
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className={`${card} p-4 space-y-3`}>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <select
+            value={actDapp}
+            onChange={(e) => setActDapp(e.target.value as DApp | "")}
+            className={`sm:w-48 ${selectCls}`}
+          >
+            {dappOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <input
+            value={actSearch}
+            onChange={(e) => setActSearch(e.target.value)}
+            placeholder="Search tx hash, address, action…"
+            className={`flex-1 ${inputCls}`}
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-[10px] text-white/30 uppercase tracking-wider font-semibold shrink-0">From</span>
+            <input type="date" value={actFrom} onChange={(e) => setActFrom(e.target.value)} className={`flex-1 ${inputCls}`} />
+          </div>
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-[10px] text-white/30 uppercase tracking-wider font-semibold shrink-0">To</span>
+            <input type="date" value={actTo} onChange={(e) => setActTo(e.target.value)} className={`flex-1 ${inputCls}`} />
+          </div>
+          <button
+            type="button"
+            onClick={() => loadActivity(0)}
+            className="h-11 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
+          >
+            {actLoading ? (
+              <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              "Search"
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Results */}
+      {actLoading && activities.length === 0 ? (
+        <div className={`${card} p-10 text-center`}>
+          <div className="w-6 h-6 border-2 border-white/10 border-t-blue-400 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-xs text-white/30">Loading activity…</p>
+        </div>
+      ) : activities.length === 0 ? (
+        <div className={`${card} p-10 text-center`}>
+          <p className="text-2xl mb-2 opacity-20">◉</p>
+          <p className="text-sm text-white/30">No activity yet</p>
+          <p className="text-xs text-white/20 mt-1">Transactions across all dApps will appear here.</p>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {activities.map((tx) => {
+            const meta = DAPP_META[tx.dapp as DApp] ?? { label: tx.dapp, icon: "·", color: "text-white/40" };
+            const actionLabel = ACTION_LABELS[tx.action] ?? tx.action.replace(/_/g, " ");
+            return (
+              <div key={tx.id} className={`${card} px-4 py-3 flex items-center gap-3`}>
+                <span className={`text-lg shrink-0 ${meta.color}`} title={meta.label}>
+                  {meta.icon}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-medium text-white/80 truncate">{actionLabel}</span>
+                    {tx.status === "error" && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-semibold">FAILED</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-white/25 font-mono">{meta.label}</span>
+                    {tx.amount && (
+                      <>
+                        <span className="text-white/10">·</span>
+                        <span className="text-[10px] text-white/40">{tx.amount}</span>
+                      </>
+                    )}
+                    {tx.tx_hash && (
+                      <>
+                        <span className="text-white/10">·</span>
+                        <a
+                          href={`https://etherscan.io/tx/${tx.tx_hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-indigo-400/60 hover:text-indigo-400 font-mono transition-colors"
+                        >
+                          {tx.tx_hash.slice(0, 10)}…
+                        </a>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <span className="text-[10px] text-white/20 shrink-0">{relativeTime(tx.created_at)}</span>
+              </div>
+            );
+          })}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => loadActivity(actPage - 1)}
+                disabled={actPage === 0}
+                className="text-xs text-white/30 hover:text-white/60 disabled:opacity-20 transition-colors cursor-pointer disabled:cursor-not-allowed"
+              >
+                ← Prev
+              </button>
+              <span className="text-[10px] text-white/20">
+                {actPage + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => loadActivity(actPage + 1)}
+                disabled={actPage >= totalPages - 1}
+                className="text-xs text-white/30 hover:text-white/60 disabled:opacity-20 transition-colors cursor-pointer disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
 /*  COMPONENT                                                          */
 /* ================================================================== */
 
@@ -126,7 +335,7 @@ export default function WalletsApp() {
   const [ethBal, setEthBal] = useState("0.000000");
   const [moneyBal, setMoneyBal] = useState("0.00");
 
-  const [tab, setTab] = useState<"home" | "apps" | "explorer" | "iframe">("home");
+  const [tab, setTab] = useState<"home" | "activity" | "apps" | "explorer" | "iframe">("home");
   const [vanityMode, setVanityMode] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<StatusEntry[]>([]);
@@ -159,11 +368,45 @@ export default function WalletsApp() {
   const [expToBlock, setExpToBlock] = useState("");
   const [expResult, setExpResult] = useState("Results will appear here...");
 
+  /* activity state */
+  const [activities, setActivities] = useState<TxRecord[]>([]);
+  const [actTotal, setActTotal] = useState(0);
+  const [actLoading, setActLoading] = useState(false);
+  const [actDapp, setActDapp] = useState<DApp | "">("");
+  const [actSearch, setActSearch] = useState("");
+  const [actFrom, setActFrom] = useState("");
+  const [actTo, setActTo] = useState("");
+  const [actPage, setActPage] = useState(0);
+  const ACT_PER_PAGE = 25;
+
   const fileRef = useRef<HTMLInputElement>(null);
 
   const addStatus = useCallback((msg: string, status: StatusEntry["status"] = "pending") => {
     setStatuses((p) => [{ msg, status }, ...p].slice(0, 10));
   }, []);
+
+  const loadActivity = useCallback(async (page = 0) => {
+    if (!user) return;
+    setActLoading(true);
+    try {
+      const { data, count } = await fetchActivity({
+        userId: user.id,
+        dapp: actDapp || null,
+        search: actSearch || null,
+        from: actFrom || null,
+        to: actTo ? actTo + "T23:59:59Z" : null,
+        limit: ACT_PER_PAGE,
+        offset: page * ACT_PER_PAGE,
+      });
+      setActivities(data);
+      setActTotal(count);
+      setActPage(page);
+    } catch {
+      /* silent */
+    } finally {
+      setActLoading(false);
+    }
+  }, [user, actDapp, actSearch, actFrom, actTo]);
 
   const fetchBalance = useCallback(async () => {
     if (!selected) return;
@@ -276,6 +519,7 @@ export default function WalletsApp() {
         const tx = await signer.sendTransaction({ to: recipient, value: ethers.utils.parseEther(sendAmt) });
         const receipt = await tx.wait();
         addStatus(`ETH sent! Tx: ${shorten(receipt.transactionHash)}`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: receipt.transactionHash, dapp: "wallets", action: "send_eth", amount: `${sendAmt} ETH`, details: { to: recipient } });
       } else {
         if (!ethers.utils.isAddress(sendTokenAddr)) { addStatus("Invalid token address", "error"); return; }
         const tok = new ethers.Contract(sendTokenAddr, ERC20_ABI, signer);
@@ -284,6 +528,7 @@ export default function WalletsApp() {
         const tx = await tok.transfer(recipient, amt);
         const receipt = await tx.wait();
         addStatus(`Token sent! Tx: ${shorten(receipt.transactionHash)}`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: receipt.transactionHash, dapp: "wallets", action: "send_token", amount: sendAmt, tokenAddress: sendTokenAddr, details: { to: recipient } });
       }
       await fetchBalance();
     } catch (e: unknown) {
@@ -314,6 +559,7 @@ export default function WalletsApp() {
         const tx = await router.swapExactETHForTokens(minOut, path, selected.address, deadline, { value: amtIn, gasLimit: parseInt(gasLimit) });
         const r = await tx.wait();
         addStatus(`Swap success! Tx: ${shorten(r.transactionHash)}`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: r.transactionHash, dapp: "wallets", action: "swap_eth_to_token", amount: `${swapAmt} ETH`, tokenAddress: swapTokenAddr });
       } else {
         const tok = new ethers.Contract(swapTokenAddr, ERC20_ABI, signer);
         const dec = await tok.decimals();
@@ -326,6 +572,7 @@ export default function WalletsApp() {
         const tx = await router.swapExactTokensForETH(amtIn, minOut, path, selected.address, deadline, { gasLimit: parseInt(gasLimit) });
         const r = await tx.wait();
         addStatus(`Swap success! Tx: ${shorten(r.transactionHash)}`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: r.transactionHash, dapp: "wallets", action: "swap_token_to_eth", amount: swapAmt, tokenAddress: swapTokenAddr });
       }
       await fetchBalance();
     } catch (e: unknown) {
@@ -434,8 +681,9 @@ export default function WalletsApp() {
     );
   }
 
-  const ethTabs: { id: "home" | "apps" | "explorer"; label: string; icon: string }[] = [
+  const ethTabs: { id: "home" | "activity" | "apps" | "explorer"; label: string; icon: string }[] = [
     { id: "home", label: "Home", icon: "⬡" },
+    { id: "activity", label: "Activity", icon: "◉" },
     { id: "apps", label: "Apps", icon: "◫" },
     { id: "explorer", label: "Explorer", icon: "◎" },
   ];
@@ -727,6 +975,32 @@ export default function WalletsApp() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* ================================================================ */}
+            {/*  ACTIVITY TAB                                                    */}
+            {/* ================================================================ */}
+            {tab === "activity" && (
+              <ActivityTab
+                user={user}
+                activities={activities}
+                actTotal={actTotal}
+                actLoading={actLoading}
+                actDapp={actDapp}
+                actSearch={actSearch}
+                actFrom={actFrom}
+                actTo={actTo}
+                actPage={actPage}
+                perPage={ACT_PER_PAGE}
+                setActDapp={setActDapp}
+                setActSearch={setActSearch}
+                setActFrom={setActFrom}
+                setActTo={setActTo}
+                loadActivity={loadActivity}
+                card={card}
+                selectCls={selectCls}
+                inputCls={inputCls}
+              />
             )}
 
             {/* ================================================================ */}

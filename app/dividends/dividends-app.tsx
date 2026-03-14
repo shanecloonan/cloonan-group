@@ -11,6 +11,7 @@ import {
 } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
 import AuthPanel from "@/components/auth-panel";
+import { logTransaction } from "@/lib/activity";
 
 declare global {
   interface Window {
@@ -389,6 +390,7 @@ export default function DividendsApp() {
       if (poolAddress) {
         log(`Dividend pool deployed at: ${poolAddress}`);
         setLaunchStatus(`Pool deployed at ${shorten(poolAddress)}! Tx: ${shorten(receipt.transactionHash)}`);
+        if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: receipt.transactionHash, dapp: "dividends", action: "create_pool", gasUsed: receipt.gasUsed.toString(), contractAddress: poolAddress, details: { tokenAddress: tokenAddr } });
       } else {
         setLaunchStatus(`Pool deployed! Tx: ${shorten(receipt.transactionHash)}`);
       }
@@ -437,6 +439,7 @@ export default function DividendsApp() {
           const tx = await pool.stake(wei);
           const receipt = await tx.wait();
           log(`Staked successfully! Gas used: ${receipt.gasUsed.toString()}. Tx: ${receipt.transactionHash}`);
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: receipt.transactionHash, dapp: "dividends", action: "stake", amount: amt, gasUsed: receipt.gasUsed.toString(), contractAddress: poolAddr });
           await refreshPools();
         } catch (e: any) {
           log(`Stake failed: ${e.message}`, true);
@@ -463,6 +466,7 @@ export default function DividendsApp() {
           const tx = await pool.unstake(tid);
           const receipt = await tx.wait();
           log(`Unstaked successfully! Gas used: ${receipt.gasUsed.toString()}. Tx: ${receipt.transactionHash}`);
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: receipt.transactionHash, dapp: "dividends", action: "unstake", gasUsed: receipt.gasUsed.toString(), contractAddress: poolAddr });
           await refreshPools();
         } catch (e: any) {
           log(`Unstake failed: ${e.message}`, true);
@@ -489,6 +493,7 @@ export default function DividendsApp() {
           const tx = await pool.claimAllRewards(tid);
           const receipt = await tx.wait();
           log(`Rewards claimed! Gas used: ${receipt.gasUsed.toString()}. Tx: ${receipt.transactionHash}`);
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: receipt.transactionHash, dapp: "dividends", action: "claim_rewards", gasUsed: receipt.gasUsed.toString(), contractAddress: poolAddr });
           await refreshPools();
         } catch (e: any) {
           log(`Claim failed: ${e.message}`, true);
@@ -515,6 +520,7 @@ export default function DividendsApp() {
           const tx = await pool.registerRewardToken(rt);
           const receipt = await tx.wait();
           log(`Reward token registered! Gas used: ${receipt.gasUsed.toString()}. Tx: ${receipt.transactionHash}`);
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: receipt.transactionHash, dapp: "dividends", action: "register_reward_token", gasUsed: receipt.gasUsed.toString(), contractAddress: poolAddr, tokenAddress: rt });
           await refreshPools();
         } catch (e: any) {
           log(`Register failed: ${e.message}`, true);
@@ -541,6 +547,7 @@ export default function DividendsApp() {
           const tx = await pool.unregisterRewardToken(rt);
           const receipt = await tx.wait();
           log(`Reward token unregistered! Gas used: ${receipt.gasUsed.toString()}. Tx: ${receipt.transactionHash}`);
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: receipt.transactionHash, dapp: "dividends", action: "unregister_reward_token", gasUsed: receipt.gasUsed.toString(), contractAddress: poolAddr, tokenAddress: rt });
           await refreshPools();
         } catch (e: any) {
           log(`Unregister failed: ${e.message}`, true);

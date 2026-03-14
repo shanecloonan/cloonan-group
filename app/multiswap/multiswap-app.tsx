@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
 import { FACTORY_ADDRESS, RPC_URL, factoryAbi } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
+import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -132,6 +133,7 @@ export default function MultiswapApp() {
         if (receipt.status === 1) {
           const evt = receipt.events?.find((e: any) => e.event === "SwapAirdropSendContractDeployed");
           log(`Contract deployed at: ${evt?.args?.contractAddress || "check logs"}`, "success");
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "multiswap", action: "deploy_multiswap" });
           await refreshContracts();
         } else {
           log("Deploy reverted.", "error");
@@ -151,6 +153,7 @@ export default function MultiswapApp() {
         if (receipt.status === 1) {
           const evt = receipt.events?.find((e: any) => e.event === "SwapAirdropSendContractDeployed");
           log(`Contract deployed at: ${evt?.args?.contractAddress || "check logs"}`, "success");
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "multiswap", action: "deploy_multiswap" });
           await refreshContracts();
         } else {
           log("Deploy reverted.", "error");

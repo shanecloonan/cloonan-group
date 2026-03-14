@@ -32,6 +32,8 @@ interface WalletContextValue {
   signUp: (email: string, password: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<string | null>;
+  updatePassword: (newPassword: string) => Promise<string | null>;
 
   vaultUnlocked: boolean;
   unlockVault: (password: string) => Promise<boolean>;
@@ -199,7 +201,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string): Promise<string | null> => {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const redirectTo = typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback`
+        : undefined;
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: redirectTo },
+      });
       if (error) return error.message;
       if (!data.user) return "Signup failed";
 
@@ -236,6 +245,27 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     clearVaultKey();
     await supabase.auth.signOut();
   }, [clearVaultKey]);
+
+  const resetPassword = useCallback(
+    async (email: string): Promise<string | null> => {
+      const redirectTo = typeof window !== "undefined"
+        ? `${window.location.origin}/auth/reset-password`
+        : undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) return error.message;
+      return null;
+    },
+    [],
+  );
+
+  const updatePassword = useCallback(
+    async (newPassword: string): Promise<string | null> => {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return error.message;
+      return null;
+    },
+    [],
+  );
 
   const unlockVault = useCallback(
     async (password: string): Promise<boolean> => {
@@ -400,6 +430,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       signUp,
       signIn,
       signOut,
+      resetPassword,
+      updatePassword,
       vaultUnlocked,
       unlockVault,
       ethWallets,
@@ -413,7 +445,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setArweaveWallet,
     }),
     [
-      user, session, isLoading, signUp, signIn, signOut,
+      user, session, isLoading, signUp, signIn, signOut, resetPassword, updatePassword,
       vaultUnlocked, unlockVault,
       ethWallets, selectedEthAddress, selectedEthWallet,
       selectEthWallet, addEthWallet, removeEthWallet, connectMetaMask,

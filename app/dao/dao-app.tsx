@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ethers } from "ethers";
 import { FACTORY_ADDRESS, FACTORY_ABI, DAO_ABI, TOKEN_ABI, INFURA_RPC } from "./abis";
+import { logTx } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -234,6 +235,7 @@ export default function DaoApp() {
       log("Waiting for confirmation...");
       const receipt = await tx.wait();
       log(`DAO created! Tx: ${receipt.transactionHash}`);
+      if (account) logTx({ walletAddress: account, txHash: receipt.transactionHash, dapp: "dao", action: "create_dao", details: { tokenAddr } });
       setStatus(`DAO deployed! Tx: ${shorten(receipt.transactionHash)}`);
       await refreshDAOs();
     } catch (e: any) {
@@ -256,6 +258,7 @@ export default function DaoApp() {
       const tx = await dao.createProposal(parseInt(pT), dest, ethers.utils.parseEther(amt), tok);
       await tx.wait();
       log("Proposal created!");
+      if (account) logTx({ walletAddress: account, dapp: "dao", action: "create_proposal", contractAddress: daoAddr });
       await refreshDAOs();
     } catch (e: any) {
       log(`Proposal failed: ${e.message}`);
@@ -270,6 +273,7 @@ export default function DaoApp() {
       const tx = await dao.vote(pId, support);
       await tx.wait();
       log(`Voted ${support ? "Yes" : "No"}!`);
+      if (account) logTx({ walletAddress: account, dapp: "dao", action: "vote", contractAddress: daoAddr, details: { proposalId: pId, support } });
       await refreshDAOs();
     } catch (e: any) {
       log(`Vote failed: ${e.message}`);
@@ -284,6 +288,7 @@ export default function DaoApp() {
       const tx = await dao.executeProposal(pId);
       await tx.wait();
       log("Proposal executed!");
+      if (account) logTx({ walletAddress: account, dapp: "dao", action: "execute_proposal", contractAddress: daoAddr, details: { proposalId: pId } });
       await refreshDAOs();
     } catch (e: any) {
       log(`Execute failed: ${e.message}`);
@@ -298,6 +303,7 @@ export default function DaoApp() {
       const tx = await dao.reclaimTokens(pId);
       await tx.wait();
       log("Tokens reclaimed!");
+      if (account) logTx({ walletAddress: account, dapp: "dao", action: "reclaim_tokens", contractAddress: daoAddr, details: { proposalId: pId } });
       await refreshDAOs();
     } catch (e: any) {
       log(`Reclaim failed: ${e.message}`);

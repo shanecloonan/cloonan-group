@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESS, RPC_URL, airdropAbi, erc20Abi } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
+import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -78,7 +79,7 @@ const tabInactive = "text-white/30 hover:text-white/60 hover:bg-white/[0.03]";
 
 export default function AirdropApp() {
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC_URL), []);
-  const { ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask } = useWallet();
+  const { user, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask } = useWallet();
 
   /* form */
   const [tokenAddress, setTokenAddress] = useState("");
@@ -198,6 +199,7 @@ export default function AirdropApp() {
       addLog(`Tx submitted: ${shorten(tx.hash)}`, "pending");
       const receipt = await tx.wait();
       addLog(`Airdrop successful! Gas used: ${receipt.gasUsed.toString()}`, "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: signerAddr, txHash: receipt.transactionHash, dapp: "airdrop", action: "airdrop", amount: `${addrs.length} recipients`, gasUsed: receipt.gasUsed.toString(), contractAddress: CONTRACT_ADDRESS, tokenAddress: tokenAddress });
 
       const newLogs: AirdropLog[] = addrs.map((addr, i) => ({
         sender: signerAddr,

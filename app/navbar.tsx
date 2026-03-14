@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useWallet } from "@/lib/wallet-context";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -14,6 +15,11 @@ const NAV_ITEMS = [
 export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { user, signOut } = useWallet();
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -44,6 +50,29 @@ export default function Navbar() {
                 {item.label}
               </Link>
             ))}
+
+            <span className="w-px h-5 bg-brand-800/60 mx-2" />
+
+            {user ? (
+              <button
+                type="button"
+                onClick={() => signOut()}
+                className="px-4 py-1.5 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-md text-brand-400 hover:text-brand-100 hover:bg-brand-800/50 transition-colors cursor-pointer"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                href="/auth"
+                className={`px-4 py-1.5 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-md transition-colors ${
+                  pathname.startsWith("/auth")
+                    ? "text-gold bg-gold/10"
+                    : "text-brand-400 hover:text-brand-100 hover:bg-brand-800/50"
+                }`}
+              >
+                Sign In
+              </Link>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -52,6 +81,7 @@ export default function Navbar() {
             onClick={() => setOpen(!open)}
             className="sm:hidden flex flex-col justify-center items-center w-8 h-8 gap-[5px] group"
             aria-label="Toggle menu"
+            aria-expanded={open}
           >
             <span
               className={`block w-5 h-[1.5px] bg-brand-300 transition-all origin-center ${open ? "rotate-45 translate-y-[6.5px]" : ""}`}
@@ -74,7 +104,6 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setOpen(false)}
                 className={`px-4 py-3 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-lg transition-colors ${
                   isActive(item.href)
                     ? "text-gold bg-gold/10"
@@ -84,6 +113,29 @@ export default function Navbar() {
                 {item.label}
               </Link>
             ))}
+
+            <span className="h-px bg-brand-800/60 my-1" />
+
+            {user ? (
+              <button
+                type="button"
+                onClick={() => signOut()}
+                className="px-4 py-3 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-lg text-brand-400 hover:text-brand-100 hover:bg-brand-800/50 transition-colors text-left cursor-pointer"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                href="/auth"
+                className={`px-4 py-3 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-lg transition-colors ${
+                  pathname.startsWith("/auth")
+                    ? "text-gold bg-gold/10"
+                    : "text-brand-400 hover:text-brand-100 hover:bg-brand-800/50"
+                }`}
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       )}

@@ -11,6 +11,7 @@ import {
 } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
 import AuthPanel from "@/components/auth-panel";
+import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -273,6 +274,7 @@ export default function EtfApp() {
       const tx = await mgr.createETF(etfName, etfSymbol.toUpperCase(), tokens, weights, feeReceiver, feeBpsNum, { gasLimit: 1500000 });
       await tx.wait();
       log(`ETF ${etfName} (${etfSymbol}) created! Tx: ${shorten(tx.hash)}`, "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: selectedEthWallet.address, txHash: tx.hash, dapp: "etf", action: "create_etf", contractAddress: MANAGER_ADDRESS, details: { name: etfName, symbol: etfSymbol } });
       setEtfName("");
       setEtfSymbol("");
       setTokenRows([{ address: "", weight: "" }]);
@@ -310,6 +312,7 @@ export default function EtfApp() {
         const tx = await mgrSigned.mintWithEth(etfToken, etfAmountWei, { value: totalWei, gasLimit: 500000 });
         await tx.wait();
         log(`Minted ${amt}! Tx: ${shorten(tx.hash)}`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selectedEthWallet!.address, txHash: tx.hash, dapp: "etf", action: "mint_etf", amount: `${amt} ETF`, contractAddress: etfToken });
         await refreshETFs();
       } catch (e: any) {
         log(`Mint failed: ${e.message}`, "error");
@@ -349,6 +352,7 @@ export default function EtfApp() {
         const tx = await mgr.burn(etfToken, etfAmountWei, { gasLimit: 500000 });
         await tx.wait();
         log(`Burned ${amt}! Tx: ${shorten(tx.hash)}`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selectedEthWallet!.address, txHash: tx.hash, dapp: "etf", action: "burn_etf", amount: `${amt} ETF`, contractAddress: etfToken });
         await refreshETFs();
       } catch (e: any) {
         log(`Burn failed: ${e.message}`, "error");
@@ -388,6 +392,7 @@ export default function EtfApp() {
         const tx = await mgr.withdraw(etfToken, etfAmountWei, { gasLimit: 500000 });
         await tx.wait();
         log(`Withdrawn ${amt}! Tx: ${shorten(tx.hash)}`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selectedEthWallet!.address, txHash: tx.hash, dapp: "etf", action: "withdraw_etf", amount: `${amt} ETF`, contractAddress: etfToken });
         await refreshETFs();
       } catch (e: any) {
         log(`Withdraw failed: ${e.message}`, "error");

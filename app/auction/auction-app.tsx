@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { useWallet } from "@/lib/wallet-context";
 import AuthPanel from "@/components/auth-panel";
 import { FACTORY_ADDRESS, RPC_URL, factoryAbi, auctionAbi, erc20Abi } from "./abis";
+import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -182,6 +183,7 @@ export default function AuctionApp() {
         const evt = receipt.events?.find((e: any) => e.event === "AuctionContractDeployed");
         const addr = evt?.args?.contractAddress;
         log(`Auction deployed at: ${addr || "check logs"}`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "auction", action: "deploy_auction" });
         await refreshAuctions();
       } else {
         log("Deploy reverted.", "error");
@@ -210,7 +212,12 @@ export default function AuctionApp() {
         const tx = await auction.placeBid(adURI, bidWei, { value: bidWei, gasLimit: 500000 });
         log(`Tx: ${shorten(tx.hash)}`);
         const r = await tx.wait();
-        r.status === 1 ? log("Bid placed!", "success") : log("Bid reverted.", "error");
+        if (r.status === 1) {
+          log("Bid placed!", "success");
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "auction", action: "place_bid" });
+        } else {
+          log("Bid reverted.", "error");
+        }
       } else {
         const tok = new ethers.Contract(payToken, erc20Abi, signer);
         const allowance: ethers.BigNumber = await tok.allowance(selectedEthAddress!, auctionAddr);
@@ -224,7 +231,12 @@ export default function AuctionApp() {
         const tx = await auction.placeBid(adURI, bidWei, { gasLimit: 500000 });
         log(`Tx: ${shorten(tx.hash)}`);
         const r = await tx.wait();
-        r.status === 1 ? log("Bid placed!", "success") : log("Bid reverted.", "error");
+        if (r.status === 1) {
+          log("Bid placed!", "success");
+          if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "auction", action: "place_bid" });
+        } else {
+          log("Bid reverted.", "error");
+        }
       }
       await refreshAuctions();
     } catch (e: any) {

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
 import { FACTORY_ADDRESS, RPC_URL, factoryAbi, lockerAbi, erc721Abi, erc20Abi } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
+import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -178,6 +179,7 @@ export default function StorefrontApp() {
             const parsed = iface.parseLog(l);
             if (parsed.name === "NFTLockerCreated") {
               log(`Storefront created: ${shorten(parsed.args.lockerAddress)}`, "success");
+              if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "storefront", action: "create_storefront" });
               break;
             }
           } catch { /* skip */ }
@@ -285,6 +287,7 @@ export default function StorefrontApp() {
       const receipt = await tx.wait();
       if (receipt.status === 1) {
         log(`NFT ${tokenId} deposited.`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "storefront", action: "deposit_nft" });
         await refreshLockers();
       } else {
         log("Deposit reverted.", "error");
@@ -342,6 +345,7 @@ export default function StorefrontApp() {
       const receipt = await tx.wait();
       if (receipt.status === 1) {
         log(`NFT ${tokenId} listed for ${price} ${tc === ZERO_ADDR ? "ETH" : "tokens"}.`, "success");
+        if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "storefront", action: "list_nft" });
         await refreshLockers();
       } else {
         log("List reverted.", "error");
@@ -364,6 +368,7 @@ export default function StorefrontApp() {
       const tx = await locker.cancelListingAndWithdrawNFT(listingId);
       await tx.wait();
       log(`Listing ${listingId} cancelled.`, "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "storefront", action: "cancel_listing" });
       await refreshLockers();
     } catch (e: any) {
       log(`Cancel failed: ${e.reason || e.message}`, "error");
@@ -401,6 +406,7 @@ export default function StorefrontApp() {
       const tx = await lockerSigned.buyNFT(listingId, overrides);
       await tx.wait();
       log(`Purchased NFT from listing ${listingId}.`, "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, txHash: tx.hash, dapp: "storefront", action: "buy_nft" });
       await refreshLockers();
     } catch (e: any) {
       log(`Buy failed: ${e.reason || e.message}`, "error");

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESS, MONEY_ADDRESS, RPC_URL, dividendsAbi, erc20Abi } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
+import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -208,6 +209,7 @@ export default function MoneyDividendsApp() {
       const tx = await contract.stake(amountWei);
       await tx.wait();
       addLog(`Staked ${stakeAmount} MONEY successfully`, "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, dapp: "moneydividends", action: "stake", amount: `${stakeAmount} MONEY`, contractAddress: CONTRACT_ADDRESS });
       setStakeAmount("");
       await fetchInfo();
     } catch (e: unknown) {
@@ -225,6 +227,7 @@ export default function MoneyDividendsApp() {
       const tx = await contract.unstake();
       await tx.wait();
       addLog("Unstaked successfully", "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, dapp: "moneydividends", action: "unstake", contractAddress: CONTRACT_ADDRESS });
       await fetchInfo();
     } catch (e: unknown) {
       addLog(`Unstake failed: ${(e as Error).message}`, "error");
@@ -241,6 +244,7 @@ export default function MoneyDividendsApp() {
       const tx = await contract.claimAllRewards();
       await tx.wait();
       addLog("Dividends claimed successfully", "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, dapp: "moneydividends", action: "claim_rewards", contractAddress: CONTRACT_ADDRESS });
       await fetchInfo();
     } catch (e: unknown) {
       addLog(`Claim failed: ${(e as Error).message}`, "error");
@@ -258,6 +262,7 @@ export default function MoneyDividendsApp() {
       const tx = await contract.registerRewardToken(rewardTokenAddr);
       await tx.wait();
       addLog("Reward token registered", "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, dapp: "moneydividends", action: "register_reward_token", contractAddress: CONTRACT_ADDRESS });
       setRewardTokenAddr("");
       await fetchInfo();
     } catch (e: unknown) {
@@ -276,6 +281,7 @@ export default function MoneyDividendsApp() {
       const tx = await contract.unregisterRewardToken(rewardTokenAddr);
       await tx.wait();
       addLog("Reward token unregistered", "success");
+      if (user) logTransaction({ userId: user.id, walletAddress: selectedEthAddress!, dapp: "moneydividends", action: "unregister_reward_token", contractAddress: CONTRACT_ADDRESS });
       setRewardTokenAddr("");
       await fetchInfo();
     } catch (e: unknown) {
