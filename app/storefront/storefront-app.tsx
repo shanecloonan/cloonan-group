@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
 import { FACTORY_ADDRESS, RPC_URL, factoryAbi, lockerAbi, erc721Abi, erc20Abi } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
@@ -429,6 +430,16 @@ export default function StorefrontApp() {
   /* ================================================================ */
   /*  RENDER                                                           */
   /* ================================================================ */
+
+  if (!user || !vaultUnlocked) {
+    return (
+      <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-[900px] mx-auto pt-12">
+          <AuthPanel />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>

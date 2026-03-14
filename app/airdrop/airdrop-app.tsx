@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESS, RPC_URL, airdropAbi, erc20Abi } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */

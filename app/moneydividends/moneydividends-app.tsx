@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESS, MONEY_ADDRESS, RPC_URL, dividendsAbi, erc20Abi } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
@@ -293,6 +294,16 @@ export default function MoneyDividendsApp() {
   /*  RENDER                                                           */
   /* ================================================================ */
 
+  if (!user || !vaultUnlocked) {
+    return (
+      <div className="min-h-screen" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-[680px] mx-auto px-4 sm:px-6 py-10">
+          <AuthPanel />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen" style={{ background: "#08090e" }}>
       <div className="w-full max-w-[680px] mx-auto px-4 sm:px-6 py-10 space-y-6">
@@ -313,7 +324,7 @@ export default function MoneyDividendsApp() {
                 <option key={w.address} value={w.address}>{w.type}: {shorten(w.address)}</option>
               ))}
             </select>
-            <button type="button" onClick={connectMetaMask} className={btnGhost}>MetaMask</button>
+            <button type="button" onClick={() => connectMetaMask().catch(() => {})} className={btnGhost}>MetaMask</button>
           </div>
           {selectedEthWallet && <p className="text-xs text-white/30 font-mono text-center">{selectedEthWallet.address}</p>}
         </div>

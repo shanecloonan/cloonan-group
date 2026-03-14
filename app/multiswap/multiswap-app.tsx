@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
 import { FACTORY_ADDRESS, RPC_URL, factoryAbi } from "./abis";
 import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 import { logTransaction } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
@@ -210,6 +211,16 @@ export default function MultiswapApp() {
   /*  RENDER                                                           */
   /* ================================================================ */
 
+  if (!user || !vaultUnlocked) {
+    return (
+      <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-[720px] mx-auto pt-12">
+          <AuthPanel />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
       <div className="w-full max-w-[720px] mx-auto space-y-5">
@@ -226,7 +237,7 @@ export default function MultiswapApp() {
           <div className="flex gap-2">
             <select
               value={selectedEthAddress ?? ""}
-              onChange={(e) => selectEthWallet(e.target.value)}
+              onChange={(e) => selectEthWallet(e.target.value || null)}
               className={`flex-1 ${selectCls}`}
             >
               <option value="">Select a wallet...</option>
@@ -234,7 +245,7 @@ export default function MultiswapApp() {
                 <option key={w.address} value={w.address}>{w.type ? `${w.type}: ` : ""}{shorten(w.address)}</option>
               ))}
             </select>
-            <button type="button" onClick={connectMetaMask} className={btnGhost}>MetaMask</button>
+            <button type="button" onClick={() => connectMetaMask().catch(() => {})} className={btnGhost}>MetaMask</button>
           </div>
         </div>
 

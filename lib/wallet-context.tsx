@@ -38,6 +38,7 @@ interface WalletContextValue {
   vaultUnlocked: boolean;
   unlockVault: (password: string) => Promise<boolean>;
 
+  chainId: number | null;
   ethWallets: EthWallet[];
   selectedEthAddress: string | null;
   selectedEthWallet: EthWallet | null;
@@ -66,6 +67,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [vaultUnlocked, setVaultUnlocked] = useState(false);
   const vaultKeyRef = useRef<CryptoKey | null>(null);
 
+  const [chainId, setChainId] = useState<number | null>(null);
   const [ethWallets, setEthWallets] = useState<EthWallet[]>([]);
   const [selectedEthAddress, setSelectedEthAddress] = useState<string | null>(null);
   const [arweaveWallet, setArweaveWalletState] = useState<ArweaveWalletData | null>(null);
@@ -189,9 +191,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       if (!s) clearVaultKey();
     });
 
+    const onChainChanged = (hexChain: string) => {
+      setChainId(parseInt(hexChain, 16));
+    };
+    if (typeof window !== "undefined" && window.ethereum) {
+      window.ethereum.on?.("chainChanged", onChainChanged);
+    }
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      if (typeof window !== "undefined" && window.ethereum) {
+        window.ethereum.removeListener?.("chainChanged", onChainChanged);
+      }
     };
   }, [loadWalletsFromDb, clearVaultKey]);
 
@@ -234,6 +246,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       if (!data.user) return "Login failed";
 
       const key = await deriveVaultKey(password, data.user.id);
+
+      const { data: prefs } = await supabase
+        .from("user_preferences")
+        .select("key_check")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (prefs?.key_check) {
+        const ok = await verifyKeyCheck(prefs.key_check, key);
+        if (!ok) return "Vault key mismatch — if you recently reset your password, your encrypted wallets may be inaccessible.";
+      }
+
       await storeVaultKey(key);
       await loadWalletsFromDb(data.user.id, key);
       return null;
@@ -335,16 +359,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         { onConflict: "user_id,address,chain" },
       );
 
-      const updated = [...ethWallets.filter((e) => e.address !== w.address), {
+      setEthWallets((prev) => [...prev.filter((e) => e.address !== w.address), {
         address: w.address,
         privateKey: w.privateKey,
         type: w.type,
-      }];
-      setEthWallets(updated);
+      }]);
 
-      if (!selectedEthAddress) setSelectedEthAddress(w.address);
+      setSelectedEthAddress((prev) => prev ?? w.address);
     },
-    [user, ethWallets, selectedEthAddress],
+    [user],
   );
 
   const removeEthWallet = useCallback(
@@ -357,18 +380,22 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         .eq("address", address)
         .eq("chain", "ethereum");
 
-      const updated = ethWallets.filter((w) => w.address !== address);
-      setEthWallets(updated);
-      if (selectedEthAddress === address) {
-        setSelectedEthAddress(updated[0]?.address ?? null);
-      }
+      setEthWallets((prev) => {
+        const updated = prev.filter((w) => w.address !== address);
+        setSelectedEthAddress((sel) =>
+          sel === address ? (updated[0]?.address ?? null) : sel,
+        );
+        return updated;
+      });
     },
-    [user, ethWallets, selectedEthAddress],
+    [user],
   );
 
   const connectMetaMask = useCallback(async (): Promise<string> => {
     if (typeof window === "undefined" || !window.ethereum) throw new Error("Install MetaMask");
     const accounts: string[] = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const hexChain: string = await window.ethereum.request({ method: "eth_chainId" });
+    setChainId(parseInt(hexChain, 16));
     const addr = accounts[0];
     await addEthWallet({ address: addr, type: "metamask" });
     selectEthWallet(addr);
@@ -434,6 +461,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       updatePassword,
       vaultUnlocked,
       unlockVault,
+      chainId,
       ethWallets,
       selectedEthAddress,
       selectedEthWallet,
@@ -446,7 +474,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       user, session, isLoading, signUp, signIn, signOut, resetPassword, updatePassword,
-      vaultUnlocked, unlockVault,
+      vaultUnlocked, unlockVault, chainId,
       ethWallets, selectedEthAddress, selectedEthWallet,
       selectEthWallet, addEthWallet, removeEthWallet, connectMetaMask,
       arweaveWallet, setArweaveWallet,
