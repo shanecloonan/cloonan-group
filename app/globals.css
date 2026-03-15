@@ -33,3 +33,8 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+@keyframes orbBreathe {
+  0%, 100% { transform: scale(0.96); }
+  50% { transform: scale(1.08); }
+}

@@ -20,6 +20,7 @@ import {
   createKeyCheck,
   verifyKeyCheck,
 } from "./crypto";
+import { ethers } from "ethers";
 import type { EthWallet, ArweaveWalletData, WalletRow } from "./wallet-types";
 
 const VAULT_KEY_SESSION = "mf_vault_key";
@@ -46,6 +47,7 @@ interface WalletContextValue {
   addEthWallet: (w: { address: string; privateKey?: string; type: "moneyfund" | "metamask" }) => Promise<void>;
   removeEthWallet: (address: string) => Promise<void>;
   connectMetaMask: () => Promise<string>;
+  getSigner: (rpcUrl?: string) => ethers.providers.JsonRpcSigner | ethers.Wallet | null;
 
   arweaveWallet: ArweaveWalletData | null;
   setArweaveWallet: (jwk: JsonWebKey | null) => Promise<void>;
@@ -446,6 +448,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 
   /* ------------------------------------------------------------------ */
+  /*  getSigner                                                          */
+  /* ------------------------------------------------------------------ */
+
+  const getSigner = useCallback(
+    (rpcUrl?: string): ethers.providers.JsonRpcSigner | ethers.Wallet | null => {
+      if (!selectedEthWallet) return null;
+      if (selectedEthWallet.type === "metamask" && typeof window !== "undefined" && window.ethereum) {
+        return new ethers.providers.Web3Provider(window.ethereum as ethers.providers.ExternalProvider).getSigner();
+      }
+      if (selectedEthWallet.privateKey) {
+        const provider = new ethers.providers.JsonRpcProvider(rpcUrl || "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73");
+        return new ethers.Wallet(selectedEthWallet.privateKey, provider);
+      }
+      return null;
+    },
+    [selectedEthWallet],
+  );
+
+  /* ------------------------------------------------------------------ */
   /*  Context value                                                      */
   /* ------------------------------------------------------------------ */
 
@@ -469,6 +490,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       addEthWallet,
       removeEthWallet,
       connectMetaMask,
+      getSigner,
       arweaveWallet,
       setArweaveWallet,
     }),
@@ -476,7 +498,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       user, session, isLoading, signUp, signIn, signOut, resetPassword, updatePassword,
       vaultUnlocked, unlockVault, chainId,
       ethWallets, selectedEthAddress, selectedEthWallet,
-      selectEthWallet, addEthWallet, removeEthWallet, connectMetaMask,
+      selectEthWallet, addEthWallet, removeEthWallet, connectMetaMask, getSigner,
       arweaveWallet, setArweaveWallet,
     ],
   );

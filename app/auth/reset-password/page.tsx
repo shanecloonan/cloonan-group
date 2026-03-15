@@ -36,24 +36,51 @@ export default function ResetPasswordPage() {
   const strength = useMemo(() => passwordStrength(password), [password]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function bootstrap() {
+      // PKCE flow: exchange ?code= for a session
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      if (code) {
+        const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
+        if (!cancelled) {
+          if (exchangeErr) {
+            setError("Invalid or expired link. Please request a new reset link.");
+          } else {
+            setReady(true);
+          }
+        }
+        return;
+      }
+
+      // Implicit flow: hash fragment is auto-processed by the client
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!cancelled && session) {
+        setReady(true);
+      }
+    }
+
+    bootstrap();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (cancelled) return;
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setReady(true);
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
-
     const timeout = setTimeout(() => {
-      setReady((prev) => {
-        if (!prev) setError("Session expired or invalid link. Please request a new reset link.");
-        return prev;
-      });
+      if (!cancelled) {
+        setReady((prev) => {
+          if (!prev) setError("Session expired or invalid link. Please request a new reset link.");
+          return prev;
+        });
+      }
     }, 10000);
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };

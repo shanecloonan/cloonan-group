@@ -96,6 +96,10 @@ const labelCls = "block text-white/40 text-[10px] font-bold uppercase tracking-w
 /*  COMPONENT                                                          */
 /* ================================================================== */
 
+function Spinner() {
+  return <span className="inline-block w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />;
+}
+
 export default function EtfApp() {
   const rpcIdx = useRef(0);
   const getProvider = useCallback(() => new ethers.providers.JsonRpcProvider(RPC_ENDPOINTS[rpcIdx.current]), []);
@@ -306,7 +310,7 @@ export default function EtfApp() {
         const mgr = new ethers.Contract(MANAGER_ADDRESS, managerAbi, prov);
         const etfAmountWei = ethers.utils.parseEther(amt);
         const weiPerEtf = await mgr.getWeiPerEtf(etfToken);
-        const totalWei = etfAmountWei.mul(weiPerEtf);
+        const totalWei = etfAmountWei.mul(weiPerEtf).div(ethers.constants.WeiPerEther);
 
         const mgrSigned = new ethers.Contract(MANAGER_ADDRESS, managerAbi, signer);
         const tx = await mgrSigned.mintWithEth(etfToken, etfAmountWei, { value: totalWei, gasLimit: 500000 });
@@ -449,13 +453,6 @@ export default function EtfApp() {
     setTokenRows((p) => p.map((r, i) => (i === idx ? { ...r, [field]: val } : r)));
   }, []);
 
-  /* ================================================================ */
-  /*  Spinner                                                          */
-  /* ================================================================ */
-
-  const Spinner = () => (
-    <span className="inline-block w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
-  );
 
   /* ================================================================ */
   /*  RENDER                                                           */
@@ -627,7 +624,7 @@ export default function EtfApp() {
             ) : (
               etfs.map((etf) => {
                 const price = parseFloat(ethers.utils.formatEther(etf.currentPrice)).toFixed(6);
-                const appreciation = (etf.percentAppreciation.toNumber() / 100).toFixed(2);
+                const appreciation = (parseFloat(etf.percentAppreciation.toString()) / 100).toFixed(2);
                 const fee = (etf.thirdFeeBps.toNumber() / 100).toFixed(2);
                 const balance = parseFloat(ethers.utils.formatEther(etf.balance)).toFixed(6);
                 const expanded = expandedToken[etf.etfToken];

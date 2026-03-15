@@ -234,7 +234,6 @@ export default function AboutApp() {
   const [activeSection, setActiveSection] = useState("overview");
   const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
   const [divCount, setDivCount] = useState(0);
-  const [orbScale, setOrbScale] = useState(1);
   const feeChartRef = useRef<HTMLCanvasElement>(null);
   const feeChartInst = useRef<Chart | null>(null);
 
@@ -277,16 +276,7 @@ export default function AboutApp() {
         return next;
       });
     }, 600);
-    let dir = 1, sc = 1;
-    const breathe = () => {
-      sc += 0.002 * dir;
-      if (sc >= 1.08) dir = -1;
-      if (sc <= 0.96) dir = 1;
-      setOrbScale(sc);
-      rafId = requestAnimationFrame(breathe);
-    };
-    let rafId = requestAnimationFrame(breathe);
-    return () => { clearInterval(interval); cancelAnimationFrame(rafId); };
+    return () => { clearInterval(interval); };
   }, []);
 
   /* ---- fee chart ---- */
@@ -481,7 +471,7 @@ export default function AboutApp() {
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center text-center z-10 transition-transform" style={{
                 background: "radial-gradient(circle at 30% 30%, #00f7ff, #004466 60%, #001a33)",
                 boxShadow: "0 0 50px rgba(0,247,255,0.5), 0 0 100px rgba(0,247,255,0.15), inset 0 0 25px #003344",
-                transform: `scale(${orbScale})`,
+                animation: "orbBreathe 3s ease-in-out infinite",
               }}>
                 <span className="text-[20px] font-extrabold text-amber-400 leading-tight uppercase" style={{ fontFamily: "'Orbitron', sans-serif" }}>MONEY<br />Dividends</span>
                 <span className="bg-white text-black font-bold text-xs px-2.5 py-0.5 rounded-md mt-1.5 shadow">{divCount}</span>

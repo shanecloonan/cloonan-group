@@ -163,19 +163,21 @@ export default function MoneyDividendsApp() {
       const [tokens, balances] = await readContract.getRegisteredTokensAndBalances();
       const rewardInfos: RewardInfo[] = [];
       for (let i = 0; i < tokens.length; i++) {
-        const [reward, rptPaid, rptStored, isReg, tokenBal] = await Promise.all([
+        const tokenContract = new ethers.Contract(tokens[i], erc20Abi, provider);
+        const [reward, rptPaid, rptStored, isReg, tokenBal, decimals] = await Promise.all([
           readContract.rewards(addr, tokens[i]),
           readContract.userRewardPerTokenPaid(addr, tokens[i]),
           readContract.rewardPerTokenStored(tokens[i]),
           readContract.isRegisteredRewardToken(tokens[i]),
           readContract.tokenBalance(tokens[i]),
+          tokenContract.decimals().catch(() => 18),
         ]);
         rewardInfos.push({
           token: tokens[i],
-          balance: ethers.utils.formatEther(tokenBal),
-          reward: ethers.utils.formatEther(reward),
-          rptPaid: ethers.utils.formatEther(rptPaid),
-          rptStored: ethers.utils.formatEther(rptStored),
+          balance: ethers.utils.formatUnits(tokenBal, decimals),
+          reward: ethers.utils.formatUnits(reward, decimals),
+          rptPaid: ethers.utils.formatUnits(rptPaid, decimals),
+          rptStored: ethers.utils.formatUnits(rptStored, decimals),
           isRegistered: isReg,
         });
       }

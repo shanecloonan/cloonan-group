@@ -10,7 +10,47 @@ export default function AuthCallbackPage() {
   const [message, setMessage] = useState("Verifying your email…");
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function bootstrap() {
+      // PKCE flow: exchange ?code= for a session
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (error) {
+          setStatus("error");
+          setMessage("Verification failed. You may close this page and try signing in.");
+          return;
+        }
+        // Check if this was a password recovery flow
+        const type = params.get("type");
+        if (type === "recovery") {
+          router.replace("/auth/reset-password");
+          return;
+        }
+        if (data.session) {
+          setStatus("success");
+          setMessage("Email verified — redirecting…");
+          setTimeout(() => router.replace("/"), 1500);
+        }
+        return;
+      }
+
+      // Implicit flow fallback: check existing session from hash fragment
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!cancelled && session) {
+        setStatus("success");
+        setMessage("Email verified — redirecting…");
+        setTimeout(() => router.replace("/"), 1500);
+      }
+    }
+
+    bootstrap();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (cancelled) return;
       if (event === "PASSWORD_RECOVERY") {
         router.replace("/auth/reset-password");
         return;
@@ -23,16 +63,19 @@ export default function AuthCallbackPage() {
     });
 
     const timeout = setTimeout(() => {
-      setStatus((prev) => {
-        if (prev === "loading") {
-          setMessage("Verification is taking longer than expected. You may close this page and try signing in.");
-          return "error";
-        }
-        return prev;
-      });
+      if (!cancelled) {
+        setStatus((prev) => {
+          if (prev === "loading") {
+            setMessage("Verification is taking longer than expected. You may close this page and try signing in.");
+            return "error";
+          }
+          return prev;
+        });
+      }
     }, 10000);
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };

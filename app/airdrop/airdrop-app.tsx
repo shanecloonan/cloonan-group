@@ -80,7 +80,7 @@ const tabInactive = "text-white/30 hover:text-white/60 hover:bg-white/[0.03]";
 
 export default function AirdropApp() {
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC_URL), []);
-  const { user, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask } = useWallet();
+  const { user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask } = useWallet();
 
   /* form */
   const [tokenAddress, setTokenAddress] = useState("");
@@ -135,10 +135,10 @@ export default function AirdropApp() {
   const recipientList = useMemo(() => recipients.split("\n").map((r) => r.trim()).filter(Boolean), [recipients]);
   const recipientCount = recipientList.length;
 
-  /* ---- gas estimate ---- */
+  /* ---- gas estimate (rough display only; actual tx uses estimateGas) ---- */
   const estimatedGas = useMemo(() => {
     const base = 60000;
-    const per = 45000;
+    const per = 65000;
     return base + recipientCount * per + 20000;
   }, [recipientCount]);
 
@@ -192,10 +192,16 @@ export default function AirdropApp() {
         addLog("Approval confirmed", "success");
       }
 
-      const gasLimit = ethers.BigNumber.from(estimatedGas);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, airdropAbi, signer);
+      let gasLimit: ethers.BigNumber;
+      try {
+        const estimate = await contract.estimateGas.airdropTokens(tokenAddress, addrs, amountsWei);
+        gasLimit = estimate.mul(120).div(100);
+      } catch {
+        gasLimit = ethers.BigNumber.from(estimatedGas);
+      }
       addLog(`Sending airdrop to ${addrs.length} recipients (gas limit: ${gasLimit.toString()})...`, "pending");
 
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, airdropAbi, signer);
       const tx = await contract.airdropTokens(tokenAddress, addrs, amountsWei, { gasLimit });
       addLog(`Tx submitted: ${shorten(tx.hash)}`, "pending");
       const receipt = await tx.wait();
@@ -297,6 +303,16 @@ export default function AirdropApp() {
   /* ================================================================ */
   /*  RENDER                                                           */
   /* ================================================================ */
+
+  if (!user || !vaultUnlocked) {
+    return (
+      <div className="min-h-screen" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-[680px] mx-auto px-4 sm:px-6 py-10">
+          <AuthPanel />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen" style={{ background: "#08090e" }}>

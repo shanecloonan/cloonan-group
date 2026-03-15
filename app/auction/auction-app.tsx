@@ -75,6 +75,15 @@ export default function AuctionApp() {
   /* wallet */
   const { user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress, selectEthWallet, connectMetaMask, isLoading } = useWallet();
 
+  const getAuctionSigner = useCallback(() => {
+    if (!selectedEthWallet) return null;
+    if (selectedEthWallet.type === "metamask" && typeof window !== "undefined" && (window as any).ethereum) {
+      return new ethers.providers.Web3Provider((window as any).ethereum).getSigner();
+    }
+    if (selectedEthWallet.privateKey) return new ethers.Wallet(selectedEthWallet.privateKey, provider);
+    return null;
+  }, [selectedEthWallet, provider]);
+
   /* deploy form */
   const [showCustomize, setShowCustomize] = useState(false);
   const [refundPct, setRefundPct] = useState("80");
@@ -133,7 +142,8 @@ export default function AuctionApp() {
     if (!selectedEthWallet || busy) return;
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
+      const signer = getAuctionSigner();
+      if (!signer) { log("No signer available.", "error"); setBusy(false); return; }
       const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, signer);
 
       const receivers: string[] = [];
@@ -202,7 +212,7 @@ export default function AuctionApp() {
     if (!adURI || adURI.length > 280) { log("Ad URI required (max 280 chars).", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
+      const signer = getAuctionSigner()!;
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       const payToken: string = await auction.bidPaymentToken();
       const bidWei = await toTokenWei(bidAmount, payToken, provider);
@@ -252,7 +262,7 @@ export default function AuctionApp() {
     if (!signerName.trim()) { log("Signer name required.", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
+      const signer = getAuctionSigner()!;
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       const sfWei: ethers.BigNumber = await auction.signFeeWei();
       const spToken: string = await auction.signPaymentToken();
@@ -288,7 +298,7 @@ export default function AuctionApp() {
     if (!ethers.utils.isAddress(auctionAddr)) { log("Invalid auction address.", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
+      const signer = getAuctionSigner()!;
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       const spToken: string = await auction.signPaymentToken();
       const feeWei = await toTokenWei(newSignFee, spToken, provider);
@@ -312,7 +322,7 @@ export default function AuctionApp() {
     if (tokenVal !== ZERO_ADDR && !ethers.utils.isAddress(tokenVal)) { log("Invalid token address.", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
+      const signer = getAuctionSigner()!;
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       log("Updating sign payment token...");
       const tx = await auction.updateSignPaymentToken(tokenVal, { gasLimit: 200000 });
@@ -331,7 +341,7 @@ export default function AuctionApp() {
     if (!ethers.utils.isAddress(auctionAddr)) { log("Invalid auction address.", "error"); return; }
     setBusy(true);
     try {
-      const signer = new ethers.Wallet(selectedEthWallet.privateKey!, provider);
+      const signer = getAuctionSigner()!;
       const auction = new ethers.Contract(auctionAddr, auctionAbi, signer);
       log("Deleting all signers...");
       const tx = await auction.deleteAllSigners({ gasLimit: 300000 });

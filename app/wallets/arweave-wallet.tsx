@@ -77,6 +77,7 @@ async function jwkToAddress(jwk: JsonWebKey): Promise<string> {
 
 async function getBalance(addr: string): Promise<string> {
   const res = await fetch(`${PROTOCOL}://${HOST}/wallet/${addr}/balance`);
+  if (!res.ok) throw new Error(`Balance fetch failed: ${res.status}`);
   return res.text();
 }
 
@@ -84,11 +85,13 @@ async function getPrice(dataSize: number | string, target?: string): Promise<str
   let url = `${PROTOCOL}://${HOST}/price/${dataSize}`;
   if (target) url += `/${target}`;
   const res = await fetch(url);
+  if (!res.ok) throw new Error(`Price fetch failed: ${res.status}`);
   return res.text();
 }
 
 async function getAnchor(): Promise<string> {
   const res = await fetch(`${PROTOCOL}://${HOST}/tx_anchor`);
+  if (!res.ok) throw new Error(`Anchor fetch failed: ${res.status}`);
   return res.text();
 }
 
@@ -154,7 +157,7 @@ export default function ArweaveWallet() {
   const refreshBalance = useCallback(async (addr: string) => {
     try {
       const winston = await getBalance(addr);
-      const ar = (BigInt(winston) / BigInt(10 ** 12)).toString();
+      const ar = (Number(winston) / 1e12).toFixed(6);
       setBalance(ar);
     } catch {
       setBalance("Error");
@@ -270,7 +273,7 @@ export default function ArweaveWallet() {
         offset += chunk.byteLength;
         const pct = ((offset / data.byteLength) * 100).toFixed(1);
         const chunkB64 = b64urlEncode(chunk);
-        await fetch(`${PROTOCOL}://${HOST}/chunk/${tx.id}`, {
+        const chunkRes = await fetch(`${PROTOCOL}://${HOST}/chunk/${tx.id}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -278,6 +281,7 @@ export default function ArweaveWallet() {
             data_path: "", offset: offset - chunk.byteLength, chunk: chunkB64,
           }),
         });
+        if (!chunkRes.ok) throw new Error(`Chunk upload failed at ${pct}%: HTTP ${chunkRes.status}`);
         setUploadStatus({ text: `Uploading: ${pct}%`, type: "loading" });
       }
       setUploadStatus({ text: `Uploaded! TX ID: ${tx.id}`, type: "success" });
@@ -391,12 +395,12 @@ export default function ArweaveWallet() {
           </div>
 
           <div className={`${card} p-5 space-y-3`}>
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Key Preview</span>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Public Key Preview</span>
             <pre className="bg-white/[0.03] rounded-lg p-3 overflow-auto text-[10px] max-h-[80px] text-white/30 font-mono leading-relaxed">
-              {localJwk ? JSON.stringify(localJwk, null, 2) : "No wallet loaded"}
+              {localJwk ? JSON.stringify({ kty: localJwk.kty, n: localJwk.n, e: localJwk.e }, null, 2) : "No wallet loaded"}
             </pre>
             <p className="text-[11px] text-amber-400/60 flex items-center gap-1">
-              <span>⚠</span> Backup your key securely. Never share it.
+              <span>⚠</span> Full private key hidden for security. Use Download to export.
             </p>
           </div>
 
