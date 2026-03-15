@@ -268,7 +268,7 @@ function Node({
 function Arrow({
   dir = "right",
   label,
-  color = "text-white/20",
+  color = "text-white/40",
   dashed,
 }: {
   dir?: "right" | "down" | "left" | "up";
@@ -412,7 +412,7 @@ function PenaltyTimeline({
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-[10px] text-white/40 font-semibold uppercase tracking-wider">
         <span>Penalty Decay Timeline</span>
-        <span className="text-white/15">|</span>
+        <span className="text-white/40">|</span>
         <span>
           Breakeven: <span className="text-emerald-400">{breakeven.toFixed(1)} days</span>
         </span>
@@ -476,7 +476,7 @@ function PenaltyTimeline({
         >
           0% PENALTY
         </div>
-        <div className="absolute top-1 right-2 text-[9px] text-white/20">
+        <div className="absolute top-1 right-2 text-[9px] text-white/40">
           Day 0 → {totalDays.toFixed(0)}
         </div>
       </div>
@@ -535,7 +535,7 @@ function DividendArchitecture() {
               <Node icon="🥩" label="Staking Pool" sub="per-token" color="border-purple-500/20" glow="rgba(168,85,247,0.1)" size="lg" />
             </FlowRow>
           </div>
-          <div className="text-[10px] text-white/20 py-2">Factory creates one pool per ERC-20 token with configurable penalty parameters</div>
+          <div className="text-[10px] text-white/40 py-2">Factory creates one pool per ERC-20 token with configurable penalty parameters</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-lg">
             {[
               { label: "token", desc: "ERC-20 address" },
@@ -565,13 +565,13 @@ function DividendArchitecture() {
             <Arrow label="approve(pool, amount)" color="text-blue-400/40" />
             <Node icon="🪙" label="ERC-20 Token" color="border-amber-500/20" />
           </FlowRow>
-          <Arrow dir="down" label="then" color="text-white/15" />
+          <Arrow dir="down" label="then" color="text-white/40" />
           <FlowRow wrap>
             <Node icon="👤" label="Staker" color="border-blue-500/20" />
             <Arrow label="stake(amount)" color="text-purple-400/40" />
             <Node icon="🥩" label="Pool" color="border-purple-500/20" glow="rgba(168,85,247,0.06)" />
           </FlowRow>
-          <Arrow dir="down" label="pool executes" color="text-white/15" />
+          <Arrow dir="down" label="pool executes" color="text-white/40" />
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <div className="flex flex-col items-center gap-1">
               <FlowRow>
@@ -607,7 +607,7 @@ function DividendArchitecture() {
             <Arrow label="sent to pool" color="text-sky-400/30" />
             <Node icon="🥩" label="Reward Pool" color="border-purple-500/20" glow="rgba(168,85,247,0.08)" />
           </FlowRow>
-          <Arrow dir="down" label="distributed by share" color="text-white/15" />
+          <Arrow dir="down" label="distributed by share" color="text-white/40" />
           <div className="grid grid-cols-3 gap-3 w-full max-w-md">
             {[
               { pct: "50%", tokens: "5,000", total: "10,000" },
@@ -620,13 +620,13 @@ function DividendArchitecture() {
               >
                 <div className="text-lg mb-1">🎫</div>
                 <div className="text-xs font-bold text-purple-400">{s.pct}</div>
-                <div className="text-[9px] text-white/25 mt-0.5">
+                <div className="text-[9px] text-white/40 mt-0.5">
                   {s.tokens} / {s.total}
                 </div>
               </div>
             ))}
           </div>
-          <div className="text-[10px] text-white/25 text-center">
+          <div className="text-[10px] text-white/40 text-center">
             reward = (userStake / totalStaked) × rewardBalance
           </div>
           <FlowRow wrap>
@@ -648,22 +648,22 @@ function DividendArchitecture() {
             <Arrow label="unstake(tokenId)" color="text-red-400/40" />
             <Node icon="🥩" label="Pool" color="border-purple-500/20" />
           </FlowRow>
-          <Arrow dir="down" label="pool executes" color="text-white/15" />
+          <Arrow dir="down" label="pool executes" color="text-white/40" />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg">
             <div className="text-center px-3 py-3 rounded-xl bg-red-500/[0.04] border border-red-500/10">
               <div className="text-lg mb-1">🔥</div>
               <div className="text-[10px] font-semibold text-red-400/80">NFT Burned</div>
-              <div className="text-[9px] text-white/25 mt-0.5">Receipt destroyed</div>
+              <div className="text-[9px] text-white/40 mt-0.5">Receipt destroyed</div>
             </div>
             <div className="text-center px-3 py-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/10">
               <div className="text-lg mb-1">💰</div>
               <div className="text-[10px] font-semibold text-emerald-400/80">Tokens Returned</div>
-              <div className="text-[9px] text-white/25 mt-0.5">amount − penalty</div>
+              <div className="text-[9px] text-white/40 mt-0.5">amount − penalty</div>
             </div>
             <div className="text-center px-3 py-3 rounded-xl bg-amber-500/[0.04] border border-amber-500/10">
               <div className="text-lg mb-1">⚠️</div>
               <div className="text-[10px] font-semibold text-amber-400/80">Penalty</div>
-              <div className="text-[9px] text-white/25 mt-0.5">→ Pool Creator</div>
+              <div className="text-[9px] text-white/40 mt-0.5">→ Pool Creator</div>
             </div>
           </div>
 
@@ -749,10 +749,10 @@ function DividendArchitecture() {
               key={s.step}
               className={`w-28 px-3 py-3 rounded-xl bg-white/[0.02] border ${s.color} text-center`}
             >
-              <div className="text-[9px] text-white/20 font-bold mb-1">STEP {s.step}</div>
+              <div className="text-[9px] text-white/40 font-bold mb-1">STEP {s.step}</div>
               <div className="text-xl mb-1">{s.icon}</div>
               <div className="text-[11px] font-semibold text-white/70">{s.title}</div>
-              <div className="text-[9px] text-white/25 mt-0.5">{s.desc}</div>
+              <div className="text-[9px] text-white/40 mt-0.5">{s.desc}</div>
             </div>
           ))}
         </div>
@@ -781,7 +781,7 @@ function EtfArchitecture() {
             <Arrow label="createETF(name, symbol, tokens[], weights[])" color="text-amber-400/40" />
             <Node icon="🏭" label="ETF Manager" color="border-amber-500/20" glow="rgba(245,158,11,0.08)" />
           </FlowRow>
-          <Arrow dir="down" label="deploys ERC-20 share token" color="text-white/15" />
+          <Arrow dir="down" label="deploys ERC-20 share token" color="text-white/40" />
           <Node icon="📈" label="ETF Token" sub="ERC-20 shares" color="border-amber-500/20" glow="rgba(245,158,11,0.06)" size="lg" />
         </div>
 
@@ -817,7 +817,7 @@ function EtfArchitecture() {
               <Node icon="🏭" label="Manager" color="border-amber-500/20" size="sm" />
             </FlowRow>
             <Arrow dir="down" color="text-emerald-400/20" />
-            <div className="text-center text-[9px] text-white/25">
+            <div className="text-center text-[9px] text-white/40">
               Uniswap V2 swaps ETH → underlying tokens
             </div>
             <Arrow dir="down" color="text-emerald-400/20" />
@@ -837,7 +837,7 @@ function EtfArchitecture() {
               <Node icon="🏭" label="Manager" color="border-amber-500/20" size="sm" />
             </FlowRow>
             <Arrow dir="down" color="text-red-400/20" />
-            <div className="text-center text-[9px] text-white/25">
+            <div className="text-center text-[9px] text-white/40">
               Underlying tokens sold → ETH via Uniswap
             </div>
             <Arrow dir="down" color="text-red-400/20" />
@@ -878,10 +878,10 @@ function DaoArchitecture() {
               key={s.step}
               className={`w-28 px-3 py-3 rounded-xl bg-white/[0.02] border ${s.color} text-center`}
             >
-              <div className="text-[9px] text-white/20 font-bold mb-1">STEP {s.step}</div>
+              <div className="text-[9px] text-white/40 font-bold mb-1">STEP {s.step}</div>
               <div className="text-xl mb-1">{s.icon}</div>
               <div className="text-[11px] font-semibold text-white/70">{s.title}</div>
-              <div className="text-[9px] text-white/25 mt-0.5">{s.desc}</div>
+              <div className="text-[9px] text-white/40 mt-0.5">{s.desc}</div>
             </div>
           ))}
         </div>
@@ -944,17 +944,17 @@ function DexArchitecture() {
             <div className="text-center px-3 py-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/10">
               <div className="text-lg mb-1">💧</div>
               <div className="text-[11px] font-semibold text-emerald-400/80">Add Liquidity</div>
-              <div className="text-[9px] text-white/25 mt-0.5">Deposit both tokens, receive LP shares</div>
+              <div className="text-[9px] text-white/40 mt-0.5">Deposit both tokens, receive LP shares</div>
             </div>
             <div className="text-center px-3 py-3 rounded-xl bg-pink-500/[0.04] border border-pink-500/10">
               <div className="text-lg mb-1">⇄</div>
               <div className="text-[11px] font-semibold text-pink-400/80">Swap</div>
-              <div className="text-[9px] text-white/25 mt-0.5">Trade along the curve, 0.5% fee</div>
+              <div className="text-[9px] text-white/40 mt-0.5">Trade along the curve, 0.5% fee</div>
             </div>
             <div className="text-center px-3 py-3 rounded-xl bg-red-500/[0.04] border border-red-500/10">
               <div className="text-lg mb-1">🔥</div>
               <div className="text-[11px] font-semibold text-red-400/80">Remove Liquidity</div>
-              <div className="text-[9px] text-white/25 mt-0.5">Burn LP, reclaim both tokens</div>
+              <div className="text-[9px] text-white/40 mt-0.5">Burn LP, reclaim both tokens</div>
             </div>
           </div>
         </div>
@@ -994,7 +994,7 @@ function StorefrontArchitecture() {
             <Arrow label="createNFTLocker(payees, shares)" color="text-emerald-400/40" />
             <Node icon="🏪" label="Storefront" sub="NFT Locker" color="border-emerald-500/20" glow="rgba(16,185,129,0.08)" />
           </FlowRow>
-          <Arrow dir="down" label="then" color="text-white/15" />
+          <Arrow dir="down" label="then" color="text-white/40" />
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 w-full max-w-xl">
             {[
               { icon: "📦", title: "Deposit NFT", desc: "ERC-721 → Locker" },
@@ -1005,7 +1005,7 @@ function StorefrontArchitecture() {
               <div key={s.title} className="text-center px-2 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="text-lg mb-1">{s.icon}</div>
                 <div className="text-[10px] font-semibold text-white/70">{s.title}</div>
-                <div className="text-[9px] text-white/25 mt-0.5">{s.desc}</div>
+                <div className="text-[9px] text-white/40 mt-0.5">{s.desc}</div>
               </div>
             ))}
           </div>
@@ -1036,7 +1036,7 @@ function AuctionArchitecture() {
             <Arrow label="deployAuction()" color="text-orange-400/40" />
             <Node icon="🖼️" label="Auction Contract" color="border-orange-500/20" glow="rgba(249,115,22,0.08)" />
           </FlowRow>
-          <Arrow dir="down" color="text-white/15" />
+          <Arrow dir="down" color="text-white/40" />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full max-w-lg">
             {[
               { icon: "💰", title: "Place Bid", desc: "Must exceed previous + increment" },
@@ -1046,7 +1046,7 @@ function AuctionArchitecture() {
               <div key={s.title} className="text-center px-2 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="text-lg mb-1">{s.icon}</div>
                 <div className="text-[10px] font-semibold text-white/70">{s.title}</div>
-                <div className="text-[9px] text-white/25 mt-0.5">{s.desc}</div>
+                <div className="text-[9px] text-white/40 mt-0.5">{s.desc}</div>
               </div>
             ))}
           </div>
@@ -1077,12 +1077,12 @@ function MultiswapArchitecture() {
             <Arrow label="deploy(swapReceivers, distReceivers)" color="text-teal-400/40" />
             <Node icon="🐙" label="Multiswap Widget" color="border-teal-500/20" glow="rgba(20,184,166,0.08)" />
           </FlowRow>
-          <Arrow dir="down" color="text-white/15" />
+          <Arrow dir="down" color="text-white/40" />
           <div className="grid grid-cols-2 gap-3 w-full max-w-md">
             <div className="text-center px-3 py-3 rounded-xl bg-teal-500/[0.04] border border-teal-500/10">
               <div className="text-lg mb-1">⇄</div>
               <div className="text-[11px] font-semibold text-teal-400/80">Batch Swaps</div>
-              <div className="text-[9px] text-white/25 mt-1 space-y-0.5">
+              <div className="text-[9px] text-white/40 mt-1 space-y-0.5">
                 <div>ETH → Multiple tokens</div>
                 <div>Token → Multiple tokens</div>
                 <div>Multi-hop routing</div>
@@ -1091,7 +1091,7 @@ function MultiswapArchitecture() {
             <div className="text-center px-3 py-3 rounded-xl bg-teal-500/[0.04] border border-teal-500/10">
               <div className="text-lg mb-1">📤</div>
               <div className="text-[11px] font-semibold text-teal-400/80">Batch Distributions</div>
-              <div className="text-[9px] text-white/25 mt-1 space-y-0.5">
+              <div className="text-[9px] text-white/40 mt-1 space-y-0.5">
                 <div>ETH to many wallets</div>
                 <div>Tokens to many wallets</div>
                 <div>Custom split %</div>
@@ -1125,13 +1125,13 @@ function AirdropArchitecture() {
             <Arrow label="approve(contract, total)" color="text-rose-400/40" />
             <Node icon="🪙" label="ERC-20" color="border-amber-500/20" />
           </FlowRow>
-          <Arrow dir="down" label="then" color="text-white/15" />
+          <Arrow dir="down" label="then" color="text-white/40" />
           <FlowRow wrap>
             <Node icon="👤" label="Sender" color="border-rose-500/20" />
             <Arrow label="airdropTokens(token, recipients[], amounts[])" color="text-rose-400/40" />
             <Node icon="🎁" label="Airdrop Contract" color="border-rose-500/20" glow="rgba(244,63,94,0.08)" />
           </FlowRow>
-          <Arrow dir="down" label="distributes" color="text-white/15" />
+          <Arrow dir="down" label="distributes" color="text-white/40" />
           <div className="flex gap-2 flex-wrap justify-center">
             {["👤", "👤", "👤", "👤", "👤"].map((_, i) => (
               <Node key={i} icon="👤" label={`Recipient ${i + 1}`} color="border-white/[0.06]" size="sm" />
@@ -1553,7 +1553,7 @@ export default function AboutApp() {
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${layerDot(item.layer)}`} />
                     <span className="text-[13px] font-medium text-white/70">{item.q}</span>
                   </div>
-                  <span className={`text-white/20 text-sm ml-3 flex-shrink-0 transition-transform ${faqOpen[i] ? "rotate-45" : ""}`}>+</span>
+                  <span className={`text-white/40 text-sm ml-3 flex-shrink-0 transition-transform ${faqOpen[i] ? "rotate-45" : ""}`}>+</span>
                 </button>
                 {faqOpen[i] && (
                   <div className="px-5 pb-4 pt-0 ml-6 border-t border-white/[0.04]">
@@ -1591,13 +1591,13 @@ export default function AboutApp() {
               {funcType && !["eth"].includes(funcType) && (
                 <div>
                   <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider block mb-1.5">Tokens</label>
-                  <input type="number" value={numTokens} onChange={(e) => setNumTokens(parseInt(e.target.value) || 1)} min={1} className={inputCls} />
+                  <input type="number" value={numTokens} onChange={(e) => setNumTokens(Math.max(1, parseInt(e.target.value) || 1))} min={1} className={inputCls} />
                 </div>
               )}
               {["singleToken", "multipleTokens", "eth"].includes(funcType) && (
                 <div>
                   <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider block mb-1.5">Recipients</label>
-                  <input type="number" value={numRecipients} onChange={(e) => setNumRecipients(parseInt(e.target.value) || 1)} min={1} className={inputCls} />
+                  <input type="number" value={numRecipients} onChange={(e) => setNumRecipients(Math.max(1, parseInt(e.target.value) || 1))} min={1} className={inputCls} />
                 </div>
               )}
             </div>
@@ -1643,7 +1643,7 @@ export default function AboutApp() {
           </div>
         </section>
 
-        <p className="text-center text-[11px] text-white/15 pt-8 pb-4">Powered by MoneyFund</p>
+        <p className="text-center text-[11px] text-white/40 pt-8 pb-4">Powered by MoneyFund</p>
       </div>
     </div>
   );

@@ -259,8 +259,10 @@ export default function EtfApp() {
       for (const row of tokenRows) {
         if (!row.address || !row.weight) continue;
         if (!ethers.utils.isAddress(row.address)) { log(`Invalid address: ${row.address}`, "error"); return; }
+        const w = parseFloat(row.weight);
+        if (!isFinite(w) || w <= 0 || w > 100) { log(`Weight must be between 0 and 100%. Got: ${row.weight}%`, "error"); return; }
         tokens.push(row.address);
-        weights.push(Math.round(parseFloat(row.weight) * 100));
+        weights.push(Math.round(w * 100));
       }
       if (tokens.length === 0) { log("Add at least one token.", "error"); return; }
       const totalPct = tokenRows.reduce((s, r) => s + (parseFloat(r.weight) || 0), 0);

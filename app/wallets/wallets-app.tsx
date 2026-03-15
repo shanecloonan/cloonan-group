@@ -241,7 +241,7 @@ function ActivityTab({
         <div className={`${card} p-10 text-center`}>
           <p className="text-2xl mb-2 opacity-20">◉</p>
           <p className="text-sm text-white/30">No activity yet</p>
-          <p className="text-xs text-white/20 mt-1">Transactions across all dApps will appear here.</p>
+          <p className="text-xs text-white/40 mt-1">Transactions across all dApps will appear here.</p>
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -261,7 +261,7 @@ function ActivityTab({
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-white/25 font-mono">{meta.label}</span>
+                    <span className="text-[10px] text-white/40 font-mono">{meta.label}</span>
                     {tx.amount && (
                       <>
                         <span className="text-white/10">·</span>
@@ -283,7 +283,7 @@ function ActivityTab({
                     )}
                   </div>
                 </div>
-                <span className="text-[10px] text-white/20 shrink-0">{relativeTime(tx.created_at)}</span>
+                <span className="text-[10px] text-white/40 shrink-0">{relativeTime(tx.created_at)}</span>
               </div>
             );
           })}
@@ -299,7 +299,7 @@ function ActivityTab({
               >
                 ← Prev
               </button>
-              <span className="text-[10px] text-white/20">
+              <span className="text-[10px] text-white/40">
                 {actPage + 1} / {totalPages}
               </span>
               <button
@@ -791,7 +791,7 @@ export default function WalletsApp() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Active Wallet</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-white/25">0x100</span>
+                      <span className="text-[10px] text-white/40">0x100</span>
                       <label className="relative w-9 h-5 cursor-pointer">
                         <input
                           type="checkbox"
@@ -970,7 +970,7 @@ export default function WalletsApp() {
                         ))}
                       </div>
                     )}
-                    {coinList.length === 0 && <p className="text-xs text-white/25">No tokens imported yet.</p>}
+                    {coinList.length === 0 && <p className="text-xs text-white/40">No tokens imported yet.</p>}
                   </div>
                 )}
 

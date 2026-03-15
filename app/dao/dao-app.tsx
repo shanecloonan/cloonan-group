@@ -423,7 +423,7 @@ export default function DaoApp() {
 
           <div className="space-y-5 max-h-[600px] overflow-y-auto pr-1">
             {daos.length === 0 && !loading && (
-              <p className="text-white/20 text-center py-10">No DAOs found.</p>
+              <p className="text-white/40 text-center py-10">No DAOs found.</p>
             )}
             {daos.map((d) => {
               const now = Math.floor(Date.now() / 1000);
@@ -584,7 +584,7 @@ export default function DaoApp() {
         >
           {logs.map((l, i) => (
             <p key={i} className="py-0.5 border-b border-white/[0.04] last:border-b-0">
-              <span className="text-white/25 mr-2">[{l.time}]</span>
+              <span className="text-white/40 mr-2">[{l.time}]</span>
               {l.msg}
             </p>
           ))}

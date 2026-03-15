@@ -474,7 +474,7 @@ export default function StorefrontApp() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Shareholders</span>
-              <span className="text-[10px] text-white/25">0.4% fee deducted — shares must sum to {REQUIRED_SHARES}</span>
+              <span className="text-[10px] text-white/40">0.4% fee deducted — shares must sum to {REQUIRED_SHARES}</span>
             </div>
             {shareholders.map((row, i) => (
               <div key={i} className="grid grid-cols-[1fr_100px] gap-2">
@@ -516,9 +516,9 @@ export default function StorefrontApp() {
           </div>
 
           {!selectedEthWallet ? (
-            <p className="text-xs text-white/25 py-4 text-center">Connect a wallet to view storefronts.</p>
+            <p className="text-xs text-white/40 py-4 text-center">Connect a wallet to view storefronts.</p>
           ) : lockers.length === 0 ? (
-            <p className="text-xs text-white/25 py-4 text-center">No storefronts found. Create one to get started.</p>
+            <p className="text-xs text-white/40 py-4 text-center">No storefronts found. Create one to get started.</p>
           ) : (
             <div className="space-y-3">
               {lockers.map((lk) => {
@@ -542,7 +542,7 @@ export default function StorefrontApp() {
                       <div className="flex items-center gap-4 text-xs text-white/40">
                         <span>{lk.stats.totalSales} sales</span>
                         <span>{parseFloat(lk.stats.totalEthProfit).toFixed(4)} ETH profit</span>
-                        <span className="text-white/20">{isExpanded ? "▲" : "▼"}</span>
+                        <span className="text-white/40">{isExpanded ? "▲" : "▼"}</span>
                       </div>
                     </button>
 
@@ -586,7 +586,7 @@ export default function StorefrontApp() {
                         <div>
                           <p className="text-xs font-medium text-white/40 mb-1">Active Listings ({lk.listings.length})</p>
                           {lk.listings.length === 0 ? (
-                            <p className="text-[11px] text-white/20 py-2">No active listings.</p>
+                            <p className="text-[11px] text-white/40 py-2">No active listings.</p>
                           ) : (
                             <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
                               {lk.listings.map((l) => (
@@ -752,7 +752,7 @@ export default function StorefrontApp() {
             style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}
           >
             {logs.length === 0 ? (
-              <p className="text-xs text-white/25 py-2 text-center">Waiting for activity...</p>
+              <p className="text-xs text-white/40 py-2 text-center">Waiting for activity...</p>
             ) : (
               logs.map((l, i) => (
                 <div
@@ -763,7 +763,7 @@ export default function StorefrontApp() {
                         : "text-white/50 bg-white/[0.02]"
                   }`}
                 >
-                  <span className="text-white/20 mr-2">[{l.ts}]</span>
+                  <span className="text-white/40 mr-2">[{l.ts}]</span>
                   {l.msg}
                 </div>
               ))
@@ -771,7 +771,7 @@ export default function StorefrontApp() {
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-white/20 pb-4">Powered by MoneyFund</p>
+        <p className="text-center text-[11px] text-white/40 pb-4">Powered by MoneyFund</p>
       </div>
     </div>
   );

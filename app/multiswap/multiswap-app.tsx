@@ -78,7 +78,7 @@ export default function MultiswapApp() {
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "pending") => {
     const ts = new Date().toLocaleTimeString();
-    setLogs((p) => [...p, { msg, type, ts }]);
+    setLogs((p) => [...p, { msg, type, ts }].slice(-200));
   }, []);
 
   useEffect(() => {
@@ -346,7 +346,7 @@ export default function MultiswapApp() {
             </button>
           </div>
           {deployed.length === 0 ? (
-            <p className="text-xs text-white/25 py-4 text-center">No contracts found.</p>
+            <p className="text-xs text-white/40 py-4 text-center">No contracts found.</p>
           ) : (
             <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
               {deployed.map((c, i) => (
@@ -390,7 +390,7 @@ export default function MultiswapApp() {
             style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}
           >
             {logs.length === 0 ? (
-              <p className="text-xs text-white/25 py-2 text-center">Waiting for activity...</p>
+              <p className="text-xs text-white/40 py-2 text-center">Waiting for activity...</p>
             ) : (
               logs.map((l, i) => (
                 <div
@@ -401,7 +401,7 @@ export default function MultiswapApp() {
                         : "text-white/50 bg-white/[0.02]"
                   }`}
                 >
-                  <span className="text-white/20 mr-2">[{l.ts}]</span>
+                  <span className="text-white/40 mr-2">[{l.ts}]</span>
                   {l.msg}
                 </div>
               ))
@@ -410,7 +410,7 @@ export default function MultiswapApp() {
         </div>
 
         {/* ── Powered by ── */}
-        <p className="text-center text-[11px] text-white/20 pb-4">Powered by MoneyFund</p>
+        <p className="text-center text-[11px] text-white/40 pb-4">Powered by MoneyFund</p>
       </div>
     </div>
   );

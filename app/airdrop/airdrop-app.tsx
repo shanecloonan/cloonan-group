@@ -538,7 +538,7 @@ export default function AirdropApp() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/20 font-mono">{shorten(log.txHash)}</span>
-                      <span className="text-white/15">{new Date(log.timestamp).toLocaleDateString()}</span>
+                      <span className="text-white/40">{new Date(log.timestamp).toLocaleDateString()}</span>
                     </div>
                   </div>
                 ))}
@@ -559,7 +559,7 @@ export default function AirdropApp() {
                       "text-white/30"
                     }`}>{l.type === "success" ? "✓" : l.type === "error" ? "✗" : l.type === "pending" ? "⋯" : "·"}</span>
                     <span className="text-xs text-white/50 flex-1 break-all">{l.msg}</span>
-                    <span className="text-[9px] text-white/15 shrink-0">{l.ts}</span>
+                    <span className="text-[9px] text-white/40 shrink-0">{l.ts}</span>
                   </div>
                 ))}
               </div>

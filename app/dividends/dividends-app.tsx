@@ -356,7 +356,7 @@ export default function DividendsApp() {
     try {
       const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, signerRef.current);
       const lockSec = ethers.BigNumber.from(Math.floor(parseFloat(hardLock) * 86400));
-      const initBps = ethers.BigNumber.from(parseInt(initPenalty));
+      const initBps = ethers.BigNumber.from(Math.round(parseFloat(initPenalty)));
       const decayBps = ethers.utils.parseUnits(decayPct, 2);
 
       log("Estimating gas...");
@@ -814,7 +814,7 @@ export default function DividendsApp() {
                 </div>
 
                 {/* Details grid */}
-                <div className="grid grid-cols-3 gap-3 mb-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
                   {[
                     { label: "Token Address", val: shorten(p.tokenAddress) },
                     { label: "Hard Lock Duration", val: `${p.hardLockDays} days` },
