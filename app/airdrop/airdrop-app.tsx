@@ -361,7 +361,7 @@ export default function AirdropApp() {
         <div className={`${card} p-5 space-y-3`}>
           <div className="flex items-center justify-between">
             <p className={labelCls}>Recipients</p>
-            <span className="text-[10px] text-white/20 font-mono">{recipientCount} address{recipientCount !== 1 ? "es" : ""}</span>
+            <span className="text-[10px] text-white/40 font-mono">{recipientCount} address{recipientCount !== 1 ? "es" : ""}</span>
           </div>
           <textarea
             value={recipients}
@@ -410,7 +410,7 @@ export default function AirdropApp() {
             </div>
           </div>
           {recipientCount > 0 && (
-            <p className="text-[10px] text-white/20 text-center">Estimated gas: ~{estimatedGas.toLocaleString()} units</p>
+            <p className="text-[10px] text-white/40 text-center">Estimated gas: ~{estimatedGas.toLocaleString()} units</p>
           )}
         </div>
 
@@ -462,7 +462,7 @@ export default function AirdropApp() {
                 </div>
                 <div className="max-h-40 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-amber-600/30 scrollbar-track-transparent">
                   {masterContacts.length === 0 ? (
-                    <p className="text-xs text-white/20 text-center py-3">No addresses yet</p>
+                    <p className="text-xs text-white/40 text-center py-3">No addresses yet</p>
                   ) : masterContacts.map((addr, i) => (
                     <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                       <span className="text-xs text-white/60 font-mono">{shorten(addr)}</span>
@@ -470,7 +470,7 @@ export default function AirdropApp() {
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-white/20 text-center">{masterContacts.length} total</p>
+                <p className="text-[10px] text-white/40 text-center">{masterContacts.length} total</p>
               </div>
             )}
 
@@ -494,10 +494,10 @@ export default function AirdropApp() {
                 <button type="button" onClick={saveCustomList} className={`${btnSecondary} w-full text-xs`}>Create List</button>
                 <div className="max-h-40 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-amber-600/30 scrollbar-track-transparent">
                   {Object.keys(customLists).length === 0 ? (
-                    <p className="text-xs text-white/20 text-center py-3">No custom lists</p>
+                    <p className="text-xs text-white/40 text-center py-3">No custom lists</p>
                   ) : Object.entries(customLists).map(([id, list]) => (
                     <div key={id} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                      <span className="text-xs text-white/60">{list.listName} <span className="text-white/20">({list.addresses.length})</span></span>
+                      <span className="text-xs text-white/60">{list.listName} <span className="text-white/40">({list.addresses.length})</span></span>
                       <div className="flex gap-2">
                         <button type="button" onClick={() => loadCustomList(id)} className="text-[10px] text-amber-400/60 hover:text-amber-400 cursor-pointer transition-colors">Load</button>
                         <button type="button" onClick={() => deleteCustomList(id)} className="text-[10px] text-red-400/60 hover:text-red-400 cursor-pointer transition-colors">Delete</button>
@@ -512,7 +512,7 @@ export default function AirdropApp() {
             {activeTab === "leaderboard" && (
               <div className="max-h-48 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-amber-600/30 scrollbar-track-transparent">
                 {leaderboard.length === 0 ? (
-                  <p className="text-xs text-white/20 text-center py-3">No airdrops recorded yet</p>
+                  <p className="text-xs text-white/40 text-center py-3">No airdrops recorded yet</p>
                 ) : leaderboard.map((entry, i) => (
                   <div key={entry.addr} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <div className="flex items-center gap-2">
@@ -529,15 +529,15 @@ export default function AirdropApp() {
             {activeTab === "history" && (
               <div className="max-h-64 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-amber-600/30 scrollbar-track-transparent">
                 {airdropLogs.length === 0 ? (
-                  <p className="text-xs text-white/20 text-center py-3">No airdrops logged yet</p>
+                  <p className="text-xs text-white/40 text-center py-3">No airdrops logged yet</p>
                 ) : airdropLogs.slice(0, 50).map((log, i) => (
                   <div key={i} className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-xs text-white/50 space-y-0.5">
                     <div className="flex justify-between">
                       <span className="font-mono text-white/40">{shorten(log.sender)} → {shorten(log.to)}</span>
-                      <span className="text-white/20">{log.amount}</span>
+                      <span className="text-white/40">{log.amount}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/20 font-mono">{shorten(log.txHash)}</span>
+                      <span className="text-white/40 font-mono">{shorten(log.txHash)}</span>
                       <span className="text-white/40">{new Date(log.timestamp).toLocaleDateString()}</span>
                     </div>
                   </div>
@@ -549,7 +549,7 @@ export default function AirdropApp() {
             {activeTab === "log" && (
               <div className="max-h-48 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-amber-600/30 scrollbar-track-transparent">
                 {logs.length === 0 ? (
-                  <p className="text-xs text-white/20 text-center py-3">No activity yet</p>
+                  <p className="text-xs text-white/40 text-center py-3">No activity yet</p>
                 ) : logs.map((l, i) => (
                   <div key={i} className="flex items-start gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02]">
                     <span className={`text-[10px] mt-0.5 ${
@@ -567,7 +567,7 @@ export default function AirdropApp() {
           </div>
         </div>
 
-        <p className="text-center text-[10px] text-white/10 pt-4">0.2% fee per airdrop</p>
+        <p className="text-center text-[10px] text-white/40 pt-4">0.2% fee per airdrop</p>
       </div>
     </div>
   );

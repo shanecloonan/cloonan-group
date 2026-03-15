@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import EtfApp from "./etf-app";
+import dynamic from "next/dynamic";
+
+const EtfApp = dynamic(() => import("./etf-app"));
 
 export const metadata: Metadata = {
   title: "MoneyFund ETF Launchpad",

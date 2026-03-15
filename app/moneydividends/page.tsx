@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import MoneyDividendsApp from "./moneydividends-app";
+import dynamic from "next/dynamic";
+
+const MoneyDividendsApp = dynamic(() => import("./moneydividends-app"));
 
 export const metadata: Metadata = {
   title: "MoneyFund Dividends",

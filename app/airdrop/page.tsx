@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import AirdropApp from "./airdrop-app";
+import dynamic from "next/dynamic";
+
+const AirdropApp = dynamic(() => import("./airdrop-app"));
 
 export const metadata: Metadata = {
   title: "MoneyFund Airdrop",

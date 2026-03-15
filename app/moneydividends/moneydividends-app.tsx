@@ -367,7 +367,7 @@ export default function MoneyDividendsApp() {
 
           <div className="p-5 space-y-3">
             {!selectedEthWallet ? (
-              <p className="text-xs text-white/20 text-center py-4">Connect wallet to see information</p>
+              <p className="text-xs text-white/40 text-center py-4">Connect wallet to see information</p>
             ) : infoTab === "user" ? (
               <>
                 <InfoRow label="Staked Amount" value={stakeInfo ? `${stakeInfo.amount} MONEY` : "—"} />
@@ -415,7 +415,7 @@ export default function MoneyDividendsApp() {
                 <InfoRow label="Min Stake" value={`${poolInfo.minStake} MONEY`} />
               </>
             ) : (
-              <p className="text-xs text-white/20 text-center py-4">Loading...</p>
+              <p className="text-xs text-white/40 text-center py-4">Loading...</p>
             )}
           </div>
         </div>
@@ -447,14 +447,14 @@ export default function MoneyDividendsApp() {
                     {l.type === "success" ? "✓" : l.type === "error" ? "✗" : l.type === "pending" ? "⋯" : "·"}
                   </span>
                   <span className="text-xs text-white/50 flex-1 break-all">{l.msg}</span>
-                  <span className="text-[9px] text-white/15 shrink-0">{l.ts}</span>
+                  <span className="text-[9px] text-white/40 shrink-0">{l.ts}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <p className="text-center text-[10px] text-white/10 pt-4">0.5% fee on stake/unstake/claim</p>
+        <p className="text-center text-[10px] text-white/40 pt-4">0.5% fee on stake/unstake/claim</p>
       </div>
     </div>
   );

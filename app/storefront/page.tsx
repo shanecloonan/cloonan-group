@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import StorefrontApp from "./storefront-app";
+import dynamic from "next/dynamic";
+
+const StorefrontApp = dynamic(() => import("./storefront-app"));
 
 export const metadata: Metadata = {
   title: "NFT Storefront Launchpad",

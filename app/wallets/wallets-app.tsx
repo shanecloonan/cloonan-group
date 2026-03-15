@@ -688,9 +688,9 @@ export default function WalletsApp() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
-        <div className="w-full max-w-[720px] mx-auto space-y-5">
-          <div className="text-center pt-4 pb-2">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-md space-y-5">
+          <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">Wallets</h1>
             <p className="text-xs text-white/30 mt-1">Sign in to access your encrypted wallet vault</p>
           </div>

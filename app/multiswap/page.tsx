@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import MultiswapApp from "./multiswap-app";
+import dynamic from "next/dynamic";
+
+const MultiswapApp = dynamic(() => import("./multiswap-app"));
 
 export const metadata: Metadata = {
   title: "Multiswap Factory",

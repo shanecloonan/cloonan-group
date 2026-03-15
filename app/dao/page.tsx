@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import DaoApp from "./dao-app";
+import dynamic from "next/dynamic";
+
+const DaoApp = dynamic(() => import("./dao-app"));
 
 export const metadata: Metadata = {
   title: "MoneyFund DAO Launchpad",

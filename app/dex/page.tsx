@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import DexApp from "./dex-app";
+import dynamic from "next/dynamic";
+
+const DexApp = dynamic(() => import("./dex-app"));
 
 export const metadata: Metadata = {
   title: "MoneyFund DEX",

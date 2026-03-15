@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import CompanyChart from "./company-chart";
 import MoneyFundLogo from "./money-fund-logo";
 
@@ -29,14 +28,6 @@ export default function Home() {
         <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-gold/10 to-transparent" />
 
         <div className="relative z-10 flex flex-col items-center px-6 text-center">
-          <div className="flex items-center gap-3 mb-8">
-            <span className="h-px w-8 bg-gold/40" />
-            <span className="text-[10px] sm:text-[11px] tracking-[0.3em] uppercase font-semibold text-gold/70">
-              Est. 1996
-            </span>
-            <span className="h-px w-8 bg-gold/40" />
-          </div>
-
           <MoneyFundLogo className="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 mb-6" />
 
           <h1 className="font-heading text-[28px] sm:text-[36px] md:text-[44px] font-semibold tracking-[2px] text-white leading-tight mb-3">
@@ -49,27 +40,13 @@ export default function Home() {
             The World&rsquo;s Biggest Hedge Fun
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-12">
-            <Link
-              href="/wallets"
-              className="inline-flex items-center gap-2 px-7 py-3 rounded-lg bg-gradient-to-b from-gold/90 to-amber-600 text-brand-950 font-semibold text-sm tracking-wide shadow-lg shadow-gold/20 hover:brightness-110 transition"
-            >
-              Get Started
-            </Link>
-            <Link
-              href="/contracts"
-              className="inline-flex items-center gap-2 px-7 py-3 rounded-lg border border-white/10 text-brand-200 font-medium text-sm tracking-wide hover:bg-white/[0.04] transition"
-            >
-              View Contracts
-            </Link>
-            <Link
-              href="/about"
-              className="inline-flex items-center gap-2 px-7 py-3 rounded-lg border border-white/10 text-brand-200 font-medium text-sm tracking-wide hover:bg-white/[0.04] transition"
-            >
-              Learn More
-            </Link>
+          <div className="flex items-center gap-3 mt-6">
+            <span className="h-px w-8 bg-gold/40" />
+            <span className="text-[10px] sm:text-[11px] tracking-[0.3em] uppercase font-semibold text-gold/70">
+              Est. 1996
+            </span>
+            <span className="h-px w-8 bg-gold/40" />
           </div>
-
         </div>
 
         <div className="absolute top-8 left-8 w-12 h-12 border-l border-t border-gold/10" />

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import DividendsApp from "./dividends-app";
+import dynamic from "next/dynamic";
+
+const DividendsApp = dynamic(() => import("./dividends-app"));
 
 export const metadata: Metadata = {
   title: "Dividend Pool Launcher",

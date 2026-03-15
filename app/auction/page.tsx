@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import AuctionApp from "./auction-app";
+import dynamic from "next/dynamic";
+
+const AuctionApp = dynamic(() => import("./auction-app"));
 
 export const metadata: Metadata = {
   title: "Ad Auction Platform",
