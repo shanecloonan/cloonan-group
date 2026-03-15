@@ -250,7 +250,7 @@ function Node({
   const labelSize = size === "sm" ? "text-[10px]" : "text-xs";
   return (
     <div
-      className={`${pad} rounded-xl border ${color} bg-white/[0.03] flex flex-col items-center gap-1 min-w-[80px] relative`}
+      className={`${pad} rounded-xl border ${color} bg-white/[0.03] flex flex-col items-center gap-1 min-w-[60px] sm:min-w-[80px] relative`}
       style={glow ? { boxShadow: `0 0 20px 2px ${glow}` } : undefined}
     >
       <span className={iconSize}>{icon}</span>
@@ -518,13 +518,22 @@ function DividendArchitecture() {
           Architecture Overview
         </h3>
         <div className="flex flex-col items-center gap-1">
-          <FlowRow>
+          <div className="sm:hidden flex flex-col items-center gap-1">
             <Node icon="👤" label="Pool Creator" color="border-purple-500/20" glow="rgba(168,85,247,0.08)" />
-            <Arrow label="createPool()" color="text-purple-400/40" />
+            <Arrow dir="down" label="createPool()" color="text-purple-400/40" />
             <Node icon="🏭" label="Factory" sub="0x5ef0...128a" color="border-indigo-500/20" glow="rgba(99,102,241,0.08)" />
-            <Arrow label="deploys" color="text-indigo-400/40" />
+            <Arrow dir="down" label="deploys" color="text-indigo-400/40" />
             <Node icon="🥩" label="Staking Pool" sub="per-token" color="border-purple-500/20" glow="rgba(168,85,247,0.1)" size="lg" />
-          </FlowRow>
+          </div>
+          <div className="hidden sm:block">
+            <FlowRow>
+              <Node icon="👤" label="Pool Creator" color="border-purple-500/20" glow="rgba(168,85,247,0.08)" />
+              <Arrow label="createPool()" color="text-purple-400/40" />
+              <Node icon="🏭" label="Factory" sub="0x5ef0...128a" color="border-indigo-500/20" glow="rgba(99,102,241,0.08)" />
+              <Arrow label="deploys" color="text-indigo-400/40" />
+              <Node icon="🥩" label="Staking Pool" sub="per-token" color="border-purple-500/20" glow="rgba(168,85,247,0.1)" size="lg" />
+            </FlowRow>
+          </div>
           <div className="text-[10px] text-white/20 py-2">Factory creates one pool per ERC-20 token with configurable penalty parameters</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-lg">
             {[
@@ -1450,7 +1459,7 @@ export default function AboutApp() {
         <section id="contracts" className="space-y-6 scroll-mt-28">
           <SectionHeading sub="Detailed breakdown of each factory contract">Smart Contracts</SectionHeading>
           {CONTRACT_SECTIONS.map((c) => (
-            <div key={c.title} className="space-y-6">
+            <div key={c.title} className="space-y-6 overflow-x-hidden">
               <div className={`${layerBg(c.layer)} rounded-2xl border border-white/[0.06] overflow-hidden`}>
                 <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${layerDot(c.layer)}`} />
