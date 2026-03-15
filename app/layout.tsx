@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     default: "MoneyFund",
     template: "%s | MoneyFund",
   },
-  description: "MoneyFund — The World's Biggest Hedge Fund.",
+  description: "MoneyFund — The World's Biggest Hedge Fun.",
 };
 
 export default function RootLayout({
