@@ -2,7 +2,6 @@
 
 import { Suspense, useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useWallet } from "@/lib/wallet-context";
 
@@ -144,9 +143,6 @@ function AuthPageInner() {
       <div className="min-h-[80vh] flex items-center justify-center px-6" style={{ background: "#08090e" }}>
         <div className="w-full max-w-sm space-y-6">
           <div className="text-center space-y-2">
-            <Link href="/" className="inline-block text-xl font-bold tracking-tight text-brand-100 mb-6">
-              Money<span className="text-gold">Fund</span>
-            </Link>
             <h1 className="text-lg font-bold text-white">Unlock Vault</h1>
             <p className="text-xs text-white/40">Enter your password to decrypt your wallets.</p>
           </div>
@@ -195,9 +191,6 @@ function AuthPageInner() {
     <div className="min-h-[80vh] flex items-center justify-center px-6" style={{ background: "#08090e" }}>
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-block text-xl font-bold tracking-tight text-brand-100 mb-6">
-            Money<span className="text-gold">Fund</span>
-          </Link>
           <h1 className="text-lg font-bold text-white">{titles[mode]}</h1>
           <p className="text-xs text-white/40">{subtitles[mode]}</p>
         </div>
