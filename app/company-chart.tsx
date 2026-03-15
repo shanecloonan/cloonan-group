@@ -124,7 +124,7 @@ export default function CompanyChart() {
       <div className="relative px-5 sm:px-8 pt-14 pb-6 sm:pt-20 sm:pb-10">
         <div className="absolute inset-0 bg-gradient-to-b from-forest/20 to-transparent" />
         <div className="relative z-10 max-w-3xl mx-auto text-center">
-          <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight uppercase mb-3 text-brand-200">
+          <h2 className="font-heading text-lg sm:text-xl md:text-2xl font-bold tracking-tight uppercase mb-3 text-brand-200">
             Entity Structure
           </h2>
           <p className="text-brand-500 text-sm max-w-lg mx-auto mb-5">
