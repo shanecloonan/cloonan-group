@@ -146,14 +146,17 @@ function UDiagram({ label, boxes, desc, pathEnd, descSize, prefix = "u" }: {
     if (layer === "asset") return `url(#${prefix}-al)`;
     if (layer === "distribution") return `url(#${prefix}-dl)`;
     if (layer === "profit") return `url(#${prefix}-pl)`;
+    if (layer === "none") return "none";
     return "#000";
   };
+  const boxStroke = (layer: string) => layer === "none" ? "rgba(255,255,255,0.2)" : "#fff";
+  const boxStrokeDash = (layer: string) => layer === "none" ? "4 3" : undefined;
 
   return (
     <div className="flex flex-col items-center w-full max-w-[320px] mx-auto">
       <p className="text-base font-bold text-white mb-2 text-center">{label}</p>
       <div className={`${card} p-4 w-full`}>
-        <svg viewBox="0 0 320 260" className="w-full h-auto" aria-label={`${label} U Diagram`}>
+        <svg viewBox="0 0 320 250" className="w-full h-auto" aria-label={`${label} U Diagram`}>
           <defs>
             <marker id={`${prefix}-ae`} markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
             <marker id={`${prefix}-ai`} markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
@@ -161,28 +164,38 @@ function UDiagram({ label, boxes, desc, pathEnd, descSize, prefix = "u" }: {
             <linearGradient id={`${prefix}-dl`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B3A2B" /><stop offset="100%" stopColor="#A65343" /></linearGradient>
             <linearGradient id={`${prefix}-pl`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#1A3C34" /><stop offset="100%" stopColor="#1F4A40" /></linearGradient>
           </defs>
+          {/* U-shaped flow path */}
           <path d={pathD} fill="none" stroke="white" strokeWidth="3" markerEnd={`url(#${prefix}-ae)`} />
+          {/* Animated gold coins traveling along the path */}
           <circle r="6" fill="gold"><animateMotion dur="3s" repeatCount="indefinite" path={pathD} /></circle>
           {rightDollar && <circle r="6" fill="gold"><animateMotion dur="3s" repeatCount="indefinite" path={pathD} begin="1.5s" /></circle>}
-          <rect x="30" y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.left.layer)} stroke="#fff" strokeWidth="2" />
+          {/* Flow direction labels on the path */}
+          <text x="46" y="170" fill="rgba(255,255,255,0.25)" fontSize="8" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90,46,170)">value in</text>
+          <text x={xEnd + 14} y="170" fill="rgba(255,255,255,0.25)" fontSize="8" textAnchor="middle" dominantBaseline="middle" transform={`rotate(90,${xEnd + 14},170)`}>value out</text>
+          {/* Left box — connected from $ coin above */}
+          <rect x="30" y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.left.layer)} stroke={boxStroke(boxes.left.layer)} strokeWidth="2" strokeDasharray={boxStrokeDash(boxes.left.layer)} />
           <text x="60" y="130" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.left.label}</text>
-          <line x1="60" y1="60" x2="60" y2="110" stroke="white" strokeWidth="2" markerEnd={`url(#${prefix}-ai)`} />
-          <rect x="130" y="190" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.bottom.layer)} stroke="#fff" strokeWidth="2" />
-          <text x="160" y="210" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.bottom.label}</text>
+          <line x1="60" y1="70" x2="60" y2="110" stroke="white" strokeWidth="2" markerEnd={`url(#${prefix}-ai)`} />
+          {/* Bottom box — connected from horizontal segment of U */}
+          <rect x="130" y="190" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.bottom.layer)} stroke={boxStroke(boxes.bottom.layer)} strokeWidth="2" strokeDasharray={boxStrokeDash(boxes.bottom.layer)} />
+          <text x="160" y="210" fill={boxes.bottom.layer === "none" ? "rgba(255,255,255,0.35)" : "white"} fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.bottom.label}</text>
           <line x1="110" y1="210" x2="130" y2="210" stroke="white" strokeWidth="2" markerEnd={`url(#${prefix}-ai)`} />
-          <rect x={xEnd - 30} y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.right.layer)} stroke="#fff" strokeWidth="2" />
-          <text x={xEnd} y="130" fill="white" fontSize={boxes.right.label.length > 7 ? "8" : "10"} fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.right.label}</text>
+          {/* Right box — connected from ascending segment of U */}
+          <rect x={xEnd - 30} y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.right.layer)} stroke={boxStroke(boxes.right.layer)} strokeWidth="2" strokeDasharray={boxStrokeDash(boxes.right.layer)} />
+          <text x={xEnd} y="130" fill={boxes.right.layer === "none" ? "rgba(255,255,255,0.35)" : "white"} fontSize={boxes.right.label.length > 7 ? "8" : "10"} fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.right.label}</text>
           <line x1={xEnd} y1="170" x2={xEnd} y2="150" stroke="white" strokeWidth="2" markerEnd={`url(#${prefix}-ai)`} />
-          <circle cx="60" cy="60" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
-          <text x="60" y="60" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
+          {/* Input $ coin (top-left) */}
+          <circle cx="60" cy="50" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
+          <text x="60" y="50" fill="black" fontSize="20" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
+          {/* Output coins (top-right) */}
           {rightDollar ? (<>
-            <circle cx="260" cy="36" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
-            <text x="260" y="36" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
-            <circle cx="290" cy="36" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
-            <text x="290" y="36" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
+            <circle cx={xEnd - 15} cy="40" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
+            <text x={xEnd - 15} y="40" fill="black" fontSize="20" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
+            <circle cx={xEnd + 15} cy="40" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
+            <text x={xEnd + 15} y="40" fill="black" fontSize="20" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
           </>) : (<>
-            <circle cx="260" cy="42" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
-            <text x="260" y="42" fill="white" fontSize="18" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">?</text>
+            <circle cx={xEnd} cy="40" r="15" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeDasharray="4 3" />
+            <text x={xEnd} y="40" fill="rgba(255,255,255,0.4)" fontSize="16" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">?</text>
           </>)}
         </svg>
       </div>
@@ -280,20 +293,20 @@ function Arrow({
   const isVert = dir === "down" || dir === "up";
   return (
     <div
-      className={`flex ${isVert ? "flex-col" : "flex-row"} items-center gap-0.5 ${color}`}
+      className={`flex ${isVert ? "flex-col" : "flex-col sm:flex-row"} items-center gap-0.5 ${color} shrink-0`}
     >
       {label && (
-        <span className="text-[9px] text-white/30 font-medium whitespace-nowrap">
+        <span className="text-[9px] text-white/30 font-medium whitespace-nowrap max-w-[140px] sm:max-w-none truncate sm:truncate-none">
           {label}
         </span>
       )}
       <div
         className={`flex items-center justify-center ${
-          isVert ? "h-6 w-px" : "w-8 h-px"
+          isVert ? "h-6 w-px" : "h-4 w-px sm:h-px sm:w-8"
         }`}
       >
         <div
-          className={`${isVert ? "w-px h-full" : "h-px w-full"} ${
+          className={`${isVert ? "w-px h-full" : "w-px h-full sm:w-full sm:h-px"} ${
             dashed ? "border-dashed" : ""
           }`}
           style={{
@@ -305,7 +318,8 @@ function Arrow({
           }}
         />
       </div>
-      <span className="text-sm font-bold">{arrows[dir]}</span>
+      <span className={`text-sm font-bold ${isVert ? "" : "hidden sm:inline"}`}>{arrows[dir]}</span>
+      <span className={`text-sm font-bold sm:hidden ${isVert ? "hidden" : ""}`}>{arrows.down}</span>
     </div>
   );
 }
@@ -320,7 +334,7 @@ function FlowRow({
   return (
     <div
       className={`flex items-center justify-center gap-2 ${
-        wrap ? "flex-wrap" : ""
+        wrap ? "flex-col sm:flex-row" : ""
       }`}
     >
       {children}
@@ -573,21 +587,17 @@ function DividendArchitecture() {
           </FlowRow>
           <Arrow dir="down" label="pool executes" color="text-white/40" />
           <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="flex flex-col items-center gap-1">
-              <FlowRow>
-                <Node icon="🪙" label="Tokens" sub="transferFrom" color="border-amber-500/20" size="sm" />
-                <Arrow label="locked in" color="text-amber-400/30" />
-                <Node icon="🔒" label="Pool Vault" color="border-amber-500/20" size="sm" />
-              </FlowRow>
-            </div>
+            <FlowRow wrap>
+              <Node icon="🪙" label="Tokens" sub="transferFrom" color="border-amber-500/20" size="sm" />
+              <Arrow label="locked in" color="text-amber-400/30" />
+              <Node icon="🔒" label="Pool Vault" color="border-amber-500/20" size="sm" />
+            </FlowRow>
             <span className="text-white/10 text-lg">+</span>
-            <div className="flex flex-col items-center gap-1">
-              <FlowRow>
-                <Node icon="🥩" label="Pool" color="border-purple-500/20" size="sm" />
-                <Arrow label="mint()" color="text-emerald-400/30" />
-                <Node icon="🎫" label="NFT Receipt" sub="ERC-721" color="border-emerald-500/20" glow="rgba(16,185,129,0.06)" size="sm" />
-              </FlowRow>
-            </div>
+            <FlowRow wrap>
+              <Node icon="🥩" label="Pool" color="border-purple-500/20" size="sm" />
+              <Arrow label="mint()" color="text-emerald-400/30" />
+              <Node icon="🎫" label="NFT Receipt" sub="ERC-721" color="border-emerald-500/20" glow="rgba(16,185,129,0.06)" size="sm" />
+            </FlowRow>
           </div>
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             <Badge text="0.5% Fee → MoneyFund Wallet" color="bg-purple-500/10 text-purple-400/60" />
