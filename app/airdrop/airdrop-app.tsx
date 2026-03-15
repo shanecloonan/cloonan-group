@@ -217,7 +217,7 @@ export default function AirdropApp() {
         txHash: receipt.transactionHash,
       }));
       setAirdropLogs((prev) => {
-        const updated = [...newLogs, ...prev];
+        const updated = [...newLogs, ...prev].slice(0, 500);
         storageSet("airdrop_logs", updated);
         return updated;
       });
@@ -238,7 +238,7 @@ export default function AirdropApp() {
     if (newAddrs.length === 0) { addLog("Enter at least one address", "error"); return; }
     if (!newAddrs.every((a) => ethers.utils.isAddress(a))) { addLog("Invalid address format", "error"); return; }
     setMasterContacts((prev) => {
-      const merged = [...new Set([...prev, ...newAddrs])];
+      const merged = [...new Set([...prev, ...newAddrs])].slice(0, 2000);
       storageSet("masterContacts", merged);
       return merged;
     });

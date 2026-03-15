@@ -438,13 +438,21 @@ export default function WalletsApp() {
     try {
       let wallet: ethers.Wallet;
       if (vanityMode) {
-        let attempts = 0;
-        while (true) {
-          attempts++;
-          wallet = ethers.Wallet.createRandom();
-          if (wallet.address.toLowerCase().startsWith("0x100")) break;
-          if (attempts > 10000) { addStatus("Failed after 10000 attempts for 0x100 prefix", "error"); return; }
-        }
+        const BATCH = 200;
+        const MAX = 50000;
+        wallet = await new Promise<ethers.Wallet>((resolve, reject) => {
+          let attempts = 0;
+          function batch() {
+            for (let i = 0; i < BATCH; i++) {
+              attempts++;
+              const w = ethers.Wallet.createRandom();
+              if (w.address.toLowerCase().startsWith("0x100")) { resolve(w); return; }
+              if (attempts >= MAX) { reject(new Error(`Failed after ${MAX} attempts for 0x100 prefix`)); return; }
+            }
+            setTimeout(batch, 0);
+          }
+          batch();
+        });
       } else {
         wallet = ethers.Wallet.createRandom();
       }
@@ -458,6 +466,7 @@ export default function WalletsApp() {
 
   const exportWallets = useCallback(() => {
     if (ethWallets.length === 0) { addStatus("No wallets to export", "error"); return; }
+    if (!confirm("WARNING: This will download your private keys in plain text. Anyone with this file can access your wallets. Store it securely and delete it after use. Continue?")) return;
     const data = ethWallets.map((w) => ({ address: w.address, privateKey: w.privateKey, type: w.type }));
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -515,8 +524,12 @@ export default function WalletsApp() {
     addStatus(`Sending ${sendAmt} ${sendType}...`);
     try {
       const signer = new ethers.Wallet(selected.privateKey, provider);
+      const gasOverrides: Record<string, unknown> = {};
+      if (gasPriceOpt === "manual" && gasPriceManual) {
+        gasOverrides.gasPrice = ethers.utils.parseUnits(gasPriceManual, "gwei");
+      }
       if (sendType === "ETH") {
-        const tx = await signer.sendTransaction({ to: recipient, value: ethers.utils.parseEther(sendAmt) });
+        const tx = await signer.sendTransaction({ to: recipient, value: ethers.utils.parseEther(sendAmt), ...gasOverrides });
         const receipt = await tx.wait();
         addStatus(`ETH sent! Tx: ${shorten(receipt.transactionHash)}`, "success");
         if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: receipt.transactionHash, dapp: "wallets", action: "send_eth", amount: `${sendAmt} ETH`, details: { to: recipient } });
@@ -525,7 +538,7 @@ export default function WalletsApp() {
         const tok = new ethers.Contract(sendTokenAddr, ERC20_ABI, signer);
         const dec = await tok.decimals();
         const amt = ethers.utils.parseUnits(sendAmt, dec);
-        const tx = await tok.transfer(recipient, amt);
+        const tx = await tok.transfer(recipient, amt, gasOverrides);
         const receipt = await tx.wait();
         addStatus(`Token sent! Tx: ${shorten(receipt.transactionHash)}`, "success");
         if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: receipt.transactionHash, dapp: "wallets", action: "send_token", amount: sendAmt, tokenAddress: sendTokenAddr, details: { to: recipient } });
@@ -534,7 +547,7 @@ export default function WalletsApp() {
     } catch (e: unknown) {
       addStatus(`Transfer failed: ${e instanceof Error ? e.message : String(e)}`, "error");
     }
-  }, [selected, recipient, sendAmt, sendType, sendTokenAddr, provider, addStatus, fetchBalance]);
+  }, [selected, recipient, sendAmt, sendType, sendTokenAddr, provider, addStatus, fetchBalance, gasPriceOpt, gasPriceManual]);
 
   /* ================================================================ */
   /*  Swap                                                             */

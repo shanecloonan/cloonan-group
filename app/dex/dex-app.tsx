@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
 import { MONEYDEX_ADDRESS, MONEYDEX_ABI, PAIR_ABI, ERC20_ABI } from "./abis";
+import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 import { logTx } from "@/lib/activity";
 
 /* ------------------------------------------------------------------ */
@@ -21,16 +23,6 @@ interface PairInfo {
   token1: string;
   symbol0: string;
   symbol1: string;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Globals / Ethereum helpers                                         */
-/* ------------------------------------------------------------------ */
-
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
 }
 
 import { RPC_URL as INFURA_RPC } from "@/lib/config";
@@ -104,15 +96,15 @@ function StatusBadge({ status }: { status: StatusState }) {
 /* ------------------------------------------------------------------ */
 
 export default function DexApp() {
-  /* ---- wallet state ---- */
-  const [account, setAccount] = useState<string | null>(null);
-  const [walletStatus, setWalletStatus] = useState<StatusState>({
-    msg: "",
-    state: "idle",
-  });
+  const {
+    user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress,
+    selectEthWallet, connectMetaMask: ctxConnectMetaMask, getSigner,
+  } = useWallet();
+
+  const account = selectedEthAddress;
+  const readProvider = useMemo(() => new ethers.providers.JsonRpcProvider(INFURA_RPC), []);
 
   /* ---- contract refs ---- */
-  const signerRef = useRef<ethers.Signer | null>(null);
   const dexRef = useRef<ethers.Contract | null>(null);
   const pairRef = useRef<ethers.Contract | null>(null);
   const t0Ref = useRef<ethers.Contract | null>(null);
@@ -175,7 +167,6 @@ export default function DexApp() {
 
   const updateStats = useCallback(async () => {
     try {
-      const readProvider = new ethers.providers.JsonRpcProvider(INFURA_RPC);
       const readDex = new ethers.Contract(MONEYDEX_ADDRESS, MONEYDEX_ABI, readProvider);
       const [tp, ts] = await Promise.all([
         readDex.totalPairs(),
@@ -187,48 +178,20 @@ export default function DexApp() {
       setTotalPairs("Error");
       setTotalSwaps("Error");
     }
-  }, []);
+  }, [readProvider]);
 
   useEffect(() => {
     updateStats();
   }, [updateStats]);
 
-  /* ---- connect MetaMask ---- */
-  const connectMetaMask = useCallback(async () => {
-    if (!window.ethereum) {
-      setWalletStatus({ msg: "Install MetaMask!", state: "error" });
-      return;
-    }
-    setWalletStatus({ msg: "Connecting MetaMask...", state: "pending" });
-    try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-      const net = await provider.getNetwork();
-      if (net.chainId !== 1) throw new Error("Switch to Ethereum Mainnet");
-      const signer = provider.getSigner();
-      const addr = await signer.getAddress();
-      signerRef.current = signer;
+  useEffect(() => {
+    const signer = getSigner();
+    if (signer) {
       dexRef.current = new ethers.Contract(MONEYDEX_ADDRESS, MONEYDEX_ABI, signer);
-      setAccount(addr);
-      setWalletStatus({ msg: "MetaMask connected", state: "success" });
-      await updateStats();
-    } catch (e: any) {
-      setWalletStatus({
-        msg: `Connection failed: ${e.message}`,
-        state: "error",
-      });
+    } else {
+      dexRef.current = null;
     }
-  }, [updateStats]);
-
-  /* ---- toggle section ---- */
-  const toggle = useCallback(
-    (id: string) => {
-      setOpenSection((prev) => (prev === id ? null : id));
-      if (id === "pairList" && openSection !== "pairList") listPairs();
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [openSection],
-  );
+  }, [selectedEthWallet, getSigner]);
 
   /* ---- load pair ---- */
   const loadPair = useCallback(
@@ -238,20 +201,19 @@ export default function DexApp() {
         setPairLoadStatus({ msg: "Invalid pair address", state: "error" });
         return;
       }
-      if (!dexRef.current || !signerRef.current) {
-        setPairLoadStatus({ msg: "Connect wallet first", state: "error" });
-        return;
-      }
+      const signer = getSigner();
+      const providerOrSigner = signer || readProvider;
+      const readDex = new ethers.Contract(MONEYDEX_ADDRESS, MONEYDEX_ABI, providerOrSigner);
       setPairLoadStatus({ msg: "Loading pair...", state: "pending" });
       try {
-        const pair = new ethers.Contract(addr, PAIR_ABI, signerRef.current);
+        const pair = new ethers.Contract(addr, PAIR_ABI, providerOrSigner);
         const [token0, token1] = await Promise.all([pair.token0(), pair.token1()]);
-        const t0 = new ethers.Contract(token0, ERC20_ABI, signerRef.current);
-        const t1 = new ethers.Contract(token1, ERC20_ABI, signerRef.current);
+        const t0 = new ethers.Contract(token0, ERC20_ABI, providerOrSigner);
+        const t1 = new ethers.Contract(token1, ERC20_ABI, providerOrSigner);
         const [sym0, sym1, reserves] = await Promise.all([
           t0.symbol(),
           t1.symbol(),
-          dexRef.current.getReserves(token0, token1),
+          readDex.getReserves(token0, token1),
         ]);
         pairRef.current = pair;
         t0Ref.current = t0;
@@ -265,39 +227,50 @@ export default function DexApp() {
         setPairLoadStatus({ msg: `Error: ${e.message}`, state: "error" });
       }
     },
-    [pairAddress],
+    [pairAddress, getSigner, readProvider],
   );
 
   /* ---- list pairs ---- */
   const listPairs = useCallback(async () => {
-    if (!dexRef.current) {
-      setPairListStatus({ msg: "Connect wallet first", state: "error" });
-      return;
-    }
     setPairListStatus({ msg: "Loading pairs...", state: "pending" });
     try {
-      const readProvider = new ethers.providers.JsonRpcProvider(INFURA_RPC);
-      const pairs: string[] = await dexRef.current.getAllPairs();
+      const readDex = new ethers.Contract(MONEYDEX_ADDRESS, MONEYDEX_ABI, readProvider);
+      const pairs: string[] = await readDex.getAllPairs();
       const infos: PairInfo[] = [];
-      for (const pa of pairs) {
-        const pc = new ethers.Contract(pa, PAIR_ABI, readProvider);
-        const [tok0, tok1] = await Promise.all([pc.token0(), pc.token1()]);
-        const t0c = new ethers.Contract(tok0, ERC20_ABI, readProvider);
-        const t1c = new ethers.Contract(tok1, ERC20_ABI, readProvider);
-        const [s0, s1] = await Promise.all([t0c.symbol(), t1c.symbol()]);
-        infos.push({ address: pa, token0: tok0, token1: tok1, symbol0: s0, symbol1: s1 });
-      }
-      setPairListHtml(infos);
+      const infosResult = await Promise.all(
+        pairs.map(async (pa): Promise<PairInfo | null> => {
+          try {
+            const pc = new ethers.Contract(pa, PAIR_ABI, readProvider);
+            const [tok0, tok1] = await Promise.all([pc.token0(), pc.token1()]);
+            const t0c = new ethers.Contract(tok0, ERC20_ABI, readProvider);
+            const t1c = new ethers.Contract(tok1, ERC20_ABI, readProvider);
+            const [s0, s1] = await Promise.all([t0c.symbol(), t1c.symbol()]);
+            return { address: pa, token0: tok0, token1: tok1, symbol0: s0, symbol1: s1 };
+          } catch { return null; }
+        }),
+      );
+      setPairListHtml(infosResult.filter((p): p is PairInfo => p !== null));
       setPairListStatus({ msg: "Pairs loaded", state: "success" });
     } catch (e: any) {
       setPairListStatus({ msg: `Error: ${e.message}`, state: "error" });
     }
-  }, []);
+  }, [readProvider]);
+
+  const toggle = useCallback(
+    (id: string) => {
+      setOpenSection((prev) => {
+        if (prev === id) return null;
+        if (id === "pairList") listPairs();
+        return id;
+      });
+    },
+    [listPairs],
+  );
 
   /* ---- create pair ---- */
   const createPair = useCallback(async () => {
-    if (!dexRef.current || !signerRef.current) {
-      setCpStatus({ msg: "Connect wallet first", state: "error" });
+    if (!dexRef.current) {
+      setCpStatus({ msg: "Select a wallet first", state: "error" });
       return;
     }
     if (!ethers.utils.isAddress(cpToken0) || !ethers.utils.isAddress(cpToken1)) {
@@ -335,7 +308,9 @@ export default function DexApp() {
     const amt1 = ethers.utils.parseEther(alAmt1);
     setAlStatus({ msg: "Approving & adding liquidity...", state: "pending" });
     try {
-      const addr = await signerRef.current!.getAddress();
+      const signer = getSigner();
+      if (!signer) { setAlStatus({ msg: "Select a wallet", state: "error" }); return; }
+      const addr = await signer.getAddress();
       const allow0 = await t0Ref.current.allowance(addr, MONEYDEX_ADDRESS);
       if (allow0.lt(amt0)) {
         const txA = await t0Ref.current.approve(MONEYDEX_ADDRESS, amt0);
@@ -360,7 +335,7 @@ export default function DexApp() {
     } catch (e: any) {
       setAlStatus({ msg: `Failed: ${e.message}`, state: "error" });
     }
-  }, [alAmt0, alAmt1, loadPair, updateStats]);
+  }, [alAmt0, alAmt1, loadPair, updateStats, getSigner, account]);
 
   /* ---- remove liquidity ---- */
   const removeLiquidity = useCallback(async () => {
@@ -375,7 +350,9 @@ export default function DexApp() {
     const liqWei = ethers.utils.parseEther(rlAmt);
     setRlStatus({ msg: "Removing liquidity...", state: "pending" });
     try {
-      const addr = await signerRef.current!.getAddress();
+      const signer = getSigner();
+      if (!signer) { setRlStatus({ msg: "Select a wallet", state: "error" }); return; }
+      const addr = await signer.getAddress();
       const allow = await pairRef.current.allowance(addr, MONEYDEX_ADDRESS);
       if (allow.lt(liqWei)) {
         const txA = await pairRef.current.approve(MONEYDEX_ADDRESS, liqWei);
@@ -394,7 +371,7 @@ export default function DexApp() {
     } catch (e: any) {
       setRlStatus({ msg: `Failed: ${e.message}`, state: "error" });
     }
-  }, [rlAmt, loadPair, updateStats]);
+  }, [rlAmt, loadPair, updateStats, getSigner, account]);
 
   /* ---- swap ---- */
   const doSwap = useCallback(
@@ -426,7 +403,9 @@ export default function DexApp() {
         const minOut = amtOut.mul(10000 - Math.round(slip * 100)).div(10000);
 
         const tokenContract = token0ToToken1 ? t0Ref.current : t1Ref.current;
-        const addr = await signerRef.current!.getAddress();
+        const signer = getSigner();
+        if (!signer) { setSwapStatus({ msg: "Select a wallet", state: "error" }); return; }
+        const addr = await signer.getAddress();
         const allow = await tokenContract.allowance(addr, MONEYDEX_ADDRESS);
         if (allow.lt(amtWei)) {
           const txA = await tokenContract.approve(MONEYDEX_ADDRESS, amtWei);
@@ -449,7 +428,7 @@ export default function DexApp() {
         setSwapStatus({ msg: `Failed: ${e.message}`, state: "error" });
       }
     },
-    [swapAmt, slippage, loadPair, updateStats],
+    [swapAmt, slippage, loadPair, updateStats, getSigner, account],
   );
 
   /* ================================================================ */
@@ -457,6 +436,16 @@ export default function DexApp() {
   /* ================================================================ */
 
   const sectionBtn = (active: boolean) => (active ? btnPrimary : btnGhost);
+
+  if (!user || !vaultUnlocked) {
+    return (
+      <div className="min-h-screen flex items-start justify-center p-4 sm:p-8" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-[720px] mx-auto pt-12">
+          <AuthPanel />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -470,15 +459,24 @@ export default function DexApp() {
 
         {/* Wallet controls */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <select
+            value={selectedEthAddress ?? ""}
+            onChange={(e) => selectEthWallet(e.target.value || null)}
+            className={`flex-1 min-w-0 ${inputCls} appearance-none cursor-pointer`}
+          >
+            <option value="">Select wallet...</option>
+            {ethWallets.map((w) => (
+              <option key={w.address} value={w.address}>{shortenAddr(w.address)} ({w.type})</option>
+            ))}
+          </select>
+          <button type="button" onClick={() => ctxConnectMetaMask().catch(() => {})} className={btnGhost}>
+            MetaMask
+          </button>
           {account && (
-            <span className="bg-white/[0.04] border border-white/[0.06] text-indigo-400 rounded-lg px-4 py-2 text-xs sm:text-sm font-mono">
+            <span className="bg-white/[0.04] border border-white/[0.06] text-indigo-400 rounded-lg px-4 py-2 text-xs font-mono hidden sm:inline">
               {shortenAddr(account)}
             </span>
           )}
-          <button type="button" onClick={connectMetaMask} className={btnGhost}>
-            {account ? "Reconnect MetaMask" : "Connect MetaMask"}
-          </button>
-          <StatusBadge status={walletStatus} />
         </div>
 
         {/* Main section */}

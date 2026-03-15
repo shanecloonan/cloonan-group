@@ -1,19 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ethers } from "ethers";
 import { FACTORY_ADDRESS, FACTORY_ABI, DAO_ABI, TOKEN_ABI, INFURA_RPC } from "./abis";
+import { useWallet } from "@/lib/wallet-context";
+import AuthPanel from "@/components/auth-panel";
 import { logTx } from "@/lib/activity";
-
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
-
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
 
 interface Proposal {
   id: number;
@@ -68,11 +60,19 @@ function shorten(a: string) {
 /* ------------------------------------------------------------------ */
 
 export default function DaoApp() {
-  const [account, setAccount] = useState<string | null>(null);
+  const {
+    user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress,
+    selectEthWallet, connectMetaMask, getSigner,
+  } = useWallet();
+
+  const account = selectedEthAddress;
+  const provider = useMemo(() => new ethers.providers.JsonRpcProvider(INFURA_RPC), []);
+
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [daos, setDaos] = useState<DaoInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
+  const [actionBusy, setActionBusy] = useState<Record<string, boolean>>({});
 
   /* launch form */
   const [tokenAddr, setTokenAddr] = useState("");
@@ -92,124 +92,109 @@ export default function DaoApp() {
   const [propAmt, setPropAmt] = useState<Record<string, string>>({});
   const [propToken, setPropToken] = useState<Record<string, string>>({});
 
-  const signerRef = useRef<ethers.Signer | null>(null);
   const logBoxRef = useRef<HTMLDivElement>(null);
+  const refreshIdRef = useRef(0);
 
   const log = useCallback((msg: string) => {
-    setLogs((p) => [...p, { time: ts(), msg }]);
+    setLogs((p) => [...p, { time: ts(), msg }].slice(-200));
   }, []);
 
   useEffect(() => {
     logBoxRef.current?.scrollTo(0, logBoxRef.current.scrollHeight);
   }, [logs]);
 
-  /* ---- read provider ---- */
-  const getReadProvider = useCallback(() => new ethers.providers.JsonRpcProvider(INFURA_RPC), []);
+  const setBusy = useCallback((key: string, busy: boolean) => {
+    setActionBusy((p) => ({ ...p, [key]: busy }));
+  }, []);
 
-  /* ---- connect wallet ---- */
-  const connect = useCallback(async () => {
-    if (!window.ethereum) {
-      log("Install MetaMask!");
-      return;
-    }
-    log("Connecting MetaMask...");
-    try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-      const net = await provider.getNetwork();
-      if (net.chainId !== 1) throw new Error("Switch to Ethereum Mainnet");
-      const signer = provider.getSigner();
-      const addr = await signer.getAddress();
-      signerRef.current = signer;
-      setAccount(addr);
-      log(`Connected: ${shorten(addr)}`);
-    } catch (e: any) {
-      log(`Connection failed: ${e.message}`);
-    }
-  }, [log]);
-
-  /* ---- refresh DAOs ---- */
+  /* ---- refresh DAOs (parallelized) ---- */
   const refreshDAOs = useCallback(async () => {
+    const rid = ++refreshIdRef.current;
     setLoading(true);
     log("Refreshing DAO list...");
     try {
-      const rp = getReadProvider();
-      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, rp);
+      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
       const addresses: string[] = await factory.getAllDAOs();
       log(`Found ${addresses.length} DAOs`);
 
-      const results: DaoInfo[] = [];
-      for (const addr of addresses) {
-        if (addr === ethers.constants.AddressZero) continue;
-        try {
-          const dao = new ethers.Contract(addr, DAO_ABI, rp);
-          const info = await dao.getDAOInfoBasic();
-          const tok = new ethers.Contract(info.tokenAddress, TOKEN_ABI, rp);
-          let name = "Unknown", symbol = "UNK", decimals = 18;
+      const validAddrs = addresses.filter((a) => a !== ethers.constants.AddressZero);
+
+      const results = await Promise.all(
+        validAddrs.map(async (addr): Promise<DaoInfo | null> => {
           try {
-            [name, symbol, decimals] = await Promise.all([tok.name(), tok.symbol(), tok.decimals()]);
-          } catch { /* skip */ }
-
-          const vpDays = Number(info.votingPeriod) / 86400;
-          const vlp = Number(info.voteLockPercentage) / 100;
-          const mt = Number(info.majorityThreshold);
-          const mppd = Number(info.maxProposalsPerDay);
-          const sl = Number(info.slippage) / 100;
-          const ethBal = ethers.utils.formatEther(info.ethBalance);
-          const tokBal = Number(info.tokenBalance) / 10 ** decimals;
-
-          let vw = 0;
-          if (account) {
+            const dao = new ethers.Contract(addr, DAO_ABI, provider);
+            const info = await dao.getDAOInfoBasic();
+            const tok = new ethers.Contract(info.tokenAddress, TOKEN_ABI, provider);
+            let name = "Unknown", symbol = "UNK", decimals = 18;
             try {
-              const w = await dao.getVotingWeight(account);
-              vw = Number(w) / 10 ** decimals;
+              [name, symbol, decimals] = await Promise.all([tok.name(), tok.symbol(), tok.decimals()]);
             } catch { /* skip */ }
-          }
 
-          const pCount = Number(await dao.proposalCount());
-          const proposals: Proposal[] = [];
-          for (let i = 0; i < pCount; i++) {
-            try {
-              const p = await dao.getProposal(i);
-              let hasReclaimed = false;
-              let locked = 0;
-              if (account) {
-                try { hasReclaimed = await dao.hasReclaimed(i, account); } catch { /* skip */ }
-                try { locked = Number(await dao.lockedTokens(i, account)) / 10 ** decimals; } catch { /* skip */ }
-              }
-              proposals.push({ ...p, hasReclaimed, lockedTokens: locked });
-            } catch { /* skip proposal */ }
-          }
+            const vpDays = Number(info.votingPeriod) / 86400;
+            const vlp = Number(info.voteLockPercentage) / 100;
+            const mt = Number(info.majorityThreshold);
+            const mppd = Number(info.maxProposalsPerDay);
+            const sl = Number(info.slippage) / 100;
+            const ethBal = ethers.utils.formatEther(info.ethBalance);
+            const tokBal = Number(info.tokenBalance) / 10 ** decimals;
 
-          results.push({
-            address: addr,
-            tokenAddress: info.tokenAddress,
-            tokenName: name,
-            tokenSymbol: symbol,
-            tokenDecimals: decimals,
-            ethBalance: ethBal,
-            tokenBalance: tokBal,
-            votingWeight: vw,
-            votingPeriodDays: vpDays,
-            countNonRespondersAsYes: info.countNonRespondersAsYes,
-            voteLockPct: vlp,
-            majorityThreshold: mt,
-            maxProposalsPerDay: mppd,
-            slippage: sl,
-            proposals,
-          });
-        } catch (e: any) {
-          log(`Error loading DAO ${shorten(addr)}: ${e.message}`);
-        }
-      }
-      setDaos(results);
+            let vw = 0;
+            if (account) {
+              try {
+                const w = await dao.getVotingWeight(account);
+                vw = Number(w) / 10 ** decimals;
+              } catch { /* skip */ }
+            }
+
+            const pCount = Number(await dao.proposalCount());
+            const proposals = await Promise.all(
+              Array.from({ length: pCount }, (_, i) => i).map(async (i): Promise<Proposal | null> => {
+                try {
+                  const p = await dao.getProposal(i);
+                  let hasReclaimed = false;
+                  let locked = 0;
+                  if (account) {
+                    try { hasReclaimed = await dao.hasReclaimed(i, account); } catch { /* skip */ }
+                    try { locked = Number(await dao.lockedTokens(i, account)) / 10 ** decimals; } catch { /* skip */ }
+                  }
+                  return { ...p, hasReclaimed, lockedTokens: locked };
+                } catch { return null; }
+              }),
+            );
+
+            return {
+              address: addr,
+              tokenAddress: info.tokenAddress,
+              tokenName: name,
+              tokenSymbol: symbol,
+              tokenDecimals: decimals,
+              ethBalance: ethBal,
+              tokenBalance: tokBal,
+              votingWeight: vw,
+              votingPeriodDays: vpDays,
+              countNonRespondersAsYes: info.countNonRespondersAsYes,
+              voteLockPct: vlp,
+              majorityThreshold: mt,
+              maxProposalsPerDay: mppd,
+              slippage: sl,
+              proposals: proposals.filter((p): p is Proposal => p !== null),
+            };
+          } catch (e: any) {
+            log(`Error loading DAO ${shorten(addr)}: ${e.message}`);
+            return null;
+          }
+        }),
+      );
+
+      if (rid !== refreshIdRef.current) return;
+      setDaos(results.filter((d): d is DaoInfo => d !== null));
       log("DAO list refreshed");
     } catch (e: any) {
       log(`Refresh failed: ${e.message}`);
     } finally {
-      setLoading(false);
+      if (rid === refreshIdRef.current) setLoading(false);
     }
-  }, [account, getReadProvider, log]);
+  }, [account, provider, log]);
 
   useEffect(() => {
     refreshDAOs();
@@ -217,14 +202,16 @@ export default function DaoApp() {
 
   /* ---- create DAO ---- */
   const createDAO = useCallback(async () => {
-    if (!signerRef.current) { log("Connect wallet first"); return; }
+    const signer = getSigner();
+    if (!signer) { log("Select a wallet first"); return; }
     if (!tokenAddr || !votingDays || !lockPct || !majority || maxProp === "" || slip === "") {
       log("Fill in all fields"); return;
     }
+    setBusy("create", true);
     setStatus("Deploying DAO...");
     log("Creating DAO...");
     try {
-      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signerRef.current);
+      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
       const vpSec = parseInt(votingDays) * 86400;
       const slBips = Math.round(parseFloat(slip) * 100);
       const tx = await factory.createDAO(
@@ -241,20 +228,24 @@ export default function DaoApp() {
     } catch (e: any) {
       log(`DAO creation failed: ${e.message}`);
       setStatus(`Failed: ${e.message}`);
+    } finally {
+      setBusy("create", false);
     }
-  }, [tokenAddr, votingDays, silence, lockPct, majority, maxProp, slip, log, refreshDAOs]);
+  }, [tokenAddr, votingDays, silence, lockPct, majority, maxProp, slip, log, refreshDAOs, getSigner, account, setBusy]);
 
   /* ---- proposal actions ---- */
   const submitProposal = useCallback(async (daoAddr: string) => {
-    if (!signerRef.current) { log("Connect wallet first"); return; }
+    const signer = getSigner();
+    if (!signer) { log("Select a wallet first"); return; }
     const pT = propType[daoAddr] ?? "0";
     const dest = propDest[daoAddr] || ethers.constants.AddressZero;
     const amt = propAmt[daoAddr] || "0";
     const tok = propToken[daoAddr] || "";
     if (!tok) { log("Fill in token address"); return; }
+    setBusy(`prop-${daoAddr}`, true);
     log(`Creating proposal for ${shorten(daoAddr)}...`);
     try {
-      const dao = new ethers.Contract(daoAddr, DAO_ABI, signerRef.current);
+      const dao = new ethers.Contract(daoAddr, DAO_ABI, signer);
       const tx = await dao.createProposal(parseInt(pT), dest, ethers.utils.parseEther(amt), tok);
       await tx.wait();
       log("Proposal created!");
@@ -262,14 +253,19 @@ export default function DaoApp() {
       await refreshDAOs();
     } catch (e: any) {
       log(`Proposal failed: ${e.message}`);
+    } finally {
+      setBusy(`prop-${daoAddr}`, false);
     }
-  }, [propType, propDest, propAmt, propToken, log, refreshDAOs]);
+  }, [propType, propDest, propAmt, propToken, log, refreshDAOs, getSigner, account, setBusy]);
 
   const doVote = useCallback(async (daoAddr: string, pId: number, support: boolean) => {
-    if (!signerRef.current) { log("Connect wallet first"); return; }
+    const signer = getSigner();
+    if (!signer) { log("Select a wallet first"); return; }
+    const bk = `vote-${daoAddr}-${pId}-${support}`;
+    setBusy(bk, true);
     log(`Voting ${support ? "Yes" : "No"} on proposal ${pId}...`);
     try {
-      const dao = new ethers.Contract(daoAddr, DAO_ABI, signerRef.current);
+      const dao = new ethers.Contract(daoAddr, DAO_ABI, signer);
       const tx = await dao.vote(pId, support);
       await tx.wait();
       log(`Voted ${support ? "Yes" : "No"}!`);
@@ -277,14 +273,19 @@ export default function DaoApp() {
       await refreshDAOs();
     } catch (e: any) {
       log(`Vote failed: ${e.message}`);
+    } finally {
+      setBusy(bk, false);
     }
-  }, [log, refreshDAOs]);
+  }, [log, refreshDAOs, getSigner, account, setBusy]);
 
   const doExecute = useCallback(async (daoAddr: string, pId: number) => {
-    if (!signerRef.current) { log("Connect wallet first"); return; }
+    const signer = getSigner();
+    if (!signer) { log("Select a wallet first"); return; }
+    const bk = `exec-${daoAddr}-${pId}`;
+    setBusy(bk, true);
     log(`Executing proposal ${pId}...`);
     try {
-      const dao = new ethers.Contract(daoAddr, DAO_ABI, signerRef.current);
+      const dao = new ethers.Contract(daoAddr, DAO_ABI, signer);
       const tx = await dao.executeProposal(pId);
       await tx.wait();
       log("Proposal executed!");
@@ -292,14 +293,19 @@ export default function DaoApp() {
       await refreshDAOs();
     } catch (e: any) {
       log(`Execute failed: ${e.message}`);
+    } finally {
+      setBusy(bk, false);
     }
-  }, [log, refreshDAOs]);
+  }, [log, refreshDAOs, getSigner, account, setBusy]);
 
   const doReclaim = useCallback(async (daoAddr: string, pId: number) => {
-    if (!signerRef.current) { log("Connect wallet first"); return; }
+    const signer = getSigner();
+    if (!signer) { log("Select a wallet first"); return; }
+    const bk = `reclaim-${daoAddr}-${pId}`;
+    setBusy(bk, true);
     log(`Reclaiming tokens for proposal ${pId}...`);
     try {
-      const dao = new ethers.Contract(daoAddr, DAO_ABI, signerRef.current);
+      const dao = new ethers.Contract(daoAddr, DAO_ABI, signer);
       const tx = await dao.reclaimTokens(pId);
       await tx.wait();
       log("Tokens reclaimed!");
@@ -307,8 +313,10 @@ export default function DaoApp() {
       await refreshDAOs();
     } catch (e: any) {
       log(`Reclaim failed: ${e.message}`);
+    } finally {
+      setBusy(bk, false);
     }
-  }, [log, refreshDAOs]);
+  }, [log, refreshDAOs, getSigner, account, setBusy]);
 
   /* ================================================================ */
   /*  Design tokens                                                    */
@@ -326,15 +334,33 @@ export default function DaoApp() {
   /*  Render                                                           */
   /* ================================================================ */
 
+  if (!user || !vaultUnlocked) {
+    return (
+      <div className="min-h-screen p-4 sm:p-10" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-[1100px] mx-auto pt-12">
+          <AuthPanel />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen p-4 sm:p-10" style={{ background: "#08090e" }}>
-      {/* ── Top bar: wallet connect ── */}
-      <div className="max-w-[1100px] mx-auto mb-8 flex items-center gap-4">
-        <button type="button" onClick={connect} className={btnPrimary}>
-          {account ? "Reconnect" : "Connect Wallet"}
-        </button>
+      {/* ── Top bar: wallet select ── */}
+      <div className="max-w-[1100px] mx-auto mb-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <select
+          value={selectedEthAddress ?? ""}
+          onChange={(e) => selectEthWallet(e.target.value || null)}
+          className={`flex-1 ${selectCls}`}
+        >
+          <option value="">Select wallet...</option>
+          {ethWallets.map((w) => (
+            <option key={w.address} value={w.address}>{shorten(w.address)} ({w.type})</option>
+          ))}
+        </select>
+        <button type="button" onClick={() => connectMetaMask().catch(() => {})} className={btnGhost}>MetaMask</button>
         {account && (
-          <span className="text-sm font-mono text-white/50 truncate">
+          <span className="text-sm font-mono text-white/50 truncate hidden sm:inline">
             {account}
           </span>
         )}
@@ -380,8 +406,8 @@ export default function DaoApp() {
               <input type="number" value={slip} onChange={(e) => setSlip(e.target.value)} placeholder="e.g., 0.5" min="0" max="10" step="0.1" className={inputCls} />
             </div>
 
-            <button type="button" onClick={createDAO} disabled={!account} className={`w-full ${btnGold}`}>
-              Launch DAO
+            <button type="button" onClick={createDAO} disabled={!selectedEthWallet || !!actionBusy["create"]} className={`w-full ${btnGold}`}>
+              {actionBusy["create"] ? "Deploying..." : "Launch DAO"}
             </button>
             {status && <p className="text-sm text-white/50 mt-2">{status}</p>}
           </div>
@@ -480,8 +506,8 @@ export default function DaoApp() {
                         onChange={(e) => setPropToken((p) => ({ ...p, [d.address]: e.target.value }))}
                         className={inputCls}
                       />
-                      <button type="button" onClick={() => submitProposal(d.address)} className={`w-full ${btnPrimary}`}>
-                        Submit Proposal
+                      <button type="button" onClick={() => submitProposal(d.address)} disabled={!!actionBusy[`prop-${d.address}`]} className={`w-full ${btnPrimary}`}>
+                        {actionBusy[`prop-${d.address}`] ? "Submitting..." : "Submit Proposal"}
                       </button>
                     </div>
                   )}
@@ -518,22 +544,22 @@ export default function DaoApp() {
                               <div className="flex flex-wrap gap-2">
                                 {!p.executed && !ended && (
                                   <>
-                                    <button type="button" onClick={() => doVote(d.address, p.id, true)} className={`${btnGhost} text-emerald-400 border-emerald-400/20`}>
-                                      Vote Yes
+                                    <button type="button" onClick={() => doVote(d.address, p.id, true)} disabled={!!actionBusy[`vote-${d.address}-${p.id}-true`]} className={`${btnGhost} text-emerald-400 border-emerald-400/20 disabled:opacity-40`}>
+                                      {actionBusy[`vote-${d.address}-${p.id}-true`] ? "Voting..." : "Vote Yes"}
                                     </button>
-                                    <button type="button" onClick={() => doVote(d.address, p.id, false)} className={`${btnGhost} text-red-400 border-red-400/20`}>
-                                      Vote No
+                                    <button type="button" onClick={() => doVote(d.address, p.id, false)} disabled={!!actionBusy[`vote-${d.address}-${p.id}-false`]} className={`${btnGhost} text-red-400 border-red-400/20 disabled:opacity-40`}>
+                                      {actionBusy[`vote-${d.address}-${p.id}-false`] ? "Voting..." : "Vote No"}
                                     </button>
                                   </>
                                 )}
                                 {!p.executed && ended && (
-                                  <button type="button" onClick={() => doExecute(d.address, p.id)} className={btnGold}>
-                                    Execute
+                                  <button type="button" onClick={() => doExecute(d.address, p.id)} disabled={!!actionBusy[`exec-${d.address}-${p.id}`]} className={`${btnGold} disabled:opacity-40`}>
+                                    {actionBusy[`exec-${d.address}-${p.id}`] ? "Executing..." : "Execute"}
                                   </button>
                                 )}
                                 {(p.lockedTokens ?? 0) > 0 && !p.hasReclaimed && (
-                                  <button type="button" onClick={() => doReclaim(d.address, p.id)} className={btnGhost}>
-                                    Reclaim ({p.lockedTokens} {d.tokenSymbol})
+                                  <button type="button" onClick={() => doReclaim(d.address, p.id)} disabled={!!actionBusy[`reclaim-${d.address}-${p.id}`]} className={`${btnGhost} disabled:opacity-40`}>
+                                    {actionBusy[`reclaim-${d.address}-${p.id}`] ? "Reclaiming..." : `Reclaim (${p.lockedTokens} ${d.tokenSymbol})`}
                                   </button>
                                 )}
                               </div>

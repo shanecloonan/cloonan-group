@@ -85,11 +85,27 @@ export default function MultiswapApp() {
     logRef.current?.scrollTo(0, logRef.current.scrollHeight);
   }, [logs]);
 
-  /* ---- refresh deployed contracts on mount ---- */
+  /* ---- refresh deployed contracts ---- */
+  const refreshContracts = useCallback(async () => {
+    try {
+      const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, provider);
+      const all = await factory.getAllDeployedContracts();
+      const list: DeployedContract[] = all.map((c: any) => ({
+        contractAddress: c.contractAddress,
+        swapReceivers: [...c.swapFeeReceivers],
+        swapBps: c.swapFeeBps.map((b: any) => Number(b)),
+        distReceivers: [...c.distributeFeeReceivers],
+        distBps: c.distributeFeeBps.map((b: any) => Number(b)),
+      }));
+      setDeployed(list);
+    } catch (e: any) {
+      log(`Failed to fetch contracts: ${e.message}`, "error");
+    }
+  }, [provider, log]);
+
   useEffect(() => {
     refreshContracts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshContracts]);
 
   /* ---- deploy ---- */
   const handleDeploy = useCallback(async () => {
@@ -166,42 +182,24 @@ export default function MultiswapApp() {
       log(`Deploy failed: ${e.reason || e.message}`, "error");
     }
     setBusy(false);
-  }, [selectedEthWallet, busy, provider, swapFees, airdropFees, log]);
+  }, [selectedEthWallet, busy, provider, swapFees, airdropFees, log, refreshContracts]);
 
   /* ---- copy embed code ---- */
   const copyEmbed = useCallback(() => {
+    const addr = deployed.length > 0 ? deployed[deployed.length - 1].contractAddress : FACTORY_ADDRESS;
     const code = `<div id="moneyfund-multiswap-widget"></div>
 <script src="https://moneyfund.com/smc.js"></script>
 <script>
   window.initMoneyFundMultiswap('moneyfund-multiswap-widget', {
-    contractAddress: '0xDfEa3460341A5D3e8B034607dd60D10bcEE4cFc9'
+    contractAddress: '${addr}'
   });
 </script>`;
     navigator.clipboard.writeText(code).then(() => {
-      log("Embed code copied to clipboard!", "success");
+      log(`Embed code copied (${addr.slice(0, 6)}...${addr.slice(-4)})!`, "success");
     }).catch((e) => {
       log(`Copy failed: ${e.message}`, "error");
     });
-  }, [log]);
-
-  /* ---- refresh deployed contracts ---- */
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const refreshContracts = useCallback(async () => {
-    try {
-      const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, provider);
-      const all = await factory.getAllDeployedContracts();
-      const list: DeployedContract[] = all.map((c: any) => ({
-        contractAddress: c.contractAddress,
-        swapReceivers: [...c.swapFeeReceivers],
-        swapBps: c.swapFeeBps.map((b: any) => Number(b)),
-        distReceivers: [...c.distributeFeeReceivers],
-        distBps: c.distributeFeeBps.map((b: any) => Number(b)),
-      }));
-      setDeployed(list);
-    } catch (e: any) {
-      log(`Failed to fetch contracts: ${e.message}`, "error");
-    }
-  }, [provider, log]);
+  }, [log, deployed]);
 
   /* ---- fee totals ---- */
   const totalSwapPct = swapFees.reduce((s, r) => s + (parseFloat(r.percent) || 0), 0);
@@ -270,14 +268,14 @@ export default function MultiswapApp() {
                   <div key={i} className="grid grid-cols-[1fr_80px] gap-2">
                     <input
                       value={row.address}
-                      onChange={(e) => { const n = [...swapFees]; n[i].address = e.target.value; setSwapFees(n); }}
+                      onChange={(e) => { const v = e.target.value; setSwapFees((p) => p.map((r, j) => j === i ? { ...r, address: v } : r)); }}
                       placeholder={`Receiver ${i + 1} address`}
                       className={inputCls}
                     />
                     <input
                       type="number"
                       value={row.percent}
-                      onChange={(e) => { const n = [...swapFees]; n[i].percent = e.target.value; setSwapFees(n); }}
+                      onChange={(e) => { const v = e.target.value; setSwapFees((p) => p.map((r, j) => j === i ? { ...r, percent: v } : r)); }}
                       placeholder="%"
                       min="0" max="3" step="0.01"
                       className={inputCls}
@@ -297,14 +295,14 @@ export default function MultiswapApp() {
                   <div key={i} className="grid grid-cols-[1fr_80px] gap-2">
                     <input
                       value={row.address}
-                      onChange={(e) => { const n = [...airdropFees]; n[i].address = e.target.value; setAirdropFees(n); }}
+                      onChange={(e) => { const v = e.target.value; setAirdropFees((p) => p.map((r, j) => j === i ? { ...r, address: v } : r)); }}
                       placeholder={`Receiver ${i + 1} address`}
                       className={inputCls}
                     />
                     <input
                       type="number"
                       value={row.percent}
-                      onChange={(e) => { const n = [...airdropFees]; n[i].percent = e.target.value; setAirdropFees(n); }}
+                      onChange={(e) => { const v = e.target.value; setAirdropFees((p) => p.map((r, j) => j === i ? { ...r, percent: v } : r)); }}
                       placeholder="%"
                       min="0" max="3" step="0.01"
                       className={inputCls}

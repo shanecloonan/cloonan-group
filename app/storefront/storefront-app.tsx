@@ -126,12 +126,6 @@ export default function StorefrontApp() {
     return null;
   }, [selectedEthWallet, provider]);
 
-  /* ---- refresh lockers when wallet changes ---- */
-  useEffect(() => {
-    if (selectedEthWallet) refreshLockers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEthAddress]);
-
   /* ---- total shares ---- */
   const totalShares = shareholders.reduce((s, r) => s + (parseInt(r.shares) || 0), 0);
 
@@ -249,6 +243,10 @@ export default function StorefrontApp() {
       log(`Failed to load storefronts: ${e.message}`, "error");
     }
   }, [selectedEthWallet, provider, log]);
+
+  useEffect(() => {
+    if (selectedEthWallet) refreshLockers();
+  }, [selectedEthAddress, refreshLockers]);
 
   /* ---- deposit NFT ---- */
   const handleDeposit = useCallback(async (lockerAddr: string) => {
@@ -416,15 +414,16 @@ export default function StorefrontApp() {
   }, [selectedEthWallet, busy, provider, getSigner, log, refreshLockers]);
 
   /* ---- deposit form helpers ---- */
-  const getDepositForm = (addr: string) => depositForms[addr] || { nftContract: "", tokenId: "" };
+  const defaultDeposit = { nftContract: "", tokenId: "" };
+  const getDepositForm = (addr: string) => depositForms[addr] || defaultDeposit;
   const updateDeposit = (addr: string, field: string, value: string) => {
-    setDepositForms((p) => ({ ...p, [addr]: { ...getDepositForm(addr), [field]: value } }));
+    setDepositForms((p) => ({ ...p, [addr]: { ...(p[addr] || defaultDeposit), [field]: value } }));
   };
 
-  /* ---- list form helpers ---- */
-  const getListForm = (addr: string) => listForms[addr] || { nftContract: "", tokenId: "", price: "", timelockDays: "", tokenContract: "", customPayees: [] as ShareholderRow[] };
+  const defaultList = { nftContract: "", tokenId: "", price: "", timelockDays: "", tokenContract: "", customPayees: [] as ShareholderRow[] };
+  const getListForm = (addr: string) => listForms[addr] || defaultList;
   const updateList = (addr: string, field: string, value: any) => {
-    setListForms((p) => ({ ...p, [addr]: { ...getListForm(addr), [field]: value } }));
+    setListForms((p) => ({ ...p, [addr]: { ...(p[addr] || defaultList), [field]: value } }));
   };
 
   /* ================================================================ */
@@ -481,14 +480,14 @@ export default function StorefrontApp() {
               <div key={i} className="grid grid-cols-[1fr_100px] gap-2">
                 <input
                   value={row.address}
-                  onChange={(e) => { const n = [...shareholders]; n[i].address = e.target.value; setShareholders(n); }}
+                  onChange={(e) => { const v = e.target.value; setShareholders((p) => p.map((r, j) => j === i ? { ...r, address: v } : r)); }}
                   placeholder={`Shareholder ${i + 1} address`}
                   className={inputCls}
                 />
                 <input
                   type="number"
                   value={row.shares}
-                  onChange={(e) => { const n = [...shareholders]; n[i].shares = e.target.value; setShareholders(n); }}
+                  onChange={(e) => { const v = e.target.value; setShareholders((p) => p.map((r, j) => j === i ? { ...r, shares: v } : r)); }}
                   placeholder="BP"
                   min="0"
                   max={REQUIRED_SHARES}
