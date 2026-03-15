@@ -20,18 +20,6 @@ const btnSecondary =
   "h-11 px-6 rounded-xl font-semibold text-sm border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer";
 
 /* ================================================================== */
-/*  SECTION DEFINITIONS                                                */
-/* ================================================================== */
-
-const SECTIONS = [
-  { id: "staking", label: "Staking Pool" },
-  { id: "profit", label: "Profit Layer" },
-  { id: "settings", label: "Settings" },
-  { id: "results", label: "Results" },
-  { id: "info", label: "Info" },
-];
-
-/* ================================================================== */
 /*  CONSTANTS                                                          */
 /* ================================================================== */
 
@@ -408,7 +396,6 @@ const DEFAULTS: CalcInputs = {
 };
 
 export default function SimulateApp() {
-  const [activeSection, setActiveSection] = useState("staking");
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     staking: false,
     profit: false,
@@ -427,27 +414,6 @@ export default function SimulateApp() {
   const lineChartRef = useRef<HTMLCanvasElement>(null);
   const pieChartInst = useRef<Chart | null>(null);
   const lineChartInst = useRef<Chart | null>(null);
-
-  /* ---- intersection observer for active section ---- */
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActiveSection(entry.target.id);
-        }
-      },
-      { rootMargin: "-40% 0px -55% 0px", threshold: 0 }
-    );
-    SECTIONS.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, []);
-
-  const scrollTo = useCallback((id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
 
   const toggleSection = useCallback((id: string) => {
     setOpenSections((prev) => {
@@ -660,34 +626,6 @@ export default function SimulateApp() {
 
   return (
     <div className="min-h-screen" style={{ background: "#08090e" }}>
-      {/* Sticky section nav */}
-      <div
-        className="sticky top-14 z-40 border-b border-white/[0.04]"
-        style={{
-          background: "rgba(8,9,14,0.92)",
-          backdropFilter: "blur(12px)",
-        }}
-      >
-        <div className="max-w-[1100px] mx-auto px-4 overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-0.5 py-2 min-w-max">
-            {SECTIONS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => scrollTo(s.id)}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-semibold tracking-wide uppercase whitespace-nowrap transition-all cursor-pointer ${
-                  activeSection === s.id
-                    ? "text-cyan-400 bg-cyan-400/10"
-                    : "text-white/30 hover:text-white/60 hover:bg-white/[0.03]"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
       <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 pt-8 pb-16 space-y-12">
         {/* Header */}
         <div className="text-center space-y-3 pt-6">
