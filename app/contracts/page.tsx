@@ -287,15 +287,13 @@ export default function ContractsPage() {
           <p className="text-xs text-brand-500 mb-4">
             See how staking rewards work before you commit
           </p>
-          <a
-            href="https://moneyfund.com/try"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/simulate"
             className="inline-flex items-center gap-2 bg-gold/15 text-gold font-semibold text-sm px-6 py-2.5 rounded-lg border border-gold/25 hover:bg-gold/25 transition-all"
           >
             Try It Now
             <ArrowRight className="w-4 h-4" />
-          </a>
+          </Link>
         </div>
       </div>
     </div>
