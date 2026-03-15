@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useWallet } from "@/lib/wallet-context";
 
-const NAV_ITEMS = [
+const BASE_NAV = [
   { label: "Home", href: "/" },
   { label: "Contracts", href: "/contracts" },
   { label: "Wallets", href: "/wallets" },
@@ -15,7 +15,11 @@ const NAV_ITEMS = [
 export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const { user, signOut } = useWallet();
+  const { user, signOut, isAdmin } = useWallet();
+
+  const NAV_ITEMS = isAdmin
+    ? [...BASE_NAV, { label: "Admin", href: "/admin" }]
+    : BASE_NAV;
 
   useEffect(() => {
     setOpen(false);

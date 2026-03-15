@@ -104,8 +104,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           if (r.encrypted_key && r.iv) {
             try {
               pk = await decrypt(r.encrypted_key, r.iv, key);
-            } catch {
-              /* key mismatch – skip decryption */
+            } catch (err) {
+              console.warn("ETH wallet decryption failed for", r.address, err);
             }
           }
           eth.push({
@@ -118,8 +118,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             const raw = await decrypt(r.encrypted_key, r.iv, key);
             const jwk = JSON.parse(raw) as JsonWebKey;
             ar = { jwk, address: r.address };
-          } catch {
-            /* key mismatch */
+          } catch (err) {
+            console.warn("Arweave wallet decryption failed for", r.address, err);
           }
         }
       }
@@ -147,7 +147,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     try {
       const exported = await exportVaultKey(key);
       sessionStorage.setItem(VAULT_KEY_SESSION, exported);
-    } catch { /* sessionStorage unavailable */ }
+    } catch (err) { console.warn("Failed to cache vault key in sessionStorage", err); }
   }, []);
 
   const clearVaultKey = useCallback(() => {
@@ -156,7 +156,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setEthWallets([]);
     setArweaveWalletState(null);
     setSelectedEthAddress(null);
-    try { sessionStorage.removeItem(VAULT_KEY_SESSION); } catch {}
+    try { sessionStorage.removeItem(VAULT_KEY_SESSION); } catch (err) { console.warn("sessionStorage clear failed", err); }
   }, []);
 
   const checkAdminRole = useCallback(async (uid: string) => {
@@ -193,7 +193,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             setVaultUnlocked(true);
             await loadWalletsFromDb(s.user.id, key);
           }
-        } catch { /* session key invalid or missing */ }
+        } catch (err) { console.warn("Session vault key restore failed", err); }
       }
       setIsLoading(false);
     }
