@@ -410,7 +410,6 @@ export default function MultiswapApp() {
         </div>
 
         {/* ── Powered by ── */}
-        <p className="text-center text-[11px] text-white/40 pb-4">Powered by MoneyFund</p>
       </div>
     </div>
   );

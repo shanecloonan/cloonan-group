@@ -1643,7 +1643,6 @@ export default function AboutApp() {
           </div>
         </section>
 
-        <p className="text-center text-[11px] text-white/40 pt-8 pb-4">Powered by MoneyFund</p>
       </div>
     </div>
   );

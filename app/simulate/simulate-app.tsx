@@ -410,7 +410,7 @@ const DEFAULTS: CalcInputs = {
 export default function SimulateApp() {
   const [activeSection, setActiveSection] = useState("staking");
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    staking: true,
+    staking: false,
     profit: false,
     settings: false,
     info: false,
@@ -1542,9 +1542,6 @@ export default function SimulateApp() {
           </div>
         </section>
 
-        <p className="text-center text-[11px] text-white/15 pt-8 pb-4">
-          Powered by MoneyFund
-        </p>
       </div>
     </div>
   );
