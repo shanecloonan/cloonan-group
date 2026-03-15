@@ -440,14 +440,6 @@ export default function AdminDashboard() {
 
   const ethWallets = wallets.filter((w) => w.chain === "ethereum");
   const arWallets = wallets.filter((w) => w.chain === "arweave");
-  const vanityWallets = ethWallets.filter((w) =>
-    w.address.toLowerCase().startsWith("0x100"),
-  );
-  const vanityPct =
-    ethWallets.length > 0
-      ? ((vanityWallets.length / ethWallets.length) * 100).toFixed(1)
-      : "0.0";
-
   const totalEthBalance = Object.values(balances).reduce(
     (sum, b) => sum + parseFloat(b.balance || "0"),
     0,
@@ -597,11 +589,10 @@ export default function AdminDashboard() {
             ) : (
               <>
                 {/* Top-level stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                   <StatCard label="Users" value={users.length.toString()} icon="👥" />
                   <StatCard label="ETH Wallets" value={ethWallets.length.toString()} icon="⬡" sub={`${arWallets.length} Arweave`} />
                   <StatCard label="Total ETH" value={balancesLoading ? "..." : totalEthBalance.toFixed(6)} icon="Ξ" sub="user wallets" />
-                  <StatCard label="0x100 Mode" value={`${vanityPct}%`} icon="✦" sub={`${vanityWallets.length} / ${ethWallets.length}`} />
                   <StatCard label="Transactions" value={totalTxCount.toString()} icon="◎" sub={`${successTxCount} ok · ${failedTxCount} fail`} />
                   <StatCard label="Contracts" value={CONTRACTS.length.toString()} icon="📜" sub={`${CONTRACTS.filter((c) => c.category === "Live").length} live`} />
                 </div>
@@ -739,9 +730,6 @@ export default function AdminDashboard() {
                   {users.map((u) => {
                     const uWallets = walletsByUser[u.id] ?? [];
                     const uEth = uWallets.filter((w) => w.chain === "ethereum");
-                    const uVanity = uEth.filter((w) =>
-                      w.address.toLowerCase().startsWith("0x100"),
-                    );
                     const uBal = uEth.reduce(
                       (s, w) => s + parseFloat(balances[w.address]?.balance || "0"),
                       0,
@@ -766,8 +754,6 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex items-center gap-3 text-[10px] text-white/30 flex-wrap">
                           <span>{uEth.length} wallet{uEth.length !== 1 ? "s" : ""}</span>
-                          <span className="text-white/10">·</span>
-                          <span>{uVanity.length} vanity</span>
                           {eng && (
                             <>
                               <span className="text-white/10">·</span>
@@ -797,9 +783,6 @@ export default function AdminDashboard() {
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono text-white/40 hover:text-blue-400 transition-colors"
                               >
-                                {w.address.toLowerCase().startsWith("0x100") && (
-                                  <span className="text-blue-400">✦</span>
-                                )}
                                 {shorten(w.address)}
                                 <span className="text-white/15">{w.wallet_type}</span>
                                 <span className="text-white/25">
@@ -883,19 +866,14 @@ export default function AdminDashboard() {
                               {uEth.map((w) => (
                                 <tr key={w.address} className="border-b border-white/[0.03]">
                                   <td className="py-2 pr-3 font-mono text-white/50">
-                                    <div className="flex items-center gap-1">
-                                      {w.address.toLowerCase().startsWith("0x100") && (
-                                        <span className="text-blue-400 text-[9px]">✦</span>
-                                      )}
-                                      <a
-                                        href={`https://etherscan.io/address/${w.address}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:text-blue-400 transition-colors"
-                                      >
-                                        {shorten(w.address)}
-                                      </a>
-                                    </div>
+                                    <a
+                                      href={`https://etherscan.io/address/${w.address}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:text-blue-400 transition-colors"
+                                    >
+                                      {shorten(w.address)}
+                                    </a>
                                   </td>
                                   <td className="py-2 pr-3 text-white/30">{w.wallet_type}</td>
                                   <td className="py-2 pr-3 text-white/60">

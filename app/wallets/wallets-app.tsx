@@ -338,9 +338,6 @@ export default function WalletsApp() {
   const [moneyBal, setMoneyBal] = useState("0.00");
 
   const [tab, setTab] = useState<"home" | "activity" | "apps" | "explorer" | "iframe">("home");
-  const [vanityMode, setVanityMode] = useState(false);
-  const vanityModeRef = useRef(false);
-  vanityModeRef.current = vanityMode;
   const [creating, setCreating] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<StatusEntry[]>([]);
@@ -441,48 +438,9 @@ export default function WalletsApp() {
   const createWallet = useCallback(async () => {
     if (creating) return;
     setCreating(true);
-    const isVanity = vanityModeRef.current;
-    addStatus(isVanity ? "Generating 0x100 vanity wallet..." : "Creating wallet...");
+    addStatus("Creating wallet...");
     try {
-      let wallet: ethers.Wallet;
-      if (isVanity) {
-        const PREFIX = "0x100";
-        const BATCH = 500;
-        const MAX = 500_000;
-        let done = false;
-        wallet = await new Promise<ethers.Wallet>((resolve, reject) => {
-          let attempts = 0;
-          function run() {
-            if (done) return;
-            try {
-              for (let i = 0; i < BATCH; i++) {
-                attempts++;
-                const w = ethers.Wallet.createRandom();
-                if (w.address.toLowerCase().startsWith(PREFIX)) {
-                  done = true;
-                  resolve(w);
-                  return;
-                }
-                if (attempts >= MAX) {
-                  done = true;
-                  reject(new Error(`No 0x100 wallet found after ${MAX.toLocaleString()} attempts`));
-                  return;
-                }
-              }
-              setTimeout(run, 0);
-            } catch (err) {
-              done = true;
-              reject(err);
-            }
-          }
-          run();
-        });
-        if (!wallet.address.toLowerCase().startsWith(PREFIX)) {
-          throw new Error("Generated wallet does not have 0x100 prefix");
-        }
-      } else {
-        wallet = ethers.Wallet.createRandom();
-      }
+      const wallet = ethers.Wallet.createRandom();
       await addEthWallet({ address: wallet.address, privateKey: wallet.privateKey, type: "moneyfund" });
       selectEthWallet(wallet.address);
       addStatus(`Wallet created: ${shorten(wallet.address)}`, "success");
@@ -817,19 +775,6 @@ export default function WalletsApp() {
                 <div className={`${card} p-4 space-y-3`}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Active Wallet</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-white/40">0x100</span>
-                      <label className="relative w-9 h-5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={vanityMode}
-                          onChange={(e) => { setVanityMode(e.target.checked); addStatus(`0x100 Mode ${e.target.checked ? "ON" : "OFF"}`, "success"); }}
-                          className="sr-only peer"
-                        />
-                        <span className="absolute inset-0 bg-white/[0.08] rounded-full peer-checked:bg-blue-500/40 transition-all" />
-                        <span className="absolute left-[2px] top-[2px] w-4 h-4 bg-white/60 rounded-full peer-checked:translate-x-4 peer-checked:bg-blue-400 transition-all" />
-                      </label>
-                    </div>
                   </div>
                   <div className="flex gap-2">
                     <select
