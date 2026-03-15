@@ -95,6 +95,8 @@ export default function EnsApp() {
   const commitmentSecretRef = useRef<string | null>(null);
   const commitmentTimestampRef = useRef<number | null>(null);
 
+  const [activeStep, setActiveStep] = useState<"check" | "commit" | "register">("check");
+
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState("Processing...");
   const [popupAddress, setPopupAddress] = useState<string | null>(null);
@@ -397,6 +399,12 @@ export default function EnsApp() {
   /*  Render                                                           */
   /* ================================================================ */
 
+  const stepBtns: { id: "check" | "commit" | "register"; label: string; icon: string }[] = [
+    { id: "check", label: "Check", icon: "🔍" },
+    { id: "commit", label: "Commit", icon: "📝" },
+    { id: "register", label: "Register", icon: "✓" },
+  ];
+
   if (isLoading) {
     return (
       <div
@@ -414,7 +422,7 @@ export default function EnsApp() {
         <div className="w-full max-w-[720px] mx-auto space-y-5">
           <div className="text-center pt-4 pb-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">
-              ENS Domain Registration
+              ENS Registrar
             </h1>
             <p className="text-xs text-white/30 mt-1">
               Sign in to access ENS registration
@@ -428,164 +436,190 @@ export default function EnsApp() {
 
   return (
     <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
-      <div className="w-full max-w-[600px] mx-auto space-y-5">
-        {/* Header */}
+      <div className="w-full max-w-[720px] mx-auto space-y-5">
+
+        {/* ── Page title + account ── */}
         <div className="text-center pt-4 pb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">
-            ENS Domain Registration
-          </h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">ENS Registrar</h1>
           <p className="text-xs text-white/30 mt-1">
-            Register .eth names on Ethereum Mainnet
+            {user.email}
+            <span className="mx-1.5 text-white/10">·</span>
+            <Link href="/wallets" className="text-blue-400/60 hover:text-blue-400 transition-colors">
+              Wallets
+            </Link>
           </p>
-          <Link
-            href="/wallets"
-            className="inline-block mt-2 text-xs text-blue-400/60 hover:text-blue-400 transition-colors"
-          >
-            ← Back to Wallets
-          </Link>
         </div>
 
-        {/* Wallet selection */}
-        <div className={`${card} p-5 space-y-4`}>
+        {/* ── Wallet selector (matches wallets home) ── */}
+        <div className={`${card} p-4 space-y-3`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">
-              Wallet
-            </span>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Active Wallet</span>
             <button
               type="button"
               onClick={handleConnectMetaMask}
-              className={`${btnSmall} text-[10px]`}
+              className={btnSmall}
             >
-              {selected?.type === "metamask"
-                ? "MetaMask Connected"
-                : "Connect MetaMask"}
+              {selected?.type === "metamask" ? "MetaMask ✓" : "MetaMask"}
             </button>
           </div>
-
-          <select
-            value={selectedEthAddress ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (!v) selectEthWallet(null);
-              else selectEthWallet(v);
-            }}
-            className={selectCls}
-          >
-            <option value="">-- Select Wallet --</option>
-            {ethWallets.map((w) => (
-              <option key={w.address} value={w.address}>
-                {shorten(w.address)} ({w.type})
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="button"
-            onClick={createMoneyFundWallet}
-            className={btnPrimary}
-          >
-            Create MoneyFund Wallet
-          </button>
+          <div className="flex gap-2">
+            <select
+              value={selectedEthAddress ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v) selectEthWallet(null);
+                else selectEthWallet(v);
+              }}
+              className={`flex-1 ${selectCls}`}
+            >
+              <option value="">Select a wallet...</option>
+              {ethWallets.map((w) => (
+                <option key={w.address} value={w.address}>{shorten(w.address)} ({w.type})</option>
+              ))}
+            </select>
+            <button type="button" onClick={createMoneyFundWallet} className={btnSmall}>Create</button>
+          </div>
         </div>
 
-        {/* ENS form */}
-        <div className={`${card} p-5 space-y-4`}>
-          <div>
-            <label className={labelCls}>ENS Name (without .eth)</label>
+        {/* ── Connected info ── */}
+        {selected && (
+          <div className={`${card} p-5`}>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Connected</span>
+            <p className="mt-2 text-lg font-bold text-white tracking-tight font-mono">{shorten(selected.address)}</p>
+            <p className="text-xs text-white/25 mt-0.5">{selected.type} wallet</p>
+          </div>
+        )}
+
+        {/* ── ENS Name input ── */}
+        <div className={`${card} p-5 space-y-3`}>
+          <h3 className="text-sm font-semibold text-white/80">Domain Name</h3>
+          <div className="flex gap-2 items-center">
             <input
               type="text"
               value={ensName}
               onChange={(e) => setEnsName(e.target.value)}
-              placeholder="e.g., example"
-              className={inputCls}
+              placeholder="yourname"
+              className={`flex-1 ${inputCls}`}
             />
+            <span className="text-sm font-semibold text-white/30 shrink-0">.eth</span>
           </div>
-
-          <button
-            type="button"
-            onClick={checkAvailability}
-            disabled={!canCheck}
-            className={btnPrimary}
-          >
-            Check Availability
-          </button>
-
-          <button
-            type="button"
-            onClick={commitName}
-            disabled={!canCommit}
-            className={btnPrimary}
-          >
-            Commit Name
-          </button>
-
-          <button
-            type="button"
-            onClick={registerName}
-            disabled={!canRegister}
-            className={btnPrimary}
-          >
-            Register Name
-          </button>
         </div>
 
-        {/* Status */}
-        {status && (
-          <div
-            className={`${card} p-4 text-sm break-words ${
-              statusType === "success"
-                ? "text-emerald-400"
-                : statusType === "error"
-                  ? "text-red-400"
-                  : statusType === "info"
-                    ? "text-blue-400"
-                    : "text-white/60"
-            }`}
-          >
-            {status}
+        {/* ── Step toggle bar (matches wallets action buttons) ── */}
+        <div className={`${card} p-1.5 flex gap-1`}>
+          {stepBtns.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setActiveStep(s.id)}
+              className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeStep === s.id
+                  ? "bg-blue-500/15 text-blue-400 shadow-[inset_0_1px_0_rgba(59,130,246,0.2)]"
+                  : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
+              }`}
+            >
+              <span className="text-xs opacity-60">{s.icon}</span>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Check panel ── */}
+        {activeStep === "check" && (
+          <div className={`${card} p-5 space-y-4`}>
+            <h3 className="text-sm font-semibold text-white/80">Check Availability</h3>
+            <p className="text-xs text-white/30">Look up whether the name is available and see the registration price for 1 year.</p>
+            <button
+              type="button"
+              onClick={checkAvailability}
+              disabled={!canCheck}
+              className={btnPrimary}
+            >
+              Check Availability
+            </button>
           </div>
         )}
 
-        {/* ENS Log */}
+        {/* ── Commit panel ── */}
+        {activeStep === "commit" && (
+          <div className={`${card} p-5 space-y-4`}>
+            <h3 className="text-sm font-semibold text-white/80">Commit Name</h3>
+            <p className="text-xs text-white/30">Submit a commitment hash on-chain. After 60 seconds you can complete registration.</p>
+            <button
+              type="button"
+              onClick={commitName}
+              disabled={!canCommit}
+              className={btnPrimary}
+            >
+              Commit
+            </button>
+          </div>
+        )}
+
+        {/* ── Register panel ── */}
+        {activeStep === "register" && (
+          <div className={`${card} p-5 space-y-4`}>
+            <h3 className="text-sm font-semibold text-white/80">Register Name</h3>
+            <p className="text-xs text-white/30">Finalize the registration. This sends the payment and records the name to your address.</p>
+            <button
+              type="button"
+              onClick={registerName}
+              disabled={!canRegister}
+              className={btnPrimary}
+            >
+              Register
+            </button>
+          </div>
+        )}
+
+        {/* ── Status log (matches wallets status log) ── */}
+        {status && (
+          <div className={`${card} p-4 max-h-[240px] overflow-y-auto space-y-1`} style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.08) transparent" }}>
+            <div
+              className={`text-xs py-2 px-3 rounded-lg ${
+                statusType === "success"
+                  ? "text-emerald-400 bg-emerald-500/5"
+                  : statusType === "error"
+                    ? "text-red-400 bg-red-500/5"
+                    : statusType === "info"
+                      ? "text-blue-400 bg-blue-500/5"
+                      : "text-white/50 bg-white/[0.02]"
+              }`}
+            >
+              {status}
+            </div>
+          </div>
+        )}
+
+        {/* ── ENS History (matches wallets activity style) ── */}
         {ensLog.length > 0 && (
-          <div className={`${card} p-4 space-y-2 max-h-[260px] overflow-y-auto`} style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.08) transparent" }}>
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">
-              History
-            </span>
+          <div className="space-y-1.5">
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider ml-1">History</span>
             {ensLog.map((entry, i) => (
-              <div
-                key={i}
-                className="rounded-xl bg-white/[0.04] border border-white/[0.06] p-3 space-y-1"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-white/70">
-                    Action #{i + 1}
-                  </span>
-                  <span className="text-[10px] text-white/25">
-                    {new Date(entry.timestamp).toLocaleString()}
-                  </span>
+              <div key={i} className={`${card} px-4 py-3 flex items-center gap-3`}>
+                <span className="text-lg shrink-0 text-blue-400/60">🌐</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-medium text-white/80 truncate">{entry.action}: {entry.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-white/25 font-mono">{shorten(entry.sender)}</span>
+                    {entry.txHash && (
+                      <>
+                        <span className="text-white/10">·</span>
+                        <a
+                          href={`https://etherscan.io/tx/${entry.txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-indigo-400/60 hover:text-indigo-400 font-mono transition-colors"
+                        >
+                          {entry.txHash.slice(0, 10)}…
+                        </a>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-white/50">
-                  <span className="text-white/30">Sender:</span>{" "}
-                  <span className="font-mono">{shorten(entry.sender)}</span>
-                </p>
-                <p className="text-xs text-white/50">
-                  <span className="text-white/30">Name:</span> {entry.name}
-                </p>
-                <p className="text-xs text-white/50">
-                  <span className="text-white/30">Action:</span> {entry.action}
-                </p>
-                <p className="text-xs text-white/50">
-                  <span className="text-white/30">Tx:</span>{" "}
-                  <a
-                    href={`https://etherscan.io/tx/${entry.txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-400/60 hover:text-indigo-400 font-mono transition-colors"
-                  >
-                    {shorten(entry.txHash)}
-                  </a>
-                </p>
+                <span className="text-[10px] text-white/20 shrink-0">{new Date(entry.timestamp).toLocaleDateString()}</span>
               </div>
             ))}
           </div>
