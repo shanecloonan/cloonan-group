@@ -26,8 +26,6 @@ export default function Home() {
           }}
         />
 
-        <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-gold/10 to-transparent" />
-
         <div className="relative z-10 flex flex-col items-center px-6 text-center">
           <MoneyFundLogo className="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 mb-6" />
 
