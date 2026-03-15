@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
 import { useWallet } from "@/lib/wallet-context";
 import AuthPanel from "@/components/auth-panel";
@@ -60,7 +61,7 @@ const APPS: AppTile[] = [
   { icon: "🎁", title: "Airdropper", url: "https://moneyfund.com/airdrop" },
   { icon: "🤖", title: "Volume Runner", url: "https://moneyfund.com/volume" },
   { icon: "🔍", title: "Block Explorer", url: "https://moneyfund.com/explorer" },
-  { icon: "🌐", title: "ENS Registrar", url: "https://moneyfund.com/etf/" },
+  { icon: "🌐", title: "ENS Registrar", url: "/ens" },
   { icon: "🃏", title: "Blackjack", url: "https://moneyfund.com/blackjack" },
   { icon: "✉️", title: "DMs", url: "https://moneyfund.com/dm" },
   { icon: "💬", title: "Chat", url: "https://moneyfund.com/chat" },
@@ -322,6 +323,7 @@ function ActivityTab({
 /* ================================================================== */
 
 export default function WalletsApp() {
+  const router = useRouter();
   const {
     user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress,
     selectEthWallet, addEthWallet, removeEthWallet, signOut, isLoading,
@@ -663,10 +665,14 @@ export default function WalletsApp() {
   const needsLogs = expAction === "getlogs";
 
   const openApp = useCallback((app: AppTile) => {
+    if (app.url.startsWith("/")) {
+      router.push(app.url);
+      return;
+    }
     setIframeUrl(app.url);
     setIframeTitle(app.title);
     setTab("iframe");
-  }, []);
+  }, [router]);
 
   /* ================================================================ */
   /*  RENDER                                                           */
