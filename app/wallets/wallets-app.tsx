@@ -339,6 +339,9 @@ export default function WalletsApp() {
 
   const [tab, setTab] = useState<"home" | "activity" | "apps" | "explorer" | "iframe">("home");
   const [vanityMode, setVanityMode] = useState(false);
+  const vanityModeRef = useRef(false);
+  vanityModeRef.current = vanityMode;
+  const [creating, setCreating] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<StatusEntry[]>([]);
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
@@ -436,25 +439,47 @@ export default function WalletsApp() {
   /* ================================================================ */
 
   const createWallet = useCallback(async () => {
-    addStatus("Creating wallet...");
+    if (creating) return;
+    setCreating(true);
+    const isVanity = vanityModeRef.current;
+    addStatus(isVanity ? "Generating 0x100 vanity wallet..." : "Creating wallet...");
     try {
       let wallet: ethers.Wallet;
-      if (vanityMode) {
-        const BATCH = 200;
-        const MAX = 50000;
+      if (isVanity) {
+        const PREFIX = "0x100";
+        const BATCH = 500;
+        const MAX = 500_000;
+        let done = false;
         wallet = await new Promise<ethers.Wallet>((resolve, reject) => {
           let attempts = 0;
-          function batch() {
-            for (let i = 0; i < BATCH; i++) {
-              attempts++;
-              const w = ethers.Wallet.createRandom();
-              if (w.address.toLowerCase().startsWith("0x100")) { resolve(w); return; }
-              if (attempts >= MAX) { reject(new Error(`Failed after ${MAX} attempts for 0x100 prefix`)); return; }
+          function run() {
+            if (done) return;
+            try {
+              for (let i = 0; i < BATCH; i++) {
+                attempts++;
+                const w = ethers.Wallet.createRandom();
+                if (w.address.toLowerCase().startsWith(PREFIX)) {
+                  done = true;
+                  resolve(w);
+                  return;
+                }
+                if (attempts >= MAX) {
+                  done = true;
+                  reject(new Error(`No 0x100 wallet found after ${MAX.toLocaleString()} attempts`));
+                  return;
+                }
+              }
+              setTimeout(run, 0);
+            } catch (err) {
+              done = true;
+              reject(err);
             }
-            setTimeout(batch, 0);
           }
-          batch();
+          run();
         });
+        if (!wallet.address.toLowerCase().startsWith(PREFIX)) {
+          throw new Error("Generated wallet does not have 0x100 prefix");
+        }
       } else {
         wallet = ethers.Wallet.createRandom();
       }
@@ -463,8 +488,10 @@ export default function WalletsApp() {
       addStatus(`Wallet created: ${shorten(wallet.address)}`, "success");
     } catch (e: unknown) {
       addStatus(`Failed: ${e instanceof Error ? e.message : String(e)}`, "error");
+    } finally {
+      setCreating(false);
     }
-  }, [vanityMode, addEthWallet, selectEthWallet, addStatus]);
+  }, [creating, addEthWallet, selectEthWallet, addStatus]);
 
   const exportWallets = useCallback(() => {
     if (ethWallets.length === 0) { addStatus("No wallets to export", "error"); return; }
@@ -822,7 +849,7 @@ export default function WalletsApp() {
                     <button type="button" onClick={copyAddress} className={btnSmall}>Copy</button>
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={createWallet} className={`flex-1 ${btnSmall}`}>Create</button>
+                    <button type="button" onClick={createWallet} disabled={creating} className={`flex-1 ${btnSmall} disabled:opacity-40 disabled:cursor-wait`}>{creating ? "Creating…" : "Create"}</button>
                     <label className={`flex-1 ${btnSmall} flex items-center justify-center cursor-pointer`}>
                       Import
                       <input ref={fileRef} type="file" accept=".json" onChange={importWallets} className="hidden" />
