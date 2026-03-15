@@ -223,7 +223,7 @@ export default function DividendsApp() {
       for (let i = 0; ; i++) {
         try {
           const addr: string = await pool.registeredRewardTokens(i);
-          if (!addr || addr === ADDRESS_ZERO) continue;
+          if (!addr || addr === ADDRESS_ZERO) break;
           const tok = new ethers.Contract(addr, erc20Abi, readProvider);
           let name = "Unknown",
             symbol = "UNK",

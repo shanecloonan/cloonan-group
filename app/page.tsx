@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import CompanyChart from "./company-chart";
 import MoneyFundLogo from "./money-fund-logo";
 
@@ -46,6 +47,27 @@ export default function Home() {
               Est. 1996
             </span>
             <span className="h-px w-8 bg-gold/40" />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-10">
+            <Link
+              href="/wallets"
+              className="inline-flex items-center px-7 py-3 rounded-lg bg-gradient-to-b from-gold/90 to-amber-600 text-brand-950 font-semibold text-sm tracking-wide shadow-lg shadow-gold/20 hover:brightness-110 transition"
+            >
+              Get Started
+            </Link>
+            <Link
+              href="/contracts"
+              className="inline-flex items-center px-7 py-3 rounded-lg border border-white/10 text-brand-200 font-medium text-sm tracking-wide hover:bg-white/[0.04] transition"
+            >
+              View Contracts
+            </Link>
+            <Link
+              href="/about"
+              className="inline-flex items-center px-7 py-3 rounded-lg border border-white/10 text-brand-200 font-medium text-sm tracking-wide hover:bg-white/[0.04] transition"
+            >
+              Learn More
+            </Link>
           </div>
         </div>
 
