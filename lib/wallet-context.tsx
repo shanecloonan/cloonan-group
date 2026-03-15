@@ -21,6 +21,7 @@ import {
   verifyKeyCheck,
 } from "./crypto";
 import { ethers } from "ethers";
+import { RPC_URL } from "./config";
 import type { EthWallet, ArweaveWalletData, WalletRow } from "./wallet-types";
 
 const VAULT_KEY_SESSION = "mf_vault_key";
@@ -29,6 +30,7 @@ interface WalletContextValue {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isAdmin: boolean;
 
   signUp: (email: string, password: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
@@ -69,6 +71,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [vaultUnlocked, setVaultUnlocked] = useState(false);
   const vaultKeyRef = useRef<CryptoKey | null>(null);
 
+  const [isAdmin, setIsAdmin] = useState(false);
   const [chainId, setChainId] = useState<number | null>(null);
   const [ethWallets, setEthWallets] = useState<EthWallet[]>([]);
   const [selectedEthAddress, setSelectedEthAddress] = useState<string | null>(null);
@@ -156,6 +159,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     try { sessionStorage.removeItem(VAULT_KEY_SESSION); } catch {}
   }, []);
 
+  const checkAdminRole = useCallback(async (uid: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid)
+      .eq("role", "admin")
+      .maybeSingle();
+    setIsAdmin(!!data);
+  }, []);
+
   /* ------------------------------------------------------------------ */
   /*  Auth bootstrap                                                     */
   /* ------------------------------------------------------------------ */
@@ -170,6 +183,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       if (s?.user) {
         setUser(s.user);
         setSession(s);
+        checkAdminRole(s.user.id);
 
         try {
           const cached = sessionStorage.getItem(VAULT_KEY_SESSION);
@@ -207,7 +221,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         window.ethereum.removeListener?.("chainChanged", onChainChanged);
       }
     };
-  }, [loadWalletsFromDb, clearVaultKey]);
+  }, [loadWalletsFromDb, clearVaultKey, checkAdminRole]);
 
   /* ------------------------------------------------------------------ */
   /*  Auth actions                                                       */
@@ -458,7 +472,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         return new ethers.providers.Web3Provider(window.ethereum as ethers.providers.ExternalProvider).getSigner();
       }
       if (selectedEthWallet.privateKey) {
-        const provider = new ethers.providers.JsonRpcProvider(rpcUrl || "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73");
+        const provider = new ethers.providers.JsonRpcProvider(rpcUrl || RPC_URL);
         return new ethers.Wallet(selectedEthWallet.privateKey, provider);
       }
       return null;
@@ -475,6 +489,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       user,
       session,
       isLoading,
+      isAdmin,
       signUp,
       signIn,
       signOut,
@@ -495,7 +510,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setArweaveWallet,
     }),
     [
-      user, session, isLoading, signUp, signIn, signOut, resetPassword, updatePassword,
+      user, session, isLoading, isAdmin, signUp, signIn, signOut, resetPassword, updatePassword,
       vaultUnlocked, unlockVault, chainId,
       ethWallets, selectedEthAddress, selectedEthWallet,
       selectEthWallet, addEthWallet, removeEthWallet, connectMetaMask, getSigner,

@@ -18,11 +18,11 @@ import {
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-const RPC = "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73";
+import { RPC_URL as RPC, ETHERSCAN_API_KEY } from "@/lib/config";
 const MONEY_ADDRESS = "0x100DB67F41A2dF3c32cC7c0955694b98339B7311";
 const UNISWAP_ROUTER = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-const ETHERSCAN_KEY = "MB89VXUF27QJHA7QYJMPE9W55UGYZNV39C";
+const ETHERSCAN_KEY = ETHERSCAN_API_KEY;
 const ETHERSCAN_API = "https://api.etherscan.io/api";
 
 const ERC20_ABI = [

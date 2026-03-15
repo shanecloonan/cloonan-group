@@ -1,10 +1,6 @@
 export const MANAGER_ADDRESS = "0x6B440ADBA6085b68e2677Ce77dC65bbAc39005d8";
 
-export const RPC_ENDPOINTS = [
-  "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73",
-  "https://rpc.ankr.com/eth",
-  "https://cloudflare-eth.com",
-];
+export { RPC_ENDPOINTS } from "@/lib/config";
 
 export const TOKEN_COLORS = [
   "#14B8A6", "#34D399", "#FBBF24", "#F87171", "#A78BFA", "#FCD34D", "#4ADE80", "#F472B6",

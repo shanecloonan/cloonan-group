@@ -1,6 +1,5 @@
 export const FACTORY_ADDRESS = "0x5ef0404f344e9c0ff2ab83b44d8827a78db7128a";
-export const INFURA_RPC =
-  "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73";
+export { RPC_URL as INFURA_RPC } from "@/lib/config";
 
 export const factoryAbi = [
   { inputs: [], name: "DecayTooFast", type: "error" },

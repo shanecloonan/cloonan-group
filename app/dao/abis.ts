@@ -34,4 +34,4 @@ export const TOKEN_ABI = [
   "function decimals() view returns (uint8)",
 ];
 
-export const INFURA_RPC = "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73";
+export { RPC_URL as INFURA_RPC } from "@/lib/config";

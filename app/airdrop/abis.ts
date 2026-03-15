@@ -1,5 +1,5 @@
 export const CONTRACT_ADDRESS = "0x6785cd86a65f3d8336fdc3b0e54c78215501dca2";
-export const RPC_URL = "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73";
+export { RPC_URL } from "@/lib/config";
 
 export const airdropAbi = [
   { inputs: [], stateMutability: "nonpayable", type: "constructor" },

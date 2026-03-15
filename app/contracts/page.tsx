@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { Copy, Check, ExternalLink, Play } from "lucide-react";
 
 interface Contract {
@@ -8,6 +9,7 @@ interface Contract {
   address: string;
   explorer: string;
   go: string;
+  internal?: boolean;
   solana?: boolean;
 }
 
@@ -28,17 +30,19 @@ const CONTRACTS: Contract[] = [
   },
   {
     name: "Fund Launcher",
-    address: "0x6b440adba6085b68e2677ce77dc65bbac39005d8",
+    address: "0x6B440ADBA6085b68e2677Ce77dC65bbAc39005d8",
     explorer:
-      "https://etherscan.io/address/0x6b440adba6085b68e2677ce77dc65bbac39005d8",
+      "https://etherscan.io/address/0x6B440ADBA6085b68e2677Ce77dC65bbAc39005d8",
     go: "/etf",
+    internal: true,
   },
   {
     name: "Dividends Launcher",
-    address: "0xdf1ec23286333da4cc9d320369153c9bad1605f9",
+    address: "0x5ef0404f344e9c0ff2ab83b44d8827a78db7128a",
     explorer:
-      "https://etherscan.io/address/0xdf1ec23286333da4cc9d320369153c9bad1605f9",
+      "https://etherscan.io/address/0x5ef0404f344e9c0ff2ab83b44d8827a78db7128a",
     go: "/dividends",
+    internal: true,
   },
   {
     name: "Coin Launcher",
@@ -49,24 +53,27 @@ const CONTRACTS: Contract[] = [
   },
   {
     name: "DAO Launcher",
-    address: "0x8ef4bc69750da8f59335da8083a00ef6ea864f9f",
+    address: "0xc346ecabc9d5c6fb943231c4b9d73ca91178545a",
     explorer:
-      "https://etherscan.io/address/0x8ef4bc69750da8f59335da8083a00ef6ea864f9f",
+      "https://etherscan.io/address/0xc346ecabc9d5c6fb943231c4b9d73ca91178545a",
     go: "/dao",
+    internal: true,
   },
   {
     name: "Multiswap Launcher",
-    address: "0xe01fe1c2a22736da756bdc2c9144464e8a73fcd7",
+    address: "0x40af76d95100372232a9fe2ddd92de7e103eb2db",
     explorer:
-      "https://etherscan.io/address/0xe01fe1c2a22736da756bdc2c9144464e8a73fcd7",
+      "https://etherscan.io/address/0x40af76d95100372232a9fe2ddd92de7e103eb2db",
     go: "/multiswap",
+    internal: true,
   },
   {
     name: "Ad-space Launcher",
-    address: "0x346a4f3bb3582396eb62624d25c03568ceb8c94c",
+    address: "0xE01FE1C2A22736da756BDc2C9144464E8A73fCd7",
     explorer:
-      "https://etherscan.io/address/0x346a4f3bb3582396eb62624d25c03568ceb8c94c",
+      "https://etherscan.io/address/0xE01FE1C2A22736da756BDc2C9144464E8A73fCd7",
     go: "/auction",
+    internal: true,
   },
   {
     name: "Multisig Launcher",
@@ -77,10 +84,11 @@ const CONTRACTS: Contract[] = [
   },
   {
     name: "Storefront Launcher",
-    address: "0x20c855f8cf408ee3a481409993e4d3ce04c2e509",
+    address: "0x15a3c66121b927f38bffef5d8017370aaf46ab68",
     explorer:
-      "https://etherscan.io/address/0x20c855f8cf408ee3a481409993e4d3ce04c2e509",
+      "https://etherscan.io/address/0x15a3c66121b927f38bffef5d8017370aaf46ab68",
     go: "/storefront",
+    internal: true,
   },
   {
     name: "MoneyFund Multiswap",
@@ -102,6 +110,7 @@ const CONTRACTS: Contract[] = [
     explorer:
       "https://etherscan.io/address/0xc79c7dbf7ac78fd5307a4631131b0a4e98e902c7",
     go: "/dex",
+    internal: true,
   },
   {
     name: "MoneyFund Dividends",
@@ -109,6 +118,7 @@ const CONTRACTS: Contract[] = [
     explorer:
       "https://etherscan.io/address/0xab18bbaf4e7e04a120d031129a47e27be04b86bf",
     go: "/moneydividends",
+    internal: true,
   },
   {
     name: "MoneyFund Airdropper",
@@ -116,6 +126,7 @@ const CONTRACTS: Contract[] = [
     explorer:
       "https://etherscan.io/address/0x6785cd86a65f3d8336fdc3b0e54c78215501dca2",
     go: "/airdrop",
+    internal: true,
   },
   {
     name: "Solana Wormhole",
@@ -141,14 +152,14 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className={`hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all ${
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all shrink-0 ${
         copied
           ? "bg-emerald-500/20 text-emerald-400"
           : "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30"
       }`}
     >
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      {copied ? "Copied" : "Copy"}
+      <span className="hidden sm:inline">{copied ? "Copied" : "Copy"}</span>
     </button>
   );
 }
@@ -157,7 +168,7 @@ export default function ContractsPage() {
   return (
     <div
       className="min-h-screen px-4 py-12 sm:px-6 sm:py-16"
-      style={{ background: "linear-gradient(135deg, #1a0d2e 0%, #0f0a1e 100%)" }}
+      style={{ background: "#08090e" }}
     >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -217,21 +228,30 @@ export default function ContractsPage() {
                             href={c.explorer}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-md bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 transition-colors shrink-0"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 transition-colors shrink-0"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                         </div>
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-center">
-                        <a
-                          href={c.go}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 transition-all hover:-translate-y-0.5 shadow-lg shadow-violet-500/25"
-                        >
-                          <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="white" />
-                        </a>
+                        {c.internal ? (
+                          <Link
+                            href={c.go}
+                            className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 transition-all hover:-translate-y-0.5 shadow-lg shadow-violet-500/25"
+                          >
+                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="white" />
+                          </Link>
+                        ) : (
+                          <a
+                            href={c.go}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 transition-all hover:-translate-y-0.5 shadow-lg shadow-violet-500/25"
+                          >
+                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="white" />
+                          </a>
+                        )}
                       </td>
                     </tr>
                   ))}

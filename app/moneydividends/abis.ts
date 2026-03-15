@@ -1,6 +1,6 @@
 export const CONTRACT_ADDRESS = "0xab18bbaf4e7e04a120d031129a47e27be04b86bf";
 export const MONEY_ADDRESS = "0x100DB67F41A2dF3c32cC7c0955694b98339B7311";
-export const RPC_URL = "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73";
+export { RPC_URL } from "@/lib/config";
 
 export const dividendsAbi = [
   { inputs: [{ internalType: "address", name: "_factory", type: "address" }, { internalType: "address", name: "_poolCreator", type: "address" }, { internalType: "address", name: "_token", type: "address" }, { internalType: "uint256", name: "_hardLockDuration", type: "uint256" }, { internalType: "uint256", name: "_initialPenaltyPercent", type: "uint256" }, { internalType: "uint256", name: "_penaltyDecayPercentPerDay", type: "uint256" }], stateMutability: "nonpayable", type: "constructor" },

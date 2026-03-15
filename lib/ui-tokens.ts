@@ -1,0 +1,11 @@
+export const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+export const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-400/30 transition-all";
+export const selectCls = `${inputCls} appearance-none cursor-pointer`;
+export const btnPrimary = "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-2";
+export const btnGold = "h-11 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-black hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-2";
+export const btnGhost = "h-11 px-5 rounded-xl font-medium text-sm border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
+export const btnDanger = "h-9 px-4 rounded-lg font-medium text-xs bg-red-500/10 border border-red-400/20 text-red-400 hover:bg-red-500/20 hover:text-red-300 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
+export const btnSuccess = "h-9 px-4 rounded-lg font-medium text-xs bg-emerald-500/10 border border-emerald-400/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
+export const btnSmall = "h-9 px-4 rounded-lg font-medium text-xs border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
+export const labelCls = "block text-white/40 text-xs font-medium uppercase tracking-wider mb-1.5";
+export const sectionTitle = "text-sm font-semibold text-white/80 mb-3 pb-2 border-b border-white/[0.06]";

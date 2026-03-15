@@ -33,7 +33,7 @@ declare global {
   }
 }
 
-const INFURA_RPC = "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73";
+import { RPC_URL as INFURA_RPC } from "@/lib/config";
 
 function shortenAddr(a: string) {
   return `${a.slice(0, 6)}...${a.slice(-4)}`;

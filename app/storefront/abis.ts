@@ -1,5 +1,5 @@
 export const FACTORY_ADDRESS = "0x15a3c66121b927f38bffef5d8017370aaf46ab68";
-export const RPC_URL = "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73";
+export { RPC_URL } from "@/lib/config";
 
 export const factoryAbi = [
   {
