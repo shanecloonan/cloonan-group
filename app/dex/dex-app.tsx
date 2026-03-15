@@ -563,7 +563,7 @@ export default function DexApp() {
 
             {/* ── Pair List ── */}
             {openSection === "pairList" && (
-              <div className={`${card} p-5 max-h-60 overflow-y-auto space-y-0 text-sm text-left`}>
+              <div className={`${card} p-5 max-h-60 overflow-y-auto overflow-x-hidden space-y-0 text-sm text-left`}>
                 {pairListHtml.length === 0 && pairListStatus.state !== "pending" && (
                   <p className="text-white/30 text-center py-3">No pairs found.</p>
                 )}
@@ -572,12 +572,12 @@ export default function DexApp() {
                     key={p.address}
                     className="flex items-center justify-between gap-3 py-2.5 px-2 bg-white/[0.02] border-b border-white/[0.04] last:border-b-0"
                   >
-                    <div className="truncate flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <span className="text-white/90 font-semibold">
                         {p.symbol0}/{p.symbol1}
                       </span>
                       <br />
-                      <span className="text-xs font-mono text-white/30 break-all">
+                      <span className="text-xs font-mono text-white/30 block truncate">
                         {p.address}
                       </span>
                     </div>
@@ -587,7 +587,7 @@ export default function DexApp() {
                         setPairAddress(p.address);
                         loadPair(p.address);
                       }}
-                      className={btnGhost}
+                      className={`${btnGhost} shrink-0`}
                     >
                       Load
                     </button>
