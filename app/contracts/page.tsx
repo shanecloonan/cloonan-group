@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import { Copy, Check, ExternalLink, Play } from "lucide-react";
+import { Copy, Check, ExternalLink, ArrowRight } from "lucide-react";
 
 interface Contract {
   name: string;
@@ -152,158 +152,152 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all shrink-0 ${
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition-all shrink-0 cursor-pointer ${
         copied
-          ? "bg-emerald-500/20 text-emerald-400"
-          : "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30"
+          ? "bg-gold/20 text-gold"
+          : "bg-brand-800/80 text-brand-400 hover:bg-brand-700/80 hover:text-brand-200"
       }`}
+      title={copied ? "Copied!" : "Copy address"}
     >
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      <span className="hidden sm:inline">{copied ? "Copied" : "Copy"}</span>
     </button>
+  );
+}
+
+function GoLink({ c }: { c: Contract }) {
+  const cls =
+    "inline-flex items-center justify-center w-7 h-7 rounded-md bg-gold/15 text-gold hover:bg-gold/25 transition-colors shrink-0";
+  return c.internal ? (
+    <Link href={c.go} className={cls} title="Open app">
+      <ArrowRight className="w-3.5 h-3.5" />
+    </Link>
+  ) : (
+    <a href={c.go} target="_blank" rel="noopener noreferrer" className={cls} title="Open app">
+      <ArrowRight className="w-3.5 h-3.5" />
+    </a>
   );
 }
 
 export default function ContractsPage() {
   return (
-    <div
-      className="min-h-screen px-4 py-12 sm:px-6 sm:py-16"
-      style={{ background: "#08090e" }}
-    >
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-2">
-            Money<span className="text-emerald-400">Fund</span> Contracts
+    <div className="min-h-screen bg-brand-950 px-4 py-10 sm:px-6 sm:py-14">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-brand-100">
+            Money<span className="text-gold">Fund</span> Contracts
           </h1>
-          <p className="text-sm text-slate-400">
-            On-chain contract addresses and explorer links.
+          <p className="text-xs text-brand-500 mt-1.5">
+            On-chain addresses and explorer links
           </p>
+          <div className="mx-auto mt-3 w-12 h-px bg-gold/30" />
         </div>
 
-        {/* Table card */}
-        <div className="relative rounded-2xl overflow-hidden">
-          {/* Animated border glow */}
-          <div
-            className="absolute -inset-[2px] rounded-2xl z-0"
-            style={{
-              background: "linear-gradient(45deg, #6aa174, #8bbf91, #6aa174)",
-              animation: "glow 4s ease-in-out infinite",
-            }}
-          />
-          <div className="relative z-10 bg-[#0A0C1E] rounded-2xl p-3 sm:p-5">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr>
-                    <th className="px-3 sm:px-4 py-3 text-[11px] sm:text-xs uppercase font-semibold tracking-wider text-white bg-gradient-to-r from-slate-600 to-slate-500 rounded-l-lg">
-                      Contract
-                    </th>
-                    <th className="px-3 sm:px-4 py-3 text-[11px] sm:text-xs uppercase font-semibold tracking-wider text-white bg-gradient-to-r from-slate-500 to-slate-600">
-                      Address
-                    </th>
-                    <th className="px-3 sm:px-4 py-3 text-[11px] sm:text-xs uppercase font-semibold tracking-wider text-white bg-gradient-to-r from-slate-600 to-slate-500 rounded-r-lg text-center">
-                      Go
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {CONTRACTS.map((c) => (
-                    <tr
-                      key={c.address}
-                      className="border-b border-emerald-400/10 hover:bg-emerald-400/[0.06] transition-colors"
-                    >
-                      <td className="px-3 sm:px-4 py-3 text-sm font-semibold text-white whitespace-nowrap">
-                        {c.name}
-                      </td>
-                      <td className="px-3 sm:px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <CopyButton text={c.address} />
-                          <span
-                            className={`font-mono text-white break-all ${c.solana ? "text-[11px]" : "text-xs"}`}
-                          >
-                            {c.address}
-                          </span>
-                          <a
-                            href={c.explorer}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 transition-colors shrink-0"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-4 py-3 text-center">
-                        {c.internal ? (
-                          <Link
-                            href={c.go}
-                            className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 transition-all hover:-translate-y-0.5 shadow-lg shadow-violet-500/25"
-                          >
-                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="white" />
-                          </Link>
-                        ) : (
-                          <a
-                            href={c.go}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 transition-all hover:-translate-y-0.5 shadow-lg shadow-violet-500/25"
-                          >
-                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="white" />
-                          </a>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-
-                  {/* Simulate Dividends row */}
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="px-4 py-8 text-center"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, rgba(106,161,116,0.12), rgba(139,191,145,0.08))",
-                      }}
-                    >
-                      <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white to-emerald-300 bg-clip-text text-transparent mb-5">
-                        Simulate Dividends
-                      </div>
-                      <a
-                        href="https://moneyfund.com/try"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2.5 bg-gradient-to-r from-violet-600 to-purple-500 text-white font-semibold text-sm sm:text-base px-8 py-3.5 rounded-xl shadow-[0_8px_20px_rgba(107,70,193,0.4)] hover:shadow-[0_12px_30px_rgba(107,70,193,0.6)] hover:from-violet-500 hover:to-purple-400 hover:-translate-y-1 transition-all"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          viewBox="0 0 24 24"
-                          fill="white"
+        <div className="rounded-2xl border border-brand-800/60 bg-brand-950 overflow-hidden">
+          {/* Desktop table */}
+          <div className="hidden sm:block">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-brand-800/60">
+                  <th className="px-4 py-2.5 text-[10px] uppercase font-semibold tracking-[0.15em] text-brand-500">
+                    Contract
+                  </th>
+                  <th className="px-4 py-2.5 text-[10px] uppercase font-semibold tracking-[0.15em] text-brand-500">
+                    Address
+                  </th>
+                  <th className="px-4 py-2.5 text-[10px] uppercase font-semibold tracking-[0.15em] text-brand-500 text-right">
+                    Links
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {CONTRACTS.map((c) => (
+                  <tr
+                    key={c.address}
+                    className="border-b border-brand-800/40 last:border-b-0 hover:bg-brand-800/20 transition-colors"
+                  >
+                    <td className="px-4 py-2.5 text-[13px] font-semibold text-brand-200 whitespace-nowrap">
+                      {c.name}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="font-mono text-[11px] text-brand-400 whitespace-nowrap">
+                        {c.address}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <CopyButton text={c.address} />
+                        <a
+                          href={c.explorer}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-brand-800/80 text-brand-400 hover:bg-brand-700/80 hover:text-brand-200 transition-colors shrink-0"
+                          title="View on explorer"
                         >
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        Try It Now
-                      </a>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <GoLink c={c} />
+                      </div>
                     </td>
                   </tr>
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile list */}
+          <div className="sm:hidden divide-y divide-brand-800/40">
+            {CONTRACTS.map((c) => (
+              <div
+                key={c.address}
+                className="px-4 py-3 flex items-center gap-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold text-brand-200 mb-1">
+                    {c.name}
+                  </div>
+                  <div className="overflow-x-auto scrollbar-none">
+                    <span className="font-mono text-[11px] text-brand-500 whitespace-nowrap">
+                      {c.address}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <CopyButton text={c.address} />
+                  <a
+                    href={c.explorer}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-brand-800/80 text-brand-400 hover:bg-brand-700/80 hover:text-brand-200 transition-colors"
+                    title="View on explorer"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <GoLink c={c} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
 
-      <style jsx>{`
-        @keyframes glow {
-          0%,
-          100% {
-            opacity: 0.5;
-          }
-          50% {
-            opacity: 0.85;
-          }
-        }
-      `}</style>
+        {/* Simulate Dividends CTA */}
+        <div className="mt-6 rounded-2xl border border-brand-800/60 bg-brand-950 px-6 py-6 text-center">
+          <p className="text-lg sm:text-xl font-bold text-brand-100 mb-1">
+            Simulate Dividends
+          </p>
+          <p className="text-xs text-brand-500 mb-4">
+            See how staking rewards work before you commit
+          </p>
+          <a
+            href="https://moneyfund.com/try"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-gold/15 text-gold font-semibold text-sm px-6 py-2.5 rounded-lg border border-gold/25 hover:bg-gold/25 transition-all"
+          >
+            Try It Now
+            <ArrowRight className="w-4 h-4" />
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
