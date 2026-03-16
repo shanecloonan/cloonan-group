@@ -436,6 +436,9 @@ export default function GatewayPage() {
             Arweave <span className="text-purple-400">Gateway</span>
           </h1>
           <p className="text-xs text-white/30 mt-1">Ground-up permaweb access by MoneyFund</p>
+          <Link href="/permawrite" className="inline-flex items-center gap-1.5 mt-2 text-[11px] text-sky-400/60 hover:text-sky-400 transition-colors">
+            Go to PermaWrite →
+          </Link>
         </div>
 
         {/* Tab bar */}

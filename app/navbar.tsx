@@ -10,6 +10,7 @@ const BASE_NAV = [
   { label: "Contracts", href: "/contracts" },
   { label: "Wallets", href: "/wallets" },
   { label: "Gateway", href: "/gateway" },
+  { label: "PermaWrite", href: "/permawrite" },
   { label: "About", href: "/about" },
 ];
 
