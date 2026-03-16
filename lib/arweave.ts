@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { ARWEAVE_GATEWAY_URL, ARWEAVE_DIRECT_GATEWAYS } from "./config";
 import { uploadToTurbo, uploadFileToTurbo, getTurboPrice, getTurboBalance, wincToAr } from "./turbo";
+import { isArConnectAvailable, dispatchTransaction, type DispatchResult } from "./arconnect";
 import type {
   ArweaveTag,
   ArweaveNetworkInfo,
@@ -615,6 +616,46 @@ export class ArweaveGateway {
     }
     const result = await this.uploadFile(file, tags, jwk, description, onProgress);
     return { ...result, method: "l1" };
+  }
+
+  /* ---- ArConnect dispatch (bundled via browser extension) ---- */
+
+  async uploadViaArConnect(
+    data: Uint8Array,
+    tags: ArweaveTag[],
+    description?: string,
+  ): Promise<ArweaveUploadResult> {
+    if (!isArConnectAvailable()) throw new Error("ArConnect not available");
+
+    const allTags: ArweaveTag[] = [
+      ...tags,
+      { name: "App-Name", value: "MoneyFund" },
+      { name: "App-Version", value: "1.0" },
+    ];
+
+    const result = await dispatchTransaction(data, allTags) as DispatchResult;
+
+    const contentTag = tags.find((t) => t.name.toLowerCase() === "content-type");
+    const ct = contentTag?.value || "application/octet-stream";
+
+    const { data: session } = await supabase.auth.getSession();
+    const userId = session.session?.user?.id;
+    if (userId) {
+      await supabase.from("arweave_uploads").insert({
+        user_id: userId,
+        tx_id: result.id,
+        data_size: data.byteLength,
+        content_type: ct,
+        tags: allTags,
+        status: result.type === "BUNDLED" ? "confirmed" : "submitted",
+        cost_winston: "0",
+        cost_ar: "0",
+        description: description || null,
+        upload_method: result.type === "BUNDLED" ? "turbo" : "l1",
+      });
+    }
+
+    return { txId: result.id, status: 200, cost: null };
   }
 
   /* ---- Turbo balance & pricing ---- */

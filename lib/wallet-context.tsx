@@ -23,6 +23,13 @@ import {
 import { ethers } from "ethers";
 import { RPC_URL } from "./config";
 import type { EthWallet, ArweaveWalletData, WalletRow } from "./wallet-types";
+import {
+  isArConnectAvailable,
+  waitForArConnect,
+  connectArConnect,
+  disconnectArConnect,
+  getArConnectAddress,
+} from "./arconnect";
 
 const VAULT_KEY_SESSION = "mf_vault_key";
 
@@ -53,6 +60,9 @@ interface WalletContextValue {
 
   arweaveWallet: ArweaveWalletData | null;
   setArweaveWallet: (jwk: JsonWebKey | null) => Promise<void>;
+  arConnectAvailable: boolean;
+  connectArConnectWallet: () => Promise<string>;
+  disconnectArConnectWallet: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -76,6 +86,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [ethWallets, setEthWallets] = useState<EthWallet[]>([]);
   const [selectedEthAddress, setSelectedEthAddress] = useState<string | null>(null);
   const [arweaveWallet, setArweaveWalletState] = useState<ArweaveWalletData | null>(null);
+  const [arConnectAvailable, setArConnectAvailable] = useState(false);
 
   const selectedEthWallet = useMemo(
     () => ethWallets.find((w) => w.address === selectedEthAddress) ?? null,
@@ -117,7 +128,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           try {
             const raw = await decrypt(r.encrypted_key, r.iv, key);
             const jwk = JSON.parse(raw) as JsonWebKey;
-            ar = { jwk, address: r.address };
+            ar = { jwk, address: r.address, source: "jwk" };
           } catch (err) {
             console.warn("Arweave wallet decryption failed for", r.address, err);
           }
@@ -212,6 +223,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     };
     if (typeof window !== "undefined" && window.ethereum) {
       window.ethereum.on?.("chainChanged", onChainChanged);
+    }
+
+    // Detect ArConnect
+    if (typeof window !== "undefined") {
+      if (isArConnectAvailable()) {
+        setArConnectAvailable(true);
+      } else {
+        waitForArConnect(3000).then((found) => {
+          if (mounted) setArConnectAvailable(found);
+        });
+      }
     }
 
     return () => {
@@ -456,10 +478,44 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         { onConflict: "user_id,address,chain" },
       );
 
-      setArweaveWalletState({ jwk, address });
+      setArweaveWalletState({ jwk, address, source: "jwk" });
     },
     [user],
   );
+
+  /* ------------------------------------------------------------------ */
+  /*  ArConnect                                                          */
+  /* ------------------------------------------------------------------ */
+
+  const connectArConnectWallet = useCallback(async (): Promise<string> => {
+    const info = await connectArConnect();
+
+    // ArConnect doesn't expose the JWK — we store a placeholder.
+    // Operations that need signing should use ArConnect's APIs.
+    // We create a minimal JWK with just the public key 'n' for address derivation.
+    const pubKey = info.publicKey;
+
+    const minimalJwk: JsonWebKey = {
+      kty: "RSA",
+      e: "AQAB",
+      n: pubKey,
+    };
+
+    setArweaveWalletState({
+      jwk: minimalJwk,
+      address: info.address,
+      source: "arconnect",
+    });
+
+    return info.address;
+  }, []);
+
+  const disconnectArConnectWallet = useCallback(async () => {
+    await disconnectArConnect();
+    if (arweaveWallet?.source === "arconnect") {
+      setArweaveWalletState(null);
+    }
+  }, [arweaveWallet]);
 
   /* ------------------------------------------------------------------ */
   /*  getSigner                                                          */
@@ -508,6 +564,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       getSigner,
       arweaveWallet,
       setArweaveWallet,
+      arConnectAvailable,
+      connectArConnectWallet,
+      disconnectArConnectWallet,
     }),
     [
       user, session, isLoading, isAdmin, signUp, signIn, signOut, resetPassword, updatePassword,
@@ -515,6 +574,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       ethWallets, selectedEthAddress, selectedEthWallet,
       selectEthWallet, addEthWallet, removeEthWallet, connectMetaMask, getSigner,
       arweaveWallet, setArweaveWallet,
+      arConnectAvailable, connectArConnectWallet, disconnectArConnectWallet,
     ],
   );
 

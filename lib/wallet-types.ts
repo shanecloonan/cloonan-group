@@ -4,9 +4,12 @@ export interface EthWallet {
   type: "moneyfund" | "metamask";
 }
 
+export type ArweaveWalletSource = "jwk" | "arconnect";
+
 export interface ArweaveWalletData {
   jwk: JsonWebKey;
   address: string;
+  source: ArweaveWalletSource;
 }
 
 export interface WalletRow {

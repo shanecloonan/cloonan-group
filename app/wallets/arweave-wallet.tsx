@@ -31,7 +31,7 @@ const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px
 /* ================================================================== */
 
 export default function ArweaveWallet() {
-  const { arweaveWallet, setArweaveWallet: saveArweaveWallet } = useWallet();
+  const { arweaveWallet, setArweaveWallet: saveArweaveWallet, arConnectAvailable, connectArConnectWallet, disconnectArConnectWallet } = useWallet();
   const gw = useMemo(() => new ArweaveGateway(), []);
 
   const [address, setAddress] = useState("");
@@ -50,6 +50,7 @@ export default function ArweaveWallet() {
   const [expStatus, setExpStatus] = useState<StatusMsg | null>(null);
   const [sendStatus, setSendStatus] = useState<StatusMsg | null>(null);
   const [uploadStatus, setUploadStatus] = useState<StatusMsg | null>(null);
+  const [acStatus, setAcStatus] = useState<StatusMsg | null>(null);
 
   /* Upload tags */
   const [uploadTags, setUploadTags] = useState<ArweaveTag[]>([]);
@@ -105,6 +106,16 @@ export default function ArweaveWallet() {
   }, [gw, arTab, dataText]);
 
   /* ---- actions ---- */
+  const handleArConnect = useCallback(async () => {
+    setAcStatus({ text: "Connecting to ArConnect...", type: "loading" });
+    try {
+      const addr = await connectArConnectWallet();
+      setAcStatus({ text: `Connected! Address: ${addr.slice(0, 8)}...${addr.slice(-6)}`, type: "success" });
+    } catch (e: unknown) {
+      setAcStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
+    }
+  }, [connectArConnectWallet]);
+
   const handleGenerate = useCallback(async () => {
     setGenStatus({ text: "Generating keypair... (2-3 sec)", type: "loading" });
     try {
@@ -267,6 +278,19 @@ export default function ArweaveWallet() {
       {/* ── Setup Tab ── */}
       {arTab === "setup" && (
         <div className="space-y-4">
+          {/* ArConnect */}
+          {arConnectAvailable && (
+            <div className={`${card} p-5 space-y-4 border-emerald-500/10`}>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-white/80">Connect ArConnect</h3>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">DETECTED</span>
+              </div>
+              <p className="text-xs text-white/30 -mt-2">Connect your ArConnect (Wander) browser wallet. Keys stay in the extension — no vault storage needed.</p>
+              <button type="button" onClick={handleArConnect} className="w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer">Connect ArConnect</button>
+              {renderStatus(acStatus)}
+            </div>
+          )}
+
           <div className={`${card} p-5 space-y-4`}>
             <h3 className="text-sm font-semibold text-white/80">Generate New Wallet</h3>
             <p className="text-xs text-white/30 -mt-2">Create a fresh RSA-4096 keypair encrypted in your vault.</p>
@@ -294,7 +318,15 @@ export default function ArweaveWallet() {
         <div className="space-y-4">
           <div className={`${card} p-5`}>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Balance</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Balance</span>
+                {arweaveWallet?.source === "arconnect" && (
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">ArConnect</span>
+                )}
+                {arweaveWallet?.source === "jwk" && (
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 font-semibold">Vault Key</span>
+                )}
+              </div>
               <button type="button" onClick={() => { if (address) refreshBalance(address); }} className={pillBtn}>
                 Refresh
               </button>
@@ -331,8 +363,14 @@ export default function ArweaveWallet() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" onClick={handleExport} className={btnPrimary}>Download Key</button>
-            <button type="button" onClick={handleClear} className={btnGhost}>Clear Wallet</button>
+            {arweaveWallet?.source === "jwk" && (
+              <button type="button" onClick={handleExport} className={btnPrimary}>Download Key</button>
+            )}
+            {arweaveWallet?.source === "arconnect" ? (
+              <button type="button" onClick={async () => { await disconnectArConnectWallet(); setArTab("setup"); }} className={`${btnGhost} col-span-2`}>Disconnect ArConnect</button>
+            ) : (
+              <button type="button" onClick={handleClear} className={btnGhost}>Clear Wallet</button>
+            )}
           </div>
           {renderStatus(expStatus)}
         </div>
