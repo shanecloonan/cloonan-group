@@ -11,14 +11,19 @@ Chart.register(...registerables);
 
 const SECTIONS = [
   { id: "overview", label: "Overview" },
+  { id: "start", label: "Get Started" },
+  { id: "architecture", label: "Architecture" },
   { id: "diagrams", label: "U-Diagrams" },
   { id: "dividends", label: "Dividend Pool" },
   { id: "trilayer", label: "Tri-Layer" },
+  { id: "tokenomics", label: "Tokenomics" },
   { id: "contracts", label: "Contracts" },
+  { id: "security", label: "Security" },
   { id: "arweave", label: "Arweave" },
   { id: "fees", label: "Fee Structure" },
   { id: "faq", label: "FAQ" },
   { id: "gas", label: "Gas Calculator" },
+  { id: "glossary", label: "Glossary" },
 ];
 
 /* ================================================================== */
@@ -215,6 +220,217 @@ function arweaveLayerLabel(l: ArweaveFeatureLayer) {
   if (l === "wallet") return "Wallet";
   return "";
 }
+
+/* ================================================================== */
+/*  ARCHITECTURE                                                       */
+/* ================================================================== */
+
+const ARCH_LAYERS: {
+  label: string;
+  color: string;
+  dotColor: string;
+  components: { name: string; detail: string }[];
+}[] = [
+  {
+    label: "Frontend",
+    color: "bg-gradient-to-br from-[#1A2F3C] to-[#1F3A4A]",
+    dotColor: "bg-cyan-400",
+    components: [
+      { name: "Next.js 16 (App Router)", detail: "Server and client components with file-based routing, server actions, and Turbopack for fast builds." },
+      { name: "React 19", detail: "Client-side interactivity with hooks, Suspense boundaries, and dynamic imports for code-split Arweave modules." },
+      { name: "Tailwind CSS v4", detail: "Utility-first styling with custom design tokens (brand-*, gold), dark theme, and responsive breakpoints." },
+      { name: "Chart.js", detail: "Interactive fee distribution charts, gas comparison visualizations, and data-driven dashboards." },
+    ],
+  },
+  {
+    label: "Backend & Auth",
+    color: "bg-gradient-to-br from-[#2A2F3C] to-[#35394E]",
+    dotColor: "bg-blue-400",
+    components: [
+      { name: "Supabase (Auth + Postgres)", detail: "Email/password authentication with JWT sessions, row-level security, and Postgres for upload records, bookmarks, and PermaWrite metadata." },
+      { name: "Supabase Edge Functions", detail: "Serverless Arweave gateway proxy that handles peer discovery, request routing, caching, and cost estimation without exposing infrastructure." },
+      { name: "Encrypted Vault", detail: "AES-GCM encrypted local storage for private keys. Ethereum keys and Arweave JWKs are encrypted with a user-derived key and never leave the browser unencrypted." },
+    ],
+  },
+  {
+    label: "Ethereum (L1)",
+    color: "bg-gradient-to-br from-[#1A3C34] to-[#1F4A40]",
+    dotColor: "bg-emerald-400",
+    components: [
+      { name: "ethers.js v6", detail: "Ethereum wallet management, contract interaction, transaction signing, and ENS resolution via Infura and Ankr RPC endpoints." },
+      { name: "8 Factory Contracts", detail: "Coin Launcher, ETF Launcher, Dividend Launcher, DAO Launcher, Multisig Launcher, Storefront, Ad Space, and Multiswap — each deploying customizable child contracts." },
+      { name: "MoneyFund DEX", detail: "Custom constant-product AMM with its own liquidity pools, separate from Uniswap routing used by Multiswap." },
+      { name: "Chainlink Price Feeds", detail: "ETH/USD oracle integration for ETF share pricing and USD-denominated fee calculations." },
+    ],
+  },
+  {
+    label: "Arweave (Permaweb)",
+    color: "bg-gradient-to-br from-[#2F2A3C] to-[#3D354E]",
+    dotColor: "bg-violet-400",
+    components: [
+      { name: "ArweaveGateway (custom)", detail: "Full Arweave HTTP client with peer pool management, block browsing, GraphQL queries, transaction submission, and content rendering — zero SDK dependencies." },
+      { name: "Turbo Bundler (ar.io)", detail: "ANS-104 data item creation, deep hash signing, and instant bundled uploads via ArDrive's Turbo service." },
+      { name: "AO Compute Layer", detail: "Hyper-parallel process messaging via Compute Units (read) and Messenger Units (write) with token balance management." },
+      { name: "Warp SmartWeave", detail: "Contract state reading via DRE nodes, Atomic Asset parsing, PST balance queries, and Vouch Protocol integration." },
+    ],
+  },
+];
+
+/* ================================================================== */
+/*  SECURITY                                                           */
+/* ================================================================== */
+
+const SECURITY_PRINCIPLES: {
+  title: string;
+  icon: string;
+  description: string;
+  details: string[];
+}[] = [
+  {
+    title: "Non-Custodial by Design",
+    icon: "🔑",
+    description: "MoneyFund never holds, accesses, or transmits your private keys. All signing happens locally in the browser.",
+    details: [
+      "Ethereum private keys are derived from user-provided mnemonic phrases and encrypted with AES-GCM before storage",
+      "Arweave JWK keypairs are generated using Web Crypto API (RSA-PSS, 4096-bit) and stored encrypted in the vault",
+      "The encrypted vault is locked with a user-chosen password — losing the password means the vault is irrecoverable",
+      "No server-side key storage — Supabase stores only public metadata (addresses, upload records, bookmarks)",
+    ],
+  },
+  {
+    title: "Smart Contract Safety",
+    icon: "🛡",
+    description: "All factory contracts follow battle-tested patterns to prevent common attack vectors.",
+    details: [
+      "ReentrancyGuard on all state-changing functions that handle ETH or token transfers",
+      "Checks-Effects-Interactions pattern enforced throughout the codebase",
+      "Immutable parameters: once a dividend pool, token, or storefront is deployed, core settings cannot be altered",
+      "62,000+ lines of Solidity — full source will be open-sourced at $1M market cap for public audit",
+    ],
+  },
+  {
+    title: "Transport & Session Security",
+    icon: "🔒",
+    description: "All network communication is encrypted and sessions are scoped with minimal privilege.",
+    details: [
+      "Supabase Auth with JWT tokens — sessions expire and refresh automatically",
+      "Row-level security (RLS) policies on all Supabase tables — users can only access their own data",
+      "Arweave transactions are signed client-side using RSA-PSS + SHA-256 before submission",
+      "HTTPS-only communication with all external services (Arweave gateways, Turbo, AO, Warp DRE)",
+    ],
+  },
+  {
+    title: "Transparency & Immutability",
+    icon: "📋",
+    description: "On-chain contracts are transparent by default — every function call and event is publicly auditable.",
+    details: [
+      "All contract actions emit events that are permanently recorded on Ethereum",
+      "No admin keys or upgrade proxies — deployed contracts are immutable",
+      "Fee splits are hardcoded in factory bytecode and cannot be changed post-deployment",
+      "Storefront listing timelocks provide verifiable minimum listing durations for investor confidence",
+    ],
+  },
+];
+
+/* ================================================================== */
+/*  TOKENOMICS                                                         */
+/* ================================================================== */
+
+const TOKENOMICS_METRICS: { label: string; value: string; sub: string }[] = [
+  { label: "Token Standard", value: "ERC-20", sub: "Ethereum Mainnet" },
+  { label: "Total Supply", value: "1,000,000,000", sub: "Fixed — no minting function" },
+  { label: "Burn Mechanism", value: "ETF 0.1%", sub: "MONEY burned on each ETF transaction" },
+  { label: "Dividend Source", value: "8 Contracts", sub: "All factories feed the MONEY pool" },
+  { label: "Staking Model", value: "ERC-721 NFT", sub: "Stake receipt is a transferable NFT" },
+  { label: "Fee Split", value: "50 / 50", sub: "MoneyFund Wallet + MONEY Dividends" },
+];
+
+const DIVIDEND_MATH = [
+  { label: "Your share", formula: "your_staked / total_staked", example: "If you stake 1,000 MONEY and the total pool is 10,000 → your share is 10%" },
+  { label: "Reward claim", formula: "share × accumulated_rewards", example: "If the pool has accumulated 5 ETH in rewards and your share is 10% → you can claim 0.5 ETH" },
+  { label: "Early unstake penalty", formula: "initialPenalty - (daysElapsed × dailyDecay)", example: "If initial penalty is 50% and daily decay is 1%, after 20 days → penalty = 50% - 20% = 30%" },
+  { label: "Storefront payout", formula: "sale_price × 0.996 → shareholders", example: "On a 1 ETH sale, 0.004 ETH goes to MF fees, 0.996 ETH is split among shareholders" },
+];
+
+/* ================================================================== */
+/*  GETTING STARTED                                                    */
+/* ================================================================== */
+
+const GETTING_STARTED_STEPS: {
+  step: number;
+  title: string;
+  description: string;
+  link?: { label: string; href: string };
+}[] = [
+  {
+    step: 1,
+    title: "Create an Account",
+    description: "Sign up with your email address. MoneyFund uses Supabase Auth — your credentials are hashed and stored securely, and session tokens refresh automatically.",
+    link: { label: "Sign In", href: "/auth" },
+  },
+  {
+    step: 2,
+    title: "Unlock the Vault",
+    description: "Set a vault password to encrypt your local key store. This password encrypts all private keys using AES-GCM before they touch storage. If you lose this password, your vault is unrecoverable — there are no resets.",
+    link: { label: "Go to Wallets", href: "/wallets" },
+  },
+  {
+    step: 3,
+    title: "Set Up an Ethereum Wallet",
+    description: "Import an existing mnemonic (12 or 24 words) or generate a new one. Your private key is derived locally using BIP-39/BIP-44 and never leaves your browser unencrypted. Fund with ETH for gas fees.",
+    link: { label: "Wallets", href: "/wallets" },
+  },
+  {
+    step: 4,
+    title: "Set Up an Arweave Wallet (Optional)",
+    description: "Generate a new RSA-4096 keypair or import an existing JWK file. This wallet is used for permanent storage on Arweave, AO compute operations, and PermaWrite. You can also connect ArConnect for browser-extension signing.",
+    link: { label: "Wallets → Arweave", href: "/wallets" },
+  },
+  {
+    step: 5,
+    title: "Explore the Platform",
+    description: "Deploy smart contracts from the Contracts page, upload files permanently with PermaWrite, browse the permaweb through the Gateway, or use the Multiswap for batch token operations.",
+    link: { label: "Contracts", href: "/contracts" },
+  },
+  {
+    step: 6,
+    title: "Stake MONEY for Dividends",
+    description: "Once you hold MONEY tokens, stake them in the dividend pool to earn a proportional share of all platform fees. Your stake is represented as a transferable ERC-721 NFT.",
+  },
+];
+
+/* ================================================================== */
+/*  GLOSSARY                                                           */
+/* ================================================================== */
+
+const GLOSSARY_TERMS: { term: string; definition: string; category: string }[] = [
+  { term: "ERC-20", definition: "The standard interface for fungible tokens on Ethereum. All tokens launched via Coin Launcher and ETFs follow this standard.", category: "Ethereum" },
+  { term: "ERC-721", definition: "The standard for non-fungible tokens (NFTs). MoneyFund uses ERC-721 for dividend staking receipts and storefront listings.", category: "Ethereum" },
+  { term: "AMM", definition: "Automated Market Maker — a decentralized exchange mechanism that uses liquidity pools and a mathematical formula (constant product: x × y = k) instead of an order book.", category: "Ethereum" },
+  { term: "LP", definition: "Liquidity Provider — a user who deposits tokens into an AMM pool to earn a share of trading fees.", category: "Ethereum" },
+  { term: "Gas", definition: "The unit measuring computational effort on Ethereum. Each operation costs a specific amount of gas, paid in ETH. Multiswap bundles operations to reduce total gas.", category: "Ethereum" },
+  { term: "Wei / Gwei", definition: "Units of ETH. 1 ETH = 10¹⁸ wei = 10⁹ gwei. Gas prices are typically quoted in gwei.", category: "Ethereum" },
+  { term: "Basis Points (bps)", definition: "A unit equal to 1/100th of a percent. 10,000 bps = 100%. MoneyFund uses bps for fee shares and allocation weights.", category: "Ethereum" },
+  { term: "ReentrancyGuard", definition: "A smart contract pattern that prevents a function from being called again before it finishes executing. Prevents the classic reentrancy attack vector.", category: "Ethereum" },
+  { term: "Factory Contract", definition: "A smart contract that deploys other smart contracts. Each MoneyFund launcher is a factory that creates customized child contracts.", category: "Ethereum" },
+  { term: "Arweave", definition: "A permanent data storage blockchain. Unlike IPFS (content-addressed but not guaranteed persistent), Arweave pays miners to store data forever via a one-time endowment fee.", category: "Arweave" },
+  { term: "Permaweb", definition: "The permanent web built on Arweave. Once data is uploaded, it is accessible forever via its transaction ID through any Arweave gateway.", category: "Arweave" },
+  { term: "JWK", definition: "JSON Web Key — the RSA keypair format used by Arweave wallets. Contains the public key (n) and private key components (d, p, q, dp, dq, qi).", category: "Arweave" },
+  { term: "Winston", definition: "The smallest unit of AR (Arweave's native token). 1 AR = 10¹² winston. Named after Winston Churchill.", category: "Arweave" },
+  { term: "ANS-104", definition: "Arweave Network Standard for bundled data items. Allows multiple data items to be bundled into a single L1 transaction for efficiency.", category: "Arweave" },
+  { term: "ArNS", definition: "Arweave Name System — maps human-readable names to Arweave transaction IDs, similar to DNS for the permaweb.", category: "Arweave" },
+  { term: "Turbo", definition: "ar.io's bundling service for instant Arweave uploads. Data items are signed locally and bundled by the service, providing near-instant confirmation.", category: "Arweave" },
+  { term: "AO", definition: "Arweave Operating System — a hyper-parallel compute environment where processes run as permanent on-chain programs with message-passing architecture.", category: "Arweave" },
+  { term: "CU / MU", definition: "Compute Unit and Messenger Unit — the two core AO services. CU executes read-only evaluations (dryrun), MU handles signed message delivery.", category: "Arweave" },
+  { term: "SmartWeave", definition: "A smart contract protocol on Arweave where contract logic is stored on-chain and state is lazily evaluated by reading interaction transactions.", category: "Arweave" },
+  { term: "DRE", definition: "Distributed Resolution Environment — Warp's network of nodes that pre-compute and cache SmartWeave contract states for fast reads.", category: "Arweave" },
+  { term: "PST", definition: "Profit Sharing Token — an Arweave SmartWeave token standard where holders earn a share of usage fees paid to the associated application.", category: "Arweave" },
+  { term: "Atomic Asset", definition: "An Arweave NFT standard where the content data and the SmartWeave contract state live in a single transaction — the asset is its own contract.", category: "Arweave" },
+  { term: "Supabase", definition: "An open-source Firebase alternative providing Postgres database, authentication, edge functions, and row-level security. MoneyFund uses it for user accounts and metadata.", category: "Platform" },
+  { term: "Vault", definition: "MoneyFund's encrypted local key store. Private keys are AES-GCM encrypted with a user password and stored in the browser. Non-custodial — no server backup.", category: "Platform" },
+  { term: "MFTL Token", definition: "MoneyFund Tri-Layer Token — any ERC-20 token deployed through the MoneyFund launchpad that connects to the tri-layer ecosystem.", category: "Platform" },
+  { term: "PermaWrite", definition: "MoneyFund's permanent file storage system built on Arweave. Files are categorized, tagged, and stored forever with optional private/public visibility.", category: "Platform" },
+];
 
 /* ================================================================== */
 /*  GAS CALCULATOR                                                     */
@@ -567,6 +783,98 @@ export default function AboutApp() {
           </div>
         </section>
 
+        {/* ═══════════ GETTING STARTED ═══════════ */}
+        <section id="start" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="Set up your account and wallets in a few minutes">Getting Started</SectionHeading>
+
+          <div className="space-y-3">
+            {GETTING_STARTED_STEPS.map((s) => (
+              <div key={s.step} className={`${card} overflow-hidden`}>
+                <div className="flex items-start gap-4 p-5 sm:p-6">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-white/[0.08] flex items-center justify-center text-sm font-bold text-cyan-300/70 shrink-0">
+                    {s.step}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-white/80 mb-1">{s.title}</h3>
+                    <p className="text-xs text-white/45 leading-relaxed">{s.description}</p>
+                    {s.link && (
+                      <a href={s.link.href} className="inline-block mt-2 text-[10px] text-cyan-400/60 hover:text-cyan-300 uppercase tracking-wider font-semibold transition-colors">
+                        {s.link.label} →
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className={`${card} p-4 text-center`}>
+            <p className="text-[10px] text-white/20 leading-relaxed">
+              MoneyFund is non-custodial — you are responsible for backing up your mnemonic phrases and Arweave JWK files.
+              There is no password reset or key recovery. Store backups securely offline.
+            </p>
+          </div>
+        </section>
+
+        {/* ═══════════ ARCHITECTURE ═══════════ */}
+        <section id="architecture" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="How the frontend, backend, Ethereum, and Arweave layers connect">System Architecture</SectionHeading>
+
+          <div className={`${card} p-6 sm:p-8`}>
+            <p className="text-[13px] text-white/60 leading-relaxed">
+              MoneyFund is a multi-chain application spanning two blockchains (Ethereum and Arweave) with a Supabase backend for authentication, metadata storage, and serverless gateway proxying. The frontend is a single Next.js 16 application that communicates directly with both chains from the browser — private keys never leave the client. The architecture is designed for zero SDK dependencies on the Arweave side, using direct HTTP and GraphQL calls for maximum control and minimal bundle size.
+            </p>
+          </div>
+
+          {/* Connection diagram */}
+          <div className={`${card} p-5 sm:p-6`}>
+            <div className="flex items-center justify-center gap-2 flex-wrap text-[10px] font-mono text-white/30 mb-4">
+              <span className="px-2 py-1 rounded bg-cyan-500/10 text-cyan-300/60 border border-cyan-500/20">Browser</span>
+              <span className="text-white/15">→</span>
+              <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-300/60 border border-blue-500/20">Supabase</span>
+              <span className="text-white/15">→</span>
+              <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-300/60 border border-emerald-500/20">Ethereum</span>
+              <span className="text-white/15">+</span>
+              <span className="px-2 py-1 rounded bg-violet-500/10 text-violet-300/60 border border-violet-500/20">Arweave</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-center">
+              {[
+                { label: "Client Signing", desc: "All TX signing happens in the browser. Keys are AES-GCM encrypted in local vault.", color: "border-cyan-500/20" },
+                { label: "Edge Proxy", desc: "Supabase Edge Functions route Arweave requests through the peer pool.", color: "border-blue-500/20" },
+                { label: "Direct Peers", desc: "Arweave data fetched from discovered peer nodes. Public gateways as fallback only.", color: "border-violet-500/20" },
+                { label: "Multi-RPC", desc: "Ethereum calls load-balanced across Infura, Ankr, and Cloudflare RPCs.", color: "border-emerald-500/20" },
+              ].map((item) => (
+                <div key={item.label} className={`rounded-xl bg-white/[0.02] border ${item.color} p-3`}>
+                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1">{item.label}</p>
+                  <p className="text-[10px] text-white/30 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Stack layers */}
+          <div className="space-y-4">
+            {ARCH_LAYERS.map((layer) => (
+              <div key={layer.label} className={`${layer.color} rounded-2xl border border-white/[0.06] overflow-hidden`}>
+                <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full ${layer.dotColor}`} />
+                  <h3 className="text-base font-bold text-white">{layer.label}</h3>
+                </div>
+                <div className="p-5 sm:p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {layer.components.map((comp) => (
+                      <div key={comp.name} className="space-y-1">
+                        <p className="text-xs font-semibold text-white/70">{comp.name}</p>
+                        <p className="text-[11px] text-white/40 leading-relaxed">{comp.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* ═══════════ U-DIAGRAMS ═══════════ */}
         <section id="diagrams" className="space-y-8 scroll-mt-28">
           <SectionHeading sub="How MoneyFund compares to equities and shitcoins">Value Flow Diagrams</SectionHeading>
@@ -668,6 +976,67 @@ export default function AboutApp() {
           </div>
         </section>
 
+        {/* ═══════════ TOKENOMICS ═══════════ */}
+        <section id="tokenomics" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="MONEY token supply, burns, staking mechanics, and fee math">MONEY Tokenomics</SectionHeading>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {TOKENOMICS_METRICS.map((m) => (
+              <div key={m.label} className={`${card} p-4 text-center`}>
+                <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">{m.label}</p>
+                <p className="text-lg font-bold text-white mt-1">{m.value}</p>
+                <p className="text-[10px] text-white/25 mt-0.5">{m.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className={`${card} p-6 sm:p-8`}>
+            <p className="text-[13px] text-white/60 leading-relaxed">
+              The MONEY token has a fixed supply of 1 billion tokens with no minting function — the supply can only decrease through burns. Every ETF transaction burns 0.1% of the fee in MONEY, creating deflationary pressure proportional to platform usage. Revenue from all eight factory contracts is funneled into the MONEY dividend pool, where stakers earn a proportional share based on their staked amount relative to the total pool. Staking issues a transferable ERC-721 NFT, meaning staked positions can be traded on secondary markets like OpenSea while the underlying tokens remain locked.
+            </p>
+          </div>
+
+          <div className={`${card} overflow-hidden`}>
+            <div className="px-6 py-4 border-b border-white/[0.06]">
+              <h3 className="text-sm font-bold text-white/80">Dividend & Fee Math</h3>
+              <p className="text-[10px] text-white/30 mt-0.5">How rewards, penalties, and payouts are calculated</p>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              {DIVIDEND_MATH.map((item) => (
+                <div key={item.label} className="px-6 py-4 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-white/70">{item.label}</span>
+                    <code className="text-[10px] font-mono text-cyan-300/50 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/10">{item.formula}</code>
+                  </div>
+                  <p className="text-[11px] text-white/35 leading-relaxed">{item.example}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className={`${card} p-5`}>
+            <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">Revenue Flow Summary</h3>
+            <div className="space-y-2">
+              {[
+                { source: "All 8 factories", split: "50% MoneyFund Wallet + 50% MONEY Dividends", note: "Base platform fees" },
+                { source: "ETF transactions", split: "0.125% + 0.125% + 0.1% MONEY burn", note: "Deflationary burn on every ETF trade" },
+                { source: "Custom creator fees", split: "Up to 3% set by contract creators", note: "70% to creator receivers, 30% to MF" },
+                { source: "DEX LP fees", split: "0.3% to liquidity providers", note: "Separate from the 0.1% + 0.1% MF fee" },
+              ].map((item) => (
+                <div key={item.source} className="flex items-start gap-3 text-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60 mt-1.5 shrink-0" />
+                  <div>
+                    <span className="text-white/60 font-medium">{item.source}</span>
+                    <span className="text-white/25 mx-2">→</span>
+                    <span className="text-white/40">{item.split}</span>
+                    <p className="text-[10px] text-white/20 mt-0.5">{item.note}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ═══════════ CONTRACTS ═══════════ */}
         <section id="contracts" className="space-y-6 scroll-mt-28">
           <SectionHeading sub="Detailed breakdown of each factory contract">Smart Contracts</SectionHeading>
@@ -691,6 +1060,41 @@ export default function AboutApp() {
               </div>
             </div>
           ))}
+        </section>
+
+        {/* ═══════════ SECURITY ═══════════ */}
+        <section id="security" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="Non-custodial design, on-chain immutability, and zero-trust architecture">Security Model</SectionHeading>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {SECURITY_PRINCIPLES.map((p) => (
+              <div key={p.title} className={`${card} overflow-hidden`}>
+                <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
+                  <span className="text-lg">{p.icon}</span>
+                  <h3 className="text-sm font-bold text-white/80">{p.title}</h3>
+                </div>
+                <div className="p-5 space-y-3">
+                  <p className="text-xs text-white/50 leading-relaxed">{p.description}</p>
+                  <ul className="space-y-1.5">
+                    {p.details.map((d, i) => (
+                      <li key={i} className="flex items-start gap-2 text-[11px] text-white/35 leading-relaxed">
+                        <span className="w-1 h-1 rounded-full bg-emerald-400/60 mt-1.5 shrink-0" />
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className={`${card} p-5`}>
+            <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">Audit Status</h3>
+            <div className="space-y-2 text-xs text-white/45 leading-relaxed">
+              <p>MoneyFund smart contracts have not yet undergone a formal third-party audit. The full Solidity source code (62,000+ lines) will be released for public audit once the MONEY token reaches a $1 million market cap.</p>
+              <p>In the meantime, all contract actions are transparent on-chain — every function call, event emission, and state change is publicly verifiable via Etherscan. The contracts use established patterns (OpenZeppelin ReentrancyGuard, Checks-Effects-Interactions) and have been internally reviewed.</p>
+            </div>
+          </div>
         </section>
 
         {/* ═══════════ ARWEAVE ═══════════ */}
@@ -896,6 +1300,31 @@ export default function AboutApp() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* ═══════════ GLOSSARY ═══════════ */}
+        <section id="glossary" className="space-y-6 scroll-mt-28">
+          <SectionHeading sub="Definitions of key terms used throughout the documentation">Glossary</SectionHeading>
+
+          {(["Ethereum", "Arweave", "Platform"] as const).map((cat) => {
+            const terms = GLOSSARY_TERMS.filter((t) => t.category === cat);
+            return (
+              <div key={cat}>
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <span className={`w-2 h-2 rounded-full ${cat === "Ethereum" ? "bg-emerald-400" : cat === "Arweave" ? "bg-violet-400" : "bg-cyan-400"}`} />
+                  <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider">{cat}</h3>
+                </div>
+                <div className={`${card} overflow-hidden divide-y divide-white/[0.04]`}>
+                  {terms.map((t) => (
+                    <div key={t.term} className="px-5 py-3 flex items-start gap-4">
+                      <code className="text-[11px] font-mono text-cyan-300/60 font-semibold shrink-0 min-w-[120px] sm:min-w-[160px] pt-0.5">{t.term}</code>
+                      <p className="text-[11px] text-white/40 leading-relaxed">{t.definition}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </section>
 
         <p className="text-center text-[11px] text-white/15 pt-8 pb-4">Powered by MoneyFund</p>
