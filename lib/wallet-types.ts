@@ -130,6 +130,23 @@ export interface ArweaveBookmark {
   created_at: string;
 }
 
+export interface ArweavePeerInfo {
+  address: string;
+  health: string;
+  latency_ms: number;
+  block_height: number;
+  version: string | null;
+  successes: number;
+  failures: number;
+  last_seen: string;
+}
+
+export interface ArweavePoolStatus {
+  pool_fresh: boolean;
+  active_peers: number;
+  top_peers: ArweavePeerInfo[];
+}
+
 export interface GqlQueryParams {
   owners?: string[];
   recipients?: string[];

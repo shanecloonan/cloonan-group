@@ -10,6 +10,7 @@ import type {
   ArweaveUploadResult,
   ArweaveUploadRecord,
   ArweaveBookmark,
+  ArweavePoolStatus,
   GqlQueryParams,
 } from "./wallet-types";
 
@@ -167,6 +168,20 @@ export class ArweaveGateway {
   async getPeers(): Promise<string[]> {
     const res = await this.fetchWithFallback("/peers");
     if (!res.ok) throw new Error(`Peers failed: ${res.status}`);
+    return res.json();
+  }
+
+  /* ---- Peer Pool (direct peer access) ---- */
+
+  async getPoolStatus(): Promise<ArweavePoolStatus> {
+    const res = await this.gw("/pool-status");
+    if (!res.ok) throw new Error(`Pool status failed: ${res.status}`);
+    return res.json();
+  }
+
+  async refreshPeerPool(): Promise<{ refreshed: boolean; peers_activated: number }> {
+    const res = await this.gw("/refresh-peers", { method: "POST" });
+    if (!res.ok) throw new Error(`Peer refresh failed: ${res.status}`);
     return res.json();
   }
 
