@@ -1,35 +1,24 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { ethers } from "ethers";
 import { useWallet } from "@/lib/wallet-context";
 import AuthPanel from "@/components/auth-panel";
 import ArweaveWallet from "./arweave-wallet";
+import dynamic from "next/dynamic";
 
-const GatewayContent = dynamic(() => import("@/app/gateway/gateway-content"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-purple-400 rounded-full animate-spin mx-auto" /></div> });
-const PermawriteContent = dynamic(() => import("@/app/permawrite/permawrite-content"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-sky-400 rounded-full animate-spin mx-auto" /></div> });
-const UnifiedUpload = dynamic(() => import("./unified-upload"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-emerald-400 rounded-full animate-spin mx-auto" /></div> });
-const PermaFeed = dynamic(() => import("./permafeed"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-violet-400 rounded-full animate-spin mx-auto" /></div> });
-import {
-  logTransaction,
-  fetchActivity,
-  DAPP_META,
-  ACTION_LABELS,
-  type TxRecord,
-  type DApp,
-} from "@/lib/activity";
+const UnifiedUpload = dynamic(() => import("./unified-upload"), { ssr: false });
+const PermaFeed = dynamic(() => import("./permafeed"), { ssr: false });
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-import { RPC_URL as RPC, ETHERSCAN_API_KEY } from "@/lib/config";
+const RPC = "https://mainnet.infura.io/v3/cf2916fb6dbc47ae824d6f36db817b73";
 const MONEY_ADDRESS = "0x100DB67F41A2dF3c32cC7c0955694b98339B7311";
 const UNISWAP_ROUTER = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-const ETHERSCAN_KEY = ETHERSCAN_API_KEY;
+const ETHERSCAN_KEY = "MB89VXUF27QJHA7QYJMPE9W55UGYZNV39C";
 const ETHERSCAN_API = "https://api.etherscan.io/api";
 
 const ERC20_ABI = [
@@ -67,7 +56,7 @@ const APPS: AppTile[] = [
   { icon: "🎁", title: "Airdropper", url: "https://moneyfund.com/airdrop" },
   { icon: "🤖", title: "Volume Runner", url: "https://moneyfund.com/volume" },
   { icon: "🔍", title: "Block Explorer", url: "https://moneyfund.com/explorer" },
-  { icon: "🌐", title: "ENS Registrar", url: "/ens" },
+  { icon: "🌐", title: "ENS Registrar", url: "https://moneyfund.com/etf/" },
   { icon: "🃏", title: "Blackjack", url: "https://moneyfund.com/blackjack" },
   { icon: "✉️", title: "DMs", url: "https://moneyfund.com/dm" },
   { icon: "💬", title: "Chat", url: "https://moneyfund.com/chat" },
@@ -124,219 +113,17 @@ const labelCls = "block text-white/40 text-xs font-medium uppercase tracking-wid
 const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
 
 /* ================================================================== */
-/*  ACTIVITY TAB COMPONENT                                             */
-/* ================================================================== */
-
-function ActivityTab({
-  user,
-  activities,
-  actTotal,
-  actLoading,
-  actDapp,
-  actSearch,
-  actFrom,
-  actTo,
-  actPage,
-  perPage,
-  setActDapp,
-  setActSearch,
-  setActFrom,
-  setActTo,
-  loadActivity,
-  card,
-  selectCls,
-  inputCls,
-}: {
-  user: { id: string } | null;
-  activities: TxRecord[];
-  actTotal: number;
-  actLoading: boolean;
-  actDapp: DApp | "";
-  actSearch: string;
-  actFrom: string;
-  actTo: string;
-  actPage: number;
-  perPage: number;
-  setActDapp: (v: DApp | "") => void;
-  setActSearch: (v: string) => void;
-  setActFrom: (v: string) => void;
-  setActTo: (v: string) => void;
-  loadActivity: (page?: number) => void;
-  card: string;
-  selectCls: string;
-  inputCls: string;
-}) {
-  useEffect(() => {
-    if (user) loadActivity(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  const totalPages = Math.max(1, Math.ceil(actTotal / perPage));
-
-  const dappOptions: { value: DApp | ""; label: string }[] = [
-    { value: "", label: "All dApps" },
-    ...Object.entries(DAPP_META).map(([key, meta]) => ({
-      value: key as DApp,
-      label: `${meta.icon} ${meta.label}`,
-    })),
-  ];
-
-  function relativeTime(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    if (days < 30) return `${days}d ago`;
-    return new Date(iso).toLocaleDateString();
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className={`${card} p-4 space-y-3`}>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <select
-            value={actDapp}
-            onChange={(e) => setActDapp(e.target.value as DApp | "")}
-            className={`sm:w-48 ${selectCls}`}
-          >
-            {dappOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <input
-            value={actSearch}
-            onChange={(e) => setActSearch(e.target.value)}
-            placeholder="Search tx hash, address, action…"
-            className={`flex-1 ${inputCls}`}
-          />
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-          <div className="flex items-center gap-2 flex-1">
-            <span className="text-[10px] text-white/30 uppercase tracking-wider font-semibold shrink-0">From</span>
-            <input type="date" value={actFrom} onChange={(e) => setActFrom(e.target.value)} className={`flex-1 ${inputCls}`} />
-          </div>
-          <div className="flex items-center gap-2 flex-1">
-            <span className="text-[10px] text-white/30 uppercase tracking-wider font-semibold shrink-0">To</span>
-            <input type="date" value={actTo} onChange={(e) => setActTo(e.target.value)} className={`flex-1 ${inputCls}`} />
-          </div>
-          <button
-            type="button"
-            onClick={() => loadActivity(0)}
-            className="h-11 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
-          >
-            {actLoading ? (
-              <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              "Search"
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Results */}
-      {actLoading && activities.length === 0 ? (
-        <div className={`${card} p-10 text-center`}>
-          <div className="w-6 h-6 border-2 border-white/10 border-t-blue-400 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-xs text-white/30">Loading activity…</p>
-        </div>
-      ) : activities.length === 0 ? (
-        <div className={`${card} p-10 text-center`}>
-          <p className="text-2xl mb-2 opacity-20">◉</p>
-          <p className="text-sm text-white/30">No activity yet</p>
-          <p className="text-xs text-white/40 mt-1">Transactions across all dApps will appear here.</p>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {activities.map((tx) => {
-            const meta = DAPP_META[tx.dapp as DApp] ?? { label: tx.dapp, icon: "·", color: "text-white/40" };
-            const actionLabel = ACTION_LABELS[tx.action] ?? tx.action.replace(/_/g, " ");
-            return (
-              <div key={tx.id} className={`${card} px-4 py-3 flex items-center gap-3`}>
-                <span className={`text-lg shrink-0 ${meta.color}`} title={meta.label}>
-                  {meta.icon}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-medium text-white/80 truncate">{actionLabel}</span>
-                    {tx.status === "error" && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-semibold">FAILED</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-white/40 font-mono">{meta.label}</span>
-                    {tx.amount && (
-                      <>
-                        <span className="text-white/10">·</span>
-                        <span className="text-[10px] text-white/40">{tx.amount}</span>
-                      </>
-                    )}
-                    {tx.tx_hash && (
-                      <>
-                        <span className="text-white/10">·</span>
-                        <a
-                          href={`https://etherscan.io/tx/${tx.tx_hash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[10px] text-indigo-400/60 hover:text-indigo-400 font-mono transition-colors"
-                        >
-                          {tx.tx_hash.slice(0, 10)}…
-                        </a>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <span className="text-[10px] text-white/40 shrink-0">{relativeTime(tx.created_at)}</span>
-              </div>
-            );
-          })}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => loadActivity(actPage - 1)}
-                disabled={actPage === 0}
-                className="text-xs text-white/30 hover:text-white/60 disabled:opacity-20 transition-colors cursor-pointer disabled:cursor-not-allowed"
-              >
-                ← Prev
-              </button>
-              <span className="text-[10px] text-white/40">
-                {actPage + 1} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => loadActivity(actPage + 1)}
-                disabled={actPage >= totalPages - 1}
-                className="text-xs text-white/30 hover:text-white/60 disabled:opacity-20 transition-colors cursor-pointer disabled:cursor-not-allowed"
-              >
-                Next →
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ================================================================== */
 /*  COMPONENT                                                          */
 /* ================================================================== */
 
 export default function WalletsApp() {
-  const router = useRouter();
   const {
     user, vaultUnlocked, ethWallets, selectedEthWallet, selectedEthAddress,
     selectEthWallet, addEthWallet, removeEthWallet, signOut, isLoading,
   } = useWallet();
 
   const [chain, setChain] = useState<"ethereum" | "arweave">("ethereum");
-  const [arweaveTab, setArweaveTab] = useState<"arweave" | "gateway" | "upload" | "permafeed">("arweave");
+  const [arTab, setArTab] = useState<"wallet" | "upload" | "feed">("wallet");
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC), []);
 
   const selected = selectedEthWallet;
@@ -344,8 +131,8 @@ export default function WalletsApp() {
   const [ethBal, setEthBal] = useState("0.000000");
   const [moneyBal, setMoneyBal] = useState("0.00");
 
-  const [tab, setTab] = useState<"home" | "activity" | "apps" | "explorer" | "iframe">("home");
-  const [creating, setCreating] = useState(false);
+  const [tab, setTab] = useState<"home" | "apps" | "explorer" | "iframe">("home");
+  const [vanityMode, setVanityMode] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<StatusEntry[]>([]);
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
@@ -377,45 +164,11 @@ export default function WalletsApp() {
   const [expToBlock, setExpToBlock] = useState("");
   const [expResult, setExpResult] = useState("Results will appear here...");
 
-  /* activity state */
-  const [activities, setActivities] = useState<TxRecord[]>([]);
-  const [actTotal, setActTotal] = useState(0);
-  const [actLoading, setActLoading] = useState(false);
-  const [actDapp, setActDapp] = useState<DApp | "">("");
-  const [actSearch, setActSearch] = useState("");
-  const [actFrom, setActFrom] = useState("");
-  const [actTo, setActTo] = useState("");
-  const [actPage, setActPage] = useState(0);
-  const ACT_PER_PAGE = 25;
-
   const fileRef = useRef<HTMLInputElement>(null);
 
   const addStatus = useCallback((msg: string, status: StatusEntry["status"] = "pending") => {
     setStatuses((p) => [{ msg, status }, ...p].slice(0, 10));
   }, []);
-
-  const loadActivity = useCallback(async (page = 0) => {
-    if (!user) return;
-    setActLoading(true);
-    try {
-      const { data, count } = await fetchActivity({
-        userId: user.id,
-        dapp: actDapp || null,
-        search: actSearch || null,
-        from: actFrom || null,
-        to: actTo ? actTo + "T23:59:59Z" : null,
-        limit: ACT_PER_PAGE,
-        offset: page * ACT_PER_PAGE,
-      });
-      setActivities(data);
-      setActTotal(count);
-      setActPage(page);
-    } catch {
-      /* silent */
-    } finally {
-      setActLoading(false);
-    }
-  }, [user, actDapp, actSearch, actFrom, actTo]);
 
   const fetchBalance = useCallback(async () => {
     if (!selected) return;
@@ -443,24 +196,30 @@ export default function WalletsApp() {
   /* ================================================================ */
 
   const createWallet = useCallback(async () => {
-    if (creating) return;
-    setCreating(true);
     addStatus("Creating wallet...");
     try {
-      const wallet = ethers.Wallet.createRandom();
+      let wallet: ethers.Wallet;
+      if (vanityMode) {
+        let attempts = 0;
+        while (true) {
+          attempts++;
+          wallet = ethers.Wallet.createRandom();
+          if (wallet.address.toLowerCase().startsWith("0x100")) break;
+          if (attempts > 10000) { addStatus("Failed after 10000 attempts for 0x100 prefix", "error"); return; }
+        }
+      } else {
+        wallet = ethers.Wallet.createRandom();
+      }
       await addEthWallet({ address: wallet.address, privateKey: wallet.privateKey, type: "moneyfund" });
       selectEthWallet(wallet.address);
       addStatus(`Wallet created: ${shorten(wallet.address)}`, "success");
     } catch (e: unknown) {
       addStatus(`Failed: ${e instanceof Error ? e.message : String(e)}`, "error");
-    } finally {
-      setCreating(false);
     }
-  }, [creating, addEthWallet, selectEthWallet, addStatus]);
+  }, [vanityMode, addEthWallet, selectEthWallet, addStatus]);
 
   const exportWallets = useCallback(() => {
     if (ethWallets.length === 0) { addStatus("No wallets to export", "error"); return; }
-    if (!confirm("WARNING: This will download your private keys in plain text. Anyone with this file can access your wallets. Store it securely and delete it after use. Continue?")) return;
     const data = ethWallets.map((w) => ({ address: w.address, privateKey: w.privateKey, type: w.type }));
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -518,30 +277,24 @@ export default function WalletsApp() {
     addStatus(`Sending ${sendAmt} ${sendType}...`);
     try {
       const signer = new ethers.Wallet(selected.privateKey, provider);
-      const gasOverrides: Record<string, unknown> = {};
-      if (gasPriceOpt === "manual" && gasPriceManual) {
-        gasOverrides.gasPrice = ethers.utils.parseUnits(gasPriceManual, "gwei");
-      }
       if (sendType === "ETH") {
-        const tx = await signer.sendTransaction({ to: recipient, value: ethers.utils.parseEther(sendAmt), ...gasOverrides });
+        const tx = await signer.sendTransaction({ to: recipient, value: ethers.utils.parseEther(sendAmt) });
         const receipt = await tx.wait();
         addStatus(`ETH sent! Tx: ${shorten(receipt.transactionHash)}`, "success");
-        if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: receipt.transactionHash, dapp: "wallets", action: "send_eth", amount: `${sendAmt} ETH`, details: { to: recipient } });
       } else {
         if (!ethers.utils.isAddress(sendTokenAddr)) { addStatus("Invalid token address", "error"); return; }
         const tok = new ethers.Contract(sendTokenAddr, ERC20_ABI, signer);
         const dec = await tok.decimals();
         const amt = ethers.utils.parseUnits(sendAmt, dec);
-        const tx = await tok.transfer(recipient, amt, gasOverrides);
+        const tx = await tok.transfer(recipient, amt);
         const receipt = await tx.wait();
         addStatus(`Token sent! Tx: ${shorten(receipt.transactionHash)}`, "success");
-        if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: receipt.transactionHash, dapp: "wallets", action: "send_token", amount: sendAmt, tokenAddress: sendTokenAddr, details: { to: recipient } });
       }
       await fetchBalance();
     } catch (e: unknown) {
       addStatus(`Transfer failed: ${e instanceof Error ? e.message : String(e)}`, "error");
     }
-  }, [selected, recipient, sendAmt, sendType, sendTokenAddr, provider, addStatus, fetchBalance, gasPriceOpt, gasPriceManual]);
+  }, [selected, recipient, sendAmt, sendType, sendTokenAddr, provider, addStatus, fetchBalance]);
 
   /* ================================================================ */
   /*  Swap                                                             */
@@ -566,7 +319,6 @@ export default function WalletsApp() {
         const tx = await router.swapExactETHForTokens(minOut, path, selected.address, deadline, { value: amtIn, gasLimit: parseInt(gasLimit) });
         const r = await tx.wait();
         addStatus(`Swap success! Tx: ${shorten(r.transactionHash)}`, "success");
-        if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: r.transactionHash, dapp: "wallets", action: "swap_eth_to_token", amount: `${swapAmt} ETH`, tokenAddress: swapTokenAddr });
       } else {
         const tok = new ethers.Contract(swapTokenAddr, ERC20_ABI, signer);
         const dec = await tok.decimals();
@@ -579,7 +331,6 @@ export default function WalletsApp() {
         const tx = await router.swapExactTokensForETH(amtIn, minOut, path, selected.address, deadline, { gasLimit: parseInt(gasLimit) });
         const r = await tx.wait();
         addStatus(`Swap success! Tx: ${shorten(r.transactionHash)}`, "success");
-        if (user) logTransaction({ userId: user.id, walletAddress: selected.address, txHash: r.transactionHash, dapp: "wallets", action: "swap_token_to_eth", amount: swapAmt, tokenAddress: swapTokenAddr });
       }
       await fetchBalance();
     } catch (e: unknown) {
@@ -657,14 +408,10 @@ export default function WalletsApp() {
   const needsLogs = expAction === "getlogs";
 
   const openApp = useCallback((app: AppTile) => {
-    if (app.url.startsWith("/")) {
-      router.push(app.url);
-      return;
-    }
     setIframeUrl(app.url);
     setIframeTitle(app.title);
     setTab("iframe");
-  }, [router]);
+  }, []);
 
   /* ================================================================ */
   /*  RENDER                                                           */
@@ -680,9 +427,9 @@ export default function WalletsApp() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8" style={{ background: "#08090e" }}>
-        <div className="w-full max-w-md space-y-5">
-          <div className="text-center">
+      <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+        <div className="w-full max-w-[720px] mx-auto space-y-5">
+          <div className="text-center pt-4 pb-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">Wallets</h1>
             <p className="text-xs text-white/30 mt-1">Sign in to access your encrypted wallet vault</p>
           </div>
@@ -692,9 +439,8 @@ export default function WalletsApp() {
     );
   }
 
-  const ethTabs: { id: "home" | "activity" | "apps" | "explorer"; label: string; icon: string }[] = [
+  const ethTabs: { id: "home" | "apps" | "explorer"; label: string; icon: string }[] = [
     { id: "home", label: "Home", icon: "⬡" },
-    { id: "activity", label: "Activity", icon: "◉" },
     { id: "apps", label: "Apps", icon: "◫" },
     { id: "explorer", label: "Explorer", icon: "◎" },
   ];
@@ -718,13 +464,29 @@ export default function WalletsApp() {
           </p>
         </div>
 
-        {/* ── Section switcher ── */}
+        {/* ── Chain switcher ── */}
         <div className={`${card} p-1.5 flex gap-1`}>
-          <button type="button" onClick={() => setChain("ethereum")} className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${chain === "ethereum" ? "bg-blue-500/15 text-blue-400 shadow-[inset_0_1px_0_rgba(59,130,246,0.2)]" : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"}`}>
+          <button
+            type="button"
+            onClick={() => setChain("ethereum")}
+            className={`flex-1 h-11 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              chain === "ethereum"
+                ? "bg-blue-500/15 text-blue-400 shadow-[inset_0_1px_0_rgba(59,130,246,0.2)]"
+                : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"
+            }`}
+          >
             <span className="w-2 h-2 rounded-full bg-blue-400" style={{ opacity: chain === "ethereum" ? 1 : 0.3 }} />
             Ethereum
           </button>
-          <button type="button" onClick={() => setChain("arweave")} className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${chain === "arweave" ? "bg-purple-500/15 text-purple-400 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]" : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"}`}>
+          <button
+            type="button"
+            onClick={() => setChain("arweave")}
+            className={`flex-1 h-11 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              chain === "arweave"
+                ? "bg-purple-500/15 text-purple-400 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]"
+                : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"
+            }`}
+          >
             <span className="w-2 h-2 rounded-full bg-purple-400" style={{ opacity: chain === "arweave" ? 1 : 0.3 }} />
             Arweave
           </button>
@@ -732,29 +494,31 @@ export default function WalletsApp() {
 
         {/* ── Arweave ── */}
         {chain === "arweave" && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className={`${card} p-1.5 flex gap-1`}>
-              <button type="button" onClick={() => setArweaveTab("arweave")} className={`flex-1 h-10 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${arweaveTab === "arweave" ? "bg-purple-500/15 text-purple-400 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400" style={{ opacity: arweaveTab === "arweave" ? 1 : 0.3 }} />
-                Arweave
-              </button>
-              <button type="button" onClick={() => setArweaveTab("gateway")} className={`flex-1 h-10 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${arweaveTab === "gateway" ? "bg-purple-500/15 text-purple-400 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400" style={{ opacity: arweaveTab === "gateway" ? 1 : 0.3 }} />
-                Gateway
-              </button>
-              <button type="button" onClick={() => setArweaveTab("upload")} className={`flex-1 h-10 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${arweaveTab === "upload" ? "bg-emerald-500/15 text-emerald-400 shadow-[inset_0_1px_0_rgba(52,211,153,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ opacity: arweaveTab === "upload" ? 1 : 0.3 }} />
-                Upload
-              </button>
-              <button type="button" onClick={() => setArweaveTab("permafeed")} className={`flex-1 h-10 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${arweaveTab === "permafeed" ? "bg-violet-500/15 text-violet-400 shadow-[inset_0_1px_0_rgba(139,92,246,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" style={{ opacity: arweaveTab === "permafeed" ? 1 : 0.3 }} />
-                PermaFeed
-              </button>
+              {([
+                { id: "wallet" as const, label: "Wallet", icon: "◈" },
+                { id: "upload" as const, label: "Upload", icon: "☁" },
+                { id: "feed" as const, label: "Feed", icon: "◫" },
+              ]).map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setArTab(t.id)}
+                  className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    arTab === t.id
+                      ? "bg-purple-500/20 text-purple-300 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]"
+                      : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
+                  }`}
+                >
+                  <span className="text-xs opacity-60">{t.icon}</span>
+                  {t.label}
+                </button>
+              ))}
             </div>
-            {arweaveTab === "arweave" && <ArweaveWallet />}
-            {arweaveTab === "gateway" && <GatewayContent />}
-            {arweaveTab === "upload" && <UnifiedUpload />}
-            {arweaveTab === "permafeed" && <PermaFeed />}
+            {arTab === "wallet" && <ArweaveWallet />}
+            {arTab === "upload" && <UnifiedUpload />}
+            {arTab === "feed" && <PermaFeed />}
           </div>
         )}
 
@@ -791,6 +555,19 @@ export default function WalletsApp() {
                 <div className={`${card} p-4 space-y-3`}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Active Wallet</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-white/25">0x100</span>
+                      <label className="relative w-9 h-5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={vanityMode}
+                          onChange={(e) => { setVanityMode(e.target.checked); addStatus(`0x100 Mode ${e.target.checked ? "ON" : "OFF"}`, "success"); }}
+                          className="sr-only peer"
+                        />
+                        <span className="absolute inset-0 bg-white/[0.08] rounded-full peer-checked:bg-blue-500/40 transition-all" />
+                        <span className="absolute left-[2px] top-[2px] w-4 h-4 bg-white/60 rounded-full peer-checked:translate-x-4 peer-checked:bg-blue-400 transition-all" />
+                      </label>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <select
@@ -810,7 +587,7 @@ export default function WalletsApp() {
                     <button type="button" onClick={copyAddress} className={btnSmall}>Copy</button>
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={createWallet} disabled={creating} className={`flex-1 ${btnSmall} disabled:opacity-40 disabled:cursor-wait`}>{creating ? "Creating…" : "Create"}</button>
+                    <button type="button" onClick={createWallet} className={`flex-1 ${btnSmall}`}>Create</button>
                     <label className={`flex-1 ${btnSmall} flex items-center justify-center cursor-pointer`}>
                       Import
                       <input ref={fileRef} type="file" accept=".json" onChange={importWallets} className="hidden" />
@@ -958,7 +735,7 @@ export default function WalletsApp() {
                         ))}
                       </div>
                     )}
-                    {coinList.length === 0 && <p className="text-xs text-white/40">No tokens imported yet.</p>}
+                    {coinList.length === 0 && <p className="text-xs text-white/25">No tokens imported yet.</p>}
                   </div>
                 )}
 
@@ -982,32 +759,6 @@ export default function WalletsApp() {
                   </div>
                 )}
               </div>
-            )}
-
-            {/* ================================================================ */}
-            {/*  ACTIVITY TAB                                                    */}
-            {/* ================================================================ */}
-            {tab === "activity" && (
-              <ActivityTab
-                user={user}
-                activities={activities}
-                actTotal={actTotal}
-                actLoading={actLoading}
-                actDapp={actDapp}
-                actSearch={actSearch}
-                actFrom={actFrom}
-                actTo={actTo}
-                actPage={actPage}
-                perPage={ACT_PER_PAGE}
-                setActDapp={setActDapp}
-                setActSearch={setActSearch}
-                setActFrom={setActFrom}
-                setActTo={setActTo}
-                loadActivity={loadActivity}
-                card={card}
-                selectCls={selectCls}
-                inputCls={inputCls}
-              />
             )}
 
             {/* ================================================================ */}

@@ -169,10 +169,30 @@ export default function PermaFeed() {
             </div>
           )}
           {!myLoading && myItems.length === 0 && (
-            <div className={`${card} p-10 text-center`}>
-              <p className="text-3xl mb-3 opacity-20">📷</p>
-              <p className="text-sm text-white/30">No files yet</p>
-              <p className="text-xs text-white/20 mt-1">Upload files from the Upload tab with PermaWrite enabled to see them here.</p>
+            <div className={`${card} p-10 text-center space-y-4`}>
+              <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mx-auto">
+                <span className="text-2xl">📂</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white/40">
+                  {myCategory ? "No files in this category" : "Your library is empty"}
+                </p>
+                <p className="text-xs text-white/25 mt-1 max-w-xs mx-auto leading-relaxed">
+                  {myCategory
+                    ? "Try selecting a different category or upload a new file."
+                    : "Upload a file or text from the Upload tab with PermaWrite enabled. Your uploads will appear here organized by category."}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-6 text-[10px] text-white/20">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400/40" />
+                  <span>Personal = only you</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40" />
+                  <span>Public = everyone</span>
+                </div>
+              </div>
             </div>
           )}
           {myItems.length > 0 && (
@@ -236,10 +256,20 @@ export default function PermaFeed() {
             </div>
           )}
           {!feedLoading && feedItems.length === 0 && (
-            <div className={`${card} p-10 text-center`}>
-              <p className="text-3xl mb-3 opacity-20">◉</p>
-              <p className="text-sm text-white/30">No public content yet</p>
-              <p className="text-xs text-white/20 mt-1">PermaWritten content from all users appears here, browseable by category.</p>
+            <div className={`${card} p-10 text-center space-y-3`}>
+              <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mx-auto">
+                <span className="text-2xl">🌐</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white/40">
+                  {feedCategory || feedTag ? "No matching content" : "Public feed is empty"}
+                </p>
+                <p className="text-xs text-white/25 mt-1 max-w-xs mx-auto leading-relaxed">
+                  {feedCategory || feedTag
+                    ? "Try a different category or tag filter."
+                    : "Content uploaded with PermaWrite set to Public appears here. Browse by category and tags."}
+                </p>
+              </div>
             </div>
           )}
           {feedItems.length > 0 && (
@@ -309,11 +339,11 @@ function CategoryFilterBar({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <div className="flex gap-1 bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.04]">
-          <button type="button" onClick={() => setMode("flat")} className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${mode === "flat" ? "bg-white/[0.08] text-white/60" : "text-white/25 hover:text-white/40"}`}>
-            List
+          <button type="button" onClick={() => setMode("flat")} className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${mode === "flat" ? "bg-white/[0.08] text-white/60" : "text-white/25 hover:text-white/40"}`}>
+            All
           </button>
-          <button type="button" onClick={() => setMode("grouped")} className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${mode === "grouped" ? "bg-white/[0.08] text-white/60" : "text-white/25 hover:text-white/40"}`}>
-            Groups
+          <button type="button" onClick={() => setMode("grouped")} className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${mode === "grouped" ? "bg-white/[0.08] text-white/60" : "text-white/25 hover:text-white/40"}`}>
+            By Group
           </button>
         </div>
         {selected && selectedCat && (
@@ -477,7 +507,9 @@ function ItemDetail({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={onBack} className={pillBtn}>← Back</button>
+        <button type="button" onClick={onBack} className="h-9 px-4 rounded-xl font-medium text-xs bg-white/[0.06] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.1] active:scale-95 transition-all cursor-pointer flex items-center gap-1.5">
+          <span>←</span> Back to feed
+        </button>
         <h2 className="text-sm font-medium text-white/70 truncate flex-1">{item.title || item.file_name || "Untitled"}</h2>
         <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase ${badgeCls}`}>
           {badgeLabel}

@@ -236,10 +236,30 @@ export default function UnifiedUpload() {
 
   if (!arweaveWallet) {
     return (
-      <div className={`${card} p-8 text-center`}>
-        <p className="text-3xl mb-4 opacity-20">☁</p>
-        <p className="text-sm text-white/50 mb-2">Set up an Arweave wallet to upload.</p>
-        <p className="text-xs text-white/30">Switch to the <strong className="text-white/50">Arweave</strong> tab to generate or import a wallet.</p>
+      <div className={`${card} p-8 text-center space-y-4`}>
+        <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto">
+          <span className="text-3xl">☁</span>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-white/60">Wallet required to upload</p>
+          <p className="text-xs text-white/30 mt-1 max-w-xs mx-auto">
+            You need an Arweave wallet to upload files. Switch to the <strong className="text-white/50">Wallet</strong> tab to generate a new one or import an existing key.
+          </p>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 text-[10px] text-white/25">
+            <span className="w-5 h-5 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-300/60">1</span>
+            <span>Generate or import a wallet</span>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-white/25">
+            <span className="w-5 h-5 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-300/60">2</span>
+            <span>Fund with AR or Turbo credits</span>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-white/25">
+            <span className="w-5 h-5 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-300/60">3</span>
+            <span>Upload files permanently</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -270,10 +290,24 @@ export default function UnifiedUpload() {
         </button>
       </div>
 
-      <div className={`${card} p-4 text-xs ${method === "turbo" ? "text-emerald-300/60 border-emerald-500/10" : "text-purple-300/60 border-purple-500/10"}`}>
-        {method === "turbo"
-          ? "Bundled via Turbo for instant confirmation. Uses Turbo credits — fund at app.ardrive.io. Falls back to L1 if credits are insufficient."
-          : "Submitted directly to the Arweave network (L1). Confirmation takes ~10-30 minutes but only requires AR in your wallet."}
+      <div className={`${card} p-4 ${method === "turbo" ? "border-emerald-500/10" : "border-purple-500/10"}`}>
+        {method === "turbo" ? (
+          <div className="flex items-start gap-3">
+            <span className="text-lg mt-0.5">⚡</span>
+            <div>
+              <p className="text-xs font-medium text-emerald-300/70">Instant confirmation via bundling</p>
+              <p className="text-[11px] text-emerald-300/40 mt-0.5 leading-relaxed">Files are bundled into ANS-104 data items and confirmed instantly. Uses Turbo credits (fund at app.ardrive.io). Falls back to L1 automatically if credits are low.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3">
+            <span className="text-lg mt-0.5">🔗</span>
+            <div>
+              <p className="text-xs font-medium text-purple-300/70">Direct L1 base layer submission</p>
+              <p className="text-[11px] text-purple-300/40 mt-0.5 leading-relaxed">Submitted directly to the Arweave network. Confirmation takes ~10-30 minutes. Only requires AR in your wallet — no Turbo credits needed.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {method === "turbo" && turboBalance && (
@@ -288,23 +322,39 @@ export default function UnifiedUpload() {
 
       {/* Content */}
       <div className={`${card} p-5 space-y-4`}>
-        <div>
-          <label className={labelCls}>Choose a File</label>
-          <input ref={fileRef} type="file" accept="*/*" onChange={handleFileSelect} className="block w-full text-sm text-white/40 file:mr-3 file:h-9 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-medium file:bg-white/[0.06] file:text-white/60 hover:file:bg-white/[0.1] file:cursor-pointer file:transition-all" />
-          {file && <p className="text-[11px] text-white/30 mt-1">{file.name} ({formatBytes(file.size)})</p>}
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Content</span>
+          {(file || text) && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300/60 border border-emerald-500/20">
+              {file ? `📎 ${file.name} (${formatBytes(file.size)})` : `📝 ${new TextEncoder().encode(text).byteLength} bytes`}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-white/[0.06]" />
-          <span className="text-[10px] text-white/20 uppercase tracking-wider">or</span>
-          <span className="h-px flex-1 bg-white/[0.06]" />
+        <div className={`rounded-xl border-2 border-dashed transition-all ${file ? "border-emerald-500/30 bg-emerald-500/5" : "border-white/[0.06] hover:border-white/[0.12]"} p-4 text-center`}>
+          <input ref={fileRef} type="file" accept="*/*" onChange={handleFileSelect} className="hidden" id="arUploadFile" />
+          <label htmlFor="arUploadFile" className="cursor-pointer">
+            <span className="text-2xl block mb-2">{file ? "✓" : "📂"}</span>
+            <p className="text-xs text-white/50">{file ? file.name : "Drop a file or click to browse"}</p>
+            {file && (
+              <button type="button" onClick={(e) => { e.preventDefault(); setFile(null); if (fileRef.current) fileRef.current.value = ""; }} className="text-[10px] text-red-400/50 hover:text-red-400 mt-1 transition-colors">
+                Remove file
+              </button>
+            )}
+          </label>
         </div>
-        <div>
-          <label className={labelCls}>Text Content</label>
-          <textarea rows={4} value={text} onChange={(e) => { setText(e.target.value); setFile(null); if (permawrite && !category) setCategory("text"); }} placeholder="Enter text to store permanently..." className={`${inputCls} h-auto py-3`} style={{ resize: "vertical" }} />
-        </div>
+        {!file && (
+          <>
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-white/[0.06]" />
+              <span className="text-[10px] text-white/20 uppercase tracking-wider">or type text</span>
+              <span className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+            <textarea rows={3} value={text} onChange={(e) => { setText(e.target.value); if (permawrite && !category) setCategory("text"); }} placeholder="Type or paste text to store permanently on Arweave..." className={`${inputCls} h-auto py-3`} style={{ resize: "vertical" }} />
+          </>
+        )}
         <div>
           <label className={labelCls}>Description (optional)</label>
-          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What is this upload?" className={inputCls} />
+          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Brief description of this upload" className={inputCls} />
         </div>
       </div>
 
@@ -338,7 +388,9 @@ export default function UnifiedUpload() {
           <span className="text-xl">🗂</span>
           <div className="flex-1 text-left">
             <p className={`text-sm font-semibold ${permawrite ? "text-violet-300" : "text-white/60"}`}>PermaWrite</p>
-            <p className="text-[11px] text-white/30 mt-0.5">Organize with categories, tags &amp; feeds</p>
+            <p className="text-[11px] text-white/30 mt-0.5">
+              {permawrite ? "Uploads are organized in your feed with categories and tags" : "Enable to organize uploads with categories, tags, and browsable feeds"}
+            </p>
           </div>
           <div className={`w-11 h-6 rounded-full flex items-center transition-all ${permawrite ? "bg-violet-500" : "bg-white/[0.08]"}`}>
             <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-all ${permawrite ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
@@ -349,19 +401,23 @@ export default function UnifiedUpload() {
           <div className="px-5 pb-5 space-y-4 border-t border-white/[0.04]">
             {/* Visibility */}
             <div className="pt-4">
-              <label className={labelCls}>Feed Visibility</label>
+              <label className={labelCls}>Who can see this?</label>
               <div className="flex gap-1.5">
-                <button type="button" onClick={() => setVisibility("personal")} className={`flex-1 h-10 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${visibility === "personal" ? "bg-sky-500/15 text-sky-300 border border-sky-500/30 shadow-[inset_0_1px_0_rgba(56,189,248,0.2)]" : "bg-white/[0.03] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.06]"}`}>
-                  <span className="text-sm">🔒</span> Personal
+                <button type="button" onClick={() => setVisibility("personal")} className={`flex-1 rounded-xl text-xs font-medium transition-all cursor-pointer flex flex-col items-center gap-1 py-3 ${visibility === "personal" ? "bg-sky-500/15 text-sky-300 border border-sky-500/30 shadow-[inset_0_1px_0_rgba(56,189,248,0.2)]" : "bg-white/[0.03] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.06]"}`}>
+                  <span className="text-lg">🔒</span>
+                  <span>Just Me</span>
+                  <span className="text-[9px] text-white/20 font-normal">My Files only</span>
                 </button>
-                <button type="button" onClick={() => setVisibility("public")} className={`flex-1 h-10 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${visibility === "public" ? "bg-violet-500/15 text-violet-300 border border-violet-500/30 shadow-[inset_0_1px_0_rgba(139,92,246,0.2)]" : "bg-white/[0.03] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.06]"}`}>
-                  <span className="text-sm">🌐</span> Public Feed
+                <button type="button" onClick={() => setVisibility("public")} className={`flex-1 rounded-xl text-xs font-medium transition-all cursor-pointer flex flex-col items-center gap-1 py-3 ${visibility === "public" ? "bg-violet-500/15 text-violet-300 border border-violet-500/30 shadow-[inset_0_1px_0_rgba(139,92,246,0.2)]" : "bg-white/[0.03] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.06]"}`}>
+                  <span className="text-lg">🌐</span>
+                  <span>Public</span>
+                  <span className="text-[9px] text-white/20 font-normal">Browsable by everyone</span>
                 </button>
               </div>
-              <p className="text-[10px] text-white/25 mt-1.5">
+              <p className="text-[10px] text-white/20 mt-2 leading-relaxed">
                 {visibility === "personal"
-                  ? "Tracked in your personal PermaFeed only. Data is still on Arweave but won't appear in the public feed."
-                  : "Visible to everyone in the public PermaFeed. Data is permanently on Arweave."}
+                  ? "Only you can see this in your personal feed. The data is still permanently stored on Arweave, but it won't appear in the public feed."
+                  : "This will be visible to everyone in the public feed, browsable by category and tags. The data is permanently and publicly stored on Arweave."}
               </p>
             </div>
 

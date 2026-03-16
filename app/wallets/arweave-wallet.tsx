@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@/lib/wallet-context";
-import ArweaveGateway from "@/lib/arweave";
-import type { ArweaveCostEstimate } from "@/lib/wallet-types";
+
+/* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
+
+const HOST = "arweave.net";
+const PROTOCOL = "https";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -14,8 +19,103 @@ interface StatusMsg {
   type: "loading" | "success" | "error";
 }
 
+interface ArweaveTx {
+  format: number;
+  owner: string | undefined;
+  target: string;
+  quantity: string;
+  reward: string;
+  last_tx: string;
+  tags: never[];
+  data_size: string;
+  data_root: string;
+  data?: string;
+  signature?: string;
+  id?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Crypto helpers (pure Web Crypto API — no external deps)            */
+/* ------------------------------------------------------------------ */
+
+function b64urlEncode(buffer: ArrayBuffer | Uint8Array): string {
+  let binary = "";
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function b64urlDecode(str: string): ArrayBuffer {
+  let s = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4) s += "=";
+  const binary = atob(s);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function sha256(message: ArrayBuffer | Uint8Array | string): Promise<Uint8Array> {
+  const buf = typeof message === "string" ? new TextEncoder().encode(message) : message;
+  const ab = buf instanceof ArrayBuffer ? buf : (buf as Uint8Array).buffer as ArrayBuffer;
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", ab));
+}
+
+async function generateKey(): Promise<JsonWebKey> {
+  const key = await crypto.subtle.generateKey(
+    { name: "RSA-PSS", modulusLength: 4096, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+    true,
+    ["sign", "verify"],
+  );
+  return crypto.subtle.exportKey("jwk", key.privateKey);
+}
+
+async function jwkToAddress(jwk: JsonWebKey): Promise<string> {
+  const n = b64urlDecode(jwk.n!);
+  const hash = await sha256(n);
+  return b64urlEncode(hash);
+}
+
+async function getBalance(addr: string): Promise<string> {
+  const res = await fetch(`${PROTOCOL}://${HOST}/wallet/${addr}/balance`);
+  return res.text();
+}
+
+async function getPrice(dataSize: number | string, target?: string): Promise<string> {
+  let url = `${PROTOCOL}://${HOST}/price/${dataSize}`;
+  if (target) url += `/${target}`;
+  const res = await fetch(url);
+  return res.text();
+}
+
+async function getAnchor(): Promise<string> {
+  const res = await fetch(`${PROTOCOL}://${HOST}/tx_anchor`);
+  return res.text();
+}
+
+async function signTx(tx: ArweaveTx, jwk: JsonWebKey) {
+  const msg = JSON.stringify({
+    owner: tx.owner, target: tx.target, data: tx.data, quantity: tx.quantity,
+    reward: tx.reward, last_tx: tx.last_tx, tags: tx.tags || [],
+    data_root: tx.data_root, data_size: tx.data_size,
+  });
+  const msgBuffer = new TextEncoder().encode(msg);
+  const privKey = await crypto.subtle.importKey("jwk", jwk, { name: "RSA-PSS", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign({ name: "RSA-PSS", saltLength: 32 }, privKey, msgBuffer);
+  tx.signature = b64urlEncode(signature);
+  const sigHash = await sha256(signature);
+  tx.id = b64urlEncode(sigHash);
+}
+
+async function postTx(tx: ArweaveTx): Promise<Response> {
+  return fetch(`${PROTOCOL}://${HOST}/tx`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(tx),
+  });
+}
+
 /* ================================================================== */
-/*  Design tokens (must match wallets-app.tsx)                         */
+/*  Shared design tokens (must match wallets-app.tsx)                   */
 /* ================================================================== */
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
@@ -31,8 +131,7 @@ const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px
 /* ================================================================== */
 
 export default function ArweaveWallet() {
-  const { arweaveWallet, setArweaveWallet: saveArweaveWallet, arConnectAvailable, connectArConnectWallet, disconnectArConnectWallet } = useWallet();
-  const gw = useMemo(() => new ArweaveGateway(), []);
+  const { arweaveWallet, setArweaveWallet: saveArweaveWallet } = useWallet();
 
   const [address, setAddress] = useState("");
   const [balance, setBalance] = useState("—");
@@ -47,20 +146,19 @@ export default function ArweaveWallet() {
   const [impStatus, setImpStatus] = useState<StatusMsg | null>(null);
   const [expStatus, setExpStatus] = useState<StatusMsg | null>(null);
   const [sendStatus, setSendStatus] = useState<StatusMsg | null>(null);
-  const [acStatus, setAcStatus] = useState<StatusMsg | null>(null);
-
-  /* Cost preview */
-  const [sendCost, setSendCost] = useState<ArweaveCostEstimate | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [sendFeeEstimate, setSendFeeEstimate] = useState<string | null>(null);
 
   /* ---- helpers ---- */
   const refreshBalance = useCallback(async (addr: string) => {
     try {
-      const { ar } = await gw.getBalance(addr);
-      setBalance(parseFloat(ar).toFixed(6));
+      const winston = await getBalance(addr);
+      const ar = (BigInt(winston) / BigInt(10 ** 12)).toString();
+      setBalance(ar);
     } catch {
       setBalance("Error");
     }
-  }, [gw]);
+  }, []);
 
   useEffect(() => {
     if (arweaveWallet) {
@@ -75,30 +173,30 @@ export default function ArweaveWallet() {
     }
   }, [arweaveWallet, refreshBalance]);
 
-  /* ---- cost previews ---- */
+  const copyAddress = useCallback(async () => {
+    if (!address) return;
+    await navigator.clipboard.writeText(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [address]);
+
   useEffect(() => {
-    if (arTab !== "send" || !target || !amount) { setSendCost(null); return; }
+    if (!target) { setSendFeeEstimate(null); return; }
     const t = setTimeout(async () => {
-      try { setSendCost(await gw.estimateCost(0)); } catch { setSendCost(null); }
+      try {
+        const fee = await getPrice(0, target);
+        const ar = (Number(fee) / 1e12).toFixed(6);
+        setSendFeeEstimate(ar);
+      } catch { setSendFeeEstimate(null); }
     }, 500);
     return () => clearTimeout(t);
-  }, [gw, arTab, target, amount]);
+  }, [target]);
 
   /* ---- actions ---- */
-  const handleArConnect = useCallback(async () => {
-    setAcStatus({ text: "Connecting to ArConnect...", type: "loading" });
-    try {
-      const addr = await connectArConnectWallet();
-      setAcStatus({ text: `Connected! Address: ${addr.slice(0, 8)}...${addr.slice(-6)}`, type: "success" });
-    } catch (e: unknown) {
-      setAcStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
-    }
-  }, [connectArConnectWallet]);
-
   const handleGenerate = useCallback(async () => {
     setGenStatus({ text: "Generating keypair... (2-3 sec)", type: "loading" });
     try {
-      const jwk = await ArweaveGateway.generateWallet();
+      const jwk = await generateKey();
       await saveArweaveWallet(jwk);
       setGenStatus({ text: "Generated & encrypted in vault.", type: "success" });
     } catch (e: unknown) {
@@ -141,10 +239,15 @@ export default function ArweaveWallet() {
     if (!target || !amount) { setSendStatus({ text: "Fill fields", type: "error" }); return; }
     setSendStatus({ text: "Sending...", type: "loading" });
     try {
-      const anchor = await gw.getTxAnchor();
-      const reward = await gw.getPrice(0, target);
-      const tx = await ArweaveGateway.buildTransferTx(target, amount, localJwk, anchor, reward);
-      const res = await gw.submitTx(tx);
+      const anchor = await getAnchor();
+      const quantity = BigInt(Math.round(parseFloat(amount) * 10 ** 12)).toString();
+      const reward = await getPrice(0, target);
+      const tx: ArweaveTx = {
+        format: 2, owner: localJwk.n, target, quantity, reward,
+        last_tx: anchor, tags: [], data_size: "0", data_root: "",
+      };
+      await signTx(tx, localJwk);
+      const res = await postTx(tx);
       if (res.status === 200) {
         setSendStatus({ text: `Sent! TX ID: ${tx.id}`, type: "success" });
         setTimeout(() => refreshBalance(address), 2000);
@@ -154,7 +257,7 @@ export default function ArweaveWallet() {
     } catch (e: unknown) {
       setSendStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
     }
-  }, [gw, localJwk, target, amount, address, refreshBalance]);
+  }, [localJwk, target, amount, address, refreshBalance]);
 
   /* ---- status badge ---- */
   const renderStatus = (s: StatusMsg | null) => {
@@ -168,17 +271,6 @@ export default function ArweaveWallet() {
     return (
       <div className={`mt-3 py-2.5 px-3.5 rounded-xl text-xs font-medium border ${cls} break-all`}>
         {s.text}
-      </div>
-    );
-  };
-
-  const renderCost = (cost: ArweaveCostEstimate | null) => {
-    if (!cost) return null;
-    return (
-      <div className="mt-2 py-2 px-3 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[10px] text-white/40 flex gap-4">
-        <span>{parseFloat(cost.ar).toFixed(8)} AR</span>
-        <span>${parseFloat(cost.usd).toFixed(6)}</span>
-        <span className="text-white/20">{cost.winston} winston</span>
       </div>
     );
   };
@@ -217,37 +309,67 @@ export default function ArweaveWallet() {
       {/* ── Setup Tab ── */}
       {arTab === "setup" && (
         <div className="space-y-4">
-          {/* ArConnect */}
-          {arConnectAvailable && (
-            <div className={`${card} p-5 space-y-4 border-emerald-500/10`}>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-white/80">Connect ArConnect</h3>
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">DETECTED</span>
+          <div className={`${card} p-5`}>
+            <div className="flex items-start gap-3 mb-3">
+              <span className="text-2xl mt-0.5">🏔</span>
+              <div>
+                <h3 className="text-sm font-semibold text-white/80">What is an Arweave wallet?</h3>
+                <p className="text-xs text-white/40 leading-relaxed mt-1">
+                  Arweave uses RSA-4096 keypairs stored as JSON Web Keys (JWK). Your private key is a <code className="text-purple-300/60">.json</code> file — think of it like a password file that proves you own your address. It&apos;s encrypted and stored in your vault.
+                </p>
               </div>
-              <p className="text-xs text-white/30 -mt-2">Connect your ArConnect (Wander) browser wallet. Keys stay in the extension — no vault storage needed.</p>
-              <button type="button" onClick={handleArConnect} className="w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer">Connect ArConnect</button>
-              {renderStatus(acStatus)}
             </div>
-          )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] text-white/30">
+              <div className="flex items-center gap-2 bg-white/[0.02] rounded-lg px-3 py-2">
+                <span className="text-base">💾</span>
+                <span>Pay once, store forever</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/[0.02] rounded-lg px-3 py-2">
+                <span className="text-base">🔒</span>
+                <span>Key encrypted in vault</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/[0.02] rounded-lg px-3 py-2">
+                <span className="text-base">⚡</span>
+                <span>Instant via Turbo bundling</span>
+              </div>
+            </div>
+          </div>
 
           <div className={`${card} p-5 space-y-4`}>
             <h3 className="text-sm font-semibold text-white/80">Generate New Wallet</h3>
-            <p className="text-xs text-white/30 -mt-2">Create a fresh RSA-4096 keypair encrypted in your vault.</p>
+            <p className="text-xs text-white/30 -mt-2">Create a fresh RSA-4096 keypair. Takes 2-3 seconds. The key is encrypted and saved to your vault automatically.</p>
             <button type="button" onClick={handleGenerate} className={btnPrimary}>Generate Keypair</button>
             {renderStatus(genStatus)}
           </div>
+
           <div className={`${card} p-5 space-y-3`}>
             <h3 className="text-sm font-semibold text-white/80">Import Existing Key</h3>
+            <p className="text-xs text-white/30 -mt-1">
+              Paste the contents of your JWK file below. This is the <code className="text-purple-300/50">.json</code> file you downloaded from ArConnect, arweave.app, or another wallet. It starts with <code className="text-purple-300/50">{`{"kty":"RSA",...}`}</code>
+            </p>
             <textarea
               rows={3}
               value={importKey}
               onChange={(e) => setImportKey(e.target.value)}
-              placeholder="Paste JWK JSON here..."
+              placeholder='{"kty":"RSA","n":"...","e":"AQAB",...}'
               className={textarea}
               style={{ resize: "vertical", fontFamily: "monospace", fontSize: "11px" }}
             />
             <button type="button" onClick={handleImport} className={btnPrimary}>Import Key</button>
             {renderStatus(impStatus)}
+          </div>
+
+          <div className={`${card} p-4`}>
+            <div className="flex items-center gap-3">
+              <span className="text-lg">🔗</span>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-white/50">ArConnect Browser Extension</p>
+                <p className="text-[10px] text-white/25 mt-0.5">Alternative: install the ArConnect (Wander) extension to sign transactions from your browser without importing keys.</p>
+              </div>
+              <a href="https://arconnect.io" target="_blank" rel="noopener noreferrer" className={pillBtn}>
+                arconnect.io ↗
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -257,15 +379,7 @@ export default function ArweaveWallet() {
         <div className="space-y-4">
           <div className={`${card} p-5`}>
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Balance</span>
-                {arweaveWallet?.source === "arconnect" && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">ArConnect</span>
-                )}
-                {arweaveWallet?.source === "jwk" && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 font-semibold">Vault Key</span>
-                )}
-              </div>
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Balance</span>
               <button type="button" onClick={() => { if (address) refreshBalance(address); }} className={pillBtn}>
                 Refresh
               </button>
@@ -278,12 +392,8 @@ export default function ArweaveWallet() {
           <div className={`${card} p-5 space-y-3`}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Address</span>
-              <button
-                type="button"
-                onClick={() => { if (address) navigator.clipboard.writeText(address); }}
-                className={pillBtn}
-              >
-                Copy
+              <button type="button" onClick={copyAddress} className={`${pillBtn} ${copied ? "text-emerald-400 border-emerald-500/30" : ""}`}>
+                {copied ? "Copied!" : "Copy"}
               </button>
             </div>
             <p className="text-xs font-mono text-white/50 break-all leading-relaxed bg-white/[0.03] rounded-lg p-3">
@@ -292,24 +402,22 @@ export default function ArweaveWallet() {
           </div>
 
           <div className={`${card} p-5 space-y-3`}>
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Public Key Preview</span>
-            <pre className="bg-white/[0.03] rounded-lg p-3 overflow-auto text-[10px] max-h-[80px] text-white/30 font-mono leading-relaxed">
-              {localJwk ? JSON.stringify({ kty: localJwk.kty, n: localJwk.n, e: localJwk.e }, null, 2) : "No wallet loaded"}
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Private Key (JWK)</span>
+            <pre className="bg-white/[0.03] rounded-lg p-3 overflow-auto text-[10px] max-h-[80px] text-white/30 font-mono leading-relaxed" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+              {localJwk ? JSON.stringify(localJwk, null, 2) : "No wallet loaded"}
             </pre>
-            <p className="text-[11px] text-amber-400/60 flex items-center gap-1">
-              <span>⚠</span> Full private key hidden for security. Use Download to export.
-            </p>
+            <div className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/10 rounded-lg px-3 py-2">
+              <span className="text-sm mt-0.5">⚠</span>
+              <div>
+                <p className="text-[11px] text-amber-400/70 font-medium">Back up your key file</p>
+                <p className="text-[10px] text-amber-400/40 mt-0.5">Download and store it securely. If you lose this key, your wallet and all its funds are permanently inaccessible.</p>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {arweaveWallet?.source === "jwk" && (
-              <button type="button" onClick={handleExport} className={btnPrimary}>Download Key</button>
-            )}
-            {arweaveWallet?.source === "arconnect" ? (
-              <button type="button" onClick={async () => { await disconnectArConnectWallet(); setArTab("setup"); }} className={`${btnGhost} col-span-2`}>Disconnect ArConnect</button>
-            ) : (
-              <button type="button" onClick={handleClear} className={btnGhost}>Clear Wallet</button>
-            )}
+            <button type="button" onClick={handleExport} className={btnPrimary}>Download Key</button>
+            <button type="button" onClick={handleClear} className={btnGhost}>Clear Wallet</button>
           </div>
           {renderStatus(expStatus)}
         </div>
@@ -319,13 +427,14 @@ export default function ArweaveWallet() {
       {arTab === "send" && (
         <div className={`${card} p-5 space-y-4`}>
           <h3 className="text-sm font-semibold text-white/80">Send AR</h3>
+          <p className="text-xs text-white/30 -mt-2">Transfer AR tokens to another Arweave address. Transactions are confirmed in ~2 minutes.</p>
           <div>
             <label className={label}>Recipient</label>
             <div className="flex gap-2">
               <input
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                placeholder="Arweave address"
+                placeholder="43-character Arweave address"
                 className={`${input} flex-1`}
               />
               <button
@@ -349,7 +458,12 @@ export default function ArweaveWallet() {
               className={input}
             />
           </div>
-          {renderCost(sendCost)}
+          {sendFeeEstimate && (
+            <div className="flex items-center justify-between bg-white/[0.02] rounded-lg px-3 py-2">
+              <span className="text-[10px] text-white/30 uppercase tracking-wider">Network Fee</span>
+              <span className="text-xs font-medium text-white/50">{sendFeeEstimate} AR</span>
+            </div>
+          )}
           <button type="button" onClick={handleSend} className={btnPrimary}>Send Transaction</button>
           {renderStatus(sendStatus)}
         </div>

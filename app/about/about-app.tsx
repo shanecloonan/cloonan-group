@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
-import CompanyChart from "../company-chart";
 
 Chart.register(...registerables);
 
@@ -16,8 +15,8 @@ const SECTIONS = [
   { id: "dividends", label: "Dividend Pool" },
   { id: "trilayer", label: "Tri-Layer" },
   { id: "contracts", label: "Contracts" },
+  { id: "arweave", label: "Arweave" },
   { id: "fees", label: "Fee Structure" },
-  { id: "security", label: "Security" },
   { id: "faq", label: "FAQ" },
   { id: "gas", label: "Gas Calculator" },
 ];
@@ -81,6 +80,143 @@ const CONTRACT_SECTIONS = [
 ];
 
 /* ================================================================== */
+/*  ARWEAVE FEATURES                                                   */
+/* ================================================================== */
+
+type ArweaveFeatureLayer = "storage" | "network" | "compute" | "wallet";
+
+const ARWEAVE_FEATURES: {
+  title: string;
+  layer: ArweaveFeatureLayer;
+  icon: string;
+  summary: string;
+  details: string[];
+}[] = [
+  {
+    title: "PermaWrite",
+    layer: "storage",
+    icon: "📜",
+    summary: "Private storage with permanent Arweave archival. Files and text are uploaded to the Arweave blockchain where they persist forever — no hosting fees, no expiration, no takedowns.",
+    details: [
+      "44 categories across 9 groups (Media, Documents, Code, Creative, Data, Web, Social, Science, Other) with automatic content-type detection",
+      "Smart upload: tries Turbo (bundled, instant) first, falls back to L1 base layer",
+      "Metadata logged to Supabase for search, filtering, and category browsing",
+      "Custom tags and suggested tags per category for rich on-chain metadata",
+      "Visibility toggle: private (Supabase only) or permawrite (Arweave + Supabase)",
+      "PermaFeed view with Arweave TX IDs and direct links to ViewBlock explorer",
+    ],
+  },
+  {
+    title: "Gateway Infrastructure",
+    layer: "network",
+    icon: "🌐",
+    summary: "Direct peer-to-peer access to the Arweave network. Requests route through discovered peer nodes — public gateways are only used as a last resort.",
+    details: [
+      "Supabase Edge Function proxy for server-side Arweave API access",
+      "Dynamic peer pool with health monitoring and automatic failover",
+      "Block explorer: browse blocks, view transactions, inspect tags and data",
+      "GraphQL console for querying the Arweave transaction index (GQL)",
+      "Transaction browser with owner, recipient, tag, and block range filters",
+      "Upload history tracking with Supabase-backed bookmarks",
+    ],
+  },
+  {
+    title: "ar.io Network",
+    layer: "network",
+    icon: "🔗",
+    summary: "Integration with the decentralized ar.io gateway network for smart gateway selection, health monitoring, and ArNS name resolution.",
+    details: [
+      "Gateway discovery from curated high-quality nodes (arweave.net, ar-io.net, arweave.dev, g8way.io)",
+      "Health checks with latency measurement and block height verification",
+      "Network statistics: total gateways, average stake, best latency, highest block",
+      "ArNS (Arweave Name System) resolution: resolve ar://name to TX IDs",
+      "ArNS URLs formatted as https://{name}.arweave.dev or https://{name}.ar-io.net",
+      "Best-gateway selection algorithm based on health and latency",
+    ],
+  },
+  {
+    title: "Turbo Bundled Uploads",
+    layer: "storage",
+    icon: "⚡",
+    summary: "Instant Arweave confirmations via ar.io's Turbo bundler service. Uploads are bundled into ANS-104 data items for near-instant finality instead of waiting for L1 block confirmations.",
+    details: [
+      "ANS-104 data item creation with cryptographic signing (RSA-PSS + SHA-256)",
+      "Deep hash anchoring for tamper-proof content addressing",
+      "Price estimation in winc (winston credits) before upload",
+      "Balance checking and top-up URL generation via ArDrive",
+      "Supports both raw data and file uploads with content-type tags",
+      "Automatic fallback to L1 base layer if Turbo credits are insufficient",
+    ],
+  },
+  {
+    title: "ArConnect Wallet",
+    layer: "wallet",
+    icon: "🔐",
+    summary: "Browser extension wallet integration via ArConnect (Wander). Provides a unified interface for both JWK file wallets and ArConnect browser wallets.",
+    details: [
+      "Auto-detection of window.arweaveWallet injection with event listener fallback",
+      "Permission-scoped connection: ACCESS_ADDRESS, ACCESS_PUBLIC_KEY, SIGN_TRANSACTION, DISPATCH",
+      "Transaction dispatch with automatic bundling for instant finality",
+      "JWK import/export for portable wallet management",
+      "Balance display in AR with winston precision",
+      "Dual wallet source support: JWK files or ArConnect extension",
+    ],
+  },
+  {
+    title: "AO Compute Layer",
+    layer: "compute",
+    icon: "🧠",
+    summary: "Integration with AO, a hyper-parallel compute environment built on Arweave. Processes run as permanent on-chain programs with message-passing architecture.",
+    details: [
+      "Direct REST API integration — no aoconnect SDK dependency",
+      "Dryrun execution via Compute Units (CU) for reading process state",
+      "Message sending via Messenger Units (MU) with signed ANS-104 data items",
+      "Token operations: balance queries, transfers, and multi-token portfolio views",
+      "Well-known AO tokens: ARIO, TRUNK, LLAMA, BARK",
+      "Process info lookup and result reading by message ID",
+    ],
+  },
+  {
+    title: "Warp SmartWeave",
+    layer: "compute",
+    icon: "📄",
+    summary: "Warp SmartWeave contract integration for reading contract state, browsing interactions, parsing Atomic Assets, and checking PST balances — all via direct REST API calls.",
+    details: [
+      "Contract state reading via DRE (Distributed Resolution Environment) nodes with automatic failover",
+      "Interaction browsing via Warp Gateway with pagination support",
+      "Atomic Asset (NFT) parsing: single transaction that is both content AND contract",
+      "PST (Profit Sharing Token) balance checking for known contracts (ARDRIVE, U, BAZAR)",
+      "Vouch Protocol integration for wallet reputation verification",
+      "Contract explorer links to Sonar (Warp's block explorer)",
+    ],
+  },
+];
+
+function arweaveLayerBg(l: ArweaveFeatureLayer) {
+  if (l === "storage") return "bg-gradient-to-br from-[#1A2F3C] to-[#1F3A4A]";
+  if (l === "network") return "bg-gradient-to-br from-[#2A2F3C] to-[#35394E]";
+  if (l === "compute") return "bg-gradient-to-br from-[#2F2A3C] to-[#3D354E]";
+  if (l === "wallet") return "bg-gradient-to-br from-[#1A3C2F] to-[#1F4A3A]";
+  return "bg-white/[0.04]";
+}
+
+function arweaveLayerDot(l: ArweaveFeatureLayer) {
+  if (l === "storage") return "bg-cyan-400";
+  if (l === "network") return "bg-blue-400";
+  if (l === "compute") return "bg-violet-400";
+  if (l === "wallet") return "bg-teal-400";
+  return "bg-white/30";
+}
+
+function arweaveLayerLabel(l: ArweaveFeatureLayer) {
+  if (l === "storage") return "Storage";
+  if (l === "network") return "Network";
+  if (l === "compute") return "Compute";
+  if (l === "wallet") return "Wallet";
+  return "";
+}
+
+/* ================================================================== */
 /*  GAS CALCULATOR                                                     */
 /* ================================================================== */
 
@@ -133,71 +269,57 @@ function layerDot(l?: string) {
 /*  U-DIAGRAM                                                          */
 /* ================================================================== */
 
-function UDiagram({ label, boxes, desc, pathEnd, descSize, prefix = "u" }: {
+function UDiagram({ label, boxes, desc, pathEnd, descSize }: {
   label: string;
   boxes: { left: { label: string; layer: string }; bottom: { label: string; layer: string }; right: { label: string; layer: string } };
   desc: string;
   pathEnd?: string;
   descSize?: string;
-  prefix?: string;
 }) {
   const rightDollar = boxes.right.layer !== "none";
   const xEnd = pathEnd === "275" ? 275 : 260;
   const pathD = `M60,60 V210 H${xEnd} V60`;
   const boxFill = (layer: string) => {
-    if (layer === "asset") return `url(#${prefix}-al)`;
-    if (layer === "distribution") return `url(#${prefix}-dl)`;
-    if (layer === "profit") return `url(#${prefix}-pl)`;
-    if (layer === "none") return "none";
+    if (layer === "asset") return "url(#al-grad)";
+    if (layer === "distribution") return "url(#dl-grad)";
+    if (layer === "profit") return "url(#pl-grad)";
     return "#000";
   };
-  const boxStroke = (layer: string) => layer === "none" ? "rgba(255,255,255,0.2)" : "#fff";
-  const boxStrokeDash = (layer: string) => layer === "none" ? "4 3" : undefined;
 
   return (
     <div className="flex flex-col items-center w-full max-w-[320px] mx-auto">
       <p className="text-base font-bold text-white mb-2 text-center">{label}</p>
       <div className={`${card} p-4 w-full`}>
-        <svg viewBox="0 0 320 250" className="w-full h-auto" aria-label={`${label} U Diagram`}>
+        <svg viewBox="0 0 320 260" className="w-full h-auto" aria-label={`${label} U Diagram`}>
           <defs>
-            <marker id={`${prefix}-ae`} markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
-            <marker id={`${prefix}-ai`} markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
-            <linearGradient id={`${prefix}-al`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#3F2A6D" /><stop offset="100%" stopColor="#4B367E" /></linearGradient>
-            <linearGradient id={`${prefix}-dl`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B3A2B" /><stop offset="100%" stopColor="#A65343" /></linearGradient>
-            <linearGradient id={`${prefix}-pl`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#1A3C34" /><stop offset="100%" stopColor="#1F4A40" /></linearGradient>
+            <marker id="ae" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
+            <marker id="ai" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="white" /></marker>
+            <linearGradient id="al-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#3F2A6D" /><stop offset="100%" stopColor="#4B367E" /></linearGradient>
+            <linearGradient id="dl-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B3A2B" /><stop offset="100%" stopColor="#A65343" /></linearGradient>
+            <linearGradient id="pl-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#1A3C34" /><stop offset="100%" stopColor="#1F4A40" /></linearGradient>
           </defs>
-          {/* U-shaped flow path */}
-          <path d={pathD} fill="none" stroke="white" strokeWidth="3" markerEnd={`url(#${prefix}-ae)`} />
-          {/* Animated gold coins traveling along the path */}
+          <path d={pathD} fill="none" stroke="white" strokeWidth="3" markerEnd="url(#ae)" />
           <circle r="6" fill="gold"><animateMotion dur="3s" repeatCount="indefinite" path={pathD} /></circle>
           {rightDollar && <circle r="6" fill="gold"><animateMotion dur="3s" repeatCount="indefinite" path={pathD} begin="1.5s" /></circle>}
-          {/* Flow direction labels on the path */}
-          <text x="46" y="170" fill="rgba(255,255,255,0.25)" fontSize="8" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90,46,170)">value in</text>
-          <text x={xEnd + 14} y="170" fill="rgba(255,255,255,0.25)" fontSize="8" textAnchor="middle" dominantBaseline="middle" transform={`rotate(90,${xEnd + 14},170)`}>value out</text>
-          {/* Left box — connected from $ coin above */}
-          <rect x="30" y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.left.layer)} stroke={boxStroke(boxes.left.layer)} strokeWidth="2" strokeDasharray={boxStrokeDash(boxes.left.layer)} />
+          <rect x="30" y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.left.layer)} stroke="#fff" strokeWidth="2" />
           <text x="60" y="130" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.left.label}</text>
-          <line x1="60" y1="70" x2="60" y2="110" stroke="white" strokeWidth="2" markerEnd={`url(#${prefix}-ai)`} />
-          {/* Bottom box — connected from horizontal segment of U */}
-          <rect x="130" y="190" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.bottom.layer)} stroke={boxStroke(boxes.bottom.layer)} strokeWidth="2" strokeDasharray={boxStrokeDash(boxes.bottom.layer)} />
-          <text x="160" y="210" fill={boxes.bottom.layer === "none" ? "rgba(255,255,255,0.35)" : "white"} fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.bottom.label}</text>
-          <line x1="110" y1="210" x2="130" y2="210" stroke="white" strokeWidth="2" markerEnd={`url(#${prefix}-ai)`} />
-          {/* Right box — connected from ascending segment of U */}
-          <rect x={xEnd - 30} y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.right.layer)} stroke={boxStroke(boxes.right.layer)} strokeWidth="2" strokeDasharray={boxStrokeDash(boxes.right.layer)} />
-          <text x={xEnd} y="130" fill={boxes.right.layer === "none" ? "rgba(255,255,255,0.35)" : "white"} fontSize={boxes.right.label.length > 7 ? "8" : "10"} fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.right.label}</text>
-          <line x1={xEnd} y1="170" x2={xEnd} y2="150" stroke="white" strokeWidth="2" markerEnd={`url(#${prefix}-ai)`} />
-          {/* Input $ coin (top-left) */}
-          <circle cx="60" cy="50" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
-          <text x="60" y="50" fill="black" fontSize="20" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
-          {/* Output coins (top-right) */}
+          <line x1="60" y1="60" x2="60" y2="110" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
+          <rect x="130" y="190" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.bottom.layer)} stroke="#fff" strokeWidth="2" />
+          <text x="160" y="210" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.bottom.label}</text>
+          <line x1="110" y1="210" x2="130" y2="210" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
+          <rect x={xEnd - 30} y="110" width="60" height="40" rx="8" ry="8" fill={boxFill(boxes.right.layer)} stroke="#fff" strokeWidth="2" />
+          <text x={xEnd} y="130" fill="white" fontSize={boxes.right.label.length > 7 ? "8" : "10"} fontWeight="bold" textAnchor="middle" dominantBaseline="middle">{boxes.right.label}</text>
+          <line x1={xEnd} y1="170" x2={xEnd} y2="150" stroke="white" strokeWidth="2" markerEnd="url(#ai)" />
+          <circle cx="60" cy="60" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
+          <text x="60" y="60" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
           {rightDollar ? (<>
-            <circle cx={xEnd - 15} cy="40" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
-            <text x={xEnd - 15} y="40" fill="black" fontSize="20" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
-            <circle cx={xEnd + 15} cy="40" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
-            <text x={xEnd + 15} y="40" fill="black" fontSize="20" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
+            <circle cx="260" cy="36" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
+            <text x="260" y="36" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
+            <circle cx="290" cy="36" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
+            <text x="290" y="36" fill="black" fontSize="24" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">$</text>
           </>) : (<>
-            <circle cx={xEnd} cy="40" r="15" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeDasharray="4 3" />
-            <text x={xEnd} y="40" fill="rgba(255,255,255,0.4)" fontSize="16" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">?</text>
+            <circle cx="260" cy="42" r="15" fill="gold" stroke="#fff" strokeWidth="2" />
+            <text x="260" y="42" fill="white" fontSize="18" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">?</text>
           </>)}
         </svg>
       </div>
@@ -207,52 +329,25 @@ function UDiagram({ label, boxes, desc, pathEnd, descSize, prefix = "u" }: {
 }
 
 /* ================================================================== */
-/*  STATIC CONNECTOR for Dividend Pool                                 */
+/*  ANIMATED COIN COMPONENT for Dividend Pool                          */
 /* ================================================================== */
 
-const BRANCH_COLORS: Record<string, [string, string]> = {
-  asset: ["#34d399", "#10b981"],
-  distribution: ["#fb923c", "#f97316"],
-  profit: ["#a78bfa", "#8b5cf6"],
-  utility: ["#38bdf8", "#0ea5e9"],
-};
-
-function StaticConnector({ branchIndex, total, layer }: { branchIndex: number; total: number; layer: string }) {
+function AnimatedCoins({ branchIndex, total }: { branchIndex: number; total: number }) {
   const angle = (branchIndex * Math.PI * 2) / total;
   const r = 220;
-  const ex = 300 + r * Math.cos(angle);
-  const ey = 300 + r * Math.sin(angle);
-  const [c1] = BRANCH_COLORS[layer] || ["#a78bfa", "#8b5cf6"];
-  const gradId = `conn-grad-${branchIndex}`;
-  const dx = 300 - ex;
-  const dy = 300 - ey;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  const nx = dx / len;
-  const ny = dy / len;
-  const dotPositions = [0.3, 0.55, 0.75];
+  const sx = 300 + r * Math.cos(angle);
+  const sy = 300 + r * Math.sin(angle);
+  const delays = useMemo(() => [0, 1.2, 2.5, 3.8], []);
 
-  return (
-    <g>
-      <defs>
-        <linearGradient id={gradId} x1={ex} y1={ey} x2="300" y2="300" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={c1} stopOpacity="0.5" />
-          <stop offset="100%" stopColor={c1} stopOpacity="0.08" />
-        </linearGradient>
-      </defs>
-      <line x1={ex} y1={ey} x2="300" y2="300" stroke={`url(#${gradId})`} strokeWidth="2" strokeLinecap="round" />
-      {dotPositions.map((t, i) => (
-        <circle
-          key={i}
-          cx={ex + dx * t}
-          cy={ey + dy * t}
-          r={3.5 - i * 0.5}
-          fill={c1}
-          opacity={0.5 - i * 0.12}
-        />
-      ))}
-      <circle cx={ex + nx * 12} cy={ey + ny * 12} r="4" fill={c1} opacity="0.7" />
-    </g>
-  );
+  return (<>
+    {delays.map((d, ci) => (
+      <circle key={ci} r="8" fill="gold" opacity="0.9" filter="url(#coinGlow)">
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin={`${d}s`} fill="freeze" path={`M${sx},${sy} L300,300`} />
+        <animate attributeName="opacity" values="0.9;0.9;0" keyTimes="0;0.7;1" dur="2.5s" repeatCount="indefinite" begin={`${d}s`} />
+        <animate attributeName="r" values="8;6;2" keyTimes="0;0.8;1" dur="2.5s" repeatCount="indefinite" begin={`${d}s`} />
+      </circle>
+    ))}
+  </>);
 }
 
 /* ================================================================== */
@@ -270,938 +365,6 @@ function SectionHeading({ children, sub }: { children: React.ReactNode; sub?: st
 }
 
 /* ================================================================== */
-/*  FLOW DIAGRAM PRIMITIVES                                            */
-/* ================================================================== */
-
-function Node({
-  icon,
-  label,
-  sub,
-  color = "border-white/10",
-  glow,
-  size = "md",
-}: {
-  icon: string;
-  label: string;
-  sub?: string;
-  color?: string;
-  glow?: string;
-  size?: "sm" | "md" | "lg";
-}) {
-  const pad = size === "sm" ? "px-3 py-2" : size === "lg" ? "px-5 py-4" : "px-4 py-3";
-  const iconSize = size === "sm" ? "text-base" : size === "lg" ? "text-2xl" : "text-lg";
-  const labelSize = size === "sm" ? "text-[10px]" : "text-xs";
-  return (
-    <div
-      className={`${pad} rounded-xl border ${color} bg-white/[0.03] flex flex-col items-center gap-1 min-w-[60px] sm:min-w-[80px] relative`}
-      style={glow ? { boxShadow: `0 0 20px 2px ${glow}` } : undefined}
-    >
-      <span className={iconSize}>{icon}</span>
-      <span className={`${labelSize} font-semibold text-white/80 text-center leading-tight`}>
-        {label}
-      </span>
-      {sub && (
-        <span className="text-[9px] text-white/30 text-center leading-tight">{sub}</span>
-      )}
-    </div>
-  );
-}
-
-function Arrow({
-  dir = "right",
-  label,
-  color = "text-white/40",
-  dashed,
-}: {
-  dir?: "right" | "down" | "left" | "up";
-  label?: string;
-  color?: string;
-  dashed?: boolean;
-}) {
-  const arrows: Record<string, string> = { right: "→", down: "↓", left: "←", up: "↑" };
-  const isVert = dir === "down" || dir === "up";
-  return (
-    <div
-      className={`flex ${isVert ? "flex-col" : "flex-col sm:flex-row"} items-center gap-0.5 ${color} shrink-0`}
-    >
-      {label && (
-        <span className="text-[9px] text-white/30 font-medium whitespace-nowrap max-w-[140px] sm:max-w-none truncate sm:truncate-none">
-          {label}
-        </span>
-      )}
-      <div
-        className={`flex items-center justify-center ${
-          isVert ? "h-6 w-px" : "h-4 w-px sm:h-px sm:w-8"
-        }`}
-      >
-        <div
-          className={`${isVert ? "w-px h-full" : "w-px h-full sm:w-full sm:h-px"} ${
-            dashed ? "border-dashed" : ""
-          }`}
-          style={{
-            background: dashed
-              ? undefined
-              : "currentColor",
-            borderTop: dashed && !isVert ? "1px dashed currentColor" : undefined,
-            borderLeft: dashed && isVert ? "1px dashed currentColor" : undefined,
-          }}
-        />
-      </div>
-      <span className={`text-sm font-bold ${isVert ? "" : "hidden sm:inline"}`}>{arrows[dir]}</span>
-      <span className={`text-sm font-bold sm:hidden ${isVert ? "hidden" : ""}`}>{arrows.down}</span>
-    </div>
-  );
-}
-
-function FlowRow({
-  children,
-  wrap,
-}: {
-  children: React.ReactNode;
-  wrap?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-center gap-2 ${
-        wrap ? "flex-col sm:flex-row" : ""
-      }`}
-    >
-      {children}
-    </div>
-  );
-}
-
-function FlowCol({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col items-center gap-1">{children}</div>
-  );
-}
-
-function Badge({
-  text,
-  color = "bg-white/5 text-white/40",
-}: {
-  text: string;
-  color?: string;
-}) {
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold ${color}`}
-    >
-      {text}
-    </span>
-  );
-}
-
-function SectionTitle({
-  icon,
-  title,
-  sub,
-  accent,
-}: {
-  icon: string;
-  title: string;
-  sub: string;
-  accent: string;
-}) {
-  return (
-    <div className="flex items-start gap-3 mb-6">
-      <span className="text-3xl">{icon}</span>
-      <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-white/90">{title}</h2>
-        <p className={`text-xs mt-0.5 ${accent}`}>{sub}</p>
-      </div>
-    </div>
-  );
-}
-
-/* ================================================================== */
-/*  PENALTY TIMELINE VISUAL                                            */
-/* ================================================================== */
-
-function PenaltyTimeline({
-  hardLock,
-  initPenalty,
-  decayPerDay,
-}: {
-  hardLock: number;
-  initPenalty: number;
-  decayPerDay: number;
-}) {
-  const breakeven = decayPerDay > 0 ? hardLock + initPenalty / decayPerDay : 0;
-  const totalDays = Math.ceil(breakeven * 1.15) || 30;
-  const segments = 40;
-
-  const points = useMemo(() => {
-    const pts: { day: number; penalty: number }[] = [];
-    for (let i = 0; i <= segments; i++) {
-      const day = (i / segments) * totalDays;
-      let penalty: number;
-      if (day < hardLock) {
-        penalty = 100;
-      } else {
-        const elapsed = day - hardLock;
-        penalty = Math.max(0, initPenalty - elapsed * decayPerDay);
-      }
-      pts.push({ day, penalty });
-    }
-    return pts;
-  }, [hardLock, initPenalty, decayPerDay, totalDays]);
-
-  const hardLockPct = (hardLock / totalDays) * 100;
-  const breakevenPct = (breakeven / totalDays) * 100;
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 text-[10px] text-white/40 font-semibold uppercase tracking-wider">
-        <span>Penalty Decay Timeline</span>
-        <span className="text-white/40">|</span>
-        <span>
-          Breakeven: <span className="text-emerald-400">{breakeven.toFixed(1)} days</span>
-        </span>
-      </div>
-
-      <div className="relative h-28 rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
-        <div
-          className="absolute top-0 left-0 h-full bg-red-500/[0.06] border-r border-red-500/20"
-          style={{ width: `${hardLockPct}%` }}
-        />
-        <div
-          className="absolute top-0 h-full border-r border-dashed border-emerald-500/30"
-          style={{ left: `${Math.min(breakevenPct, 100)}%` }}
-        />
-
-        <svg
-          viewBox={`0 0 ${segments} 100`}
-          preserveAspectRatio="none"
-          className="absolute inset-0 w-full h-full"
-        >
-          <defs>
-            <linearGradient id="penGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="rgb(239,68,68)" stopOpacity="0.6" />
-              <stop offset="50%" stopColor="rgb(245,158,11)" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="rgb(16,185,129)" stopOpacity="0.6" />
-            </linearGradient>
-            <linearGradient id="penFill" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="rgb(239,68,68)" stopOpacity="0.08" />
-              <stop offset="50%" stopColor="rgb(245,158,11)" stopOpacity="0.04" />
-              <stop offset="100%" stopColor="rgb(16,185,129)" stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-          <path
-            d={
-              `M 0 ${100 - points[0].penalty} ` +
-              points
-                .map((p, i) => `L ${i} ${100 - p.penalty}`)
-                .join(" ") +
-              ` L ${segments} 100 L 0 100 Z`
-            }
-            fill="url(#penFill)"
-          />
-          <path
-            d={
-              `M 0 ${100 - points[0].penalty} ` +
-              points.map((p, i) => `L ${i} ${100 - p.penalty}`).join(" ")
-            }
-            fill="none"
-            stroke="url(#penGrad)"
-            strokeWidth="1.5"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-
-        <div className="absolute bottom-1 left-1 text-[9px] text-red-400/60 font-semibold">
-          LOCKED
-        </div>
-        <div
-          className="absolute bottom-1 text-[9px] text-emerald-400/60 font-semibold"
-          style={{ left: `${Math.min(breakevenPct, 98)}%` }}
-        >
-          0% PENALTY
-        </div>
-        <div className="absolute top-1 right-2 text-[9px] text-white/40">
-          Day 0 → {totalDays.toFixed(0)}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-sm bg-red-500/40" /> Hard Lock ({hardLock}d)
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-sm bg-amber-500/40" /> Penalty Decay (−{decayPerDay}%/day)
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-sm bg-emerald-500/40" /> Penalty-free
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* ================================================================== */
-/*  ARCHITECTURE DIAGRAM SECTIONS                                      */
-/* ================================================================== */
-
-function DividendArchitecture() {
-  const [h, setH] = useState(7);
-  const [p, setP] = useState(30);
-  const [d, setD] = useState(1);
-
-  return (
-    <section className="space-y-8">
-      <SectionTitle
-        icon="🥩"
-        title="Dividend Launcher"
-        sub="ERC-721 staking pools with time-locked rewards and penalty mechanics"
-        accent="text-purple-400/80"
-      />
-
-      <div className={`${card} p-5 sm:p-6 space-y-6`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Architecture Overview
-        </h3>
-        <div className="flex flex-col items-center gap-1">
-          <div className="sm:hidden flex flex-col items-center gap-1">
-            <Node icon="👤" label="Pool Creator" color="border-purple-500/20" glow="rgba(168,85,247,0.08)" />
-            <Arrow dir="down" label="createPool()" color="text-purple-400/40" />
-            <Node icon="🏭" label="Factory" sub="0x5ef0...128a" color="border-indigo-500/20" glow="rgba(99,102,241,0.08)" />
-            <Arrow dir="down" label="deploys" color="text-indigo-400/40" />
-            <Node icon="🥩" label="Staking Pool" sub="per-token" color="border-purple-500/20" glow="rgba(168,85,247,0.1)" size="lg" />
-          </div>
-          <div className="hidden sm:block">
-            <FlowRow>
-              <Node icon="👤" label="Pool Creator" color="border-purple-500/20" glow="rgba(168,85,247,0.08)" />
-              <Arrow label="createPool()" color="text-purple-400/40" />
-              <Node icon="🏭" label="Factory" sub="0x5ef0...128a" color="border-indigo-500/20" glow="rgba(99,102,241,0.08)" />
-              <Arrow label="deploys" color="text-indigo-400/40" />
-              <Node icon="🥩" label="Staking Pool" sub="per-token" color="border-purple-500/20" glow="rgba(168,85,247,0.1)" size="lg" />
-            </FlowRow>
-          </div>
-          <div className="text-[10px] text-white/40 py-2">Factory creates one pool per ERC-20 token with configurable penalty parameters</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-lg">
-            {[
-              { label: "token", desc: "ERC-20 address" },
-              { label: "hardLock", desc: "Lock duration" },
-              { label: "initPenalty", desc: "Starting penalty %" },
-              { label: "decayRate", desc: "Daily reduction %" },
-            ].map((p) => (
-              <div
-                key={p.label}
-                className="text-center px-3 py-2 rounded-lg bg-purple-500/[0.05] border border-purple-500/10"
-              >
-                <div className="text-[10px] font-mono text-purple-400/80">{p.label}</div>
-                <div className="text-[9px] text-white/30 mt-0.5">{p.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Staking Flow — Tokens → NFT Receipt
-        </h3>
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="👤" label="Staker" color="border-blue-500/20" />
-            <Arrow label="approve(pool, amount)" color="text-blue-400/40" />
-            <Node icon="🪙" label="ERC-20 Token" color="border-amber-500/20" />
-          </FlowRow>
-          <Arrow dir="down" label="then" color="text-white/40" />
-          <FlowRow wrap>
-            <Node icon="👤" label="Staker" color="border-blue-500/20" />
-            <Arrow label="stake(amount)" color="text-purple-400/40" />
-            <Node icon="🥩" label="Pool" color="border-purple-500/20" glow="rgba(168,85,247,0.06)" />
-          </FlowRow>
-          <Arrow dir="down" label="pool executes" color="text-white/40" />
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <FlowRow wrap>
-              <Node icon="🪙" label="Tokens" sub="transferFrom" color="border-amber-500/20" size="sm" />
-              <Arrow label="locked in" color="text-amber-400/30" />
-              <Node icon="🔒" label="Pool Vault" color="border-amber-500/20" size="sm" />
-            </FlowRow>
-            <span className="text-white/10 text-lg">+</span>
-            <FlowRow wrap>
-              <Node icon="🥩" label="Pool" color="border-purple-500/20" size="sm" />
-              <Arrow label="mint()" color="text-emerald-400/30" />
-              <Node icon="🎫" label="NFT Receipt" sub="ERC-721" color="border-emerald-500/20" glow="rgba(16,185,129,0.06)" size="sm" />
-            </FlowRow>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2 pt-2">
-            <Badge text="0.5% Fee → MoneyFund Wallet" color="bg-purple-500/10 text-purple-400/60" />
-            <Badge text="NFT = tradeable on OpenSea" color="bg-emerald-500/10 text-emerald-400/60" />
-          </div>
-        </div>
-      </div>
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Reward Distribution — Proportional to Stake Share
-        </h3>
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="Ξ" label="ETH" sub="receive()" color="border-sky-500/20" size="sm" />
-            <Node icon="🪙" label="ERC-20" sub="transfer()" color="border-amber-500/20" size="sm" />
-            <Arrow label="sent to pool" color="text-sky-400/30" />
-            <Node icon="🥩" label="Reward Pool" color="border-purple-500/20" glow="rgba(168,85,247,0.08)" />
-          </FlowRow>
-          <Arrow dir="down" label="distributed by share" color="text-white/40" />
-          <div className="grid grid-cols-3 gap-3 w-full max-w-md">
-            {[
-              { pct: "50%", tokens: "5,000", total: "10,000" },
-              { pct: "30%", tokens: "3,000", total: "10,000" },
-              { pct: "20%", tokens: "2,000", total: "10,000" },
-            ].map((s, i) => (
-              <div
-                key={i}
-                className="text-center px-2 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]"
-              >
-                <div className="text-lg mb-1">🎫</div>
-                <div className="text-xs font-bold text-purple-400">{s.pct}</div>
-                <div className="text-[9px] text-white/40 mt-0.5">
-                  {s.tokens} / {s.total}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="text-[10px] text-white/40 text-center">
-            reward = (userStake / totalStaked) × rewardBalance
-          </div>
-          <FlowRow wrap>
-            <Node icon="🎫" label="NFT Holder" color="border-emerald-500/20" size="sm" />
-            <Arrow label="claimAllRewards(tokenId)" color="text-emerald-400/30" />
-            <Node icon="💰" label="ETH + Tokens" sub="rewards sent" color="border-sky-500/20" size="sm" />
-          </FlowRow>
-          <Badge text="0.5% claim fee → MoneyFund Wallet" color="bg-purple-500/10 text-purple-400/60" />
-        </div>
-      </div>
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Unstaking — NFT Burn + Penalty Mechanics
-        </h3>
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="🎫" label="NFT" sub="ERC-721" color="border-emerald-500/20" />
-            <Arrow label="unstake(tokenId)" color="text-red-400/40" />
-            <Node icon="🥩" label="Pool" color="border-purple-500/20" />
-          </FlowRow>
-          <Arrow dir="down" label="pool executes" color="text-white/40" />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg">
-            <div className="text-center px-3 py-3 rounded-xl bg-red-500/[0.04] border border-red-500/10">
-              <div className="text-lg mb-1">🔥</div>
-              <div className="text-[10px] font-semibold text-red-400/80">NFT Burned</div>
-              <div className="text-[9px] text-white/40 mt-0.5">Receipt destroyed</div>
-            </div>
-            <div className="text-center px-3 py-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/10">
-              <div className="text-lg mb-1">💰</div>
-              <div className="text-[10px] font-semibold text-emerald-400/80">Tokens Returned</div>
-              <div className="text-[9px] text-white/40 mt-0.5">amount − penalty</div>
-            </div>
-            <div className="text-center px-3 py-3 rounded-xl bg-amber-500/[0.04] border border-amber-500/10">
-              <div className="text-lg mb-1">⚠️</div>
-              <div className="text-[10px] font-semibold text-amber-400/80">Penalty</div>
-              <div className="text-[9px] text-white/40 mt-0.5">→ Pool Creator</div>
-            </div>
-          </div>
-
-          <div className="w-full max-w-lg px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
-            <div className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-2">
-              Penalty Formula
-            </div>
-            <div className="text-sm font-mono text-amber-400/80">
-              penalty = initPenalty − (daysAfterLock × decayPerDay)
-            </div>
-            <div className="text-sm font-mono text-emerald-400/80 mt-1">
-              breakeven = hardLock + (initPenalty / decayPerDay)
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Interactive Penalty Timeline
-        </h3>
-        <div className="grid grid-cols-3 gap-3 max-w-md">
-          <div>
-            <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold block mb-1">
-              Hard Lock (days)
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={60}
-              value={h}
-              onChange={(e) => setH(Number(e.target.value))}
-              className="w-full accent-purple-500"
-            />
-            <div className="text-xs text-purple-400 text-center mt-0.5">{h}</div>
-          </div>
-          <div>
-            <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold block mb-1">
-              Init Penalty (%)
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={p}
-              onChange={(e) => setP(Number(e.target.value))}
-              className="w-full accent-amber-500"
-            />
-            <div className="text-xs text-amber-400 text-center mt-0.5">{p}%</div>
-          </div>
-          <div>
-            <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold block mb-1">
-              Decay/Day (%)
-            </label>
-            <input
-              type="range"
-              min={0.1}
-              max={10}
-              step={0.1}
-              value={d}
-              onChange={(e) => setD(Number(e.target.value))}
-              className="w-full accent-emerald-500"
-            />
-            <div className="text-xs text-emerald-400 text-center mt-0.5">{d}%</div>
-          </div>
-        </div>
-        <PenaltyTimeline hardLock={h} initPenalty={p} decayPerDay={d} />
-      </div>
-
-      <div className={`${card} p-5 sm:p-6 space-y-4`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          ERC-721 Receipt NFT — Lifecycle
-        </h3>
-        <div className="flex flex-wrap justify-center gap-3">
-          {[
-            { step: "1", icon: "🪙", title: "Stake Tokens", desc: "Deposit ERC-20 into pool", color: "border-blue-500/15" },
-            { step: "2", icon: "🎫", title: "NFT Minted", desc: "Unique ERC-721 receipt", color: "border-emerald-500/15" },
-            { step: "3", icon: "🔄", title: "Tradeable", desc: "Sell/transfer on OpenSea", color: "border-indigo-500/15" },
-            { step: "4", icon: "💰", title: "Claim Rewards", desc: "NFT holder earns dividends", color: "border-amber-500/15" },
-            { step: "5", icon: "🔥", title: "Unstake & Burn", desc: "Tokens returned, NFT destroyed", color: "border-red-500/15" },
-          ].map((s) => (
-            <div
-              key={s.step}
-              className={`w-28 px-3 py-3 rounded-xl bg-white/[0.02] border ${s.color} text-center`}
-            >
-              <div className="text-[9px] text-white/40 font-bold mb-1">STEP {s.step}</div>
-              <div className="text-xl mb-1">{s.icon}</div>
-              <div className="text-[11px] font-semibold text-white/70">{s.title}</div>
-              <div className="text-[9px] text-white/40 mt-0.5">{s.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function EtfArchitecture() {
-  return (
-    <section className="space-y-8">
-      <SectionTitle
-        icon="📈"
-        title="ETF Launcher"
-        sub="Weighted token baskets with Uniswap V2 swaps and Chainlink pricing"
-        accent="text-amber-400/80"
-      />
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Create → Mint → Burn Flow
-        </h3>
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="👤" label="Creator" color="border-amber-500/20" />
-            <Arrow label="createETF(name, symbol, tokens[], weights[])" color="text-amber-400/40" />
-            <Node icon="🏭" label="ETF Manager" color="border-amber-500/20" glow="rgba(245,158,11,0.08)" />
-          </FlowRow>
-          <Arrow dir="down" label="deploys ERC-20 share token" color="text-white/40" />
-          <Node icon="📈" label="ETF Token" sub="ERC-20 shares" color="border-amber-500/20" glow="rgba(245,158,11,0.06)" size="lg" />
-        </div>
-
-        <div className="text-center space-y-2">
-          <div className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">
-            Weighted Token Basket
-          </div>
-          <div className="flex justify-center gap-2 flex-wrap">
-            {[
-              { sym: "WETH", pct: "40%", color: "bg-blue-500/10 text-blue-400/80 border-blue-500/15" },
-              { sym: "USDC", pct: "25%", color: "bg-green-500/10 text-green-400/80 border-green-500/15" },
-              { sym: "LINK", pct: "20%", color: "bg-indigo-500/10 text-indigo-400/80 border-indigo-500/15" },
-              { sym: "UNI", pct: "15%", color: "bg-pink-500/10 text-pink-400/80 border-pink-500/15" },
-            ].map((t) => (
-              <div
-                key={t.sym}
-                className={`px-3 py-2 rounded-lg border text-xs font-semibold ${t.color}`}
-              >
-                {t.sym} {t.pct}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className={`${card} p-5 space-y-3`}>
-          <h4 className="text-xs font-bold text-emerald-400/80 uppercase tracking-wider">Mint (Buy In)</h4>
-          <FlowCol>
-            <FlowRow>
-              <Node icon="Ξ" label="ETH" color="border-sky-500/20" size="sm" />
-              <Arrow label="mintWithEth()" color="text-emerald-400/30" />
-              <Node icon="🏭" label="Manager" color="border-amber-500/20" size="sm" />
-            </FlowRow>
-            <Arrow dir="down" color="text-emerald-400/20" />
-            <div className="text-center text-[9px] text-white/40">
-              Uniswap V2 swaps ETH → underlying tokens
-            </div>
-            <Arrow dir="down" color="text-emerald-400/20" />
-            <FlowRow>
-              <Node icon="📈" label="ETF Shares" sub="minted to user" color="border-emerald-500/20" size="sm" />
-            </FlowRow>
-          </FlowCol>
-          <Badge text="0.35% fee: 0.125% wallet + 0.125% dividends + 0.1% MONEY burn" color="bg-amber-500/10 text-amber-400/60" />
-        </div>
-
-        <div className={`${card} p-5 space-y-3`}>
-          <h4 className="text-xs font-bold text-red-400/80 uppercase tracking-wider">Burn (Redeem)</h4>
-          <FlowCol>
-            <FlowRow>
-              <Node icon="📈" label="ETF Shares" color="border-amber-500/20" size="sm" />
-              <Arrow label="burn()" color="text-red-400/30" />
-              <Node icon="🏭" label="Manager" color="border-amber-500/20" size="sm" />
-            </FlowRow>
-            <Arrow dir="down" color="text-red-400/20" />
-            <div className="text-center text-[9px] text-white/40">
-              Underlying tokens sold → ETH via Uniswap
-            </div>
-            <Arrow dir="down" color="text-red-400/20" />
-            <FlowRow>
-              <Node icon="Ξ" label="ETH" sub="returned to user" color="border-sky-500/20" size="sm" />
-            </FlowRow>
-          </FlowCol>
-          <Badge text="Shares burned, proportional ETH returned" color="bg-red-500/10 text-red-400/60" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function DaoArchitecture() {
-  return (
-    <section className="space-y-8">
-      <SectionTitle
-        icon="🗳️"
-        title="DAO Launcher"
-        sub="On-chain governance with token-weighted voting and proposal execution"
-        accent="text-sky-400/80"
-      />
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Proposal Lifecycle
-        </h3>
-        <div className="flex flex-wrap justify-center gap-3">
-          {[
-            { step: "1", icon: "📝", title: "Create Proposal", desc: "Send ETH or swap tokens", color: "border-sky-500/15" },
-            { step: "2", icon: "🗳️", title: "Voting Period", desc: "Token holders vote Yes/No", color: "border-indigo-500/15" },
-            { step: "3", icon: "⏱️", title: "Period Ends", desc: "Votes tallied by weight", color: "border-amber-500/15" },
-            { step: "4", icon: "⚡", title: "Execute", desc: "If majority reached", color: "border-emerald-500/15" },
-            { step: "5", icon: "🔓", title: "Reclaim", desc: "Unlock voting tokens", color: "border-purple-500/15" },
-          ].map((s) => (
-            <div
-              key={s.step}
-              className={`w-28 px-3 py-3 rounded-xl bg-white/[0.02] border ${s.color} text-center`}
-            >
-              <div className="text-[9px] text-white/40 font-bold mb-1">STEP {s.step}</div>
-              <div className="text-xl mb-1">{s.icon}</div>
-              <div className="text-[11px] font-semibold text-white/70">{s.title}</div>
-              <div className="text-[9px] text-white/40 mt-0.5">{s.desc}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col items-center gap-2 pt-3">
-          <div className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">
-            Vote Weight Mechanics
-          </div>
-          <div className="w-full max-w-md px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <div className="text-[10px] text-white/40 space-y-1.5">
-              <div className="flex justify-between">
-                <span>Vote weight</span>
-                <span className="text-sky-400/70 font-mono">userTokenBalance</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tokens locked during vote</span>
-                <span className="text-amber-400/70 font-mono">voteLockPct% of balance</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Silence = Consent</span>
-                <span className="text-emerald-400/70 font-mono">non-voters count as Yes</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Execution swap fee</span>
-                <span className="text-purple-400/70 font-mono">0.5% → wallet + dividends</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function DexArchitecture() {
-  return (
-    <section className="space-y-8">
-      <SectionTitle
-        icon="🍒"
-        title="MoneyFund DEX"
-        sub="Custom AMM with constant-product pools and LP rewards"
-        accent="text-pink-400/80"
-      />
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          AMM Architecture
-        </h3>
-
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="🪙" label="Token A" color="border-pink-500/20" />
-            <span className="text-white/10 text-lg">×</span>
-            <Node icon="🪙" label="Token B" color="border-pink-500/20" />
-            <span className="text-white/10 text-lg">=</span>
-            <Node icon="📊" label="k (constant)" sub="x × y = k" color="border-pink-500/20" glow="rgba(236,72,153,0.06)" />
-          </FlowRow>
-
-          <div className="w-full max-w-lg grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="text-center px-3 py-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/10">
-              <div className="text-lg mb-1">💧</div>
-              <div className="text-[11px] font-semibold text-emerald-400/80">Add Liquidity</div>
-              <div className="text-[9px] text-white/40 mt-0.5">Deposit both tokens, receive LP shares</div>
-            </div>
-            <div className="text-center px-3 py-3 rounded-xl bg-pink-500/[0.04] border border-pink-500/10">
-              <div className="text-lg mb-1">⇄</div>
-              <div className="text-[11px] font-semibold text-pink-400/80">Swap</div>
-              <div className="text-[9px] text-white/40 mt-0.5">Trade along the curve, 0.5% fee</div>
-            </div>
-            <div className="text-center px-3 py-3 rounded-xl bg-red-500/[0.04] border border-red-500/10">
-              <div className="text-lg mb-1">🔥</div>
-              <div className="text-[11px] font-semibold text-red-400/80">Remove Liquidity</div>
-              <div className="text-[9px] text-white/40 mt-0.5">Burn LP, reclaim both tokens</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-center space-y-2 pt-2">
-          <div className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">
-            0.5% Swap Fee Distribution
-          </div>
-          <div className="flex justify-center gap-3">
-            <Badge text="0.3% → Liquidity Providers" color="bg-emerald-500/10 text-emerald-400/60" />
-            <Badge text="0.1% → Wallet" color="bg-pink-500/10 text-pink-400/60" />
-            <Badge text="0.1% → Dividends" color="bg-purple-500/10 text-purple-400/60" />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function StorefrontArchitecture() {
-  return (
-    <section className="space-y-8">
-      <SectionTitle
-        icon="🛒"
-        title="Storefront Launcher"
-        sub="Decentralized NFT marketplace with custom payee splits"
-        accent="text-emerald-400/80"
-      />
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Marketplace Flow
-        </h3>
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="👤" label="Creator" color="border-emerald-500/20" />
-            <Arrow label="createNFTLocker(payees, shares)" color="text-emerald-400/40" />
-            <Node icon="🏪" label="Storefront" sub="NFT Locker" color="border-emerald-500/20" glow="rgba(16,185,129,0.08)" />
-          </FlowRow>
-          <Arrow dir="down" label="then" color="text-white/40" />
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 w-full max-w-xl">
-            {[
-              { icon: "📦", title: "Deposit NFT", desc: "ERC-721 → Locker" },
-              { icon: "🏷️", title: "List NFT", desc: "Set price + timelock" },
-              { icon: "💳", title: "Buy NFT", desc: "ETH or ERC-20" },
-              { icon: "💸", title: "Split Payment", desc: "99.6% to payees" },
-            ].map((s) => (
-              <div key={s.title} className="text-center px-2 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <div className="text-lg mb-1">{s.icon}</div>
-                <div className="text-[10px] font-semibold text-white/70">{s.title}</div>
-                <div className="text-[9px] text-white/40 mt-0.5">{s.desc}</div>
-              </div>
-            ))}
-          </div>
-          <Badge text="0.4% sale fee: 0.2% wallet + 0.2% dividends" color="bg-emerald-500/10 text-emerald-400/60" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function AuctionArchitecture() {
-  return (
-    <section className="space-y-8">
-      <SectionTitle
-        icon="🖼️"
-        title="Ad-space Launcher"
-        sub="Continuous ascending auctions with configurable refund and comment mechanics"
-        accent="text-orange-400/80"
-      />
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Auction Lifecycle
-        </h3>
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="👤" label="Creator" color="border-orange-500/20" />
-            <Arrow label="deployAuction()" color="text-orange-400/40" />
-            <Node icon="🖼️" label="Auction Contract" color="border-orange-500/20" glow="rgba(249,115,22,0.08)" />
-          </FlowRow>
-          <Arrow dir="down" color="text-white/40" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full max-w-lg">
-            {[
-              { icon: "💰", title: "Place Bid", desc: "Must exceed previous + increment" },
-              { icon: "↩️", title: "Refund", desc: "0-100% of outbid amount returned" },
-              { icon: "✍️", title: "Sign Ad", desc: "Comment for a fee ($1+ USD)" },
-            ].map((s) => (
-              <div key={s.title} className="text-center px-2 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <div className="text-lg mb-1">{s.icon}</div>
-                <div className="text-[10px] font-semibold text-white/70">{s.title}</div>
-                <div className="text-[9px] text-white/40 mt-0.5">{s.desc}</div>
-              </div>
-            ))}
-          </div>
-          <Badge text="0.4% bid fee: 0.2% wallet + 0.2% dividends" color="bg-orange-500/10 text-orange-400/60" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function MultiswapArchitecture() {
-  return (
-    <section className="space-y-8">
-      <SectionTitle
-        icon="🐙"
-        title="Multiswap Launcher"
-        sub="Batch swaps and distributions via Uniswap V2 in a single transaction"
-        accent="text-teal-400/80"
-      />
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Swap + Distribute Architecture
-        </h3>
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="👤" label="Deployer" color="border-teal-500/20" />
-            <Arrow label="deploy(swapReceivers, distReceivers)" color="text-teal-400/40" />
-            <Node icon="🐙" label="Multiswap Widget" color="border-teal-500/20" glow="rgba(20,184,166,0.08)" />
-          </FlowRow>
-          <Arrow dir="down" color="text-white/40" />
-          <div className="grid grid-cols-2 gap-3 w-full max-w-md">
-            <div className="text-center px-3 py-3 rounded-xl bg-teal-500/[0.04] border border-teal-500/10">
-              <div className="text-lg mb-1">⇄</div>
-              <div className="text-[11px] font-semibold text-teal-400/80">Batch Swaps</div>
-              <div className="text-[9px] text-white/40 mt-1 space-y-0.5">
-                <div>ETH → Multiple tokens</div>
-                <div>Token → Multiple tokens</div>
-                <div>Multi-hop routing</div>
-              </div>
-            </div>
-            <div className="text-center px-3 py-3 rounded-xl bg-teal-500/[0.04] border border-teal-500/10">
-              <div className="text-lg mb-1">📤</div>
-              <div className="text-[11px] font-semibold text-teal-400/80">Batch Distributions</div>
-              <div className="text-[9px] text-white/40 mt-1 space-y-0.5">
-                <div>ETH to many wallets</div>
-                <div>Tokens to many wallets</div>
-                <div>Custom split %</div>
-              </div>
-            </div>
-          </div>
-          <Badge text="0.1% fee: 0.05% wallet + 0.05% dividends" color="bg-teal-500/10 text-teal-400/60" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function AirdropArchitecture() {
-  return (
-    <section className="space-y-8">
-      <SectionTitle
-        icon="🎁"
-        title="Airdrop Tool"
-        sub="Batch ERC-20 distribution to multiple recipients in one transaction"
-        accent="text-rose-400/80"
-      />
-
-      <div className={`${card} p-5 sm:p-6 space-y-5`}>
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-          Airdrop Flow
-        </h3>
-        <div className="flex flex-col items-center gap-3">
-          <FlowRow wrap>
-            <Node icon="👤" label="Sender" color="border-rose-500/20" />
-            <Arrow label="approve(contract, total)" color="text-rose-400/40" />
-            <Node icon="🪙" label="ERC-20" color="border-amber-500/20" />
-          </FlowRow>
-          <Arrow dir="down" label="then" color="text-white/40" />
-          <FlowRow wrap>
-            <Node icon="👤" label="Sender" color="border-rose-500/20" />
-            <Arrow label="airdropTokens(token, recipients[], amounts[])" color="text-rose-400/40" />
-            <Node icon="🎁" label="Airdrop Contract" color="border-rose-500/20" glow="rgba(244,63,94,0.08)" />
-          </FlowRow>
-          <Arrow dir="down" label="distributes" color="text-white/40" />
-          <div className="flex gap-2 flex-wrap justify-center">
-            {["👤", "👤", "👤", "👤", "👤"].map((_, i) => (
-              <Node key={i} icon="👤" label={`Recipient ${i + 1}`} color="border-white/[0.06]" size="sm" />
-            ))}
-          </div>
-          <div className="flex gap-2 flex-wrap justify-center">
-            <Badge text="Uniform mode: same amount to all" color="bg-rose-500/10 text-rose-400/60" />
-            <Badge text="Individual mode: custom per-recipient" color="bg-amber-500/10 text-amber-400/60" />
-          </div>
-          <Badge text="0.2% fee: 0.1% wallet + 0.1% dividends" color="bg-rose-500/10 text-rose-400/60" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function getArchitecture(title: string): React.ReactNode {
-  switch (title) {
-    case "Dividend Launcher": return <DividendArchitecture />;
-    case "ETF Launcher": return <EtfArchitecture />;
-    case "DAO Launcher": return <DaoArchitecture />;
-    case "Storefront Launcher": return <StorefrontArchitecture />;
-    case "Ad Space Launcher": return <AuctionArchitecture />;
-    case "Multiswap Launcher": return <MultiswapArchitecture />;
-    case "MoneyFund DEX": return <DexArchitecture />;
-    case "MoneyFund Airdrop": return <AirdropArchitecture />;
-    default: return null;
-  }
-}
-
-/* ================================================================== */
 /*  MAIN COMPONENT                                                     */
 /* ================================================================== */
 
@@ -1209,6 +372,7 @@ export default function AboutApp() {
   const [activeSection, setActiveSection] = useState("overview");
   const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
   const [divCount, setDivCount] = useState(0);
+  const [orbScale, setOrbScale] = useState(1);
   const feeChartRef = useRef<HTMLCanvasElement>(null);
   const feeChartInst = useRef<Chart | null>(null);
 
@@ -1251,7 +415,16 @@ export default function AboutApp() {
         return next;
       });
     }, 600);
-    return () => { clearInterval(interval); };
+    let dir = 1, sc = 1;
+    const breathe = () => {
+      sc += 0.002 * dir;
+      if (sc >= 1.08) dir = -1;
+      if (sc <= 0.96) dir = 1;
+      setOrbScale(sc);
+      rafId = requestAnimationFrame(breathe);
+    };
+    let rafId = requestAnimationFrame(breathe);
+    return () => { clearInterval(interval); cancelAnimationFrame(rafId); };
   }, []);
 
   /* ---- fee chart ---- */
@@ -1394,16 +567,13 @@ export default function AboutApp() {
           </div>
         </section>
 
-        {/* ═══════════ ENTITY STRUCTURE ═══════════ */}
-        <CompanyChart />
-
         {/* ═══════════ U-DIAGRAMS ═══════════ */}
         <section id="diagrams" className="space-y-8 scroll-mt-28">
           <SectionHeading sub="How MoneyFund compares to equities and shitcoins">Value Flow Diagrams</SectionHeading>
           <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-6">
-            <UDiagram prefix="eq" label="Equities" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Shares", layer: "profit" }, right: { label: "Dividends", layer: "distribution" } }} desc="Unlike crypto, equities rely on fundamentals more than speculative degeneracy. While that tends to be positive, existing systems & structures are perhaps equally flawed in their own ways. Equity is made up out of thin air and thus carries ever-present risks like dilution and centralized control. There are basically two types: private equity + stocks. Private equity often requires you to be an accredited investor which is basically a rich person. This means poor people cant buy companies until they get listed on a public ponzi at massively inflated valuations. It's also difficult to fund many risky business endeavors with traditional systems because they're gatekept by boomers and regulators. For instance an IPO costs about 25 million dollars. The stock market has a number of familiar flaws like restricted trading hours. Due to the aforementioned inferiorities both of these analog asset types will be replaced by ERC-20 tokens. Summary of downsides: high friction, mutable supply, mutable dividends." />
-            <UDiagram prefix="sc" label="Shitcoins" boxes={{ left: { label: "Tokens", layer: "profit" }, bottom: { label: "Nothing", layer: "none" }, right: { label: "Nothing", layer: "none" } }} desc="This diagram represents 99% of cryptocurrencies & the larger problem MoneyFund seeks to solve. These are pointless nonsense coins which is only sustainable for top-quality memes. Certain cartoons are great for short-term gambling but the space has become predictably oversaturated with fagcoins that are resented by normal people. The main barrier to shitcoin adoption is their vapid uselessness. Besides coordinated wealth transfers, shitcoins are purposeless and thus automatically dismissed from the conversations of productive society. Despite significant shortcomings, tokens still outshine equities in many key ways. ERC-20 tokens operate on a decentralized network that ensures trustless & permissionless transacting 24/7 globally. The Ethereum blockchain is the oldest + largest smart contract platform in the world. This network effect, as well as the inherent composability of ERC-20 tokens, has allowed them to gain widespread adoption as the global standard for tokenized assets like stablecoins. Summary of downsides: people are tired of gay nonsense." />
-            <UDiagram prefix="mf" label="MoneyFunds" pathEnd="275" descSize="text-[7px]" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Dividends", layer: "distribution" }, right: { label: "Tokens", layer: "profit" } }} desc="MoneyFund combines the sustainability of traditional business with the transparency + decentralization of the Ethereum blockchain. No more expensive IPOs, no more scam ICOs- the future is IMOs. Initial Money Offerings are the gold standard for tokenized asset deployment and all coins launched elsewhere should be dismissed & discredited. MFTL tokens allow for unlimited customization within secure parameters. This constrained flexibility allows MoneyFund infrastructure to facilitate the creation + management of uniquely productive assets. In addition to the benefits of being built on the largest defi network in the world, MF offers additional advantages over traditional equities- the largest two being transparency and immutability. For instance walmart can delist or change prices at any time whereas the storefronts produced by our factory include a listing timelock mechanism to enhance operational transparency. This is beneficial to users who are considering investing in some MFTL token thats connected to an NFT storefront for example. Users can view the store's inventory and timelocks to know the minimum duration that items will be locked in the storefront + listed at their current price for. This allows auditors to know how long the MFTL token will be backed by listings. Similarly, dividend immutability is a significant upgrade to the offchain tradfi model. Once a dividend pool is deployed nobody can make changes. Same thing for tokens- once a coin is launched the company it represents cannot dilute shareholders unless something like a mintable function is explicitly written in the contract. Summary of downsides: none." />
+            <UDiagram label="Equities" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Shares", layer: "profit" }, right: { label: "Dividends", layer: "distribution" } }} desc="Unlike crypto, equities rely on fundamentals more than speculative degeneracy. While that tends to be positive, existing systems & structures are perhaps equally flawed in their own ways. Equity is made up out of thin air and thus carries ever-present risks like dilution and centralized control. There are basically two types: private equity + stocks. Private equity often requires you to be an accredited investor which is basically a rich person. This means poor people cant buy companies until they get listed on a public ponzi at massively inflated valuations. It's also difficult to fund many risky business endeavors with traditional systems because they're gatekept by boomers and regulators. For instance an IPO costs about 25 million dollars. The stock market has a number of familiar flaws like restricted trading hours. Due to the aforementioned inferiorities both of these analog asset types will be replaced by ERC-20 tokens. Summary of downsides: high friction, mutable supply, mutable dividends." />
+            <UDiagram label="Shitcoins" boxes={{ left: { label: "Tokens", layer: "profit" }, bottom: { label: "Nothing", layer: "none" }, right: { label: "Nothing", layer: "none" } }} desc="This diagram represents 99% of cryptocurrencies & the larger problem MoneyFund seeks to solve. These are pointless nonsense coins which is only sustainable for top-quality memes. Certain cartoons are great for short-term gambling but the space has become predictably oversaturated with fagcoins that are resented by normal people. The main barrier to shitcoin adoption is their vapid uselessness. Besides coordinated wealth transfers, shitcoins are purposeless and thus automatically dismissed from the conversations of productive society. Despite significant shortcomings, tokens still outshine equities in many key ways. ERC-20 tokens operate on a decentralized network that ensures trustless & permissionless transacting 24/7 globally. The Ethereum blockchain is the oldest + largest smart contract platform in the world. This network effect, as well as the inherent composability of ERC-20 tokens, has allowed them to gain widespread adoption as the global standard for tokenized assets like stablecoins. Summary of downsides: people are tired of gay nonsense." />
+            <UDiagram label="MoneyFunds" pathEnd="275" descSize="text-[7px]" boxes={{ left: { label: "Business", layer: "asset" }, bottom: { label: "Dividends", layer: "distribution" }, right: { label: "Tokens", layer: "profit" } }} desc="MoneyFund combines the sustainability of traditional business with the transparency + decentralization of the Ethereum blockchain. No more expensive IPOs, no more scam ICOs- the future is IMOs. Initial Money Offerings are the gold standard for tokenized asset deployment and all coins launched elsewhere should be dismissed & discredited. MFTL tokens allow for unlimited customization within secure parameters. This constrained flexibility allows MoneyFund infrastructure to facilitate the creation + management of uniquely productive assets. In addition to the benefits of being built on the largest defi network in the world, MF offers additional advantages over traditional equities- the largest two being transparency and immutability. For instance walmart can delist or change prices at any time whereas the storefronts produced by our factory include a listing timelock mechanism to enhance operational transparency. This is beneficial to users who are considering investing in some MFTL token thats connected to an NFT storefront for example. Users can view the store's inventory and timelocks to know the minimum duration that items will be locked in the storefront + listed at their current price for. This allows auditors to know how long the MFTL token will be backed by listings. Similarly, dividend immutability is a significant upgrade to the offchain tradfi model. Once a dividend pool is deployed nobody can make changes. Same thing for tokens- once a coin is launched the company it represents cannot dilute shareholders unless something like a mintable function is explicitly written in the contract. Summary of downsides: none." />
           </div>
         </section>
 
@@ -1414,18 +584,20 @@ export default function AboutApp() {
           {/* Desktop: full animated visualization */}
           <div className="hidden md:flex justify-center">
             <div className="relative w-[640px] h-[640px] rounded-3xl" style={{ background: "radial-gradient(circle at center, #111318, #08090e)" }}>
-              {/* SVG layer for static connectors */}
+              {/* SVG layer for paths + animated coins */}
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 600 600">
+                <defs>
+                  <filter id="coinGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                </defs>
                 {POOL_BRANCHES.map((_, i) => {
                   const angle = (i * Math.PI * 2) / POOL_BRANCHES.length;
                   const r = 220;
                   const ex = 300 + r * Math.cos(angle);
                   const ey = 300 + r * Math.sin(angle);
-                  const strokeColor = i % 3 === 0 ? "rgba(52,211,153,0.06)" : i % 3 === 1 ? "rgba(251,146,60,0.06)" : "rgba(167,139,250,0.06)";
-                  return <line key={`bg-${i}`} x1="300" y1="300" x2={ex} y2={ey} stroke={strokeColor} strokeWidth="10" strokeLinecap="round" />;
+                  const strokeColor = i % 3 === 0 ? "rgba(52,211,153,0.12)" : i % 3 === 1 ? "rgba(251,146,60,0.12)" : "rgba(167,139,250,0.12)";
+                  return <line key={`line-${i}`} x1="300" y1="300" x2={ex} y2={ey} stroke={strokeColor} strokeWidth="10" />;
                 })}
-                {POOL_BRANCHES.map((b, i) => <StaticConnector key={`conn-${i}`} branchIndex={i} total={POOL_BRANCHES.length} layer={b.layer} />)}
-                <circle cx="300" cy="300" r="6" fill="rgba(0,247,255,0.3)" />
+                {POOL_BRANCHES.map((_, i) => <AnimatedCoins key={`coins-${i}`} branchIndex={i} total={POOL_BRANCHES.length} />)}
               </svg>
 
               {/* Branch orbs */}
@@ -1447,7 +619,7 @@ export default function AboutApp() {
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[160px] rounded-full flex flex-col items-center justify-center text-center z-10 transition-transform" style={{
                 background: "radial-gradient(circle at 30% 30%, #00f7ff, #004466 60%, #001a33)",
                 boxShadow: "0 0 50px rgba(0,247,255,0.5), 0 0 100px rgba(0,247,255,0.15), inset 0 0 25px #003344",
-                animation: "orbBreathe 3s ease-in-out infinite",
+                transform: `scale(${orbScale})`,
               }}>
                 <span className="text-[20px] font-extrabold text-amber-400 leading-tight uppercase" style={{ fontFamily: "'Orbitron', sans-serif" }}>MONEY<br />Dividends</span>
                 <span className="bg-white text-black font-bold text-xs px-2.5 py-0.5 rounded-md mt-1.5 shadow">{divCount}</span>
@@ -1500,28 +672,71 @@ export default function AboutApp() {
         <section id="contracts" className="space-y-6 scroll-mt-28">
           <SectionHeading sub="Detailed breakdown of each factory contract">Smart Contracts</SectionHeading>
           {CONTRACT_SECTIONS.map((c) => (
-            <div key={c.title} className="space-y-6 overflow-x-hidden">
-              <div className={`${layerBg(c.layer)} rounded-2xl border border-white/[0.06] overflow-hidden`}>
-                <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${layerDot(c.layer)}`} />
-                  <h3 className="text-base sm:text-lg font-bold text-white">{c.title}</h3>
-                </div>
-                <div className={`grid ${c.creator ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"} divide-y md:divide-y-0 md:divide-x divide-white/[0.06]`}>
-                  {c.creator && (
-                    <div className="p-5">
-                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">Creator</p>
-                      <p className="text-xs text-white/60 leading-relaxed">{c.creator}</p>
-                    </div>
-                  )}
+            <div key={c.title} className={`${layerBg(c.layer)} rounded-2xl border border-white/[0.06] overflow-hidden`}>
+              <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${layerDot(c.layer)}`} />
+                <h3 className="text-base sm:text-lg font-bold text-white">{c.title}</h3>
+              </div>
+              <div className={`grid ${c.creator ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"} divide-y md:divide-y-0 md:divide-x divide-white/[0.06]`}>
+                {c.creator && (
                   <div className="p-5">
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">User</p>
-                    <p className="text-xs text-white/60 leading-relaxed">{c.user}</p>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">Creator</p>
+                    <p className="text-xs text-white/60 leading-relaxed">{c.creator}</p>
                   </div>
+                )}
+                <div className="p-5">
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">User</p>
+                  <p className="text-xs text-white/60 leading-relaxed">{c.user}</p>
                 </div>
               </div>
-              {getArchitecture(c.title)}
             </div>
           ))}
+        </section>
+
+        {/* ═══════════ ARWEAVE ═══════════ */}
+        <section id="arweave" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="Permanent storage, decentralized compute, and peer-to-peer networking on Arweave">Arweave Infrastructure</SectionHeading>
+
+          <div className={`${card} p-6 sm:p-8`}>
+            <p className="text-[13px] text-white/60 leading-relaxed">
+              Arweave is a permanent data storage network that pays miners to store data forever in a single upfront transaction. MoneyFund integrates a full Arweave stack — from low-level peer networking and bundled uploads to high-level smart contract interactions and a permanent file archival system. All integrations use direct REST APIs with zero SDK dependencies, keeping the bundle lean and giving full control over request routing, error handling, and failover logic.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3">
+            {(["storage", "network", "compute", "wallet"] as ArweaveFeatureLayer[]).map((key) => (
+              <div key={key} className={`${arweaveLayerBg(key)} px-5 py-3 rounded-xl text-center min-w-[130px] border border-white/[0.06]`}>
+                <div className="flex items-center justify-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${arweaveLayerDot(key)}`} />
+                  <p className="text-sm font-bold text-white">{arweaveLayerLabel(key)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-4">
+            {ARWEAVE_FEATURES.map((f) => (
+              <div key={f.title} className={`${arweaveLayerBg(f.layer)} rounded-2xl border border-white/[0.06] overflow-hidden`}>
+                <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full ${arweaveLayerDot(f.layer)}`} />
+                  <span className="text-lg">{f.icon}</span>
+                  <h3 className="text-base sm:text-lg font-bold text-white">{f.title}</h3>
+                  <span className="text-[10px] font-bold text-white/20 uppercase tracking-wider ml-auto hidden sm:block">{arweaveLayerLabel(f.layer)}</span>
+                </div>
+                <div className="p-5 sm:p-6 space-y-4">
+                  <p className="text-xs text-white/60 leading-relaxed">{f.summary}</p>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                    {f.details.map((d, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-white/45 leading-relaxed">
+                        <span className={`w-1 h-1 rounded-full ${arweaveLayerDot(f.layer)} mt-1.5 flex-shrink-0`} />
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* ═══════════ FEE STRUCTURE ═══════════ */}
@@ -1578,123 +793,6 @@ export default function AboutApp() {
           </div>
         </section>
 
-        {/* ═══════════ SECURITY ═══════════ */}
-        <section id="security" className="space-y-6 scroll-mt-28">
-          <SectionHeading sub="Non-custodial vault architecture with client-side encryption">Wallet Security</SectionHeading>
-
-          <div className={`${card} p-6 sm:p-8`}>
-            <p className="text-[13px] text-white/60 leading-relaxed">
-              MoneyFund wallets are non-custodial by design. Private keys are encrypted and decrypted entirely in your browser — the server never sees, stores, or transmits plaintext key material. The vault uses password-derived keys and authenticated encryption so that even a full database breach reveals nothing usable to an attacker.
-            </p>
-          </div>
-
-          <div className={`${card} p-5 sm:p-6 space-y-5`}>
-            <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-              Vault Architecture
-            </h3>
-            <div className="flex flex-col items-center gap-3">
-              <FlowRow wrap>
-                <Node icon="🔑" label="Password" color="border-amber-500/20" />
-                <Arrow label="PBKDF2 · 600K iterations · SHA-256" color="text-amber-400/40" />
-                <Node icon="🔐" label="Vault Key" sub="AES-GCM 256" color="border-cyan-500/20" glow="rgba(0,247,255,0.06)" />
-              </FlowRow>
-              <Arrow dir="down" label="encrypts / decrypts" color="text-white/40" />
-              <FlowRow wrap>
-                <Node icon="🪙" label="ETH Keys" sub="encrypted at rest" color="border-purple-500/20" size="sm" />
-                <Node icon="📦" label="Arweave JWK" sub="encrypted at rest" color="border-teal-500/20" size="sm" />
-              </FlowRow>
-              <div className="flex flex-wrap justify-center gap-2 pt-2">
-                <Badge text="Client-side only — nothing leaves the browser unencrypted" color="bg-emerald-500/10 text-emerald-400/60" />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {([
-              {
-                icon: "🧮",
-                title: "PBKDF2 Key Derivation",
-                desc: "Your vault key is derived from your password using PBKDF2 with 600,000 iterations of SHA-256. The salt is a SHA-256 hash of your user ID, making each derived key unique even for identical passwords across accounts.",
-                accent: "border-amber-500/15",
-              },
-              {
-                icon: "🔒",
-                title: "AES-GCM 256 Encryption",
-                desc: "All private keys and Arweave JWKs are encrypted with AES-GCM using 256-bit keys and a random 96-bit IV per ciphertext. AES-GCM provides both confidentiality and authenticity — any tampering is detected on decrypt.",
-                accent: "border-cyan-500/15",
-              },
-              {
-                icon: "🧪",
-                title: "Key Verification",
-                desc: "On sign-in and vault unlock, a stored encrypted check value is decrypted to verify the derived key is correct before any wallet data is touched. A wrong password fails cleanly without exposing ciphertext.",
-                accent: "border-purple-500/15",
-              },
-              {
-                icon: "⏱️",
-                title: "Session-Scoped Vault",
-                desc: "The vault key is held in memory and cached in sessionStorage, which is automatically cleared when you close the tab or sign out. There is no persistent plaintext key material on disk.",
-                accent: "border-emerald-500/15",
-              },
-              {
-                icon: "🦊",
-                title: "MetaMask Wallets",
-                desc: "When you connect MetaMask, MoneyFund never receives or stores a private key. Transactions are signed by MetaMask directly. Only the public address is persisted.",
-                accent: "border-orange-500/15",
-              },
-              {
-                icon: "🛡️",
-                title: "Smart Contract Guards",
-                desc: "All protocol contracts use OpenZeppelin's ReentrancyGuard to prevent re-entrancy attacks. Contract functions and event logs are publicly auditable on-chain, and all actions are transparent from deployment onward.",
-                accent: "border-rose-500/15",
-              },
-            ] as const).map((item) => (
-              <div
-                key={item.title}
-                className={`${card} border ${item.accent} p-5 space-y-2`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{item.icon}</span>
-                  <h4 className="text-xs font-bold text-white/80">{item.title}</h4>
-                </div>
-                <p className="text-[11px] text-white/50 leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className={`${card} p-5 sm:p-6 space-y-4`}>
-            <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
-              What the Server Stores vs. What It Knows
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-white/70">
-                <thead>
-                  <tr className="border-b border-white/[0.08]">
-                    <th className="p-3 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Data</th>
-                    <th className="p-3 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Stored in DB</th>
-                    <th className="p-3 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Readable by Server</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { data: "Wallet public address", stored: "Yes", readable: "Yes", storedColor: "text-amber-400/70", readableColor: "text-amber-400/70" },
-                    { data: "Encrypted private key + IV", stored: "Yes", readable: "No — AES-GCM ciphertext", storedColor: "text-amber-400/70", readableColor: "text-emerald-400/70" },
-                    { data: "Vault key", stored: "No", readable: "No — exists only in browser memory", storedColor: "text-emerald-400/70", readableColor: "text-emerald-400/70" },
-                    { data: "Password", stored: "No", readable: "No — only Supabase Auth hash", storedColor: "text-emerald-400/70", readableColor: "text-emerald-400/70" },
-                    { data: "Plaintext private key", stored: "No", readable: "No — never transmitted", storedColor: "text-emerald-400/70", readableColor: "text-emerald-400/70" },
-                    { data: "Key check ciphertext", stored: "Yes", readable: "No — verifiable only with correct key", storedColor: "text-amber-400/70", readableColor: "text-emerald-400/70" },
-                  ].map((row, i) => (
-                    <tr key={i} className="border-b border-white/[0.04]">
-                      <td className="p-3 font-semibold text-white/80">{row.data}</td>
-                      <td className={`p-3 ${row.storedColor}`}>{row.stored}</td>
-                      <td className={`p-3 ${row.readableColor}`}>{row.readable}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
         {/* ═══════════ FAQ ═══════════ */}
         <section id="faq" className="space-y-6 scroll-mt-28">
           <SectionHeading sub="Common questions about MoneyFund contracts">Frequently Asked Questions</SectionHeading>
@@ -1710,7 +808,7 @@ export default function AboutApp() {
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${layerDot(item.layer)}`} />
                     <span className="text-[13px] font-medium text-white/70">{item.q}</span>
                   </div>
-                  <span className={`text-white/40 text-sm ml-3 flex-shrink-0 transition-transform ${faqOpen[i] ? "rotate-45" : ""}`}>+</span>
+                  <span className={`text-white/20 text-sm ml-3 flex-shrink-0 transition-transform ${faqOpen[i] ? "rotate-45" : ""}`}>+</span>
                 </button>
                 {faqOpen[i] && (
                   <div className="px-5 pb-4 pt-0 ml-6 border-t border-white/[0.04]">
@@ -1748,13 +846,13 @@ export default function AboutApp() {
               {funcType && !["eth"].includes(funcType) && (
                 <div>
                   <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider block mb-1.5">Tokens</label>
-                  <input type="number" value={numTokens} onChange={(e) => setNumTokens(Math.max(1, parseInt(e.target.value) || 1))} min={1} className={inputCls} />
+                  <input type="number" value={numTokens} onChange={(e) => setNumTokens(parseInt(e.target.value) || 1)} min={1} className={inputCls} />
                 </div>
               )}
               {["singleToken", "multipleTokens", "eth"].includes(funcType) && (
                 <div>
                   <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider block mb-1.5">Recipients</label>
-                  <input type="number" value={numRecipients} onChange={(e) => setNumRecipients(Math.max(1, parseInt(e.target.value) || 1))} min={1} className={inputCls} />
+                  <input type="number" value={numRecipients} onChange={(e) => setNumRecipients(parseInt(e.target.value) || 1)} min={1} className={inputCls} />
                 </div>
               )}
             </div>
@@ -1800,6 +898,7 @@ export default function AboutApp() {
           </div>
         </section>
 
+        <p className="text-center text-[11px] text-white/15 pt-8 pb-4">Powered by MoneyFund</p>
       </div>
     </div>
   );
