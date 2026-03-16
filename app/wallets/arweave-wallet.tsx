@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useWallet } from "@/lib/wallet-context";
 import ArweaveGateway from "@/lib/arweave";
-import type { ArweaveTag, ArweaveCostEstimate } from "@/lib/wallet-types";
+import type { ArweaveCostEstimate } from "@/lib/wallet-types";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -36,31 +36,21 @@ export default function ArweaveWallet() {
 
   const [address, setAddress] = useState("");
   const [balance, setBalance] = useState("—");
-  const [arTab, setArTab] = useState<"setup" | "info" | "send" | "upload">("setup");
+  const [arTab, setArTab] = useState<"setup" | "info" | "send">("setup");
   const [localJwk, setLocalJwk] = useState<JsonWebKey | null>(null);
 
   const [importKey, setImportKey] = useState("");
   const [target, setTarget] = useState("");
   const [amount, setAmount] = useState("");
-  const [dataText, setDataText] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const [genStatus, setGenStatus] = useState<StatusMsg | null>(null);
   const [impStatus, setImpStatus] = useState<StatusMsg | null>(null);
   const [expStatus, setExpStatus] = useState<StatusMsg | null>(null);
   const [sendStatus, setSendStatus] = useState<StatusMsg | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<StatusMsg | null>(null);
   const [acStatus, setAcStatus] = useState<StatusMsg | null>(null);
-
-  /* Upload tags */
-  const [uploadTags, setUploadTags] = useState<ArweaveTag[]>([]);
-  const [newTagName, setNewTagName] = useState("");
-  const [newTagValue, setNewTagValue] = useState("");
 
   /* Cost preview */
   const [sendCost, setSendCost] = useState<ArweaveCostEstimate | null>(null);
-  const [uploadCost, setUploadCost] = useState<ArweaveCostEstimate | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   /* ---- helpers ---- */
   const refreshBalance = useCallback(async (addr: string) => {
@@ -93,17 +83,6 @@ export default function ArweaveWallet() {
     }, 500);
     return () => clearTimeout(t);
   }, [gw, arTab, target, amount]);
-
-  useEffect(() => {
-    if (arTab !== "upload") { setUploadCost(null); return; }
-    const file = fileRef.current?.files?.[0];
-    const size = file ? file.size : dataText ? new TextEncoder().encode(dataText).byteLength : 0;
-    if (size === 0) { setUploadCost(null); return; }
-    const t = setTimeout(async () => {
-      try { setUploadCost(await gw.estimateCost(size)); } catch { setUploadCost(null); }
-    }, 500);
-    return () => clearTimeout(t);
-  }, [gw, arTab, dataText]);
 
   /* ---- actions ---- */
   const handleArConnect = useCallback(async () => {
@@ -177,45 +156,6 @@ export default function ArweaveWallet() {
     }
   }, [gw, localJwk, target, amount, address, refreshBalance]);
 
-  const handleUpload = useCallback(async () => {
-    if (!localJwk) { setUploadStatus({ text: "No wallet loaded", type: "error" }); return; }
-    const file = fileRef.current?.files?.[0];
-    if (!dataText && !file) { setUploadStatus({ text: "Add text or file", type: "error" }); return; }
-    setUploadStatus({ text: "Preparing...", type: "loading" });
-    setUploadProgress(0);
-    try {
-      let result;
-      if (file) {
-        result = await gw.uploadFile(file, uploadTags, localJwk, undefined, (pct) => setUploadProgress(pct));
-      } else {
-        const data = new TextEncoder().encode(dataText);
-        const tags: ArweaveTag[] = [{ name: "Content-Type", value: "text/plain" }, ...uploadTags];
-        result = await gw.uploadData(data, tags, localJwk, undefined, (pct) => setUploadProgress(pct));
-      }
-      if (result.status === 200) {
-        setUploadStatus({ text: `Uploaded! TX ID: ${result.txId}`, type: "success" });
-      } else {
-        throw new Error(`Status: ${result.status}`);
-      }
-    } catch (e: unknown) {
-      setUploadStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
-    } finally {
-      setUploadProgress(null);
-    }
-  }, [gw, localJwk, dataText, uploadTags]);
-
-  /* ---- tag helpers ---- */
-  const addTag = useCallback(() => {
-    if (!newTagName.trim()) return;
-    setUploadTags((prev) => [...prev, { name: newTagName.trim(), value: newTagValue.trim() }]);
-    setNewTagName("");
-    setNewTagValue("");
-  }, [newTagName, newTagValue]);
-
-  const removeTag = useCallback((i: number) => {
-    setUploadTags((prev) => prev.filter((_, idx) => idx !== i));
-  }, []);
-
   /* ---- status badge ---- */
   const renderStatus = (s: StatusMsg | null) => {
     if (!s) return null;
@@ -247,7 +187,6 @@ export default function ArweaveWallet() {
     { id: "setup", label: "Setup", icon: "+" },
     { id: "info", label: "Info", icon: "i" },
     { id: "send", label: "Send", icon: "↑" },
-    { id: "upload", label: "Upload", icon: "☁" },
   ];
 
   /* ================================================================ */
@@ -416,75 +355,6 @@ export default function ArweaveWallet() {
         </div>
       )}
 
-      {/* ── Upload Tab ── */}
-      {arTab === "upload" && (
-        <div className="space-y-4">
-          <div className={`${card} p-5 space-y-4`}>
-            <h3 className="text-sm font-semibold text-white/80">Upload to Arweave</h3>
-            <p className="text-xs text-white/30 -mt-2">Permanently store text or a file on the permaweb.</p>
-            <div>
-              <label className={label}>Text Data</label>
-              <textarea
-                rows={3}
-                value={dataText}
-                onChange={(e) => setDataText(e.target.value)}
-                placeholder="Enter text to upload..."
-                className={textarea}
-                style={{ resize: "vertical" }}
-              />
-            </div>
-            <div>
-              <label className={label}>Or choose a file</label>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="*/*"
-                className="block w-full text-sm text-white/40 file:mr-3 file:h-9 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-medium file:bg-white/[0.06] file:text-white/60 hover:file:bg-white/[0.1] file:cursor-pointer file:transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Tag editor */}
-          <div className={`${card} p-5 space-y-3`}>
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Custom Tags</span>
-            {uploadTags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {uploadTags.map((t, i) => (
-                  <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300/60">
-                    {t.name}: {t.value}
-                    <button type="button" onClick={() => removeTag(i)} className="text-red-400/60 hover:text-red-400 cursor-pointer">x</button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="flex gap-2">
-              <input value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Tag name" className={`flex-1 ${input}`} />
-              <input value={newTagValue} onChange={(e) => setNewTagValue(e.target.value)} placeholder="Tag value" className={`flex-1 ${input}`} />
-              <button type="button" onClick={addTag} className="h-11 px-4 rounded-xl font-medium text-xs bg-white/[0.06] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.1] active:scale-95 transition-all cursor-pointer">Add</button>
-            </div>
-          </div>
-
-          {/* Cost estimate */}
-          {renderCost(uploadCost)}
-
-          {/* Progress */}
-          {uploadProgress !== null && (
-            <div className={`${card} p-4`}>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-purple-500 to-violet-500 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
-                </div>
-                <span className="text-xs text-white/50 w-12 text-right">{uploadProgress}%</span>
-              </div>
-            </div>
-          )}
-
-          <button type="button" onClick={handleUpload} disabled={uploadProgress !== null} className={btnPrimary}>
-            {uploadProgress !== null ? "Uploading..." : "Upload"}
-          </button>
-          {renderStatus(uploadStatus)}
-        </div>
-      )}
     </div>
   );
 }

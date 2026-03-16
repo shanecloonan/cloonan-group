@@ -24,6 +24,17 @@ import {
   type AoResult,
   type AoTokenInfo,
 } from "@/lib/ao";
+import {
+  readContractState,
+  getAtomicAsset,
+  getPstInfo,
+  getVouchScore,
+  getSonarUrl,
+  KNOWN_CONTRACTS,
+  type SmartWeaveState,
+  type AtomicAsset,
+  type PstInfo,
+} from "@/lib/smartweave";
 import type {
   ArweaveNetworkInfo,
   ArweaveCostEstimate,
@@ -144,6 +155,14 @@ export default function GatewayContent() {
   const [aoTokens, setAoTokens] = useState<(AoTokenInfo & { balance?: string; rawBalance?: string })[]>([]);
   const [aoTokensLoading, setAoTokensLoading] = useState(false);
 
+  /* SmartWeave state */
+  const [swContractId, setSwContractId] = useState("");
+  const [swState, setSwState] = useState<SmartWeaveState | null>(null);
+  const [swAsset, setSwAsset] = useState<AtomicAsset | null>(null);
+  const [swPst, setSwPst] = useState<PstInfo | null>(null);
+  const [swLoading, setSwLoading] = useState(false);
+  const [swVouch, setSwVouch] = useState<{ vouched: boolean; score: number; vouchers: string[] } | null>(null);
+
   const [bookmarks, setBookmarks] = useState<ArweaveBookmark[]>([]);
   const [bmLabel, setBmLabel] = useState("");
   const [bmTarget, setBmTarget] = useState("");
@@ -252,7 +271,33 @@ export default function GatewayContent() {
     finally { setAoTokensLoading(false); }
   }, [arweaveWallet]);
 
-  useEffect(() => { if (tab === "ao" && arweaveWallet) loadAoTokenBalances(); }, [tab, arweaveWallet, loadAoTokenBalances]);
+  const handleSwRead = useCallback(async () => {
+    const id = swContractId.trim();
+    if (!id) return;
+    setSwLoading(true);
+    setSwState(null); setSwAsset(null); setSwPst(null);
+    try {
+      const state = await readContractState(id);
+      setSwState(state);
+      const s = state.state as Record<string, unknown>;
+      // Auto-detect contract type
+      if (s.contentType || s.claimable) {
+        setSwAsset(await getAtomicAsset(id));
+      }
+      if (s.balances && s.ticker) {
+        setSwPst(await getPstInfo(id));
+      }
+    } catch (e) {
+      setSwState({ state: { error: e instanceof Error ? e.message : String(e) }, validity: {}, sortKey: "", contractTxId: id });
+    } finally { setSwLoading(false); }
+  }, [swContractId]);
+
+  useEffect(() => {
+    if (tab === "ao" && arweaveWallet) {
+      loadAoTokenBalances();
+      getVouchScore(arweaveWallet.address).then(setSwVouch).catch(() => setSwVouch(null));
+    }
+  }, [tab, arweaveWallet, loadAoTokenBalances]);
   useEffect(() => { if (tab === "network") { loadNetworkInfo(); loadArioGateways(); } }, [tab, loadNetworkInfo, loadArioGateways]);
   useEffect(() => { if (tab !== "network") return; const iv = setInterval(loadNetworkInfo, 30000); return () => clearInterval(iv); }, [tab, loadNetworkInfo]);
 
@@ -961,6 +1006,119 @@ export default function GatewayContent() {
               {aoResult.Messages.length === 0 && !aoResult.Output?.data && (
                 <p className="text-xs text-white/30 text-center py-2">No output returned.</p>
               )}
+            </div>
+          )}
+
+          {/* Vouch Score */}
+          {swVouch && arweaveWallet && (
+            <div className={`${card} p-4`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Vouch Protocol</span>
+                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${swVouch.vouched ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-white/5 text-white/30 border border-white/10"}`}>
+                  {swVouch.vouched ? `VOUCHED (${swVouch.score})` : "NOT VOUCHED"}
+                </span>
+              </div>
+              {swVouch.vouched && swVouch.vouchers.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {swVouch.vouchers.map((v) => (
+                    <span key={v} className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/5 border border-emerald-500/10 text-emerald-400/50 font-mono">
+                      {v.slice(0, 8)}...{v.slice(-4)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SmartWeave Contract Reader */}
+          <div className={`${card} p-5 space-y-3`}>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">SmartWeave Contract Reader</span>
+            <p className="text-[10px] text-white/20 -mt-1">Read state of any SmartWeave contract via the Warp DRE network.</p>
+
+            <div className="flex gap-2">
+              <input
+                value={swContractId}
+                onChange={(e) => setSwContractId(e.target.value)}
+                placeholder="Contract TX ID..."
+                className={`flex-1 ${inputCls}`}
+                onKeyDown={(e) => e.key === "Enter" && handleSwRead()}
+              />
+              <button type="button" onClick={handleSwRead} disabled={swLoading || !swContractId.trim()} className={btnPrimary}>
+                {swLoading ? "Reading..." : "Read"}
+              </button>
+            </div>
+
+            <div className="flex gap-1.5 flex-wrap">
+              {Object.entries(KNOWN_CONTRACTS).map(([key, id]) => (
+                <button key={key} type="button" onClick={() => { setSwContractId(id); }} className={pillBtn}>
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Atomic Asset Display */}
+          {swAsset && (
+            <div className={`${card} p-5 space-y-3`}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Atomic Asset</span>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 font-semibold">NFT</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><span className="text-[10px] text-white/25 uppercase">Title</span><p className="text-xs text-white/60">{swAsset.title}</p></div>
+                <div><span className="text-[10px] text-white/25 uppercase">Ticker</span><p className="text-xs text-white/60">{swAsset.ticker}</p></div>
+                <div><span className="text-[10px] text-white/25 uppercase">Type</span><p className="text-xs text-white/60">{swAsset.contentType || swAsset.type}</p></div>
+                <div><span className="text-[10px] text-white/25 uppercase">Owner</span><p className="text-xs text-white/60 font-mono truncate">{swAsset.owner.slice(0, 12)}...</p></div>
+              </div>
+              {swAsset.description && <p className="text-[11px] text-white/30">{swAsset.description}</p>}
+              <div className="flex gap-2">
+                <a href={swAsset.contentUrl} target="_blank" rel="noopener noreferrer" className={pillBtn}>View Content</a>
+                <a href={getSonarUrl(swAsset.contractTxId)} target="_blank" rel="noopener noreferrer" className={pillBtn}>Sonar</a>
+              </div>
+            </div>
+          )}
+
+          {/* PST Display */}
+          {swPst && !swAsset && (
+            <div className={`${card} p-5 space-y-3`}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Profit Sharing Token</span>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold">PST</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div><span className="text-[10px] text-white/25 uppercase">Name</span><p className="text-xs text-white/60">{swPst.name}</p></div>
+                <div><span className="text-[10px] text-white/25 uppercase">Ticker</span><p className="text-xs text-white/60">{swPst.ticker}</p></div>
+                <div><span className="text-[10px] text-white/25 uppercase">Supply</span><p className="text-xs text-white/60 tabular-nums">{swPst.totalSupply.toLocaleString()}</p></div>
+              </div>
+              {Object.keys(swPst.balances).length > 0 && (
+                <div>
+                  <span className="text-[10px] text-white/25 uppercase">Top Holders</span>
+                  <div className="mt-1 space-y-1 max-h-[150px] overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                    {Object.entries(swPst.balances)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 10)
+                      .map(([addr, bal]) => (
+                        <div key={addr} className="flex items-center gap-2 text-[11px]">
+                          <span className="font-mono text-white/30 truncate flex-1">{addr}</span>
+                          <span className="text-white/50 tabular-nums shrink-0">{bal.toLocaleString()} {swPst.ticker}</span>
+                          <span className="text-[10px] text-white/20 shrink-0">({(bal / swPst.totalSupply * 100).toFixed(1)}%)</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+              <a href={getSonarUrl(swPst.contractTxId)} target="_blank" rel="noopener noreferrer" className={pillBtn}>View on Sonar</a>
+            </div>
+          )}
+
+          {/* Raw State */}
+          {swState && !swAsset && !swPst && (
+            <div className={`${card} p-5 space-y-3`}>
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Contract State</span>
+              <pre className="p-3 rounded-lg bg-black/20 text-[11px] text-white/40 font-mono overflow-auto max-h-[300px] whitespace-pre-wrap break-all" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                {JSON.stringify(swState.state, null, 2).slice(0, 5000)}
+              </pre>
+              <a href={getSonarUrl(swState.contractTxId)} target="_blank" rel="noopener noreferrer" className={pillBtn}>View on Sonar</a>
             </div>
           )}
         </div>
