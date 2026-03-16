@@ -278,6 +278,10 @@ export function getArweaveContentUrl(txId: string): string {
   return `https://arweave.net/${txId}`;
 }
 
+export function getArioContentUrl(txId: string): string {
+  return `https://ar-io.net/${txId}`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Upload: Private                                                    */
 /* ------------------------------------------------------------------ */

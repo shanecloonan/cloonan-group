@@ -4,6 +4,16 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useWallet } from "@/lib/wallet-context";
 import ArweaveGateway, { buildGqlQuery, winstonToAr } from "@/lib/arweave";
 import { ARWEAVE_DIRECT_GATEWAYS } from "@/lib/config";
+import {
+  discoverGateways,
+  resolveToTxId,
+  resolveArns,
+  isArnsName,
+  getArnsUrl,
+  computeNetworkStats,
+  type ArioGatewayHealth,
+  type GatewayNetworkStats,
+} from "@/lib/ario";
 import type {
   ArweaveNetworkInfo,
   ArweaveCostEstimate,
@@ -106,6 +116,14 @@ export default function GatewayContent() {
   const [gqlResult, setGqlResult] = useState("");
   const [gqlLoading, setGqlLoading] = useState(false);
 
+  const [arioGateways, setArioGateways] = useState<ArioGatewayHealth[]>([]);
+  const [arioNetStats, setArioNetStats] = useState<GatewayNetworkStats | null>(null);
+  const [arioLoading, setArioLoading] = useState(false);
+
+  const [arnsInput, setArnsInput] = useState("");
+  const [arnsResult, setArnsResult] = useState<{ name: string; txId: string; url: string } | null>(null);
+  const [arnsLoading, setArnsLoading] = useState(false);
+
   const [bookmarks, setBookmarks] = useState<ArweaveBookmark[]>([]);
   const [bmLabel, setBmLabel] = useState("");
   const [bmTarget, setBmTarget] = useState("");
@@ -138,7 +156,34 @@ export default function GatewayContent() {
     finally { setPoolRefreshing(false); }
   }, [gw]);
 
-  useEffect(() => { if (tab === "network") loadNetworkInfo(); }, [tab, loadNetworkInfo]);
+  const loadArioGateways = useCallback(async () => {
+    setArioLoading(true);
+    try {
+      const gws = await discoverGateways();
+      setArioGateways(gws);
+      setArioNetStats(computeNetworkStats(gws));
+    } catch { /* silent */ }
+    finally { setArioLoading(false); }
+  }, []);
+
+  const handleArnsResolve = useCallback(async () => {
+    const input = arnsInput.trim();
+    if (!input) return;
+    setArnsLoading(true);
+    setArnsResult(null);
+    try {
+      const txId = await resolveToTxId(input);
+      if (txId) {
+        const name = input.replace(/^ar:\/\//, "");
+        setArnsResult({ name, txId, url: isArnsName(name) ? getArnsUrl(name) : `https://arweave.net/${txId}` });
+      } else {
+        setArnsResult(null);
+      }
+    } catch { /* silent */ }
+    finally { setArnsLoading(false); }
+  }, [arnsInput]);
+
+  useEffect(() => { if (tab === "network") { loadNetworkInfo(); loadArioGateways(); } }, [tab, loadNetworkInfo, loadArioGateways]);
   useEffect(() => { if (tab !== "network") return; const iv = setInterval(loadNetworkInfo, 30000); return () => clearInterval(iv); }, [tab, loadNetworkInfo]);
 
   const searchExplorer = useCallback(async () => {
@@ -164,15 +209,18 @@ export default function GatewayContent() {
   }, [gw, expQuery, expType]);
 
   const loadBrowseData = useCallback(async (txId?: string) => {
-    const id = (txId || browseTxId).trim();
-    if (!id) return;
+    const input = (txId || browseTxId).trim();
+    if (!input) return;
     setBrowseLoading(true); setBrowseData(null);
     try {
+      // Resolve ArNS names or ar:// URLs to TX IDs
+      const id = await resolveToTxId(input) ?? input;
+      if (id !== input) setBrowseTxId(id);
       const { data, contentType } = await gw.getRawData(id);
       const blob = new Blob([data], { type: contentType });
       const url = URL.createObjectURL(blob);
       setBrowseData({ url, contentType });
-      setBrowseHistory((prev) => [id, ...prev.filter((h) => h !== id)].slice(0, 20));
+      setBrowseHistory((prev) => [input, ...prev.filter((h) => h !== input && h !== id)].slice(0, 20));
     } catch (e) { console.error("Browse failed:", e); }
     finally { setBrowseLoading(false); }
   }, [gw, browseTxId]);
@@ -358,6 +406,82 @@ export default function GatewayContent() {
               })}
             </div>
           </div>
+          {/* ar.io Gateway Network */}
+          <div className={`${card} p-5`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-white/30 uppercase tracking-wider">ar.io Gateway Network</span>
+                {arioNetStats && (
+                  <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    {arioNetStats.healthyCount}/{arioNetStats.totalChecked} LIVE
+                  </span>
+                )}
+              </div>
+              <button type="button" onClick={loadArioGateways} disabled={arioLoading} className={pillBtn}>
+                {arioLoading ? <span className="w-3 h-3 border border-white/40 border-t-transparent rounded-full animate-spin" /> : "Scan"}
+              </button>
+            </div>
+            {arioNetStats && (
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div><p className="text-2xl font-bold text-cyan-400">{arioNetStats.healthyCount}</p><p className="text-[10px] text-white/30 mt-0.5 uppercase">Healthy</p></div>
+                <div><p className="text-2xl font-bold text-white">{arioNetStats.bestLatencyMs}ms</p><p className="text-[10px] text-white/30 mt-0.5 uppercase">Best Latency</p></div>
+                <div><p className="text-2xl font-bold text-white">{arioNetStats.avgLatencyMs}ms</p><p className="text-[10px] text-white/30 mt-0.5 uppercase">Avg Latency</p></div>
+              </div>
+            )}
+            {arioGateways.length > 0 && (
+              <div className="space-y-1 max-h-[300px] overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                {arioGateways.map((g) => (
+                  <div key={g.fqdn} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-white/[0.02] transition-colors group">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${g.healthy ? "bg-emerald-400" : "bg-red-400"}`} />
+                    <span className="text-[11px] font-mono text-white/50 min-w-0 truncate flex-1">{g.fqdn}</span>
+                    <span className="text-[10px] text-white/25 tabular-nums shrink-0">{g.latencyMs}ms</span>
+                    {g.version && <span className="text-[10px] text-white/15 shrink-0">v{g.version}</span>}
+                    {g.healthy && (
+                      <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400/40 hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Open</a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {arioGateways.length === 0 && !arioLoading && (
+              <p className="text-xs text-white/30 text-center py-4">Click Scan to discover ar.io gateways.</p>
+            )}
+          </div>
+
+          {/* ArNS Resolver */}
+          <div className={`${card} p-5`}>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider mb-3 block">ArNS Name Resolver</span>
+            <div className="flex gap-2">
+              <input
+                value={arnsInput}
+                onChange={(e) => setArnsInput(e.target.value)}
+                placeholder="Enter ArNS name or ar://name..."
+                className={`flex-1 ${inputCls}`}
+                onKeyDown={(e) => e.key === "Enter" && handleArnsResolve()}
+              />
+              <button type="button" onClick={handleArnsResolve} disabled={arnsLoading} className={btnPrimary}>
+                {arnsLoading ? <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" /> : "Resolve"}
+              </button>
+            </div>
+            {arnsResult && (
+              <div className="mt-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-cyan-300/40 uppercase font-medium">Name</span>
+                  <span className="text-xs font-mono text-cyan-300/80">{arnsResult.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-white/30 uppercase font-medium">TX ID</span>
+                  <span className="text-xs font-mono text-white/50 break-all">{arnsResult.txId}</span>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => { setBrowseTxId(arnsResult.txId); setTab("browser"); loadBrowseData(arnsResult.txId); }} className={pillBtn}>View Data</button>
+                  <a href={arnsResult.url} target="_blank" rel="noopener noreferrer" className={pillBtn}>Open URL</a>
+                  <button type="button" onClick={() => navigator.clipboard.writeText(arnsResult.txId)} className={pillBtn}>Copy TX</button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {gwStats && gwStats.totalRequests > 0 && (
             <div className={`${card} p-5`}>
               <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Your Gateway Usage</span>
@@ -445,7 +569,7 @@ export default function GatewayContent() {
       {tab === "browser" && (
         <div className="space-y-4">
           <div className={`${card} p-4 flex gap-2`}>
-            <input value={browseTxId} onChange={(e) => setBrowseTxId(e.target.value)} placeholder="Enter Transaction ID to view..." className={`flex-1 ${inputCls}`} onKeyDown={(e) => e.key === "Enter" && loadBrowseData()} />
+            <input value={browseTxId} onChange={(e) => setBrowseTxId(e.target.value)} placeholder="TX ID, ArNS name, or ar://name..." className={`flex-1 ${inputCls}`} onKeyDown={(e) => e.key === "Enter" && loadBrowseData()} />
             <button type="button" onClick={() => loadBrowseData()} disabled={browseLoading} className={btnPrimary}>
               {browseLoading ? <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" /> : "View"}
             </button>
