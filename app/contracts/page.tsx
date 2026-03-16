@@ -19,7 +19,8 @@ const CONTRACTS: Contract[] = [
     address: "eS5YbYQhuDOjDttzgM2YP7_26q37k_Me5czIoMwVlfw",
     explorer:
       "https://viewblock.io/arweave/address/eS5YbYQhuDOjDttzgM2YP7_26q37k_Me5czIoMwVlfw",
-    go: "https://moneyfund.com",
+    go: "/gateway",
+    internal: true,
   },
   {
     name: "MONEY",

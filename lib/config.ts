@@ -10,3 +10,18 @@ export const RPC_ENDPOINTS = [
 export const ETHERSCAN_API_KEY = ETHERSCAN_KEY;
 export const ETHERSCAN_BASE_URL = "https://api.etherscan.io/api";
 export const EXPECTED_CHAIN_ID = 1;
+
+/* ------------------------------------------------------------------ */
+/*  Arweave Gateway                                                    */
+/* ------------------------------------------------------------------ */
+
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xvjqxjakckkbfsdrntwk.supabase.co";
+
+export const ARWEAVE_GATEWAY_URL = `${SUPABASE_URL}/functions/v1/arweave-gateway`;
+
+export const ARWEAVE_DIRECT_GATEWAYS = [
+  "https://arweave.net",
+  "https://ar-io.net",
+  "https://arweave.dev",
+];

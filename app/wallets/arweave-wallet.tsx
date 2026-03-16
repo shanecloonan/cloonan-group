@@ -1,14 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import Link from "next/link";
 import { useWallet } from "@/lib/wallet-context";
-
-/* ------------------------------------------------------------------ */
-/*  Constants                                                          */
-/* ------------------------------------------------------------------ */
-
-const HOST = "arweave.net";
-const PROTOCOL = "https";
+import ArweaveGateway from "@/lib/arweave";
+import type { ArweaveTag, ArweaveCostEstimate } from "@/lib/wallet-types";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -19,106 +15,8 @@ interface StatusMsg {
   type: "loading" | "success" | "error";
 }
 
-interface ArweaveTx {
-  format: number;
-  owner: string | undefined;
-  target: string;
-  quantity: string;
-  reward: string;
-  last_tx: string;
-  tags: never[];
-  data_size: string;
-  data_root: string;
-  data?: string;
-  signature?: string;
-  id?: string;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Crypto helpers (pure Web Crypto API — no external deps)            */
-/* ------------------------------------------------------------------ */
-
-function b64urlEncode(buffer: ArrayBuffer | Uint8Array): string {
-  let binary = "";
-  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}
-
-function b64urlDecode(str: string): ArrayBuffer {
-  let s = str.replace(/-/g, "+").replace(/_/g, "/");
-  while (s.length % 4) s += "=";
-  const binary = atob(s);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes.buffer;
-}
-
-async function sha256(message: ArrayBuffer | Uint8Array | string): Promise<Uint8Array> {
-  const buf = typeof message === "string" ? new TextEncoder().encode(message) : message;
-  const ab = buf instanceof ArrayBuffer ? buf : (buf as Uint8Array).buffer as ArrayBuffer;
-  return new Uint8Array(await crypto.subtle.digest("SHA-256", ab));
-}
-
-async function generateKey(): Promise<JsonWebKey> {
-  const key = await crypto.subtle.generateKey(
-    { name: "RSA-PSS", modulusLength: 4096, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
-    true,
-    ["sign", "verify"],
-  );
-  return crypto.subtle.exportKey("jwk", key.privateKey);
-}
-
-async function jwkToAddress(jwk: JsonWebKey): Promise<string> {
-  const n = b64urlDecode(jwk.n!);
-  const hash = await sha256(n);
-  return b64urlEncode(hash);
-}
-
-async function getBalance(addr: string): Promise<string> {
-  const res = await fetch(`${PROTOCOL}://${HOST}/wallet/${addr}/balance`);
-  if (!res.ok) throw new Error(`Balance fetch failed: ${res.status}`);
-  return res.text();
-}
-
-async function getPrice(dataSize: number | string, target?: string): Promise<string> {
-  let url = `${PROTOCOL}://${HOST}/price/${dataSize}`;
-  if (target) url += `/${target}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Price fetch failed: ${res.status}`);
-  return res.text();
-}
-
-async function getAnchor(): Promise<string> {
-  const res = await fetch(`${PROTOCOL}://${HOST}/tx_anchor`);
-  if (!res.ok) throw new Error(`Anchor fetch failed: ${res.status}`);
-  return res.text();
-}
-
-async function signTx(tx: ArweaveTx, jwk: JsonWebKey) {
-  const msg = JSON.stringify({
-    owner: tx.owner, target: tx.target, data: tx.data, quantity: tx.quantity,
-    reward: tx.reward, last_tx: tx.last_tx, tags: tx.tags || [],
-    data_root: tx.data_root, data_size: tx.data_size,
-  });
-  const msgBuffer = new TextEncoder().encode(msg);
-  const privKey = await crypto.subtle.importKey("jwk", jwk, { name: "RSA-PSS", hash: "SHA-256" }, false, ["sign"]);
-  const signature = await crypto.subtle.sign({ name: "RSA-PSS", saltLength: 32 }, privKey, msgBuffer);
-  tx.signature = b64urlEncode(signature);
-  const sigHash = await sha256(signature);
-  tx.id = b64urlEncode(sigHash);
-}
-
-async function postTx(tx: ArweaveTx): Promise<Response> {
-  return fetch(`${PROTOCOL}://${HOST}/tx`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(tx),
-  });
-}
-
 /* ================================================================== */
-/*  Shared design tokens (must match wallets-app.tsx)                   */
+/*  Design tokens (must match wallets-app.tsx)                         */
 /* ================================================================== */
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
@@ -135,6 +33,7 @@ const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px
 
 export default function ArweaveWallet() {
   const { arweaveWallet, setArweaveWallet: saveArweaveWallet } = useWallet();
+  const gw = useMemo(() => new ArweaveGateway(), []);
 
   const [address, setAddress] = useState("");
   const [balance, setBalance] = useState("—");
@@ -153,16 +52,25 @@ export default function ArweaveWallet() {
   const [sendStatus, setSendStatus] = useState<StatusMsg | null>(null);
   const [uploadStatus, setUploadStatus] = useState<StatusMsg | null>(null);
 
+  /* Upload tags */
+  const [uploadTags, setUploadTags] = useState<ArweaveTag[]>([]);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagValue, setNewTagValue] = useState("");
+
+  /* Cost preview */
+  const [sendCost, setSendCost] = useState<ArweaveCostEstimate | null>(null);
+  const [uploadCost, setUploadCost] = useState<ArweaveCostEstimate | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
   /* ---- helpers ---- */
   const refreshBalance = useCallback(async (addr: string) => {
     try {
-      const winston = await getBalance(addr);
-      const ar = (Number(winston) / 1e12).toFixed(6);
-      setBalance(ar);
+      const { ar } = await gw.getBalance(addr);
+      setBalance(parseFloat(ar).toFixed(6));
     } catch {
       setBalance("Error");
     }
-  }, []);
+  }, [gw]);
 
   useEffect(() => {
     if (arweaveWallet) {
@@ -177,11 +85,31 @@ export default function ArweaveWallet() {
     }
   }, [arweaveWallet, refreshBalance]);
 
+  /* ---- cost previews ---- */
+  useEffect(() => {
+    if (arTab !== "send" || !target || !amount) { setSendCost(null); return; }
+    const t = setTimeout(async () => {
+      try { setSendCost(await gw.estimateCost(0)); } catch { setSendCost(null); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [gw, arTab, target, amount]);
+
+  useEffect(() => {
+    if (arTab !== "upload") { setUploadCost(null); return; }
+    const file = fileRef.current?.files?.[0];
+    const size = file ? file.size : dataText ? new TextEncoder().encode(dataText).byteLength : 0;
+    if (size === 0) { setUploadCost(null); return; }
+    const t = setTimeout(async () => {
+      try { setUploadCost(await gw.estimateCost(size)); } catch { setUploadCost(null); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [gw, arTab, dataText]);
+
   /* ---- actions ---- */
   const handleGenerate = useCallback(async () => {
     setGenStatus({ text: "Generating keypair... (2-3 sec)", type: "loading" });
     try {
-      const jwk = await generateKey();
+      const jwk = await ArweaveGateway.generateWallet();
       await saveArweaveWallet(jwk);
       setGenStatus({ text: "Generated & encrypted in vault.", type: "success" });
     } catch (e: unknown) {
@@ -224,15 +152,10 @@ export default function ArweaveWallet() {
     if (!target || !amount) { setSendStatus({ text: "Fill fields", type: "error" }); return; }
     setSendStatus({ text: "Sending...", type: "loading" });
     try {
-      const anchor = await getAnchor();
-      const quantity = BigInt(Math.round(parseFloat(amount) * 10 ** 12)).toString();
-      const reward = await getPrice(0, target);
-      const tx: ArweaveTx = {
-        format: 2, owner: localJwk.n, target, quantity, reward,
-        last_tx: anchor, tags: [], data_size: "0", data_root: "",
-      };
-      await signTx(tx, localJwk);
-      const res = await postTx(tx);
+      const anchor = await gw.getTxAnchor();
+      const reward = await gw.getPrice(0, target);
+      const tx = await ArweaveGateway.buildTransferTx(target, amount, localJwk, anchor, reward);
+      const res = await gw.submitTx(tx);
       if (res.status === 200) {
         setSendStatus({ text: `Sent! TX ID: ${tx.id}`, type: "success" });
         setTimeout(() => refreshBalance(address), 2000);
@@ -242,53 +165,46 @@ export default function ArweaveWallet() {
     } catch (e: unknown) {
       setSendStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
     }
-  }, [localJwk, target, amount, address, refreshBalance]);
+  }, [gw, localJwk, target, amount, address, refreshBalance]);
 
   const handleUpload = useCallback(async () => {
     if (!localJwk) { setUploadStatus({ text: "No wallet loaded", type: "error" }); return; }
     const file = fileRef.current?.files?.[0];
     if (!dataText && !file) { setUploadStatus({ text: "Add text or file", type: "error" }); return; }
     setUploadStatus({ text: "Preparing...", type: "loading" });
+    setUploadProgress(0);
     try {
-      let data: Uint8Array;
-      if (dataText) {
-        data = new TextEncoder().encode(dataText);
+      let result;
+      if (file) {
+        result = await gw.uploadFile(file, uploadTags, localJwk, undefined, (pct) => setUploadProgress(pct));
       } else {
-        data = new Uint8Array(await file!.arrayBuffer());
+        const data = new TextEncoder().encode(dataText);
+        const tags: ArweaveTag[] = [{ name: "Content-Type", value: "text/plain" }, ...uploadTags];
+        result = await gw.uploadData(data, tags, localJwk, undefined, (pct) => setUploadProgress(pct));
       }
-      const dataRoot = await sha256(data);
-      const anchor = await getAnchor();
-      const dataSize = data.byteLength.toString();
-      const reward = await getPrice(dataSize);
-      const tx: ArweaveTx = {
-        format: 2, owner: localJwk.n, target: "", quantity: "0", reward,
-        last_tx: anchor, tags: [], data_size: dataSize, data_root: b64urlEncode(dataRoot),
-      };
-      await signTx(tx, localJwk);
-      await postTx(tx);
-      const chunkSize = 256 * 1024;
-      let offset = 0;
-      while (offset < data.byteLength) {
-        const chunk = data.slice(offset, offset + chunkSize);
-        offset += chunk.byteLength;
-        const pct = ((offset / data.byteLength) * 100).toFixed(1);
-        const chunkB64 = b64urlEncode(chunk);
-        const chunkRes = await fetch(`${PROTOCOL}://${HOST}/chunk/${tx.id}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            data_root: tx.data_root, data_size: tx.data_size,
-            data_path: "", offset: offset - chunk.byteLength, chunk: chunkB64,
-          }),
-        });
-        if (!chunkRes.ok) throw new Error(`Chunk upload failed at ${pct}%: HTTP ${chunkRes.status}`);
-        setUploadStatus({ text: `Uploading: ${pct}%`, type: "loading" });
+      if (result.status === 200) {
+        setUploadStatus({ text: `Uploaded! TX ID: ${result.txId}`, type: "success" });
+      } else {
+        throw new Error(`Status: ${result.status}`);
       }
-      setUploadStatus({ text: `Uploaded! TX ID: ${tx.id}`, type: "success" });
     } catch (e: unknown) {
       setUploadStatus({ text: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" });
+    } finally {
+      setUploadProgress(null);
     }
-  }, [localJwk, dataText]);
+  }, [gw, localJwk, dataText, uploadTags]);
+
+  /* ---- tag helpers ---- */
+  const addTag = useCallback(() => {
+    if (!newTagName.trim()) return;
+    setUploadTags((prev) => [...prev, { name: newTagName.trim(), value: newTagValue.trim() }]);
+    setNewTagName("");
+    setNewTagValue("");
+  }, [newTagName, newTagValue]);
+
+  const removeTag = useCallback((i: number) => {
+    setUploadTags((prev) => prev.filter((_, idx) => idx !== i));
+  }, []);
 
   /* ---- status badge ---- */
   const renderStatus = (s: StatusMsg | null) => {
@@ -306,6 +222,17 @@ export default function ArweaveWallet() {
     );
   };
 
+  const renderCost = (cost: ArweaveCostEstimate | null) => {
+    if (!cost) return null;
+    return (
+      <div className="mt-2 py-2 px-3 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[10px] text-white/40 flex gap-4">
+        <span>{parseFloat(cost.ar).toFixed(8)} AR</span>
+        <span>${parseFloat(cost.usd).toFixed(6)}</span>
+        <span className="text-white/20">{cost.winston} winston</span>
+      </div>
+    );
+  };
+
   const tabs: { id: typeof arTab; label: string; icon: string }[] = [
     { id: "setup", label: "Setup", icon: "+" },
     { id: "info", label: "Info", icon: "i" },
@@ -319,6 +246,13 @@ export default function ArweaveWallet() {
 
   return (
     <div className="space-y-5">
+      {/* Gateway link */}
+      <div className="flex justify-end">
+        <Link href="/gateway" className={`${pillBtn} text-purple-300/60 hover:text-purple-300`}>
+          Open Gateway Dashboard
+        </Link>
+      </div>
+
       {/* Tabs */}
       <div className={`${card} p-1.5 flex gap-1`}>
         {tabs.map((t) => (
@@ -446,6 +380,7 @@ export default function ArweaveWallet() {
               className={input}
             />
           </div>
+          {renderCost(sendCost)}
           <button type="button" onClick={handleSend} className={btnPrimary}>Send Transaction</button>
           {renderStatus(sendStatus)}
         </div>
@@ -453,30 +388,70 @@ export default function ArweaveWallet() {
 
       {/* ── Upload Tab ── */}
       {arTab === "upload" && (
-        <div className={`${card} p-5 space-y-4`}>
-          <h3 className="text-sm font-semibold text-white/80">Upload to Arweave</h3>
-          <p className="text-xs text-white/30 -mt-2">Permanently store text or a file on the permaweb.</p>
-          <div>
-            <label className={label}>Text Data</label>
-            <textarea
-              rows={3}
-              value={dataText}
-              onChange={(e) => setDataText(e.target.value)}
-              placeholder="Enter text to upload..."
-              className={textarea}
-              style={{ resize: "vertical" }}
-            />
+        <div className="space-y-4">
+          <div className={`${card} p-5 space-y-4`}>
+            <h3 className="text-sm font-semibold text-white/80">Upload to Arweave</h3>
+            <p className="text-xs text-white/30 -mt-2">Permanently store text or a file on the permaweb.</p>
+            <div>
+              <label className={label}>Text Data</label>
+              <textarea
+                rows={3}
+                value={dataText}
+                onChange={(e) => setDataText(e.target.value)}
+                placeholder="Enter text to upload..."
+                className={textarea}
+                style={{ resize: "vertical" }}
+              />
+            </div>
+            <div>
+              <label className={label}>Or choose a file</label>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="*/*"
+                className="block w-full text-sm text-white/40 file:mr-3 file:h-9 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-medium file:bg-white/[0.06] file:text-white/60 hover:file:bg-white/[0.1] file:cursor-pointer file:transition-all"
+              />
+            </div>
           </div>
-          <div>
-            <label className={label}>Or choose a file</label>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="*/*"
-              className="block w-full text-sm text-white/40 file:mr-3 file:h-9 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-medium file:bg-white/[0.06] file:text-white/60 hover:file:bg-white/[0.1] file:cursor-pointer file:transition-all"
-            />
+
+          {/* Tag editor */}
+          <div className={`${card} p-5 space-y-3`}>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Custom Tags</span>
+            {uploadTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {uploadTags.map((t, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300/60">
+                    {t.name}: {t.value}
+                    <button type="button" onClick={() => removeTag(i)} className="text-red-400/60 hover:text-red-400 cursor-pointer">x</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Tag name" className={`flex-1 ${input}`} />
+              <input value={newTagValue} onChange={(e) => setNewTagValue(e.target.value)} placeholder="Tag value" className={`flex-1 ${input}`} />
+              <button type="button" onClick={addTag} className="h-11 px-4 rounded-xl font-medium text-xs bg-white/[0.06] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.1] active:scale-95 transition-all cursor-pointer">Add</button>
+            </div>
           </div>
-          <button type="button" onClick={handleUpload} className={btnPrimary}>Upload</button>
+
+          {/* Cost estimate */}
+          {renderCost(uploadCost)}
+
+          {/* Progress */}
+          {uploadProgress !== null && (
+            <div className={`${card} p-4`}>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-purple-500 to-violet-500 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+                </div>
+                <span className="text-xs text-white/50 w-12 text-right">{uploadProgress}%</span>
+              </div>
+            </div>
+          )}
+
+          <button type="button" onClick={handleUpload} disabled={uploadProgress !== null} className={btnPrimary}>
+            {uploadProgress !== null ? "Uploading..." : "Upload"}
+          </button>
           {renderStatus(uploadStatus)}
         </div>
       )}
