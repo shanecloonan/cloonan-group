@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import CompanyChart from "./company-chart";
 import MoneyFundLogo from "./money-fund-logo";
-import ProtocolMap from "./protocol-map";
 
 export const metadata: Metadata = {
   title: "MoneyFund | The World's Biggest Hedge Fun",
@@ -51,9 +50,6 @@ export default function Home() {
         <div className="absolute bottom-8 left-8 w-12 h-12 border-l border-b border-gold/10" />
         <div className="absolute bottom-8 right-8 w-12 h-12 border-r border-b border-gold/10" />
       </div>
-
-      {/* ── Protocol Map ── */}
-      <ProtocolMap />
 
       {/* ── Entity Structure ── */}
       <CompanyChart />

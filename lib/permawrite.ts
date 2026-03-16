@@ -502,6 +502,8 @@ export async function permawriteSmart(
     category: string;
     tags: string[];
     preferredMethod?: UploadMethod;
+    visibility?: "private" | "permawrite";
+    customTags?: ArweaveTag[];
   },
   onProgress?: (pct: number) => void,
 ): Promise<PermawriteItem & { method: UploadMethod } | null> {
@@ -520,6 +522,7 @@ export async function permawriteSmart(
   ];
   if (opts.description) arTags.push({ name: "Description", value: opts.description });
   for (const tag of opts.tags) arTags.push({ name: "Tag", value: tag });
+  if (opts.customTags) for (const ct of opts.customTags) arTags.push(ct);
 
   const result = await gw.smartUploadFile(
     file, arTags, jwk, opts.preferredMethod ?? "turbo",
@@ -536,7 +539,7 @@ export async function permawriteSmart(
       description: opts.description || null,
       category_slug: opts.category,
       tags: opts.tags,
-      visibility: "permawrite",
+      visibility: opts.visibility ?? "permawrite",
       file_name: file.name,
       file_size: file.size,
       content_type: file.type,
@@ -559,6 +562,8 @@ export async function permawriteTextSmart(
     category: string;
     tags: string[];
     preferredMethod?: UploadMethod;
+    visibility?: "private" | "permawrite";
+    customTags?: ArweaveTag[];
   },
   onProgress?: (pct: number) => void,
 ): Promise<PermawriteItem & { method: UploadMethod } | null> {
@@ -578,6 +583,7 @@ export async function permawriteTextSmart(
   ];
   if (opts.description) arTags.push({ name: "Description", value: opts.description });
   for (const tag of opts.tags) arTags.push({ name: "Tag", value: tag });
+  if (opts.customTags) for (const ct of opts.customTags) arTags.push(ct);
 
   const result = await gw.smartUploadData(
     data_bytes, arTags, jwk, opts.preferredMethod ?? "turbo",
@@ -594,7 +600,7 @@ export async function permawriteTextSmart(
       description: opts.description || null,
       category_slug: opts.category,
       tags: opts.tags,
-      visibility: "permawrite",
+      visibility: opts.visibility ?? "permawrite",
       file_name: null,
       file_size: data_bytes.byteLength,
       content_type: "text/plain",

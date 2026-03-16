@@ -14,6 +14,16 @@ import {
   type ArioGatewayHealth,
   type GatewayNetworkStats,
 } from "@/lib/ario";
+import {
+  dryrun,
+  getTokenInfo,
+  getTokenBalance,
+  getProcessInfo,
+  formatTokenAmount,
+  AO_TOKENS,
+  type AoResult,
+  type AoTokenInfo,
+} from "@/lib/ao";
 import type {
   ArweaveNetworkInfo,
   ArweaveCostEstimate,
@@ -59,13 +69,14 @@ function relativeTime(ts: number | string): string {
   return new Date(d).toLocaleDateString();
 }
 
-type Tab = "network" | "explorer" | "browser" | "upload" | "history" | "graphql" | "bookmarks";
+type Tab = "network" | "explorer" | "browser" | "upload" | "ao" | "history" | "graphql" | "bookmarks";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "network", label: "Network", icon: "◉" },
   { id: "explorer", label: "Explorer", icon: "◎" },
   { id: "browser", label: "Browser", icon: "◫" },
   { id: "upload", label: "Upload", icon: "☁" },
+  { id: "ao", label: "AO", icon: "⊛" },
   { id: "history", label: "History", icon: "◷" },
   { id: "graphql", label: "GraphQL", icon: "⬡" },
   { id: "bookmarks", label: "Saved", icon: "★" },
@@ -123,6 +134,15 @@ export default function GatewayContent() {
   const [arnsInput, setArnsInput] = useState("");
   const [arnsResult, setArnsResult] = useState<{ name: string; txId: string; url: string } | null>(null);
   const [arnsLoading, setArnsLoading] = useState(false);
+
+  /* AO state */
+  const [aoProcessId, setAoProcessId] = useState("");
+  const [aoAction, setAoAction] = useState("");
+  const [aoData, setAoData] = useState("");
+  const [aoResult, setAoResult] = useState<AoResult | null>(null);
+  const [aoLoading, setAoLoading] = useState(false);
+  const [aoTokens, setAoTokens] = useState<(AoTokenInfo & { balance?: string; rawBalance?: string })[]>([]);
+  const [aoTokensLoading, setAoTokensLoading] = useState(false);
 
   const [bookmarks, setBookmarks] = useState<ArweaveBookmark[]>([]);
   const [bmLabel, setBmLabel] = useState("");
@@ -183,6 +203,56 @@ export default function GatewayContent() {
     finally { setArnsLoading(false); }
   }, [arnsInput]);
 
+  const handleAoDryrun = useCallback(async () => {
+    const pid = aoProcessId.trim();
+    if (!pid) return;
+    setAoLoading(true);
+    setAoResult(null);
+    try {
+      const tags = aoAction.trim()
+        ? [{ name: "Action", value: aoAction.trim() }]
+        : [];
+      const result = await dryrun(pid, tags, aoData.trim() || undefined, arweaveWallet?.address);
+      setAoResult(result);
+    } catch (e) {
+      setAoResult({ Messages: [], Spawns: [], Output: { data: `Error: ${e instanceof Error ? e.message : String(e)}` } });
+    } finally { setAoLoading(false); }
+  }, [aoProcessId, aoAction, aoData, arweaveWallet]);
+
+  const loadAoTokenBalances = useCallback(async () => {
+    if (!arweaveWallet?.address) return;
+    setAoTokensLoading(true);
+    try {
+      const results = await Promise.all(
+        Object.entries(AO_TOKENS).map(async ([key, pid]) => {
+          try {
+            const [info, rawBal] = await Promise.all([
+              getTokenInfo(pid),
+              getTokenBalance(pid, arweaveWallet.address),
+            ]);
+            return {
+              ...info,
+              rawBalance: rawBal,
+              balance: formatTokenAmount(rawBal, info.denomination),
+            };
+          } catch {
+            return {
+              name: key,
+              ticker: key,
+              denomination: 0,
+              processId: pid,
+              rawBalance: "0",
+              balance: "0",
+            };
+          }
+        }),
+      );
+      setAoTokens(results);
+    } catch { /* silent */ }
+    finally { setAoTokensLoading(false); }
+  }, [arweaveWallet]);
+
+  useEffect(() => { if (tab === "ao" && arweaveWallet) loadAoTokenBalances(); }, [tab, arweaveWallet, loadAoTokenBalances]);
   useEffect(() => { if (tab === "network") { loadNetworkInfo(); loadArioGateways(); } }, [tab, loadNetworkInfo, loadArioGateways]);
   useEffect(() => { if (tab !== "network") return; const iv = setInterval(loadNetworkInfo, 30000); return () => clearInterval(iv); }, [tab, loadNetworkInfo]);
 
@@ -754,6 +824,145 @@ export default function GatewayContent() {
             <button type="button" onClick={runGql} disabled={gqlLoading} className={`w-full ${btnPrimary}`}>{gqlLoading ? <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin mx-auto" /> : "Run Query"}</button>
           </div>
           {gqlResult && (<div className={`${card} p-4`}><span className="text-xs font-medium text-white/30 uppercase tracking-wider mb-2 block">Result</span><pre className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-white/40 max-h-[400px] overflow-auto whitespace-pre-wrap break-all font-mono" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>{gqlResult}</pre></div>)}
+        </div>
+      )}
+
+      {/* AO (Arweave Operating System) */}
+      {tab === "ao" && (
+        <div className="space-y-4">
+          {/* Token Balances */}
+          <div className={`${card} p-5`}>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">AO Token Balances</span>
+              <button type="button" onClick={loadAoTokenBalances} disabled={aoTokensLoading || !arweaveWallet} className={pillBtn}>
+                {aoTokensLoading ? <span className="w-3 h-3 border border-white/40 border-t-transparent rounded-full animate-spin" /> : "Refresh"}
+              </button>
+            </div>
+
+            {!arweaveWallet && (
+              <p className="text-xs text-white/30 text-center py-4">Connect an Arweave wallet to view AO token balances.</p>
+            )}
+
+            {arweaveWallet && aoTokens.length > 0 && (
+              <div className="space-y-2">
+                {aoTokens.map((token) => (
+                  <div key={token.processId} className="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center text-[11px] font-bold text-cyan-300/60 shrink-0">
+                      {token.ticker.slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium text-white/70">{token.name}</span>
+                        <span className="text-[10px] text-white/25">{token.ticker}</span>
+                      </div>
+                      <p className="text-[10px] font-mono text-white/20 truncate">{token.processId}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-white tabular-nums">{token.balance}</p>
+                      {token.rawBalance && token.rawBalance !== "0" && token.denomination > 0 && (
+                        <p className="text-[10px] text-white/20 tabular-nums">{token.rawBalance} raw</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {arweaveWallet && aoTokens.length === 0 && !aoTokensLoading && (
+              <p className="text-xs text-white/30 text-center py-4">Click Refresh to load token balances.</p>
+            )}
+          </div>
+
+          {/* Dryrun Console */}
+          <div className={`${card} p-5 space-y-3`}>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">AO Process Console</span>
+            <p className="text-[10px] text-white/20 -mt-1">Send read-only messages (dryrun) to any AO process.</p>
+
+            <div>
+              <label className="block text-white/40 text-xs font-medium uppercase tracking-wider mb-1">Process ID</label>
+              <input
+                value={aoProcessId}
+                onChange={(e) => setAoProcessId(e.target.value)}
+                placeholder="Process ID (e.g. ARIO token address)..."
+                className={inputCls}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-white/40 text-xs font-medium uppercase tracking-wider mb-1">Action Tag</label>
+                <input
+                  value={aoAction}
+                  onChange={(e) => setAoAction(e.target.value)}
+                  placeholder="Info, Balance, Balances..."
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-white/40 text-xs font-medium uppercase tracking-wider mb-1">Data (optional)</label>
+                <input
+                  value={aoData}
+                  onChange={(e) => setAoData(e.target.value)}
+                  placeholder="Optional message data..."
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button type="button" onClick={handleAoDryrun} disabled={aoLoading || !aoProcessId.trim()} className={`flex-1 ${btnPrimary}`}>
+                {aoLoading ? "Running..." : "Dryrun"}
+              </button>
+              {Object.entries(AO_TOKENS).slice(0, 3).map(([key, pid]) => (
+                <button key={key} type="button" onClick={() => { setAoProcessId(pid); setAoAction("Info"); }} className={pillBtn}>
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Dryrun Result */}
+          {aoResult && (
+            <div className={`${card} p-5 space-y-3`}>
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Result</span>
+
+              {aoResult.Output?.data && (
+                <div>
+                  <span className="text-[10px] text-white/20 uppercase font-medium">Output</span>
+                  <pre className="mt-1 p-3 rounded-lg bg-black/20 text-xs text-white/50 font-mono overflow-auto max-h-[200px] whitespace-pre-wrap break-all" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                    {aoResult.Output.data}
+                  </pre>
+                </div>
+              )}
+
+              {aoResult.Messages.length > 0 && aoResult.Messages.map((msg, i) => (
+                <div key={i} className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-cyan-300/40 uppercase font-medium">Message {i + 1}</span>
+                    {msg.Target && <span className="text-[10px] text-white/20 font-mono truncate">→ {msg.Target.slice(0, 12)}...</span>}
+                  </div>
+                  {msg.Tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {msg.Tags.map((t, j) => (
+                        <span key={j} className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300/50">
+                          {t.name}: {t.value.length > 30 ? t.value.slice(0, 30) + "..." : t.value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {msg.Data && (
+                    <pre className="p-2 rounded bg-black/20 text-[11px] text-white/40 font-mono overflow-auto max-h-[150px] whitespace-pre-wrap break-all" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                      {msg.Data.length > 2000 ? msg.Data.slice(0, 2000) + "\n..." : msg.Data}
+                    </pre>
+                  )}
+                </div>
+              ))}
+
+              {aoResult.Messages.length === 0 && !aoResult.Output?.data && (
+                <p className="text-xs text-white/30 text-center py-2">No output returned.</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
