@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
+import CompanyChart from "../company-chart";
 
 Chart.register(...registerables);
 
@@ -1392,6 +1393,9 @@ export default function AboutApp() {
             ))}
           </div>
         </section>
+
+        {/* ═══════════ ENTITY STRUCTURE ═══════════ */}
+        <CompanyChart />
 
         {/* ═══════════ U-DIAGRAMS ═══════════ */}
         <section id="diagrams" className="space-y-8 scroll-mt-28">

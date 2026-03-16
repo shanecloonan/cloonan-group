@@ -10,6 +10,8 @@ import ArweaveWallet from "./arweave-wallet";
 
 const GatewayContent = dynamic(() => import("@/app/gateway/gateway-content"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-purple-400 rounded-full animate-spin mx-auto" /></div> });
 const PermawriteContent = dynamic(() => import("@/app/permawrite/permawrite-content"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-sky-400 rounded-full animate-spin mx-auto" /></div> });
+const UnifiedUpload = dynamic(() => import("./unified-upload"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-emerald-400 rounded-full animate-spin mx-auto" /></div> });
+const PermaFeed = dynamic(() => import("./permafeed"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-violet-400 rounded-full animate-spin mx-auto" /></div> });
 import {
   logTransaction,
   fetchActivity,
@@ -334,7 +336,7 @@ export default function WalletsApp() {
   } = useWallet();
 
   const [chain, setChain] = useState<"ethereum" | "arweave">("ethereum");
-  const [arweaveTab, setArweaveTab] = useState<"arweave" | "gateway" | "permawrite">("arweave");
+  const [arweaveTab, setArweaveTab] = useState<"arweave" | "gateway" | "upload" | "permafeed">("arweave");
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC), []);
 
   const selected = selectedEthWallet;
@@ -740,14 +742,19 @@ export default function WalletsApp() {
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-400" style={{ opacity: arweaveTab === "gateway" ? 1 : 0.3 }} />
                 Gateway
               </button>
-              <button type="button" onClick={() => setArweaveTab("permawrite")} className={`flex-1 h-10 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${arweaveTab === "permawrite" ? "bg-sky-500/15 text-sky-400 shadow-[inset_0_1px_0_rgba(56,189,248,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-400" style={{ opacity: arweaveTab === "permawrite" ? 1 : 0.3 }} />
-                PermaWrite
+              <button type="button" onClick={() => setArweaveTab("upload")} className={`flex-1 h-10 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${arweaveTab === "upload" ? "bg-emerald-500/15 text-emerald-400 shadow-[inset_0_1px_0_rgba(52,211,153,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ opacity: arweaveTab === "upload" ? 1 : 0.3 }} />
+                Upload
+              </button>
+              <button type="button" onClick={() => setArweaveTab("permafeed")} className={`flex-1 h-10 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${arweaveTab === "permafeed" ? "bg-violet-500/15 text-violet-400 shadow-[inset_0_1px_0_rgba(139,92,246,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" style={{ opacity: arweaveTab === "permafeed" ? 1 : 0.3 }} />
+                PermaFeed
               </button>
             </div>
             {arweaveTab === "arweave" && <ArweaveWallet />}
             {arweaveTab === "gateway" && <GatewayContent />}
-            {arweaveTab === "permawrite" && <PermawriteContent />}
+            {arweaveTab === "upload" && <UnifiedUpload />}
+            {arweaveTab === "permafeed" && <PermaFeed />}
           </div>
         )}
 
