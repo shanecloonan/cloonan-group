@@ -205,25 +205,52 @@ function UDiagram({ label, boxes, desc, pathEnd, descSize, prefix = "u" }: {
 }
 
 /* ================================================================== */
-/*  ANIMATED COIN COMPONENT for Dividend Pool                          */
+/*  STATIC CONNECTOR for Dividend Pool                                 */
 /* ================================================================== */
 
-function AnimatedCoins({ branchIndex, total }: { branchIndex: number; total: number }) {
+const BRANCH_COLORS: Record<string, [string, string]> = {
+  asset: ["#34d399", "#10b981"],
+  distribution: ["#fb923c", "#f97316"],
+  profit: ["#a78bfa", "#8b5cf6"],
+  utility: ["#38bdf8", "#0ea5e9"],
+};
+
+function StaticConnector({ branchIndex, total, layer }: { branchIndex: number; total: number; layer: string }) {
   const angle = (branchIndex * Math.PI * 2) / total;
   const r = 220;
-  const sx = 300 + r * Math.cos(angle);
-  const sy = 300 + r * Math.sin(angle);
-  const delays = useMemo(() => [0, 1.2, 2.5, 3.8], []);
+  const ex = 300 + r * Math.cos(angle);
+  const ey = 300 + r * Math.sin(angle);
+  const [c1] = BRANCH_COLORS[layer] || ["#a78bfa", "#8b5cf6"];
+  const gradId = `conn-grad-${branchIndex}`;
+  const dx = 300 - ex;
+  const dy = 300 - ey;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  const nx = dx / len;
+  const ny = dy / len;
+  const dotPositions = [0.3, 0.55, 0.75];
 
-  return (<>
-    {delays.map((d, ci) => (
-      <circle key={ci} r="8" fill="gold" opacity="0.9" filter="url(#coinGlow)">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin={`${d}s`} fill="freeze" path={`M${sx},${sy} L300,300`} />
-        <animate attributeName="opacity" values="0.9;0.9;0" keyTimes="0;0.7;1" dur="2.5s" repeatCount="indefinite" begin={`${d}s`} />
-        <animate attributeName="r" values="8;6;2" keyTimes="0;0.8;1" dur="2.5s" repeatCount="indefinite" begin={`${d}s`} />
-      </circle>
-    ))}
-  </>);
+  return (
+    <g>
+      <defs>
+        <linearGradient id={gradId} x1={ex} y1={ey} x2="300" y2="300" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={c1} stopOpacity="0.5" />
+          <stop offset="100%" stopColor={c1} stopOpacity="0.08" />
+        </linearGradient>
+      </defs>
+      <line x1={ex} y1={ey} x2="300" y2="300" stroke={`url(#${gradId})`} strokeWidth="2" strokeLinecap="round" />
+      {dotPositions.map((t, i) => (
+        <circle
+          key={i}
+          cx={ex + dx * t}
+          cy={ey + dy * t}
+          r={3.5 - i * 0.5}
+          fill={c1}
+          opacity={0.5 - i * 0.12}
+        />
+      ))}
+      <circle cx={ex + nx * 12} cy={ey + ny * 12} r="4" fill={c1} opacity="0.7" />
+    </g>
+  );
 }
 
 /* ================================================================== */
@@ -1382,20 +1409,18 @@ export default function AboutApp() {
           {/* Desktop: full animated visualization */}
           <div className="hidden md:flex justify-center">
             <div className="relative w-[640px] h-[640px] rounded-3xl" style={{ background: "radial-gradient(circle at center, #111318, #08090e)" }}>
-              {/* SVG layer for paths + animated coins */}
+              {/* SVG layer for static connectors */}
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 600 600">
-                <defs>
-                  <filter id="coinGlow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-                </defs>
                 {POOL_BRANCHES.map((_, i) => {
                   const angle = (i * Math.PI * 2) / POOL_BRANCHES.length;
                   const r = 220;
                   const ex = 300 + r * Math.cos(angle);
                   const ey = 300 + r * Math.sin(angle);
-                  const strokeColor = i % 3 === 0 ? "rgba(52,211,153,0.12)" : i % 3 === 1 ? "rgba(251,146,60,0.12)" : "rgba(167,139,250,0.12)";
-                  return <line key={`line-${i}`} x1="300" y1="300" x2={ex} y2={ey} stroke={strokeColor} strokeWidth="10" />;
+                  const strokeColor = i % 3 === 0 ? "rgba(52,211,153,0.06)" : i % 3 === 1 ? "rgba(251,146,60,0.06)" : "rgba(167,139,250,0.06)";
+                  return <line key={`bg-${i}`} x1="300" y1="300" x2={ex} y2={ey} stroke={strokeColor} strokeWidth="10" strokeLinecap="round" />;
                 })}
-                {POOL_BRANCHES.map((_, i) => <AnimatedCoins key={`coins-${i}`} branchIndex={i} total={POOL_BRANCHES.length} />)}
+                {POOL_BRANCHES.map((b, i) => <StaticConnector key={`conn-${i}`} branchIndex={i} total={POOL_BRANCHES.length} layer={b.layer} />)}
+                <circle cx="300" cy="300" r="6" fill="rgba(0,247,255,0.3)" />
               </svg>
 
               {/* Branch orbs */}
