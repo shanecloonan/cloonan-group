@@ -11,6 +11,7 @@ import type {
   ArweaveTag,
   ArweaveUploadRecord,
   ArweaveBookmark,
+  ArweavePoolStatus,
   GqlQueryParams,
 } from "@/lib/wallet-types";
 
@@ -69,6 +70,8 @@ export default function GatewayContent() {
   const [costPerMb, setCostPerMb] = useState<ArweaveCostEstimate | null>(null);
   const [gwHealth, setGwHealth] = useState<Record<string, "up" | "down" | "checking">>({});
   const [gwStats, setGwStats] = useState<{ totalRequests: number; cacheHitRate: number; avgResponseMs: number } | null>(null);
+  const [poolStatus, setPoolStatus] = useState<ArweavePoolStatus | null>(null);
+  const [poolRefreshing, setPoolRefreshing] = useState(false);
 
   const [expQuery, setExpQuery] = useState("");
   const [expType, setExpType] = useState<"txid" | "owner" | "recipient" | "tags">("txid");
@@ -112,6 +115,7 @@ export default function GatewayContent() {
       setCostPerMb(cost);
     } catch { /* silent */ }
     try { const stats = await ArweaveGateway.getGatewayStats(); setGwStats(stats); } catch { /* silent */ }
+    try { setPoolStatus(await gw.getPoolStatus()); } catch { /* silent */ }
     for (const gateway of ARWEAVE_DIRECT_GATEWAYS) {
       setGwHealth((prev) => ({ ...prev, [gateway]: "checking" }));
       try {
@@ -119,6 +123,15 @@ export default function GatewayContent() {
         setGwHealth((prev) => ({ ...prev, [gateway]: res.ok ? "up" : "down" }));
       } catch { setGwHealth((prev) => ({ ...prev, [gateway]: "down" })); }
     }
+  }, [gw]);
+
+  const handleRefreshPool = useCallback(async () => {
+    setPoolRefreshing(true);
+    try {
+      await gw.refreshPeerPool();
+      setPoolStatus(await gw.getPoolStatus());
+    } catch { /* silent */ }
+    finally { setPoolRefreshing(false); }
   }, [gw]);
 
   useEffect(() => { if (tab === "network") loadNetworkInfo(); }, [tab, loadNetworkInfo]);
@@ -267,8 +280,56 @@ export default function GatewayContent() {
               </div>
             </div>
           )}
+          {/* Peer Pool */}
           <div className={`${card} p-5`}>
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Gateway Health</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Direct Peer Pool</span>
+                {poolStatus && (
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${poolStatus.pool_fresh ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"}`}>
+                    {poolStatus.pool_fresh ? "LIVE" : "STALE"}
+                  </span>
+                )}
+              </div>
+              <button type="button" onClick={handleRefreshPool} disabled={poolRefreshing} className={pillBtn}>
+                {poolRefreshing ? <span className="w-3 h-3 border border-white/40 border-t-transparent rounded-full animate-spin" /> : "Discover Peers"}
+              </button>
+            </div>
+            {poolStatus ? (
+              <>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div><p className="text-2xl font-bold text-emerald-400">{poolStatus.active_peers}</p><p className="text-[10px] text-white/30 mt-0.5 uppercase">Active Peers</p></div>
+                  <div><p className="text-2xl font-bold text-white">{poolStatus.top_peers.length > 0 ? `${Math.min(...poolStatus.top_peers.map(p => p.latency_ms))}ms` : "—"}</p><p className="text-[10px] text-white/30 mt-0.5 uppercase">Best Latency</p></div>
+                </div>
+                {poolStatus.top_peers.length > 0 && (
+                  <div className="space-y-1 max-h-[280px] overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                    {poolStatus.top_peers.map((peer) => {
+                      const health = parseFloat(peer.health);
+                      return (
+                        <div key={peer.address} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-white/[0.02] transition-colors group">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${health >= 0.7 ? "bg-emerald-400" : health >= 0.4 ? "bg-yellow-400" : "bg-red-400"}`} />
+                          <span className="text-[11px] font-mono text-white/50 min-w-0 truncate">{peer.address}</span>
+                          <span className="text-[10px] text-white/25 tabular-nums shrink-0">{peer.latency_ms}ms</span>
+                          <span className="text-[10px] text-white/20 tabular-nums shrink-0">h{peer.block_height.toLocaleString()}</span>
+                          <div className="ml-auto w-12 h-1.5 rounded-full bg-white/[0.06] overflow-hidden shrink-0">
+                            <div className={`h-full rounded-full transition-all ${health >= 0.7 ? "bg-emerald-400" : health >= 0.4 ? "bg-yellow-400" : "bg-red-400"}`} style={{ width: `${Math.round(health * 100)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {poolStatus.active_peers === 0 && (
+                  <p className="text-xs text-white/30 text-center py-4">No peers discovered yet. Click &ldquo;Discover Peers&rdquo; to bootstrap.</p>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center justify-center py-6"><div className="w-5 h-5 border-2 border-white/10 border-t-emerald-400 rounded-full animate-spin" /></div>
+            )}
+          </div>
+          {/* Fallback Gateways (last resort) */}
+          <div className={`${card} p-5`}>
+            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Fallback Gateways <span className="normal-case text-white/15">(last resort only)</span></span>
             <div className="mt-3 space-y-2">
               {ARWEAVE_DIRECT_GATEWAYS.map((g) => {
                 const status = gwHealth[g] || "checking";
@@ -292,6 +353,13 @@ export default function GatewayContent() {
               </div>
             </div>
           )}
+          <div className={`${card} p-4 text-center`}>
+            <p className="text-[10px] text-white/20 leading-relaxed">
+              Requests route through directly-discovered Arweave peer nodes.
+              Public gateways are only used as a last resort if all peers are unreachable.
+              Peer pool self-sustains through peer-to-peer discovery after initial bootstrap.
+            </p>
+          </div>
         </div>
       )}
 
