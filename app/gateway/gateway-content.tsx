@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useWallet } from "@/lib/wallet-context";
 import ArweaveGateway, { buildGqlQuery, winstonToAr } from "@/lib/arweave";
 import { ARWEAVE_DIRECT_GATEWAYS } from "@/lib/config";
 import {
   discoverGateways,
   resolveToTxId,
-  resolveArns,
   isArnsName,
   getArnsUrl,
   computeNetworkStats,
@@ -16,9 +16,9 @@ import {
 } from "@/lib/ario";
 import {
   dryrun,
+  sendMessage,
   getTokenInfo,
   getTokenBalance,
-  getProcessInfo,
   formatTokenAmount,
   AO_TOKENS,
   type AoResult,
@@ -43,8 +43,11 @@ import type {
   ArweaveUploadRecord,
   ArweaveBookmark,
   ArweavePoolStatus,
+  ArweaveBlock,
   GqlQueryParams,
 } from "@/lib/wallet-types";
+
+const UnifiedUpload = dynamic(() => import("@/app/wallets/unified-upload"), { ssr: false });
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/30 transition-all";
@@ -79,10 +82,11 @@ function relativeTime(ts: number | string): string {
   return new Date(d).toLocaleDateString();
 }
 
-type Tab = "network" | "explorer" | "browser" | "upload" | "ao" | "history" | "graphql" | "bookmarks";
+type Tab = "network" | "blocks" | "explorer" | "browser" | "upload" | "ao" | "history" | "graphql" | "bookmarks";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "network", label: "Network", icon: "◉" },
+  { id: "blocks", label: "Blocks", icon: "▦" },
   { id: "explorer", label: "Explorer", icon: "◎" },
   { id: "browser", label: "Browser", icon: "◫" },
   { id: "upload", label: "Upload", icon: "☁" },
@@ -148,6 +152,26 @@ export default function GatewayContent() {
   const [swLoading, setSwLoading] = useState(false);
   const [swVouch, setSwVouch] = useState<{ vouched: boolean; score: number; vouchers: string[] } | null>(null);
 
+  /* Block explorer state */
+  const [blocks, setBlocks] = useState<ArweaveBlock[]>([]);
+  const [blocksLoading, setBlocksLoading] = useState(false);
+  const [blockDetail, setBlockDetail] = useState<ArweaveBlock | null>(null);
+  const [blockHeightInput, setBlockHeightInput] = useState("");
+
+  /* Browser TX metadata */
+  const [browseMeta, setBrowseMeta] = useState<{
+    owner: string; fee: string; quantity: string; block?: { height: number; timestamp: number };
+    tags: ArweaveTag[];
+  } | null>(null);
+
+  /* Wallet balance in header */
+  const [walletBal, setWalletBal] = useState<{ ar: string; turbo: string } | null>(null);
+
+  /* AO message sending */
+  const [aoSendMode, setAoSendMode] = useState<"dryrun" | "send">("dryrun");
+  const [aoSendResult, setAoSendResult] = useState<string | null>(null);
+  const [aoSending, setAoSending] = useState(false);
+
   const [bookmarks, setBookmarks] = useState<ArweaveBookmark[]>([]);
   const [bmLabel, setBmLabel] = useState("");
   const [bmTarget, setBmTarget] = useState("");
@@ -170,6 +194,35 @@ export default function GatewayContent() {
       } catch { setGwHealth((prev) => ({ ...prev, [gateway]: "down" })); }
     }
   }, [gw]);
+
+  const loadWalletBalance = useCallback(async () => {
+    if (!arweaveWallet?.address) { setWalletBal(null); return; }
+    try {
+      const [bal, turbo] = await Promise.all([
+        gw.getBalance(arweaveWallet.address),
+        ArweaveGateway.getTurboBalance(arweaveWallet.address).catch(() => null),
+      ]);
+      setWalletBal({ ar: parseFloat(bal.ar).toFixed(6), turbo: turbo ? turbo.ar : "0" });
+    } catch { setWalletBal(null); }
+  }, [gw, arweaveWallet]);
+
+  const loadRecentBlocks = useCallback(async () => {
+    setBlocksLoading(true);
+    try { setBlocks(await gw.getRecentBlocks(15)); }
+    catch { setBlocks([]); }
+    finally { setBlocksLoading(false); }
+  }, [gw]);
+
+  const loadBlockByHeight = useCallback(async () => {
+    const h = parseInt(blockHeightInput, 10);
+    if (isNaN(h)) return;
+    setBlocksLoading(true);
+    try {
+      const block = await gw.getBlockByHeight(h);
+      setBlockDetail(block);
+    } catch { setBlockDetail(null); }
+    finally { setBlocksLoading(false); }
+  }, [gw, blockHeightInput]);
 
   const handleRefreshPool = useCallback(async () => {
     setPoolRefreshing(true);
@@ -207,21 +260,30 @@ export default function GatewayContent() {
     finally { setArnsLoading(false); }
   }, [arnsInput]);
 
-  const handleAoDryrun = useCallback(async () => {
+  const handleAoExecute = useCallback(async () => {
     const pid = aoProcessId.trim();
     if (!pid) return;
-    setAoLoading(true);
-    setAoResult(null);
-    try {
-      const tags = aoAction.trim()
-        ? [{ name: "Action", value: aoAction.trim() }]
-        : [];
-      const result = await dryrun(pid, tags, aoData.trim() || undefined, arweaveWallet?.address);
-      setAoResult(result);
-    } catch (e) {
-      setAoResult({ Messages: [], Spawns: [], Output: { data: `Error: ${e instanceof Error ? e.message : String(e)}` } });
-    } finally { setAoLoading(false); }
-  }, [aoProcessId, aoAction, aoData, arweaveWallet]);
+
+    if (aoSendMode === "send") {
+      if (!arweaveWallet?.jwk) { setAoSendResult("No wallet connected — import a JWK first."); return; }
+      setAoSending(true); setAoSendResult(null);
+      try {
+        const tags = aoAction.trim() ? [{ name: "Action", value: aoAction.trim() }] : [];
+        const msgId = await sendMessage({ process: pid, tags, data: aoData.trim() || undefined }, arweaveWallet.jwk);
+        setAoSendResult(`Message sent: ${msgId}`);
+      } catch (e) { setAoSendResult(`Error: ${e instanceof Error ? e.message : String(e)}`); }
+      finally { setAoSending(false); }
+    } else {
+      setAoLoading(true); setAoResult(null);
+      try {
+        const tags = aoAction.trim() ? [{ name: "Action", value: aoAction.trim() }] : [];
+        const result = await dryrun(pid, tags, aoData.trim() || undefined, arweaveWallet?.address);
+        setAoResult(result);
+      } catch (e) {
+        setAoResult({ Messages: [], Spawns: [], Output: { data: `Error: ${e instanceof Error ? e.message : String(e)}` } });
+      } finally { setAoLoading(false); }
+    }
+  }, [aoProcessId, aoAction, aoData, arweaveWallet, aoSendMode]);
 
   const loadAoTokenBalances = useCallback(async () => {
     if (!arweaveWallet?.address) return;
@@ -285,6 +347,8 @@ export default function GatewayContent() {
   }, [tab, arweaveWallet, loadAoTokenBalances]);
   useEffect(() => { if (tab === "network") { loadNetworkInfo(); loadArioGateways(); } }, [tab, loadNetworkInfo, loadArioGateways]);
   useEffect(() => { if (tab !== "network") return; const iv = setInterval(loadNetworkInfo, 30000); return () => clearInterval(iv); }, [tab, loadNetworkInfo]);
+  useEffect(() => { if (tab === "blocks") loadRecentBlocks(); }, [tab, loadRecentBlocks]);
+  useEffect(() => { loadWalletBalance(); }, [loadWalletBalance]);
 
   const searchExplorer = useCallback(async () => {
     if (!expQuery.trim()) return;
@@ -311,15 +375,30 @@ export default function GatewayContent() {
   const loadBrowseData = useCallback(async (txId?: string) => {
     const input = (txId || browseTxId).trim();
     if (!input) return;
-    setBrowseLoading(true); setBrowseData(null);
+    setBrowseLoading(true); setBrowseData(null); setBrowseMeta(null);
     try {
-      // Resolve ArNS names or ar:// URLs to TX IDs
       const id = await resolveToTxId(input) ?? input;
       if (id !== input) setBrowseTxId(id);
-      const { data, contentType } = await gw.getRawData(id);
-      const blob = new Blob([data], { type: contentType });
+      const [rawResult, txResult] = await Promise.all([
+        gw.getRawData(id),
+        gw.getTx(id).catch(() => null),
+      ]);
+      const blob = new Blob([rawResult.data], { type: rawResult.contentType });
       const url = URL.createObjectURL(blob);
-      setBrowseData({ url, contentType });
+      setBrowseData({ url, contentType: rawResult.contentType });
+      if (txResult) {
+        const decodedTags: ArweaveTag[] = (txResult.tags ?? []).map((t: { name: string; value: string }) => {
+          try { return { name: atob(t.name), value: atob(t.value) }; } catch { return t; }
+        });
+        const status = await gw.getTxStatus(id).catch(() => null);
+        setBrowseMeta({
+          owner: txResult.owner || "",
+          fee: winstonToAr(txResult.reward || "0"),
+          quantity: winstonToAr(txResult.quantity || "0"),
+          block: status?.block_height ? { height: status.block_height, timestamp: status.block_indep_hash ? 0 : 0 } : undefined,
+          tags: decodedTags,
+        });
+      }
       setBrowseHistory((prev) => [input, ...prev.filter((h) => h !== input && h !== id)].slice(0, 20));
     } catch (e) { console.error("Browse failed:", e); }
     finally { setBrowseLoading(false); }
@@ -361,6 +440,38 @@ export default function GatewayContent() {
 
   return (
     <div className="space-y-5">
+      {/* Wallet status bar */}
+      {arweaveWallet && (
+        <div className={`${card} px-4 py-2.5 flex items-center gap-4 text-xs`}>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-white/40 font-mono">{arweaveWallet.address.slice(0, 6)}...{arweaveWallet.address.slice(-4)}</span>
+          </div>
+          {walletBal && (
+            <>
+              <span className="h-3 w-px bg-white/10" />
+              <span className="text-white/50"><span className="text-white/80 font-medium">{walletBal.ar}</span> AR</span>
+              {walletBal.turbo !== "0" && (
+                <>
+                  <span className="h-3 w-px bg-white/10" />
+                  <span className="text-white/50"><span className="text-white/80 font-medium">{walletBal.turbo}</span> Turbo</span>
+                </>
+              )}
+            </>
+          )}
+          <span className="ml-auto text-white/20">|</span>
+          <a href="/wallets" className="text-purple-400/60 hover:text-purple-300 text-[10px] uppercase tracking-wider transition-colors">Wallet</a>
+          <a href="/permawrite" className="text-purple-400/60 hover:text-purple-300 text-[10px] uppercase tracking-wider transition-colors">PermaWrite</a>
+        </div>
+      )}
+      {!arweaveWallet && (
+        <div className={`${card} px-4 py-2.5 flex items-center gap-3 text-xs`}>
+          <span className="w-2 h-2 rounded-full bg-yellow-400/60" />
+          <span className="text-white/40">No Arweave wallet connected</span>
+          <a href="/wallets" className="ml-auto text-purple-400/60 hover:text-purple-300 text-[10px] uppercase tracking-wider transition-colors">Set Up Wallet</a>
+        </div>
+      )}
+
       {/* Tab bar */}
       <div className={`${card} p-1.5 flex gap-1 overflow-x-auto`}>
         {TABS.map((t) => (
@@ -559,6 +670,97 @@ export default function GatewayContent() {
         </div>
       )}
 
+      {/* BLOCKS */}
+      {tab === "blocks" && (
+        <div className="space-y-4">
+          <div className={`${card} p-5`}>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Block Explorer</span>
+              <button type="button" onClick={loadRecentBlocks} disabled={blocksLoading} className={pillBtn}>
+                {blocksLoading ? <span className="w-3 h-3 border border-white/40 border-t-transparent rounded-full animate-spin" /> : "Refresh"}
+              </button>
+            </div>
+            <div className="flex gap-2 mb-4">
+              <input value={blockHeightInput} onChange={(e) => setBlockHeightInput(e.target.value)} placeholder="Jump to block height..." className={`flex-1 ${inputCls}`} onKeyDown={(e) => e.key === "Enter" && loadBlockByHeight()} />
+              <button type="button" onClick={loadBlockByHeight} disabled={blocksLoading} className={btnPrimary}>Go</button>
+            </div>
+          </div>
+
+          {blockDetail && (
+            <div className={`${card} p-5 space-y-3`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Block #{blockDetail.height.toLocaleString()}</span>
+                <button type="button" onClick={() => setBlockDetail(null)} className={pillBtn}>Close</button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><span className="text-[10px] text-white/30 uppercase">Height</span><p className="text-sm font-bold text-white tabular-nums">{blockDetail.height.toLocaleString()}</p></div>
+                <div><span className="text-[10px] text-white/30 uppercase">Timestamp</span><p className="text-sm text-white/60">{new Date(blockDetail.timestamp * 1000).toLocaleString()}</p></div>
+                <div><span className="text-[10px] text-white/30 uppercase">Transactions</span><p className="text-sm font-bold text-white tabular-nums">{blockDetail.txs?.length ?? 0}</p></div>
+                <div><span className="text-[10px] text-white/30 uppercase">Block Size</span><p className="text-sm text-white/60">{formatBytes(blockDetail.block_size)}</p></div>
+                <div><span className="text-[10px] text-white/30 uppercase">Weave Size</span><p className="text-sm text-white/60">{formatBytes(blockDetail.weave_size)}</p></div>
+                <div><span className="text-[10px] text-white/30 uppercase">Reward Pool</span><p className="text-sm text-white/60">{winstonToAr(String(blockDetail.reward_pool))} AR</p></div>
+              </div>
+              <div>
+                <span className="text-[10px] text-white/30 uppercase">Miner</span>
+                <p className="text-xs font-mono text-white/40 break-all mt-0.5">{blockDetail.reward_addr}</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-white/30 uppercase">Block Hash</span>
+                <p className="text-xs font-mono text-white/40 break-all mt-0.5">{blockDetail.indep_hash}</p>
+              </div>
+              {blockDetail.txs && blockDetail.txs.length > 0 && (
+                <div>
+                  <span className="text-[10px] text-white/30 uppercase">Transaction IDs ({blockDetail.txs.length})</span>
+                  <div className="mt-1 max-h-[200px] overflow-y-auto space-y-0.5" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                    {blockDetail.txs.map((txId) => (
+                      <button key={txId} type="button" onClick={() => { setBrowseTxId(txId); setTab("browser"); loadBrowseData(txId); }} className="block w-full text-left text-[11px] font-mono text-purple-300/50 hover:text-purple-300 py-1 px-2 rounded-lg hover:bg-white/[0.03] transition-colors cursor-pointer truncate">
+                        {txId}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                {blockDetail.height > 0 && (
+                  <button type="button" onClick={() => { setBlockHeightInput(String(blockDetail.height - 1)); gw.getBlockByHeight(blockDetail.height - 1).then(setBlockDetail).catch(() => {}); }} className={pillBtn}>Prev Block</button>
+                )}
+                <button type="button" onClick={() => { setBlockHeightInput(String(blockDetail.height + 1)); gw.getBlockByHeight(blockDetail.height + 1).then(setBlockDetail).catch(() => {}); }} className={pillBtn}>Next Block</button>
+              </div>
+            </div>
+          )}
+
+          {blocks.length > 0 && (
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider px-1">Recent Blocks</span>
+              {blocks.map((block) => (
+                <button key={block.indep_hash} type="button" onClick={() => { setBlockDetail(block); setBlockHeightInput(String(block.height)); }} className={`w-full text-left ${card} px-4 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer`}>
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-white tabular-nums">#{block.height.toLocaleString()}</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">{relativeTime(block.timestamp)}</p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] text-white/40">{block.txs?.length ?? 0} txs</span>
+                        <span className="text-[10px] text-white/30">{formatBytes(block.block_size)}</span>
+                      </div>
+                      <p className="text-[10px] font-mono text-white/20 truncate mt-0.5">{block.indep_hash}</p>
+                    </div>
+                    <span className="text-white/15 text-sm shrink-0">▸</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {blocks.length === 0 && !blocksLoading && (
+            <div className={`${card} p-10 text-center`}><p className="text-sm text-white/30">Click Refresh to load recent blocks.</p></div>
+          )}
+          {blocksLoading && blocks.length === 0 && (
+            <div className={`${card} p-10 text-center`}><div className="w-5 h-5 border-2 border-white/10 border-t-purple-400 rounded-full animate-spin mx-auto mb-3" /><p className="text-xs text-white/30">Loading blocks...</p></div>
+          )}
+        </div>
+      )}
+
       {/* EXPLORER */}
       {tab === "explorer" && (
         <div className="space-y-4">
@@ -638,8 +840,25 @@ export default function GatewayContent() {
                 <div className="flex gap-2">
                   <a href={browseData.url} target="_blank" rel="noopener noreferrer" className={pillBtn}>Open Raw</a>
                   <button type="button" onClick={() => ArweaveGateway.addBookmark("content", browseTxId.trim(), browseData.contentType)} className={pillBtn}>Bookmark</button>
+                  <a href={`https://viewblock.io/arweave/tx/${browseTxId.trim()}`} target="_blank" rel="noopener noreferrer" className={pillBtn}>ViewBlock</a>
                 </div>
               </div>
+              {/* TX Metadata Panel */}
+              {browseMeta && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div><span className="text-[10px] text-white/25 uppercase">Owner</span><p className="text-[11px] font-mono text-white/40 truncate">{browseMeta.owner ? `${browseMeta.owner.slice(0, 10)}...` : "—"}</p></div>
+                  <div><span className="text-[10px] text-white/25 uppercase">Fee</span><p className="text-[11px] text-white/50">{parseFloat(browseMeta.fee).toFixed(8)} AR</p></div>
+                  <div><span className="text-[10px] text-white/25 uppercase">Quantity</span><p className="text-[11px] text-white/50">{browseMeta.quantity === "0.000000000000" ? "—" : `${browseMeta.quantity} AR`}</p></div>
+                  <div><span className="text-[10px] text-white/25 uppercase">Block</span><p className="text-[11px] text-white/50">{browseMeta.block ? `#${browseMeta.block.height.toLocaleString()}` : "Pending"}</p></div>
+                </div>
+              )}
+              {browseMeta && browseMeta.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {browseMeta.tags.map((t, i) => (
+                    <span key={i} className="text-[9px] px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/35">{t.name}: {t.value.length > 40 ? t.value.slice(0, 40) + "..." : t.value}</span>
+                  ))}
+                </div>
+              )}
               <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-black/30 min-h-[200px] max-h-[500px] overflow-auto">
                 {ArweaveGateway.contentCategory(browseData.contentType) === "image" && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -662,6 +881,18 @@ export default function GatewayContent() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* UPLOAD */}
+      {tab === "upload" && (
+        <div className="space-y-4">
+          <div className={`${card} p-4`}>
+            <p className="text-xs text-white/30 leading-relaxed">
+              Upload files or text permanently to Arweave. Choose Turbo for instant confirmation via bundling, or Standard (L1) for direct on-chain posting.
+            </p>
+          </div>
+          <UnifiedUpload />
         </div>
       )}
 
@@ -767,45 +998,44 @@ export default function GatewayContent() {
             )}
           </div>
 
-          {/* Dryrun Console */}
+          {/* AO Process Console */}
           <div className={`${card} p-5 space-y-3`}>
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">AO Process Console</span>
-            <p className="text-[10px] text-white/20 -mt-1">Send read-only messages (dryrun) to any AO process.</p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-white/30 uppercase tracking-wider">AO Process Console</span>
+              <div className="flex gap-1 p-0.5 rounded-lg bg-white/[0.04]">
+                <button type="button" onClick={() => setAoSendMode("dryrun")} className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${aoSendMode === "dryrun" ? "bg-purple-500/20 text-purple-300" : "text-white/40 hover:text-white/60"}`}>
+                  Dryrun (Read)
+                </button>
+                <button type="button" onClick={() => setAoSendMode("send")} className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${aoSendMode === "send" ? "bg-emerald-500/20 text-emerald-300" : "text-white/40 hover:text-white/60"}`}>
+                  Send (Write)
+                </button>
+              </div>
+            </div>
+            <p className="text-[10px] text-white/20 -mt-1">
+              {aoSendMode === "dryrun"
+                ? "Read-only evaluation — no wallet needed, no on-chain effect."
+                : "Sends a signed message on-chain via the MU. Requires a connected wallet."}
+            </p>
 
             <div>
               <label className="block text-white/40 text-xs font-medium uppercase tracking-wider mb-1">Process ID</label>
-              <input
-                value={aoProcessId}
-                onChange={(e) => setAoProcessId(e.target.value)}
-                placeholder="Process ID (e.g. ARIO token address)..."
-                className={inputCls}
-              />
+              <input value={aoProcessId} onChange={(e) => setAoProcessId(e.target.value)} placeholder="Process ID (e.g. ARIO token address)..." className={inputCls} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-white/40 text-xs font-medium uppercase tracking-wider mb-1">Action Tag</label>
-                <input
-                  value={aoAction}
-                  onChange={(e) => setAoAction(e.target.value)}
-                  placeholder="Info, Balance, Balances..."
-                  className={inputCls}
-                />
+                <input value={aoAction} onChange={(e) => setAoAction(e.target.value)} placeholder="Info, Balance, Transfer..." className={inputCls} />
               </div>
               <div>
                 <label className="block text-white/40 text-xs font-medium uppercase tracking-wider mb-1">Data (optional)</label>
-                <input
-                  value={aoData}
-                  onChange={(e) => setAoData(e.target.value)}
-                  placeholder="Optional message data..."
-                  className={inputCls}
-                />
+                <input value={aoData} onChange={(e) => setAoData(e.target.value)} placeholder="Optional message data..." className={inputCls} />
               </div>
             </div>
 
             <div className="flex gap-2">
-              <button type="button" onClick={handleAoDryrun} disabled={aoLoading || !aoProcessId.trim()} className={`flex-1 ${btnPrimary}`}>
-                {aoLoading ? "Running..." : "Dryrun"}
+              <button type="button" onClick={handleAoExecute} disabled={(aoLoading || aoSending) || !aoProcessId.trim()} className={`flex-1 ${aoSendMode === "send" ? "h-11 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer" : btnPrimary}`}>
+                {aoLoading || aoSending ? "Processing..." : aoSendMode === "dryrun" ? "Dryrun" : "Send Message"}
               </button>
               {Object.entries(AO_TOKENS).slice(0, 3).map(([key, pid]) => (
                 <button key={key} type="button" onClick={() => { setAoProcessId(pid); setAoAction("Info"); }} className={pillBtn}>
@@ -813,6 +1043,12 @@ export default function GatewayContent() {
                 </button>
               ))}
             </div>
+
+            {aoSendResult && (
+              <div className={`p-3 rounded-xl text-xs font-mono break-all ${aoSendResult.startsWith("Error") ? "bg-red-500/10 border border-red-500/20 text-red-300/70" : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300/70"}`}>
+                {aoSendResult}
+              </div>
+            )}
           </div>
 
           {/* Dryrun Result */}

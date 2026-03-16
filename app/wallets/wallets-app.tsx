@@ -519,6 +519,12 @@ export default function WalletsApp() {
             {arTab === "wallet" && <ArweaveWallet />}
             {arTab === "upload" && <UnifiedUpload />}
             {arTab === "feed" && <PermaFeed />}
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm px-4 py-2.5 flex items-center gap-3 text-xs">
+              <span className="text-white/25">Quick links:</span>
+              <a href="/gateway" className="text-purple-400/60 hover:text-purple-300 transition-colors">Gateway</a>
+              <span className="text-white/10">|</span>
+              <a href="/permawrite" className="text-purple-400/60 hover:text-purple-300 transition-colors">PermaWrite</a>
+            </div>
           </div>
         )}
 

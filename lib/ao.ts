@@ -12,14 +12,7 @@
 
 import { createSignedDataItem } from "./turbo";
 import { b64urlEncode } from "./arweave";
-
-/* ------------------------------------------------------------------ */
-/*  Config                                                             */
-/* ------------------------------------------------------------------ */
-
-const AO_MU_URL = "https://mu.ao-testnet.xyz";
-const AO_CU_URL = "https://cu.ao-testnet.xyz";
-const AO_GATEWAY = "https://arweave.net";
+import { AO_MU_URL, AO_CU_URL, AO_GATEWAY_URL as AO_GATEWAY } from "./config";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

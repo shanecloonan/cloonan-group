@@ -31,12 +31,12 @@ export default function GatewayPage() {
 
   return (
     <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
-      <div className="w-full max-w-[860px] mx-auto space-y-5">
+      <div className="w-full max-w-[960px] mx-auto space-y-5">
         <div className="text-center pt-4 pb-2">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">
             Arweave <span className="text-purple-400">Gateway</span>
           </h1>
-          <p className="text-xs text-white/30 mt-1">Ground-up permaweb access by MoneyFund</p>
+          <p className="text-xs text-white/30 mt-1">Full permaweb access — blocks, transactions, uploads, AO compute, and SmartWeave</p>
         </div>
         <GatewayContent />
       </div>

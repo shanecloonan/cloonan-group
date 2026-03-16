@@ -32,3 +32,25 @@ export const ARWEAVE_DIRECT_GATEWAYS = [
 
 export const TURBO_UPLOAD_URL = "https://upload.ardrive.io";
 export const TURBO_PAYMENT_URL = "https://payment.ardrive.io";
+
+/* ------------------------------------------------------------------ */
+/*  AO (Arweave Operating System)                                      */
+/* ------------------------------------------------------------------ */
+
+export const AO_MU_URL = "https://mu.ao-testnet.xyz";
+export const AO_CU_URL = "https://cu.ao-testnet.xyz";
+export const AO_GATEWAY_URL = "https://arweave.net";
+
+/* ------------------------------------------------------------------ */
+/*  Warp SmartWeave (DRE)                                              */
+/* ------------------------------------------------------------------ */
+
+export const DRE_NODES = [
+  "https://dre-1.warp.cc",
+  "https://dre-u.warp.cc",
+  "https://dre-2.warp.cc",
+  "https://dre-3.warp.cc",
+];
+
+export const WARP_GATEWAY_URL = "https://gateway.warp.cc";
+export const SONAR_URL = "https://sonar.warp.cc";

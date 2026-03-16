@@ -13,6 +13,7 @@ import type {
   ArweaveUploadRecord,
   ArweaveBookmark,
   ArweavePoolStatus,
+  ArweaveBlock,
   GqlQueryParams,
   UploadMethod,
 } from "./wallet-types";
@@ -314,6 +315,37 @@ export class ArweaveGateway {
 
   async getTransactionsByTags(tags: { name: string; values: string[] }[], first = 25, after?: string): Promise<ArweaveGqlResult> {
     return this.queryTransactions({ tags, first, after, sort: "HEIGHT_DESC" });
+  }
+
+  /* ---- Blocks ---- */
+
+  async getBlockByHeight(height: number): Promise<ArweaveBlock> {
+    const res = await this.fetchWithFallback(`/block/height/${height}`);
+    if (!res.ok) throw new Error(`Block fetch failed: ${res.status}`);
+    return res.json();
+  }
+
+  async getBlockByHash(hash: string): Promise<ArweaveBlock> {
+    const res = await this.fetchWithFallback(`/block/hash/${hash}`);
+    if (!res.ok) throw new Error(`Block fetch failed: ${res.status}`);
+    return res.json();
+  }
+
+  async getCurrentBlock(): Promise<ArweaveBlock> {
+    const info = await this.getNetworkInfo();
+    return this.getBlockByHeight(info.height);
+  }
+
+  async getRecentBlocks(count = 10): Promise<ArweaveBlock[]> {
+    const info = await this.getNetworkInfo();
+    const blocks: ArweaveBlock[] = [];
+    for (let i = 0; i < count; i++) {
+      try {
+        const block = await this.getBlockByHeight(info.height - i);
+        blocks.push(block);
+      } catch { break; }
+    }
+    return blocks;
   }
 
   /* ---- Crypto (static) ---- */

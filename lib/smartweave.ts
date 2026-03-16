@@ -8,19 +8,11 @@
  * Uses direct REST API calls — no warp-contracts SDK dependency.
  */
 
-/* ------------------------------------------------------------------ */
-/*  Config                                                             */
-/* ------------------------------------------------------------------ */
-
-const DRE_NODES = [
-  "https://dre-1.warp.cc",
-  "https://dre-u.warp.cc",
-  "https://dre-2.warp.cc",
-  "https://dre-3.warp.cc",
-];
-
-const WARP_GATEWAY = "https://gateway.warp.cc";
-const SONAR_URL = "https://sonar.warp.cc";
+import {
+  DRE_NODES,
+  WARP_GATEWAY_URL as WARP_GATEWAY,
+  SONAR_URL,
+} from "./config";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
