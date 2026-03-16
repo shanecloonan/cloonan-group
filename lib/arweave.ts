@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { ARWEAVE_GATEWAY_URL, ARWEAVE_DIRECT_GATEWAYS } from "./config";
+import { uploadToTurbo, uploadFileToTurbo, getTurboPrice, getTurboBalance, wincToAr } from "./turbo";
 import type {
   ArweaveTag,
   ArweaveNetworkInfo,
@@ -12,6 +13,7 @@ import type {
   ArweaveBookmark,
   ArweavePoolStatus,
   GqlQueryParams,
+  UploadMethod,
 } from "./wallet-types";
 
 /* ------------------------------------------------------------------ */
@@ -499,6 +501,132 @@ export class ArweaveGateway {
     const hasCt = tags.some((t) => t.name.toLowerCase() === "content-type");
     const allTags = hasCt ? tags : [{ name: "Content-Type", value: file.type || "application/octet-stream" }, ...tags];
     return this.uploadData(buffer, allTags, jwk, description || file.name, onProgress);
+  }
+
+  /* ---- Bundled upload (Turbo) ---- */
+
+  async uploadDataBundled(
+    data: Uint8Array,
+    tags: ArweaveTag[],
+    jwk: JsonWebKey,
+    description?: string,
+    onProgress?: (pct: number) => void,
+  ): Promise<ArweaveUploadResult> {
+    const allTags: ArweaveTag[] = [
+      ...tags,
+      { name: "App-Name", value: "MoneyFund" },
+      { name: "App-Version", value: "1.0" },
+    ];
+
+    const contentTag = tags.find((t) => t.name.toLowerCase() === "content-type");
+    const ct = contentTag?.value || "application/octet-stream";
+
+    const { data: session } = await supabase.auth.getSession();
+    const userId = session.session?.user?.id;
+
+    let cost: ArweaveCostEstimate | null = null;
+    try {
+      const turboPrice = await getTurboPrice(data.byteLength);
+      cost = {
+        winston: turboPrice.winc,
+        ar: wincToAr(turboPrice.winc),
+        usd: "0",
+        usd_per_ar: 0,
+      };
+    } catch { /* ok */ }
+
+    const { id: txId, turboResult } = await uploadToTurbo(data, jwk, allTags, onProgress);
+
+    if (userId) {
+      await supabase.from("arweave_uploads").insert({
+        user_id: userId,
+        tx_id: txId,
+        data_size: data.byteLength,
+        content_type: ct,
+        tags: allTags,
+        status: "confirmed",
+        cost_winston: cost?.winston ?? "0",
+        cost_ar: cost?.ar ?? "0",
+        description: description || null,
+        upload_method: "turbo",
+        bundle_id: turboResult.id || null,
+      });
+    }
+
+    return { txId, status: 200, cost };
+  }
+
+  async uploadFileBundled(
+    file: File,
+    tags: ArweaveTag[],
+    jwk: JsonWebKey,
+    description?: string,
+    onProgress?: (pct: number) => void,
+  ): Promise<ArweaveUploadResult> {
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const hasCt = tags.some((t) => t.name.toLowerCase() === "content-type");
+    const allTags = hasCt
+      ? tags
+      : [{ name: "Content-Type", value: file.type || "application/octet-stream" }, ...tags];
+    return this.uploadDataBundled(buffer, allTags, jwk, description || file.name, onProgress);
+  }
+
+  /**
+   * Smart upload: tries Turbo (bundled, instant) first, falls back to L1.
+   * Returns the method used.
+   */
+  async smartUploadData(
+    data: Uint8Array,
+    tags: ArweaveTag[],
+    jwk: JsonWebKey,
+    preferredMethod: UploadMethod = "turbo",
+    description?: string,
+    onProgress?: (pct: number) => void,
+  ): Promise<ArweaveUploadResult & { method: UploadMethod }> {
+    if (preferredMethod === "turbo") {
+      try {
+        const result = await this.uploadDataBundled(data, tags, jwk, description, onProgress);
+        return { ...result, method: "turbo" };
+      } catch {
+        const result = await this.uploadData(data, tags, jwk, description, onProgress);
+        return { ...result, method: "l1" };
+      }
+    }
+    const result = await this.uploadData(data, tags, jwk, description, onProgress);
+    return { ...result, method: "l1" };
+  }
+
+  async smartUploadFile(
+    file: File,
+    tags: ArweaveTag[],
+    jwk: JsonWebKey,
+    preferredMethod: UploadMethod = "turbo",
+    description?: string,
+    onProgress?: (pct: number) => void,
+  ): Promise<ArweaveUploadResult & { method: UploadMethod }> {
+    if (preferredMethod === "turbo") {
+      try {
+        const result = await this.uploadFileBundled(file, tags, jwk, description, onProgress);
+        return { ...result, method: "turbo" };
+      } catch {
+        const result = await this.uploadFile(file, tags, jwk, description, onProgress);
+        return { ...result, method: "l1" };
+      }
+    }
+    const result = await this.uploadFile(file, tags, jwk, description, onProgress);
+    return { ...result, method: "l1" };
+  }
+
+  /* ---- Turbo balance & pricing ---- */
+
+  static async getTurboBalance(address: string): Promise<{ winc: string; ar: string }> {
+    const bal = await getTurboBalance(address);
+    return { winc: bal.winc, ar: wincToAr(bal.winc) };
+  }
+
+  static async getTurboPrice(bytes: number): Promise<{ winc: string; ar: string }> {
+    const price = await getTurboPrice(bytes);
+    return { winc: price.winc, ar: wincToAr(price.winc) };
   }
 
   /* ---- Content rendering helpers ---- */

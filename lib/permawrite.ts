@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import ArweaveGateway from "./arweave";
-import type { ArweaveTag, ArweaveCostEstimate } from "./wallet-types";
+import type { ArweaveTag, ArweaveCostEstimate, UploadMethod } from "./wallet-types";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -486,6 +486,125 @@ export async function permawriteText(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Upload: Smart PermaWrite (Turbo first, L1 fallback)                */
+/* ------------------------------------------------------------------ */
+
+export async function permawriteSmart(
+  file: File,
+  jwk: JsonWebKey,
+  opts: {
+    title?: string;
+    description?: string;
+    category: string;
+    tags: string[];
+    preferredMethod?: UploadMethod;
+  },
+  onProgress?: (pct: number) => void,
+): Promise<PermawriteItem & { method: UploadMethod } | null> {
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user?.id;
+  if (!userId) throw new Error("Not authenticated");
+
+  const gw = new ArweaveGateway();
+
+  const arTags: ArweaveTag[] = [
+    { name: "Content-Type", value: file.type || "application/octet-stream" },
+    { name: "App-Name", value: "PermaWrite" },
+    { name: "App-Version", value: "1.0" },
+    { name: "Category", value: opts.category },
+    { name: "Title", value: opts.title || file.name },
+  ];
+  if (opts.description) arTags.push({ name: "Description", value: opts.description });
+  for (const tag of opts.tags) arTags.push({ name: "Tag", value: tag });
+
+  const result = await gw.smartUploadFile(
+    file, arTags, jwk, opts.preferredMethod ?? "turbo",
+    opts.description || file.name, onProgress,
+  );
+
+  if (result.status !== 200) throw new Error(`Arweave upload failed (status ${result.status})`);
+
+  const { data, error } = await supabase
+    .from("permawrite_items")
+    .insert({
+      user_id: userId,
+      title: opts.title || file.name,
+      description: opts.description || null,
+      category_slug: opts.category,
+      tags: opts.tags,
+      visibility: "permawrite",
+      file_name: file.name,
+      file_size: file.size,
+      content_type: file.type,
+      arweave_tx_id: result.txId,
+      arweave_tags: arTags,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`DB insert failed: ${error.message}`);
+  return { ...(data as PermawriteItem), method: result.method };
+}
+
+export async function permawriteTextSmart(
+  text: string,
+  jwk: JsonWebKey,
+  opts: {
+    title?: string;
+    description?: string;
+    category: string;
+    tags: string[];
+    preferredMethod?: UploadMethod;
+  },
+  onProgress?: (pct: number) => void,
+): Promise<PermawriteItem & { method: UploadMethod } | null> {
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user?.id;
+  if (!userId) throw new Error("Not authenticated");
+
+  const gw = new ArweaveGateway();
+  const data_bytes = new TextEncoder().encode(text);
+
+  const arTags: ArweaveTag[] = [
+    { name: "Content-Type", value: "text/plain" },
+    { name: "App-Name", value: "PermaWrite" },
+    { name: "App-Version", value: "1.0" },
+    { name: "Category", value: opts.category },
+    { name: "Title", value: opts.title || "text" },
+  ];
+  if (opts.description) arTags.push({ name: "Description", value: opts.description });
+  for (const tag of opts.tags) arTags.push({ name: "Tag", value: tag });
+
+  const result = await gw.smartUploadData(
+    data_bytes, arTags, jwk, opts.preferredMethod ?? "turbo",
+    opts.description, onProgress,
+  );
+
+  if (result.status !== 200) throw new Error(`Arweave upload failed (status ${result.status})`);
+
+  const { data: row, error } = await supabase
+    .from("permawrite_items")
+    .insert({
+      user_id: userId,
+      title: opts.title || "Text",
+      description: opts.description || null,
+      category_slug: opts.category,
+      tags: opts.tags,
+      visibility: "permawrite",
+      file_name: null,
+      file_size: data_bytes.byteLength,
+      content_type: "text/plain",
+      arweave_tx_id: result.txId,
+      arweave_tags: arTags,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`DB insert failed: ${error.message}`);
+  return { ...(row as PermawriteItem), method: result.method };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Cost estimation                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -493,6 +612,14 @@ export async function estimatePermawriteCost(bytes: number): Promise<ArweaveCost
   try {
     const gw = new ArweaveGateway();
     return await gw.estimateCost(bytes);
+  } catch {
+    return null;
+  }
+}
+
+export async function estimateTurboCost(bytes: number): Promise<{ winc: string; ar: string } | null> {
+  try {
+    return await ArweaveGateway.getTurboPrice(bytes);
   } catch {
     return null;
   }

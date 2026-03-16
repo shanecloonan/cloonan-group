@@ -12,9 +12,10 @@ import {
   getFeed,
   uploadPrivate,
   uploadPrivateText,
-  permawrite,
-  permawriteText,
+  permawriteSmart,
+  permawriteTextSmart,
   estimatePermawriteCost,
+  estimateTurboCost,
   deleteItem,
   getSignedUrl,
   getArweaveContentUrl,
@@ -166,13 +167,18 @@ export default function PermawriteContent() {
     }
   }, [uploadTitle]);
 
+  const [turboCostEstimate, setTurboCostEstimate] = useState<{ winc: string; ar: string } | null>(null);
+
   useEffect(() => {
-    if (tab !== "upload" || uploadMode !== "permawrite") { setUploadCost(null); return; }
+    if (tab !== "upload" || uploadMode !== "permawrite") { setUploadCost(null); setTurboCostEstimate(null); return; }
     let size = 0;
     if (uploadFile) size = uploadFile.size;
     else if (uploadText) size = new TextEncoder().encode(uploadText).byteLength;
-    if (size === 0) { setUploadCost(null); return; }
-    const t = setTimeout(() => { estimatePermawriteCost(size).then(setUploadCost); }, 500);
+    if (size === 0) { setUploadCost(null); setTurboCostEstimate(null); return; }
+    const t = setTimeout(() => {
+      estimatePermawriteCost(size).then(setUploadCost);
+      estimateTurboCost(size).then(setTurboCostEstimate);
+    }, 500);
     return () => clearTimeout(t);
   }, [tab, uploadMode, uploadFile, uploadText]);
 
@@ -194,7 +200,7 @@ export default function PermawriteContent() {
     if (!uploadCategory) { setUploadStatus({ msg: "Choose a category", type: "error" }); return; }
     if (uploadMode === "permawrite" && !arweaveWallet) { setUploadStatus({ msg: "Connect an Arweave wallet to PermaWrite (switch to Arweave tab)", type: "error" }); return; }
 
-    setUploadStatus({ msg: uploadMode === "permawrite" ? "PermaWriting to Arweave..." : "Uploading...", type: "loading" });
+    setUploadStatus({ msg: uploadMode === "permawrite" ? "PermaWriting via Turbo..." : "Uploading...", type: "loading" });
     setUploadProgress(uploadMode === "permawrite" ? 0 : null);
     try {
       const opts = { title: uploadTitle || undefined, description: uploadDesc || undefined, category: uploadCategory, tags: uploadTags };
@@ -203,9 +209,16 @@ export default function PermawriteContent() {
         else await uploadPrivateText(text, opts);
         setUploadStatus({ msg: "Saved privately!", type: "success" });
       } else {
-        if (file) await permawrite(file, arweaveWallet!.jwk, opts, (pct) => setUploadProgress(pct));
-        else await permawriteText(text, arweaveWallet!.jwk, opts, (pct) => setUploadProgress(pct));
-        setUploadStatus({ msg: "PermaWritten to Arweave!", type: "success" });
+        let method = "turbo";
+        if (file) {
+          const result = await permawriteSmart(file, arweaveWallet!.jwk, opts, (pct) => setUploadProgress(pct));
+          method = result?.method ?? "turbo";
+        } else {
+          const result = await permawriteTextSmart(text, arweaveWallet!.jwk, opts, (pct) => setUploadProgress(pct));
+          method = result?.method ?? "turbo";
+        }
+        const methodMsg = method === "turbo" ? "instantly via Turbo" : "via L1 (~10-30 min confirmation)";
+        setUploadStatus({ msg: `PermaWritten to Arweave ${methodMsg}!`, type: "success" });
         getCategoryCounts().then(setCategoryCounts);
       }
       setUploadFile(null);
@@ -489,22 +502,22 @@ export default function PermawriteContent() {
             )}
           </div>
 
-          {uploadMode === "permawrite" && uploadCost && (
+          {uploadMode === "permawrite" && (uploadCost || turboCostEstimate) && (
             <div className={`${card} p-4 border-purple-500/10`}>
               <span className="text-[10px] text-purple-300/40 uppercase tracking-wider font-medium">PermaWrite Cost</span>
-              <div className="grid grid-cols-3 gap-4 mt-2">
-                <div>
-                  <p className="text-sm font-bold text-white">{parseFloat(uploadCost.ar).toFixed(8)}</p>
-                  <p className="text-[10px] text-white/30">AR</p>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">${parseFloat(uploadCost.usd).toFixed(6)}</p>
-                  <p className="text-[10px] text-white/30">USD</p>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">{uploadCost.winston}</p>
-                  <p className="text-[10px] text-white/30">Winston</p>
-                </div>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                {turboCostEstimate && (
+                  <div>
+                    <p className="text-sm font-bold text-emerald-300">{parseFloat(turboCostEstimate.ar).toFixed(8)}</p>
+                    <p className="text-[10px] text-emerald-300/40">AR via Turbo (instant)</p>
+                  </div>
+                )}
+                {uploadCost && (
+                  <div>
+                    <p className="text-sm font-bold text-white/50">{parseFloat(uploadCost.ar).toFixed(8)}</p>
+                    <p className="text-[10px] text-white/20">AR via L1 (fallback)</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

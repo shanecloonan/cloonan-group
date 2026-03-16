@@ -156,3 +156,16 @@ export interface GqlQueryParams {
   after?: string;
   sort?: "HEIGHT_ASC" | "HEIGHT_DESC";
 }
+
+/* ------------------------------------------------------------------ */
+/*  Upload method (L1 vs bundled)                                      */
+/* ------------------------------------------------------------------ */
+
+export type UploadMethod = "l1" | "turbo";
+
+export interface BundledUploadResult {
+  txId: string;
+  method: UploadMethod;
+  turboTimestamp?: number;
+  turboCaches?: string[];
+}

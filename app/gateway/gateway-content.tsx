@@ -13,6 +13,7 @@ import type {
   ArweaveBookmark,
   ArweavePoolStatus,
   GqlQueryParams,
+  UploadMethod,
 } from "@/lib/wallet-types";
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
@@ -94,6 +95,9 @@ export default function GatewayContent() {
   const [uploadStatus, setUploadStatus] = useState<{ msg: string; type: "success" | "error" | "loading" } | null>(null);
   const uploadFileRef = useRef<HTMLInputElement>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadMethod, setUploadMethod] = useState<UploadMethod>("turbo");
+  const [turboCost, setTurboCost] = useState<{ winc: string; ar: string } | null>(null);
+  const [turboBalance, setTurboBalance] = useState<{ winc: string; ar: string } | null>(null);
 
   const [uploads, setUploads] = useState<ArweaveUploadRecord[]>([]);
   const [uploadsLoading, setUploadsLoading] = useState(false);
@@ -177,11 +181,17 @@ export default function GatewayContent() {
     let size = 0;
     if (uploadFile) size = uploadFile.size;
     else if (uploadText) size = new TextEncoder().encode(uploadText).byteLength;
-    if (size === 0) { setUploadCost(null); return; }
+    if (size === 0) { setUploadCost(null); setTurboCost(null); return; }
     try { setUploadCost(await gw.estimateCost(size)); } catch { setUploadCost(null); }
+    try { setTurboCost(await ArweaveGateway.getTurboPrice(size)); } catch { setTurboCost(null); }
   }, [gw, uploadFile, uploadText]);
 
   useEffect(() => { if (tab === "upload") { const t = setTimeout(computeUploadCost, 500); return () => clearTimeout(t); } }, [tab, computeUploadCost]);
+
+  useEffect(() => {
+    if (tab !== "upload" || !arweaveWallet) { setTurboBalance(null); return; }
+    ArweaveGateway.getTurboBalance(arweaveWallet.address).then(setTurboBalance).catch(() => setTurboBalance(null));
+  }, [tab, arweaveWallet]);
 
   const addTag = useCallback(() => {
     if (!uploadNewTagName.trim()) return;
@@ -195,16 +205,21 @@ export default function GatewayContent() {
     if (!arweaveWallet) { setUploadStatus({ msg: "Connect an Arweave wallet first (switch to Arweave tab)", type: "error" }); return; }
     const file = uploadFile; const text = uploadText.trim();
     if (!file && !text) { setUploadStatus({ msg: "Add text or choose a file", type: "error" }); return; }
-    setUploadStatus({ msg: "Preparing upload...", type: "loading" }); setUploadProgress(0);
+    const methodLabel = uploadMethod === "turbo" ? "Bundling via Turbo" : "Uploading to L1";
+    setUploadStatus({ msg: `${methodLabel}...`, type: "loading" }); setUploadProgress(0);
     try {
       let result;
-      if (file) { result = await gw.uploadFile(file, uploadTags, arweaveWallet.jwk, uploadDesc || undefined, (pct) => setUploadProgress(pct)); }
-      else { const data = new TextEncoder().encode(text); const tags: ArweaveTag[] = [{ name: "Content-Type", value: "text/plain" }, ...uploadTags]; result = await gw.uploadData(data, tags, arweaveWallet.jwk, uploadDesc || undefined, (pct) => setUploadProgress(pct)); }
-      if (result.status === 200) { setUploadStatus({ msg: `Uploaded! TX: ${result.txId}`, type: "success" }); setUploadText(""); setUploadFile(null); setUploadDesc(""); setUploadTags([]); if (uploadFileRef.current) uploadFileRef.current.value = ""; }
+      if (file) { result = await gw.smartUploadFile(file, uploadTags, arweaveWallet.jwk, uploadMethod, uploadDesc || undefined, (pct) => setUploadProgress(pct)); }
+      else { const data = new TextEncoder().encode(text); const tags: ArweaveTag[] = [{ name: "Content-Type", value: "text/plain" }, ...uploadTags]; result = await gw.smartUploadData(data, tags, arweaveWallet.jwk, uploadMethod, uploadDesc || undefined, (pct) => setUploadProgress(pct)); }
+      if (result.status === 200) {
+        const methodMsg = result.method === "turbo" ? " (instant via Turbo)" : " (L1 — ~10-30 min confirmation)";
+        setUploadStatus({ msg: `Uploaded! TX: ${result.txId}${methodMsg}`, type: "success" });
+        setUploadText(""); setUploadFile(null); setUploadDesc(""); setUploadTags([]); if (uploadFileRef.current) uploadFileRef.current.value = "";
+      }
       else { setUploadStatus({ msg: `Upload failed (status ${result.status})`, type: "error" }); }
     } catch (e) { setUploadStatus({ msg: `Error: ${e instanceof Error ? e.message : String(e)}`, type: "error" }); }
     finally { setUploadProgress(null); }
-  }, [gw, arweaveWallet, uploadFile, uploadText, uploadTags, uploadDesc]);
+  }, [gw, arweaveWallet, uploadFile, uploadText, uploadTags, uploadDesc, uploadMethod]);
 
   const loadUploads = useCallback(async () => {
     setUploadsLoading(true);
@@ -480,6 +495,33 @@ export default function GatewayContent() {
           )}
           {arweaveWallet && (
             <>
+              {/* Upload Method Selector */}
+              <div className={`${card} p-1.5 flex gap-1`}>
+                <button type="button" onClick={() => setUploadMethod("turbo")} className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${uploadMethod === "turbo" ? "bg-emerald-500/15 text-emerald-300 shadow-[inset_0_1px_0_rgba(52,211,153,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ opacity: uploadMethod === "turbo" ? 1 : 0.3 }} />Bundled (Instant)
+                </button>
+                <button type="button" onClick={() => setUploadMethod("l1")} className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${uploadMethod === "l1" ? "bg-purple-500/15 text-purple-300 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
+                  <span className="w-2 h-2 rounded-full bg-purple-400" style={{ opacity: uploadMethod === "l1" ? 1 : 0.3 }} />Standard (L1)
+                </button>
+              </div>
+
+              <div className={`${card} p-4 text-xs ${uploadMethod === "turbo" ? "text-emerald-300/60 border-emerald-500/10" : "text-purple-300/60 border-purple-500/10"}`}>
+                {uploadMethod === "turbo"
+                  ? "Bundled mode: Data is bundled via Turbo for instant confirmation (~8ms). Uses Turbo credits — fund at app.ardrive.io. Falls back to L1 if credits are insufficient."
+                  : "Standard mode: Transaction is submitted directly to the Arweave network (L1). Confirmation takes ~10-30 minutes but requires only AR in your wallet."}
+              </div>
+
+              {/* Turbo Balance */}
+              {uploadMethod === "turbo" && turboBalance && (
+                <div className={`${card} p-4`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-emerald-300/40 uppercase tracking-wider font-medium">Turbo Credits</span>
+                    <a href="https://app.ardrive.io" target="_blank" rel="noopener noreferrer" className={pillBtn}>Fund Account</a>
+                  </div>
+                  <p className="text-lg font-bold text-white mt-1">{parseFloat(turboBalance.ar).toFixed(8)} <span className="text-sm font-normal text-white/30">AR equivalent</span></p>
+                </div>
+              )}
+
               <div className={`${card} p-5 space-y-4`}>
                 <h3 className="text-sm font-semibold text-white/80">Upload to the Permaweb</h3>
                 <div>
@@ -502,14 +544,22 @@ export default function GatewayContent() {
                   <button type="button" onClick={addTag} className={btnSmall}>Add</button>
                 </div>
               </div>
-              {uploadCost && (
+              {(uploadCost || turboCost) && (
                 <div className={`${card} p-4`}>
                   <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Estimated Cost</span>
-                  <div className="grid grid-cols-3 gap-4 mt-2">
-                    <div><p className="text-sm font-bold text-white">{parseFloat(uploadCost.ar).toFixed(8)}</p><p className="text-[10px] text-white/30">AR</p></div>
-                    <div><p className="text-sm font-bold text-white">${parseFloat(uploadCost.usd).toFixed(6)}</p><p className="text-[10px] text-white/30">USD</p></div>
-                    <div><p className="text-sm font-bold text-white">{uploadCost.winston}</p><p className="text-[10px] text-white/30">Winston</p></div>
-                  </div>
+                  {uploadMethod === "turbo" && turboCost && (
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      <div><p className="text-sm font-bold text-emerald-300">{parseFloat(turboCost.ar).toFixed(8)}</p><p className="text-[10px] text-emerald-300/40">AR (Turbo)</p></div>
+                      <div><p className="text-sm font-bold text-white/40">{uploadCost ? parseFloat(uploadCost.ar).toFixed(8) : "—"}</p><p className="text-[10px] text-white/20">AR (L1 comparison)</p></div>
+                    </div>
+                  )}
+                  {uploadMethod === "l1" && uploadCost && (
+                    <div className="grid grid-cols-3 gap-4 mt-2">
+                      <div><p className="text-sm font-bold text-white">{parseFloat(uploadCost.ar).toFixed(8)}</p><p className="text-[10px] text-white/30">AR</p></div>
+                      <div><p className="text-sm font-bold text-white">${parseFloat(uploadCost.usd).toFixed(6)}</p><p className="text-[10px] text-white/30">USD</p></div>
+                      <div><p className="text-sm font-bold text-white">{uploadCost.winston}</p><p className="text-[10px] text-white/30">Winston</p></div>
+                    </div>
+                  )}
                 </div>
               )}
               {uploadProgress !== null && (
@@ -520,7 +570,7 @@ export default function GatewayContent() {
                   </div>
                 </div>
               )}
-              <button type="button" onClick={handleUpload} disabled={uploadProgress !== null} className={`w-full ${btnPrimary}`}>{uploadProgress !== null ? "Uploading..." : "Upload to Arweave"}</button>
+              <button type="button" onClick={handleUpload} disabled={uploadProgress !== null} className={`w-full ${btnPrimary}`}>{uploadProgress !== null ? "Uploading..." : uploadMethod === "turbo" ? "Upload via Turbo (Instant)" : "Upload to Arweave (L1)"}</button>
               {uploadStatus && (<div className={`${card} p-3 text-xs font-medium ${uploadStatus.type === "success" ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" : uploadStatus.type === "error" ? "text-red-400 border-red-500/20 bg-red-500/5" : "text-purple-300 border-purple-500/20 bg-purple-500/5"} break-all`}>{uploadStatus.msg}</div>)}
             </>
           )}

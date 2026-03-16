@@ -25,3 +25,10 @@ export const ARWEAVE_DIRECT_GATEWAYS = [
   "https://ar-io.net",
   "https://arweave.dev",
 ];
+
+/* ------------------------------------------------------------------ */
+/*  Turbo (bundled uploads via ar.io)                                  */
+/* ------------------------------------------------------------------ */
+
+export const TURBO_UPLOAD_URL = "https://upload.ardrive.io";
+export const TURBO_PAYMENT_URL = "https://payment.ardrive.io";
