@@ -2,10 +2,14 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { ethers } from "ethers";
 import { useWallet } from "@/lib/wallet-context";
 import AuthPanel from "@/components/auth-panel";
 import ArweaveWallet from "./arweave-wallet";
+
+const GatewayContent = dynamic(() => import("@/app/gateway/gateway-content"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-purple-400 rounded-full animate-spin mx-auto" /></div> });
+const PermawriteContent = dynamic(() => import("@/app/permawrite/permawrite-content"), { ssr: false, loading: () => <div className="py-10 text-center"><div className="w-5 h-5 border-2 border-white/10 border-t-sky-400 rounded-full animate-spin mx-auto" /></div> });
 import {
   logTransaction,
   fetchActivity,
@@ -329,7 +333,7 @@ export default function WalletsApp() {
     selectEthWallet, addEthWallet, removeEthWallet, signOut, isLoading,
   } = useWallet();
 
-  const [chain, setChain] = useState<"ethereum" | "arweave">("ethereum");
+  const [chain, setChain] = useState<"ethereum" | "arweave" | "gateway" | "permawrite">("ethereum");
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC), []);
 
   const selected = selectedEthWallet;
@@ -711,36 +715,35 @@ export default function WalletsApp() {
           </p>
         </div>
 
-        {/* ── Chain switcher ── */}
+        {/* ── Section switcher ── */}
         <div className={`${card} p-1.5 flex gap-1`}>
-          <button
-            type="button"
-            onClick={() => setChain("ethereum")}
-            className={`flex-1 h-11 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              chain === "ethereum"
-                ? "bg-blue-500/15 text-blue-400 shadow-[inset_0_1px_0_rgba(59,130,246,0.2)]"
-                : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"
-            }`}
-          >
+          <button type="button" onClick={() => setChain("ethereum")} className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${chain === "ethereum" ? "bg-blue-500/15 text-blue-400 shadow-[inset_0_1px_0_rgba(59,130,246,0.2)]" : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"}`}>
             <span className="w-2 h-2 rounded-full bg-blue-400" style={{ opacity: chain === "ethereum" ? 1 : 0.3 }} />
             Ethereum
           </button>
-          <button
-            type="button"
-            onClick={() => setChain("arweave")}
-            className={`flex-1 h-11 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              chain === "arweave"
-                ? "bg-purple-500/15 text-purple-400 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]"
-                : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"
-            }`}
-          >
+          <button type="button" onClick={() => setChain("arweave")} className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${chain === "arweave" ? "bg-purple-500/15 text-purple-400 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]" : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"}`}>
             <span className="w-2 h-2 rounded-full bg-purple-400" style={{ opacity: chain === "arweave" ? 1 : 0.3 }} />
             Arweave
+          </button>
+          <button type="button" onClick={() => setChain("gateway")} className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${chain === "gateway" ? "bg-purple-500/15 text-purple-400 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]" : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"}`}>
+            <span className="w-2 h-2 rounded-full bg-purple-400" style={{ opacity: chain === "gateway" ? 1 : 0.3 }} />
+            Gateway
+          </button>
+          <button type="button" onClick={() => setChain("permawrite")} className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${chain === "permawrite" ? "bg-sky-500/15 text-sky-400 shadow-[inset_0_1px_0_rgba(56,189,248,0.2)]" : "text-white/35 hover:text-white/55 hover:bg-white/[0.03]"}`}>
+            <span className="w-2 h-2 rounded-full bg-sky-400" style={{ opacity: chain === "permawrite" ? 1 : 0.3 }} />
+            <span className="hidden sm:inline">PermaWrite</span>
+            <span className="sm:hidden">Perma</span>
           </button>
         </div>
 
         {/* ── Arweave ── */}
         {chain === "arweave" && <ArweaveWallet />}
+
+        {/* ── Gateway ── */}
+        {chain === "gateway" && <GatewayContent />}
+
+        {/* ── PermaWrite ── */}
+        {chain === "permawrite" && <PermawriteContent />}
 
         {/* ── Ethereum ── */}
         {chain === "ethereum" && (

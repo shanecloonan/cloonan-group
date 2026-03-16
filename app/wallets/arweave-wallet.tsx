@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import Link from "next/link";
 import { useWallet } from "@/lib/wallet-context";
 import ArweaveGateway from "@/lib/arweave";
 import type { ArweaveTag, ArweaveCostEstimate } from "@/lib/wallet-types";
@@ -246,13 +245,6 @@ export default function ArweaveWallet() {
 
   return (
     <div className="space-y-5">
-      {/* Gateway link */}
-      <div className="flex justify-end">
-        <Link href="/gateway" className={`${pillBtn} text-purple-300/60 hover:text-purple-300`}>
-          Open Gateway Dashboard
-        </Link>
-      </div>
-
       {/* Tabs */}
       <div className={`${card} p-1.5 flex gap-1`}>
         {tabs.map((t) => (
