@@ -16,6 +16,7 @@ const SECTIONS = [
   { id: "trilayer", label: "Tri-Layer" },
   { id: "contracts", label: "Contracts" },
   { id: "fees", label: "Fee Structure" },
+  { id: "security", label: "Security" },
   { id: "faq", label: "FAQ" },
   { id: "gas", label: "Gas Calculator" },
 ];
@@ -1570,6 +1571,123 @@ export default function AboutApp() {
 
           <div className={`${card} p-5`} style={{ height: 320 }}>
             <canvas ref={feeChartRef} />
+          </div>
+        </section>
+
+        {/* ═══════════ SECURITY ═══════════ */}
+        <section id="security" className="space-y-6 scroll-mt-28">
+          <SectionHeading sub="Non-custodial vault architecture with client-side encryption">Wallet Security</SectionHeading>
+
+          <div className={`${card} p-6 sm:p-8`}>
+            <p className="text-[13px] text-white/60 leading-relaxed">
+              MoneyFund wallets are non-custodial by design. Private keys are encrypted and decrypted entirely in your browser — the server never sees, stores, or transmits plaintext key material. The vault uses password-derived keys and authenticated encryption so that even a full database breach reveals nothing usable to an attacker.
+            </p>
+          </div>
+
+          <div className={`${card} p-5 sm:p-6 space-y-5`}>
+            <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
+              Vault Architecture
+            </h3>
+            <div className="flex flex-col items-center gap-3">
+              <FlowRow wrap>
+                <Node icon="🔑" label="Password" color="border-amber-500/20" />
+                <Arrow label="PBKDF2 · 600K iterations · SHA-256" color="text-amber-400/40" />
+                <Node icon="🔐" label="Vault Key" sub="AES-GCM 256" color="border-cyan-500/20" glow="rgba(0,247,255,0.06)" />
+              </FlowRow>
+              <Arrow dir="down" label="encrypts / decrypts" color="text-white/40" />
+              <FlowRow wrap>
+                <Node icon="🪙" label="ETH Keys" sub="encrypted at rest" color="border-purple-500/20" size="sm" />
+                <Node icon="📦" label="Arweave JWK" sub="encrypted at rest" color="border-teal-500/20" size="sm" />
+              </FlowRow>
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
+                <Badge text="Client-side only — nothing leaves the browser unencrypted" color="bg-emerald-500/10 text-emerald-400/60" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {([
+              {
+                icon: "🧮",
+                title: "PBKDF2 Key Derivation",
+                desc: "Your vault key is derived from your password using PBKDF2 with 600,000 iterations of SHA-256. The salt is a SHA-256 hash of your user ID, making each derived key unique even for identical passwords across accounts.",
+                accent: "border-amber-500/15",
+              },
+              {
+                icon: "🔒",
+                title: "AES-GCM 256 Encryption",
+                desc: "All private keys and Arweave JWKs are encrypted with AES-GCM using 256-bit keys and a random 96-bit IV per ciphertext. AES-GCM provides both confidentiality and authenticity — any tampering is detected on decrypt.",
+                accent: "border-cyan-500/15",
+              },
+              {
+                icon: "🧪",
+                title: "Key Verification",
+                desc: "On sign-in and vault unlock, a stored encrypted check value is decrypted to verify the derived key is correct before any wallet data is touched. A wrong password fails cleanly without exposing ciphertext.",
+                accent: "border-purple-500/15",
+              },
+              {
+                icon: "⏱️",
+                title: "Session-Scoped Vault",
+                desc: "The vault key is held in memory and cached in sessionStorage, which is automatically cleared when you close the tab or sign out. There is no persistent plaintext key material on disk.",
+                accent: "border-emerald-500/15",
+              },
+              {
+                icon: "🦊",
+                title: "MetaMask Wallets",
+                desc: "When you connect MetaMask, MoneyFund never receives or stores a private key. Transactions are signed by MetaMask directly. Only the public address is persisted.",
+                accent: "border-orange-500/15",
+              },
+              {
+                icon: "🛡️",
+                title: "Smart Contract Guards",
+                desc: "All protocol contracts use OpenZeppelin's ReentrancyGuard to prevent re-entrancy attacks. Contract functions and event logs are publicly auditable on-chain, and all actions are transparent from deployment onward.",
+                accent: "border-rose-500/15",
+              },
+            ] as const).map((item) => (
+              <div
+                key={item.title}
+                className={`${card} border ${item.accent} p-5 space-y-2`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{item.icon}</span>
+                  <h4 className="text-xs font-bold text-white/80">{item.title}</h4>
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className={`${card} p-5 sm:p-6 space-y-4`}>
+            <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">
+              What the Server Stores vs. What It Knows
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-white/70">
+                <thead>
+                  <tr className="border-b border-white/[0.08]">
+                    <th className="p-3 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Data</th>
+                    <th className="p-3 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Stored in DB</th>
+                    <th className="p-3 text-left text-[10px] font-bold text-white/40 uppercase tracking-wider">Readable by Server</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { data: "Wallet public address", stored: "Yes", readable: "Yes", storedColor: "text-amber-400/70", readableColor: "text-amber-400/70" },
+                    { data: "Encrypted private key + IV", stored: "Yes", readable: "No — AES-GCM ciphertext", storedColor: "text-amber-400/70", readableColor: "text-emerald-400/70" },
+                    { data: "Vault key", stored: "No", readable: "No — exists only in browser memory", storedColor: "text-emerald-400/70", readableColor: "text-emerald-400/70" },
+                    { data: "Password", stored: "No", readable: "No — only Supabase Auth hash", storedColor: "text-emerald-400/70", readableColor: "text-emerald-400/70" },
+                    { data: "Plaintext private key", stored: "No", readable: "No — never transmitted", storedColor: "text-emerald-400/70", readableColor: "text-emerald-400/70" },
+                    { data: "Key check ciphertext", stored: "Yes", readable: "No — verifiable only with correct key", storedColor: "text-amber-400/70", readableColor: "text-emerald-400/70" },
+                  ].map((row, i) => (
+                    <tr key={i} className="border-b border-white/[0.04]">
+                      <td className="p-3 font-semibold text-white/80">{row.data}</td>
+                      <td className={`p-3 ${row.storedColor}`}>{row.stored}</td>
+                      <td className={`p-3 ${row.readableColor}`}>{row.readable}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 
