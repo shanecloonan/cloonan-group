@@ -119,6 +119,8 @@ export interface ArweaveUploadRecord {
   cost_winston: string | null;
   cost_ar: string | null;
   description: string | null;
+  upload_method: string | null;
+  bundle_id: string | null;
   created_at: string;
   confirmed_at: string | null;
 }

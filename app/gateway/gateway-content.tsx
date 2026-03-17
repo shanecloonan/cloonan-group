@@ -40,7 +40,6 @@ import type {
   ArweaveCostEstimate,
   ArweaveGqlEdge,
   ArweaveTag,
-  ArweaveUploadRecord,
   ArweaveBookmark,
   ArweavePoolStatus,
   ArweaveBlock,
@@ -48,6 +47,7 @@ import type {
 } from "@/lib/wallet-types";
 
 const UnifiedUpload = dynamic(() => import("@/app/wallets/unified-upload"), { ssr: false });
+const ArweaveHistory = dynamic(() => import("@/app/wallets/arweave-history"), { ssr: false });
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/30 transition-all";
@@ -120,8 +120,6 @@ export default function GatewayContent() {
   const [browseLoading, setBrowseLoading] = useState(false);
   const [browseHistory, setBrowseHistory] = useState<string[]>([]);
 
-  const [uploads, setUploads] = useState<ArweaveUploadRecord[]>([]);
-  const [uploadsLoading, setUploadsLoading] = useState(false);
 
   const [gqlQuery, setGqlQuery] = useState("");
   const [gqlResult, setGqlResult] = useState("");
@@ -404,14 +402,6 @@ export default function GatewayContent() {
     finally { setBrowseLoading(false); }
   }, [gw, browseTxId]);
 
-
-  const loadUploads = useCallback(async () => {
-    setUploadsLoading(true);
-    try { setUploads(await ArweaveGateway.getUploads()); } catch { /* silent */ }
-    finally { setUploadsLoading(false); }
-  }, []);
-
-  useEffect(() => { if (tab === "history" && user) loadUploads(); }, [tab, user, loadUploads]);
 
   const GQL_TEMPLATES = useMemo(() => [
     { label: "My Transactions", query: arweaveWallet ? buildGqlQuery({ owners: [arweaveWallet.address], first: 25, sort: "HEIGHT_DESC" }) : "# Connect an Arweave wallet first" },
@@ -897,44 +887,7 @@ export default function GatewayContent() {
       )}
 
       {/* HISTORY */}
-      {tab === "history" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">My Uploads</span>
-            <button type="button" onClick={loadUploads} className={pillBtn}>Refresh</button>
-          </div>
-          {uploadsLoading && uploads.length === 0 && (<div className={`${card} p-10 text-center`}><div className="w-5 h-5 border-2 border-white/10 border-t-purple-400 rounded-full animate-spin mx-auto mb-3" /><p className="text-xs text-white/30">Loading...</p></div>)}
-          {!uploadsLoading && uploads.length === 0 && (<div className={`${card} p-10 text-center`}><p className="text-sm text-white/30">No uploads yet</p><p className="text-xs text-white/20 mt-1">Upload data from the Upload tab to see it here.</p></div>)}
-          {uploads.length > 0 && (
-            <>
-              <div className={`${card} p-4`}>
-                <div className="grid grid-cols-3 gap-4">
-                  <div><p className="text-xl font-bold text-white">{uploads.length}</p><p className="text-[10px] text-white/30 uppercase">Uploads</p></div>
-                  <div><p className="text-xl font-bold text-white">{formatBytes(uploads.reduce((s, u) => s + (u.data_size || 0), 0))}</p><p className="text-[10px] text-white/30 uppercase">Total Data</p></div>
-                  <div><p className="text-xl font-bold text-white">{uploads.reduce((s, u) => s + parseFloat(u.cost_ar || "0"), 0).toFixed(6)}</p><p className="text-[10px] text-white/30 uppercase">Total AR</p></div>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                {uploads.map((u) => (
-                  <div key={u.id} className={`${card} px-4 py-3 flex items-center gap-3`}>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-mono text-purple-300/60 truncate">{u.tx_id || "Preparing..."}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {u.filename && <span className="text-[10px] text-white/40">{u.filename}</span>}
-                        {u.content_type && <span className="text-[10px] text-white/30">{u.content_type}</span>}
-                        <span className="text-[10px] text-white/30">{formatBytes(u.data_size)}</span>
-                        <span className="text-[10px] text-white/30">{relativeTime(u.created_at)}</span>
-                      </div>
-                    </div>
-                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase ${u.status === "confirmed" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : u.status === "submitted" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" : u.status === "failed" ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"}`}>{u.status}</span>
-                    {u.tx_id && (<button type="button" onClick={() => { setBrowseTxId(u.tx_id!); setTab("browser"); loadBrowseData(u.tx_id!); }} className={pillBtn}>View</button>)}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      {tab === "history" && <ArweaveHistory />}
 
       {/* GRAPHQL */}
       {tab === "graphql" && (
