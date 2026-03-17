@@ -22,10 +22,19 @@ const UnifiedUpload = dynamic(() => import("@/app/wallets/unified-upload"), {
   ),
 });
 
+const PermawriteRepos = dynamic(() => import("@/app/wallets/permawrite-repos"), {
+  ssr: false,
+  loading: () => (
+    <div className="py-10 text-center">
+      <div className="w-5 h-5 border-2 border-white/10 border-t-cyan-400 rounded-full animate-spin mx-auto" />
+    </div>
+  ),
+});
+
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 
 export default function PermawriteContent() {
-  const [pwTab, setPwTab] = useState<"feed" | "upload">("feed");
+  const [pwTab, setPwTab] = useState<"feed" | "upload" | "repos">("feed");
 
   return (
     <div className="space-y-5">
@@ -83,6 +92,17 @@ export default function PermawriteContent() {
         >
           <span className="text-xs opacity-60">☁</span>Upload
         </button>
+        <button
+          type="button"
+          onClick={() => setPwTab("repos")}
+          className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+            pwTab === "repos"
+              ? "bg-cyan-500/20 text-cyan-300 shadow-[inset_0_1px_0_rgba(34,211,238,0.2)]"
+              : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
+          }`}
+        >
+          <span className="text-xs opacity-60">⌥</span>Repos
+        </button>
       </div>
 
       {pwTab === "feed" && <PermaFeed />}
@@ -100,6 +120,7 @@ export default function PermawriteContent() {
           <UnifiedUpload />
         </div>
       )}
+      {pwTab === "repos" && <PermawriteRepos />}
     </div>
   );
 }
