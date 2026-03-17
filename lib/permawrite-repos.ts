@@ -283,6 +283,92 @@ export async function commitFiles(opts: {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Diff computation                                                   */
+/* ------------------------------------------------------------------ */
+
+export interface FileDiff {
+  path: string;
+  status: "added" | "modified" | "removed" | "unchanged";
+  file?: RepoFile;
+  previousFile?: RepoFile;
+}
+
+export function computeDiff(
+  current: RepoFile[],
+  previous: RepoFile[],
+): FileDiff[] {
+  const prevMap = new Map<string, RepoFile>();
+  for (const f of previous) prevMap.set(f.path, f);
+
+  const currMap = new Map<string, RepoFile>();
+  for (const f of current) currMap.set(f.path, f);
+
+  const diffs: FileDiff[] = [];
+
+  for (const f of current) {
+    const prev = prevMap.get(f.path);
+    if (!prev) {
+      diffs.push({ path: f.path, status: "added", file: f });
+    } else if (prev.tx_id !== f.tx_id) {
+      diffs.push({ path: f.path, status: "modified", file: f, previousFile: prev });
+    } else {
+      diffs.push({ path: f.path, status: "unchanged", file: f });
+    }
+  }
+
+  for (const f of previous) {
+    if (!currMap.has(f.path)) {
+      diffs.push({ path: f.path, status: "removed", previousFile: f });
+    }
+  }
+
+  return diffs.sort((a, b) => {
+    const order = { added: 0, modified: 1, removed: 2, unchanged: 3 };
+    return order[a.status] - order[b.status] || a.path.localeCompare(b.path);
+  });
+}
+
+export function diffSummary(diffs: FileDiff[]): { added: number; modified: number; removed: number } {
+  let added = 0, modified = 0, removed = 0;
+  for (const d of diffs) {
+    if (d.status === "added") added++;
+    else if (d.status === "modified") modified++;
+    else if (d.status === "removed") removed++;
+  }
+  return { added, modified, removed };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Fetch file content from Arweave                                    */
+/* ------------------------------------------------------------------ */
+
+export async function fetchFileContent(txId: string): Promise<{ text: string; truncated: boolean }> {
+  const MAX = 200_000;
+  const res = await fetch(`https://arweave.net/${txId}`);
+  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+  const ct = res.headers.get("content-type") || "";
+  if (ct.startsWith("image/") || ct.startsWith("video/") || ct.startsWith("audio/")) {
+    return { text: `[Binary content: ${ct}]`, truncated: false };
+  }
+  const text = await res.text();
+  if (text.length > MAX) return { text: text.slice(0, MAX), truncated: true };
+  return { text, truncated: false };
+}
+
+export function isPreviewableText(contentType: string): boolean {
+  if (contentType.startsWith("text/")) return true;
+  if (contentType.includes("json") || contentType.includes("xml") || contentType.includes("javascript")
+    || contentType.includes("typescript") || contentType.includes("yaml") || contentType.includes("toml")
+    || contentType.includes("markdown") || contentType.includes("sql") || contentType.includes("csv")
+    || contentType.includes("html") || contentType.includes("css") || contentType.includes("script")) return true;
+  return false;
+}
+
+export function isPreviewableImage(contentType: string): boolean {
+  return contentType.startsWith("image/");
+}
+
+/* ------------------------------------------------------------------ */
 /*  File helpers                                                       */
 /* ------------------------------------------------------------------ */
 
