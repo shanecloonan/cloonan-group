@@ -7,6 +7,7 @@ import { useWallet } from "@/lib/wallet-context";
 
 const BASE_NAV = [
   { label: "Home", href: "/" },
+  { label: "Brands", href: "/brands" },
   { label: "Contracts", href: "/contracts" },
   { label: "Wallets", href: "/wallets" },
   { label: "Gateway", href: "/gateway" },
