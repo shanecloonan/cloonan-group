@@ -10,7 +10,6 @@ const BASE_NAV = [
   { label: "Brands", href: "/brands" },
   { label: "Contracts", href: "/contracts" },
   { label: "Wallets", href: "/wallets" },
-  { label: "Gateway", href: "/gateway" },
   { label: "About", href: "/about" },
 ];
 
