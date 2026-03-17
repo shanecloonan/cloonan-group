@@ -11,6 +11,7 @@ Chart.register(...registerables);
 
 const SECTIONS = [
   { id: "overview", label: "Overview" },
+  { id: "stats", label: "Platform Stats" },
   { id: "start", label: "Get Started" },
   { id: "architecture", label: "Architecture" },
   { id: "diagrams", label: "U-Diagrams" },
@@ -780,6 +781,89 @@ export default function AboutApp() {
                 <p className="text-[10px] text-white/50 mt-0.5">{sub}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ═══════════ PLATFORM STATS ═══════════ */}
+        <section id="stats" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="A snapshot of the platform's codebase, infrastructure, and on-chain footprint">Platform Stats</SectionHeading>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {([
+              { value: "31,400+", label: "Lines of Code", sub: "TypeScript, Solidity, CSS" },
+              { value: "95", label: "Source Files", sub: "Components, libraries, configs" },
+              { value: "23", label: "App Routes", sub: "Next.js pages" },
+              { value: "17", label: "Library Modules", sub: "Shared logic layer" },
+              { value: "8", label: "Factory Contracts", sub: "On-chain launchers" },
+              { value: "16", label: "Smart Contracts", sub: "Deployed on Ethereum + Solana" },
+              { value: "12", label: "Supabase Tables", sub: "Database schema" },
+              { value: "3", label: "Blockchains", sub: "Ethereum, Arweave, Solana" },
+            ] as const).map((s) => (
+              <div key={s.label} className={`${card} p-4 text-center`}>
+                <p className="text-2xl sm:text-3xl font-extrabold text-white tabular-nums tracking-tight">{s.value}</p>
+                <p className="text-[11px] font-semibold text-white/50 mt-1.5 uppercase tracking-wider">{s.label}</p>
+                <p className="text-[10px] text-white/25 mt-0.5">{s.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className={`${card} p-5`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Codebase Breakdown</p>
+                <div className="space-y-1.5">
+                  {([
+                    { label: "TypeScript / TSX", value: "22,800+", pct: 73 },
+                    { label: "JSON / Config", value: "6,500+", pct: 21 },
+                    { label: "CSS / Styles", value: "1,100+", pct: 3 },
+                    { label: "Solidity ABIs", value: "1,000+", pct: 3 },
+                  ] as const).map((row) => (
+                    <div key={row.label}>
+                      <div className="flex items-center justify-between text-[10px] mb-0.5">
+                        <span className="text-white/40">{row.label}</span>
+                        <span className="text-white/25 tabular-nums">{row.value} lines</span>
+                      </div>
+                      <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-purple-500/40 to-cyan-500/40" style={{ width: `${row.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Deployed Contracts</p>
+                <div className="space-y-1.5">
+                  {([
+                    { label: "Factory Launchers", value: "8", desc: "Fund, Dividend, Coin, DAO, Multisig, Storefront, Ad-space, Multiswap" },
+                    { label: "Standalone Contracts", value: "5", desc: "DEX, Airdropper, MONEY Dividends, MONEY DAO, MONEY Multiswap" },
+                    { label: "Token Contracts", value: "1", desc: "MONEY (ERC-20)" },
+                    { label: "Cross-chain", value: "2", desc: "Arweave wallet, Solana Wormhole" },
+                  ] as const).map((row) => (
+                    <div key={row.label} className="flex items-start gap-2">
+                      <span className="text-sm font-bold text-white/60 w-5 text-right tabular-nums shrink-0">{row.value}</span>
+                      <div>
+                        <p className="text-[11px] text-white/50">{row.label}</p>
+                        <p className="text-[9px] text-white/20 leading-relaxed">{row.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`${card} p-5`}>
+            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Supabase Tables (12)</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
+              {([
+                "user_wallets", "user_preferences", "user_roles", "tx_history",
+                "arweave_uploads", "arweave_bookmarks", "arweave_gateway_logs",
+                "permawrite_items", "permawrite_categories", "permawrite_category_groups",
+                "permawrite_repos", "permawrite_repo_commits",
+              ] as const).map((t) => (
+                <p key={t} className="text-[10px] font-mono text-purple-300/30">{t}</p>
+              ))}
+            </div>
           </div>
         </section>
 
