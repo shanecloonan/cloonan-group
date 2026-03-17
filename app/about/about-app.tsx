@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
-import CompanyChart from "../company-chart";
 
 Chart.register(...registerables);
 
@@ -733,9 +732,6 @@ export default function AboutApp() {
 
   return (
     <div className="min-h-screen" style={{ background: "#08090e" }}>
-
-      {/* ═══════════ ENTITY STRUCTURE ═══════════ */}
-      <CompanyChart />
 
       {/* ═══════════ STICKY SECTION NAV ═══════════ */}
       <div className="sticky top-14 z-40 border-b border-white/[0.04]" style={{ background: "rgba(8,9,14,0.92)", backdropFilter: "blur(12px)" }}>
