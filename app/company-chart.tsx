@@ -29,7 +29,7 @@ const SUBSIDIARIES = [
     name: "ChipFab",
     url: "https://chipfab.com",
     role: "Fabrication Infrastructure",
-    desc: "Semiconductor research company focused on developing next-generation fabrication processes.",
+    desc: "Semiconductor research.",
     accent: "text-violet-400",
     border: "border-violet-400/40",
     bg: "bg-violet-400/5",
