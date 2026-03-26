@@ -26,7 +26,7 @@ export default function Home() {
         <MoneyFundLogo className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 mb-4" />
 
         <h1 className="font-heading text-[36px] sm:text-[52px] md:text-[64px] font-semibold tracking-[3px] text-white leading-tight mb-2">
-          Money<span className="text-gold">Fund</span>
+          MoneyFund
         </h1>
 
         <p className="text-base sm:text-xl md:text-2xl font-light tracking-[0.05em] text-brand-400 max-w-2xl leading-relaxed">
