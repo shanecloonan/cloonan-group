@@ -16,10 +16,10 @@ const SUBSIDIARIES = [
     tag: "bg-gold/15 text-gold",
   },
   {
-    name: "PermaWrite",
-    url: "https://permawrite.com",
-    role: "Permanent Storage",
-    desc: "Decentralized permanent data storage solutions built on Arweave infrastructure.",
+    name: "Deltamorph",
+    url: "https://deltamorph.com",
+    role: "Genomic Research",
+    desc: "Genetic discovery lab.",
     accent: "text-sky-400",
     border: "border-sky-400/40",
     bg: "bg-sky-400/5",
@@ -28,8 +28,8 @@ const SUBSIDIARIES = [
   {
     name: "ChipFab",
     url: "https://chipfab.com",
-    role: "Semiconductor Research",
-    desc: "Semiconductor research company focused on next-generation chip design and fabrication processes.",
+    role: "Semiconductor Infrastructure Development",
+    desc: "Semiconductor research company focused on developing next-generation fabrication processes.",
     accent: "text-violet-400",
     border: "border-violet-400/40",
     bg: "bg-violet-400/5",
@@ -38,8 +38,8 @@ const SUBSIDIARIES = [
   {
     name: "FileDisplay",
     url: "https://filedisplay.com",
-    role: "Internal-Tooling SaaS",
-    desc: "Internal tooling SaaS platform for operations across all subsidiaries.",
+    role: "Enterprise Software",
+    desc: "Internal tooling SaaS platform.",
     accent: "text-emerald-400",
     border: "border-emerald-400/40",
     bg: "bg-emerald-400/5",
@@ -177,7 +177,7 @@ export default function CompanyChart() {
 
             {/* Level 2: DeltaMorph */}
             <a
-              href="https://deltamorph.com"
+              href="https://parentholding.com"
               target="_blank"
               rel="noopener noreferrer"
               className="relative w-full max-w-sm border border-brand-400/40 bg-brand-400/5 rounded-sm pt-4 pb-4 px-4 sm:pt-5 sm:pb-5 sm:px-6 text-center block transition-all hover:border-brand-300 hover:bg-brand-400/10"
@@ -186,11 +186,11 @@ export default function CompanyChart() {
                 Parent Nexus
               </p>
               <h3 className="font-heading text-xl sm:text-3xl font-bold uppercase tracking-wide text-brand-200 mb-2">
-                DeltaMorph
+                ParentHolding
               </h3>
               <p className="text-brand-400 text-[11px] sm:text-xs leading-relaxed">
-                Parent holding company and profit-distribution nexus. Receives
-                all subsidiary revenue and channels it upstream to the vault.
+                Profit-distribution nexus that receives
+                cashflow from subsidiaries and channels it upstream to the vault.
                 Holds 100% of every subsidiary.
               </p>
             </a>
