@@ -47,6 +47,52 @@ export interface CategoryCount {
 }
 
 /* ------------------------------------------------------------------ */
+/*  DB-resilience helpers                                              */
+/* ------------------------------------------------------------------ */
+/*
+ * The `permawrite_items` table is created by a migration under
+ * `infra/supabase/migrations`. On brand-new Supabase projects (or
+ * projects that haven't run the migration yet) the insert returns
+ * PGRST205 / "Could not find the table ... in the schema cache".
+ *
+ * When we've already paid for and submitted an Arweave transaction we
+ * do NOT want to fail the whole upload just because logging to the
+ * schema cache failed — the tx is already permanent on-chain. Instead
+ * we log a warning and return a best-effort synthesized item so the
+ * UI still shows a success state. Private-only uploads (no Arweave)
+ * keep the hard failure, because for those the DB IS the source of
+ * truth.
+ */
+function isPermawriteTableMissing(err: unknown): boolean {
+  if (!err) return false;
+  const e = err as { code?: string; message?: string; details?: string };
+  if (e.code === "PGRST205" || e.code === "42P01") return true;
+  const msg = (e.message || "") + " " + (e.details || "");
+  return /schema cache/i.test(msg) || /could not find the table/i.test(msg);
+}
+
+function syntheticItem(fields: Partial<PermawriteItem> & { user_id: string; category_slug: string }): PermawriteItem {
+  const now = new Date().toISOString();
+  return {
+    id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`),
+    user_id: fields.user_id,
+    title: fields.title ?? null,
+    description: fields.description ?? null,
+    category_slug: fields.category_slug,
+    tags: fields.tags ?? [],
+    visibility: fields.visibility ?? "permawrite",
+    file_name: fields.file_name ?? null,
+    file_size: fields.file_size ?? 0,
+    content_type: fields.content_type ?? null,
+    storage_path: fields.storage_path ?? null,
+    arweave_tx_id: fields.arweave_tx_id ?? null,
+    arweave_tags: fields.arweave_tags ?? [],
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Category auto-detection                                            */
 /* ------------------------------------------------------------------ */
 
@@ -411,25 +457,32 @@ export async function permawrite(
 
   if (result.status !== 200) throw new Error(`Arweave upload failed (status ${result.status})`);
 
+  const row = {
+    user_id: userId,
+    title: opts.title || file.name,
+    description: opts.description || null,
+    category_slug: opts.category,
+    tags: opts.tags,
+    visibility: "permawrite" as const,
+    file_name: file.name,
+    file_size: file.size,
+    content_type: file.type,
+    arweave_tx_id: result.txId,
+    arweave_tags: arTags,
+  };
   const { data, error } = await supabase
     .from("permawrite_items")
-    .insert({
-      user_id: userId,
-      title: opts.title || file.name,
-      description: opts.description || null,
-      category_slug: opts.category,
-      tags: opts.tags,
-      visibility: "permawrite",
-      file_name: file.name,
-      file_size: file.size,
-      content_type: file.type,
-      arweave_tx_id: result.txId,
-      arweave_tags: arTags,
-    })
+    .insert(row)
     .select()
     .single();
 
-  if (error) throw new Error(`DB insert failed: ${error.message}`);
+  if (error) {
+    if (isPermawriteTableMissing(error)) {
+      console.warn("[permawrite] permawrite_items table missing — Arweave tx succeeded but was not logged to DB. Apply the migration under infra/supabase/migrations.");
+      return syntheticItem(row);
+    }
+    throw new Error(`DB insert failed: ${error.message}`);
+  }
   return data as PermawriteItem;
 }
 
@@ -467,25 +520,32 @@ export async function permawriteText(
 
   if (result.status !== 200) throw new Error(`Arweave upload failed (status ${result.status})`);
 
+  const insertRow = {
+    user_id: userId,
+    title: opts.title || "Text",
+    description: opts.description || null,
+    category_slug: opts.category,
+    tags: opts.tags,
+    visibility: "permawrite" as const,
+    file_name: null,
+    file_size: data_bytes.byteLength,
+    content_type: "text/plain",
+    arweave_tx_id: result.txId,
+    arweave_tags: arTags,
+  };
   const { data: row, error } = await supabase
     .from("permawrite_items")
-    .insert({
-      user_id: userId,
-      title: opts.title || "Text",
-      description: opts.description || null,
-      category_slug: opts.category,
-      tags: opts.tags,
-      visibility: "permawrite",
-      file_name: null,
-      file_size: data_bytes.byteLength,
-      content_type: "text/plain",
-      arweave_tx_id: result.txId,
-      arweave_tags: arTags,
-    })
+    .insert(insertRow)
     .select()
     .single();
 
-  if (error) throw new Error(`DB insert failed: ${error.message}`);
+  if (error) {
+    if (isPermawriteTableMissing(error)) {
+      console.warn("[permawrite] permawrite_items table missing — Arweave tx succeeded but was not logged to DB.");
+      return syntheticItem(insertRow);
+    }
+    throw new Error(`DB insert failed: ${error.message}`);
+  }
   return row as PermawriteItem;
 }
 
@@ -531,25 +591,32 @@ export async function permawriteSmart(
 
   if (result.status !== 200) throw new Error(`Arweave upload failed (status ${result.status})`);
 
+  const row = {
+    user_id: userId,
+    title: opts.title || file.name,
+    description: opts.description || null,
+    category_slug: opts.category,
+    tags: opts.tags,
+    visibility: opts.visibility ?? "permawrite",
+    file_name: file.name,
+    file_size: file.size,
+    content_type: file.type,
+    arweave_tx_id: result.txId,
+    arweave_tags: arTags,
+  };
   const { data, error } = await supabase
     .from("permawrite_items")
-    .insert({
-      user_id: userId,
-      title: opts.title || file.name,
-      description: opts.description || null,
-      category_slug: opts.category,
-      tags: opts.tags,
-      visibility: opts.visibility ?? "permawrite",
-      file_name: file.name,
-      file_size: file.size,
-      content_type: file.type,
-      arweave_tx_id: result.txId,
-      arweave_tags: arTags,
-    })
+    .insert(row)
     .select()
     .single();
 
-  if (error) throw new Error(`DB insert failed: ${error.message}`);
+  if (error) {
+    if (isPermawriteTableMissing(error)) {
+      console.warn("[permawrite] permawrite_items table missing — Arweave tx succeeded but was not logged to DB. Apply the migration under infra/supabase/migrations.");
+      return { ...syntheticItem(row), method: result.method };
+    }
+    throw new Error(`DB insert failed: ${error.message}`);
+  }
   return { ...(data as PermawriteItem), method: result.method };
 }
 
@@ -592,25 +659,32 @@ export async function permawriteTextSmart(
 
   if (result.status !== 200) throw new Error(`Arweave upload failed (status ${result.status})`);
 
+  const insertRow = {
+    user_id: userId,
+    title: opts.title || "Text",
+    description: opts.description || null,
+    category_slug: opts.category,
+    tags: opts.tags,
+    visibility: opts.visibility ?? "permawrite",
+    file_name: null,
+    file_size: data_bytes.byteLength,
+    content_type: "text/plain",
+    arweave_tx_id: result.txId,
+    arweave_tags: arTags,
+  };
   const { data: row, error } = await supabase
     .from("permawrite_items")
-    .insert({
-      user_id: userId,
-      title: opts.title || "Text",
-      description: opts.description || null,
-      category_slug: opts.category,
-      tags: opts.tags,
-      visibility: opts.visibility ?? "permawrite",
-      file_name: null,
-      file_size: data_bytes.byteLength,
-      content_type: "text/plain",
-      arweave_tx_id: result.txId,
-      arweave_tags: arTags,
-    })
+    .insert(insertRow)
     .select()
     .single();
 
-  if (error) throw new Error(`DB insert failed: ${error.message}`);
+  if (error) {
+    if (isPermawriteTableMissing(error)) {
+      console.warn("[permawrite] permawrite_items table missing — Arweave tx succeeded but was not logged to DB.");
+      return { ...syntheticItem(insertRow), method: result.method };
+    }
+    throw new Error(`DB insert failed: ${error.message}`);
+  }
   return { ...(row as PermawriteItem), method: result.method };
 }
 
