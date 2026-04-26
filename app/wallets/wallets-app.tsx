@@ -123,7 +123,7 @@ export default function WalletsApp() {
   } = useWallet();
 
   const [chain, setChain] = useState<"ethereum" | "arweave">("ethereum");
-  const [arTab, setArTab] = useState<"wallet" | "upload" | "history">("wallet");
+  const [arTab, setArTab] = useState<"wallet" | "upload" | "history">("upload");
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC), []);
 
   const selected = selectedEthWallet;

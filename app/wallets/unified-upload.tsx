@@ -300,14 +300,14 @@ export default function UnifiedUpload() {
     : "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Content */}
-      <div className={`${card} p-5 space-y-4`}>
+      <div className={`${card} p-4 space-y-3`}>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Content</span>
+          <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Content</span>
           {(file || text) && (
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300/60 border border-emerald-500/20">
-              {file ? `📎 ${file.name} (${formatBytes(file.size)})` : `📝 ${new TextEncoder().encode(text).byteLength} bytes`}
+              {file ? `${file.name} (${formatBytes(file.size)})` : `${new TextEncoder().encode(text).byteLength} bytes`}
             </span>
           )}
         </div>
@@ -316,44 +316,31 @@ export default function UnifiedUpload() {
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
-          className={`rounded-xl border-2 border-dashed transition-all p-4 text-center ${
+          className={`rounded-lg border border-dashed transition-all px-3 py-3 text-center ${
             isDragging
               ? "border-purple-400/70 bg-purple-500/10 ring-2 ring-purple-500/30"
               : file
                 ? "border-emerald-500/30 bg-emerald-500/5"
-                : "border-white/[0.06] hover:border-white/[0.12]"
+                : "border-white/[0.08] hover:border-white/[0.14]"
           }`}
         >
           <input ref={fileRef} type="file" accept="*/*" onChange={handleFileSelect} className="hidden" id="arUploadFile" />
-          <label htmlFor="arUploadFile" className="cursor-pointer block">
-            <span className="text-2xl block mb-2">{isDragging ? "⬇" : file ? "✓" : "📂"}</span>
-            <p className="text-xs text-white/50">
-              {isDragging ? "Drop to upload as a single file" : file ? file.name : "Drop a file here or click to browse"}
-            </p>
-            <p className="text-[10px] text-white/20 mt-1">
-              {isDragging ? "Zips & folders stay intact — uploaded as one file" : "Any file type — zip files upload as-is"}
-            </p>
+          <label htmlFor="arUploadFile" className="cursor-pointer flex items-center justify-center gap-2 text-xs text-white/55">
+            <span className="text-sm">{isDragging ? "⬇" : file ? "✓" : "📂"}</span>
+            <span className="truncate">
+              {isDragging ? "Drop to upload" : file ? file.name : "Drop file or click to browse"}
+            </span>
             {file && (
-              <button type="button" onClick={(e) => { e.preventDefault(); setFile(null); if (fileRef.current) fileRef.current.value = ""; }} className="text-[10px] text-red-400/50 hover:text-red-400 mt-1 transition-colors">
-                Remove file
+              <button type="button" onClick={(e) => { e.preventDefault(); setFile(null); if (fileRef.current) fileRef.current.value = ""; }} className="text-[10px] text-red-400/60 hover:text-red-400 transition-colors ml-1">
+                remove
               </button>
             )}
           </label>
         </div>
         {!file && (
-          <>
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-white/[0.06]" />
-              <span className="text-[10px] text-white/20 uppercase tracking-wider">or type text</span>
-              <span className="h-px flex-1 bg-white/[0.06]" />
-            </div>
-            <textarea rows={3} value={text} onChange={(e) => { setText(e.target.value); if (permawrite && !category) setCategory("text"); }} placeholder="Type or paste text to store permanently on Arweave..." className={`${inputCls} h-auto py-3`} style={{ resize: "vertical" }} />
-          </>
+          <textarea rows={2} value={text} onChange={(e) => { setText(e.target.value); if (permawrite && !category) setCategory("text"); }} placeholder="…or paste text to store permanently" className={`${inputCls} h-auto py-2.5`} style={{ resize: "vertical" }} />
         )}
-        <div>
-          <label className={labelCls}>Description (optional)</label>
-          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Brief description of this upload" className={inputCls} />
-        </div>
+        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description (optional)" className={inputCls} />
       </div>
 
       {/* PermaWrite Toggle */}
@@ -361,17 +348,15 @@ export default function UnifiedUpload() {
         <button
           type="button"
           onClick={() => setPermawrite(!permawrite)}
-          className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/[0.02] transition-all cursor-pointer"
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-all cursor-pointer"
         >
-          <span className="text-xl">🗂</span>
+          <span className="text-base">🗂</span>
           <div className="flex-1 text-left">
             <p className={`text-sm font-semibold ${permawrite ? "text-violet-300" : "text-white/60"}`}>PermaWrite</p>
-            <p className="text-[11px] text-white/30 mt-0.5">
-              {permawrite ? "Uploads are organized in your feed with categories and tags" : "Enable to organize uploads with categories, tags, and browsable feeds"}
-            </p>
+            <p className="text-[10px] text-white/30 mt-0.5">Categories, tags &amp; browsable feed</p>
           </div>
-          <div className={`w-11 h-6 rounded-full flex items-center transition-all ${permawrite ? "bg-violet-500" : "bg-white/[0.08]"}`}>
-            <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-all ${permawrite ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
+          <div className={`w-10 h-5 rounded-full flex items-center transition-all ${permawrite ? "bg-violet-500" : "bg-white/[0.08]"}`}>
+            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-all ${permawrite ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
           </div>
         </button>
 
