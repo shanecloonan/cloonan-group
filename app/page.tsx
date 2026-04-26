@@ -37,46 +37,59 @@ export default function Home() {
         }}
       />
 
+      {/*
+        Guilloché waves — three interwoven bands of sinusoidal curves.
+        This is the actual engraving style used on banknotes (engine-
+        turning / Spirograph-derived). We layer two copies at different
+        rotations so the eye reads it as a braided mesh rather than a
+        repeating stamp.
+      */}
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.65]"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.6]"
       >
         <defs>
           <pattern
-            id="guilloche"
+            id="wavesA"
             x="0"
             y="0"
-            width="240"
-            height="240"
+            width="160"
+            height="24"
             patternUnits="userSpaceOnUse"
           >
-            <g stroke="rgba(176,214,188,0.14)" strokeWidth="0.5" fill="none">
-              <circle cx="120" cy="120" r="100" />
-              <circle cx="120" cy="120" r="85" />
-              <circle cx="120" cy="120" r="70" />
-              <circle cx="120" cy="120" r="55" />
-              <circle cx="120" cy="120" r="40" />
-              <circle cx="120" cy="120" r="25" />
-              <circle cx="40" cy="40" r="36" />
-              <circle cx="200" cy="40" r="36" />
-              <circle cx="40" cy="200" r="36" />
-              <circle cx="200" cy="200" r="36" />
-              <circle cx="40" cy="40" r="22" />
-              <circle cx="200" cy="40" r="22" />
-              <circle cx="40" cy="200" r="22" />
-              <circle cx="200" cy="200" r="22" />
+            <g stroke="rgba(176,214,188,0.15)" strokeWidth="0.5" fill="none">
+              <path d="M 0,6  Q 20,-6 40,6  T 80,6  T 120,6  T 160,6" />
+              <path d="M 0,12 Q 20,0  40,12 T 80,12 T 120,12 T 160,12" />
+              <path d="M 0,18 Q 20,6  40,18 T 80,18 T 120,18 T 160,18" />
+            </g>
+          </pattern>
+          <pattern
+            id="wavesB"
+            x="0"
+            y="0"
+            width="160"
+            height="24"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(28)"
+          >
+            <g stroke="rgba(176,214,188,0.11)" strokeWidth="0.45" fill="none">
+              <path d="M 0,6  Q 20,-6 40,6  T 80,6  T 120,6  T 160,6" />
+              <path d="M 0,12 Q 20,0  40,12 T 80,12 T 120,12 T 160,12" />
+              <path d="M 0,18 Q 20,6  40,18 T 80,18 T 120,18 T 160,18" />
             </g>
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill="url(#guilloche)" />
+        <rect width="100%" height="100%" fill="url(#wavesA)" />
+        <rect width="100%" height="100%" fill="url(#wavesB)" />
       </svg>
 
+      {/* Faint diagonal intaglio hairlines — reinforces the etched-paper feel
+          without competing with the waves. Kept very low alpha. */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        className="pointer-events-none absolute inset-0 opacity-[0.22]"
         style={{
           backgroundImage: `
-            repeating-linear-gradient(45deg, transparent 0, transparent 3px, rgba(176,214,188,0.055) 3px, rgba(176,214,188,0.055) 4px),
-            repeating-linear-gradient(-45deg, transparent 0, transparent 3px, rgba(176,214,188,0.04) 3px, rgba(176,214,188,0.04) 4px)
+            repeating-linear-gradient(45deg, transparent 0, transparent 4px, rgba(176,214,188,0.05) 4px, rgba(176,214,188,0.05) 5px)
           `,
         }}
       />
