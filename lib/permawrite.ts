@@ -525,7 +525,7 @@ export async function permawriteSmart(
   if (opts.customTags) for (const ct of opts.customTags) arTags.push(ct);
 
   const result = await gw.smartUploadFile(
-    file, arTags, jwk, opts.preferredMethod ?? "turbo",
+    file, arTags, jwk, opts.preferredMethod ?? "l1",
     opts.description || file.name, onProgress,
   );
 
@@ -586,7 +586,7 @@ export async function permawriteTextSmart(
   if (opts.customTags) for (const ct of opts.customTags) arTags.push(ct);
 
   const result = await gw.smartUploadData(
-    data_bytes, arTags, jwk, opts.preferredMethod ?? "turbo",
+    data_bytes, arTags, jwk, opts.preferredMethod ?? "l1",
     opts.description, onProgress,
   );
 

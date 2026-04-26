@@ -30,8 +30,10 @@ export default function UnifiedUpload() {
   const { arweaveWallet } = useWallet();
   const gw = useMemo(() => new ArweaveGateway(), []);
 
-  const [method, setMethod] = useState<UploadMethod>("turbo");
+  const [method, setMethod] = useState<UploadMethod>("l1");
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragDepthRef = useRef(0);
   const [text, setText] = useState("");
   const [desc, setDesc] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -64,6 +66,20 @@ export default function UnifiedUpload() {
       setCategories(cats);
       setGroups(grps);
     });
+  }, []);
+
+  // Prevent the browser from navigating away if the user misses the dropzone.
+  useEffect(() => {
+    const preventDefault = (e: DragEvent) => {
+      // Only intercept file drags, not text/link drags from other areas of the app.
+      if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+    };
+    window.addEventListener("dragover", preventDefault);
+    window.addEventListener("drop", preventDefault);
+    return () => {
+      window.removeEventListener("dragover", preventDefault);
+      window.removeEventListener("drop", preventDefault);
+    };
   }, []);
 
   const grouped = useMemo(
@@ -122,8 +138,7 @@ export default function UnifiedUpload() {
     ArweaveGateway.getTurboBalance(arweaveWallet.address).then(setTurboBalance).catch(() => setTurboBalance(null));
   }, [arweaveWallet]);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] || null;
+  const acceptFile = useCallback((f: File | null) => {
     setFile(f);
     setText("");
     if (f) {
@@ -131,6 +146,41 @@ export default function UnifiedUpload() {
       if (!title) setTitle(f.name);
     }
   }, [title]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    acceptFile(e.target.files?.[0] || null);
+  }, [acceptFile]);
+
+  // Single-file drag-and-drop.
+  // Important: we treat whatever is dropped as a single opaque File — zips stay zips.
+  const onDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current += 1;
+    if (e.dataTransfer?.types?.includes("Files")) setIsDragging(true);
+  }, []);
+  const onDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  }, []);
+  const onDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragging(false);
+  }, []);
+  const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = 0;
+    setIsDragging(false);
+    const dropped = e.dataTransfer?.files;
+    if (dropped && dropped.length > 0) {
+      acceptFile(dropped[0]);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [acceptFile]);
 
   const addCustomTag = useCallback(() => {
     if (!newTagName.trim()) return;
@@ -188,13 +238,13 @@ export default function UnifiedUpload() {
       setStatus({ msg: `PermaWriting ${visLabel}...`, type: "loading" });
       setProgress(0);
       try {
-        let uploadMethod = "turbo";
+        let uploadMethod: UploadMethod = method;
         if (f) {
           const result = await permawriteSmart(f, arweaveWallet.jwk, pwOpts, (pct) => setProgress(pct));
-          uploadMethod = result?.method ?? "turbo";
+          uploadMethod = result?.method ?? method;
         } else {
           const result = await permawriteTextSmart(t, arweaveWallet.jwk, pwOpts, (pct) => setProgress(pct));
-          uploadMethod = result?.method ?? "turbo";
+          uploadMethod = result?.method ?? method;
         }
         const methodMsg = uploadMethod === "turbo" ? "instantly via Turbo" : "via L1 (~10-30 min confirmation)";
         setStatus({ msg: `PermaWritten ${visLabel} ${methodMsg}!`, type: "success" });
@@ -282,11 +332,11 @@ export default function UnifiedUpload() {
     <div className="space-y-4">
       {/* Upload Method */}
       <div className={`${card} p-1.5 flex gap-1`}>
-        <button type="button" onClick={() => setMethod("turbo")} className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${method === "turbo" ? "bg-emerald-500/15 text-emerald-300 shadow-[inset_0_1px_0_rgba(52,211,153,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
-          <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ opacity: method === "turbo" ? 1 : 0.3 }} />Turbo (Instant)
-        </button>
         <button type="button" onClick={() => setMethod("l1")} className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${method === "l1" ? "bg-purple-500/15 text-purple-300 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
           <span className="w-2 h-2 rounded-full bg-purple-400" style={{ opacity: method === "l1" ? 1 : 0.3 }} />Standard (L1)
+        </button>
+        <button type="button" onClick={() => setMethod("turbo")} className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${method === "turbo" ? "bg-emerald-500/15 text-emerald-300 shadow-[inset_0_1px_0_rgba(52,211,153,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
+          <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ opacity: method === "turbo" ? 1 : 0.3 }} />Turbo (Instant)
         </button>
       </div>
 
@@ -330,11 +380,28 @@ export default function UnifiedUpload() {
             </span>
           )}
         </div>
-        <div className={`rounded-xl border-2 border-dashed transition-all ${file ? "border-emerald-500/30 bg-emerald-500/5" : "border-white/[0.06] hover:border-white/[0.12]"} p-4 text-center`}>
+        <div
+          onDragEnter={onDragEnter}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          className={`rounded-xl border-2 border-dashed transition-all p-4 text-center ${
+            isDragging
+              ? "border-purple-400/70 bg-purple-500/10 ring-2 ring-purple-500/30"
+              : file
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : "border-white/[0.06] hover:border-white/[0.12]"
+          }`}
+        >
           <input ref={fileRef} type="file" accept="*/*" onChange={handleFileSelect} className="hidden" id="arUploadFile" />
-          <label htmlFor="arUploadFile" className="cursor-pointer">
-            <span className="text-2xl block mb-2">{file ? "✓" : "📂"}</span>
-            <p className="text-xs text-white/50">{file ? file.name : "Drop a file or click to browse"}</p>
+          <label htmlFor="arUploadFile" className="cursor-pointer block">
+            <span className="text-2xl block mb-2">{isDragging ? "⬇" : file ? "✓" : "📂"}</span>
+            <p className="text-xs text-white/50">
+              {isDragging ? "Drop to upload as a single file" : file ? file.name : "Drop a file here or click to browse"}
+            </p>
+            <p className="text-[10px] text-white/20 mt-1">
+              {isDragging ? "Zips & folders stay intact — uploaded as one file" : "Any file type — zip files upload as-is"}
+            </p>
             {file && (
               <button type="button" onClick={(e) => { e.preventDefault(); setFile(null); if (fileRef.current) fileRef.current.value = ""; }} className="text-[10px] text-red-400/50 hover:text-red-400 mt-1 transition-colors">
                 Remove file

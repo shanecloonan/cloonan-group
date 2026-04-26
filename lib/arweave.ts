@@ -652,7 +652,7 @@ export class ArweaveGateway {
     data: Uint8Array,
     tags: ArweaveTag[],
     jwk: JsonWebKey,
-    preferredMethod: UploadMethod = "turbo",
+    preferredMethod: UploadMethod = "l1",
     description?: string,
     onProgress?: (pct: number) => void,
   ): Promise<ArweaveUploadResult & { method: UploadMethod }> {
@@ -673,7 +673,7 @@ export class ArweaveGateway {
     file: File,
     tags: ArweaveTag[],
     jwk: JsonWebKey,
-    preferredMethod: UploadMethod = "turbo",
+    preferredMethod: UploadMethod = "l1",
     description?: string,
     onProgress?: (pct: number) => void,
   ): Promise<ArweaveUploadResult & { method: UploadMethod }> {

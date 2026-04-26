@@ -272,6 +272,8 @@ export default function PermawriteRepos() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dirInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragDepthRef = useRef(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -281,6 +283,19 @@ export default function PermawriteRepos() {
   }, []);
 
   useEffect(() => { if (!loaded) load(); }, [loaded, load]);
+
+  // Prevent the browser from navigating away if the user misses the dropzone.
+  useEffect(() => {
+    const preventDefault = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+    };
+    window.addEventListener("dragover", preventDefault);
+    window.addEventListener("drop", preventDefault);
+    return () => {
+      window.removeEventListener("dragover", preventDefault);
+      window.removeEventListener("drop", preventDefault);
+    };
+  }, []);
 
   const openRepo = useCallback(async (repo: Repo) => {
     setSelectedRepo(repo);
@@ -347,6 +362,93 @@ export default function PermawriteRepos() {
     } catch { /* silent */ }
     setConfirmDelete(false);
   }, [selectedRepo]);
+
+  /* ------------------------------------------------------------------ */
+  /*  Drag-and-drop for commit view                                      */
+  /* ------------------------------------------------------------------ */
+
+  // Walk a FileSystemEntry (file or directory) and return every File inside it
+  // with `webkitRelativePath` populated so the tree structure survives the drop.
+  const walkEntry = useCallback(async (entry: FileSystemEntry, prefix = ""): Promise<File[]> => {
+    if (entry.isFile) {
+      const fileEntry = entry as FileSystemFileEntry;
+      const file = await new Promise<File>((resolve, reject) => fileEntry.file(resolve, reject));
+      const relPath = prefix ? `${prefix}/${file.name}` : file.name;
+      // Preserve the relative path the same way <input webkitdirectory> does,
+      // so downstream code (buildTree, commitFiles) sees identical shape.
+      try {
+        Object.defineProperty(file, "webkitRelativePath", { value: relPath, configurable: true });
+      } catch { /* non-writable on some browsers — tolerate */ }
+      return [file];
+    }
+    if (entry.isDirectory) {
+      const dirEntry = entry as FileSystemDirectoryEntry;
+      const reader = dirEntry.createReader();
+      const out: File[] = [];
+      // readEntries returns in batches; must loop until empty.
+      const readBatch = (): Promise<FileSystemEntry[]> =>
+        new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+      while (true) {
+        const batch = await readBatch();
+        if (batch.length === 0) break;
+        for (const child of batch) {
+          const files = await walkEntry(child, prefix ? `${prefix}/${entry.name}` : entry.name);
+          out.push(...files);
+        }
+      }
+      return out;
+    }
+    return [];
+  }, []);
+
+  const onDropEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current += 1;
+    if (e.dataTransfer?.types?.includes("Files")) setIsDragging(true);
+  }, []);
+  const onDropOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  }, []);
+  const onDropLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragging(false);
+  }, []);
+  const onDropHandler = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = 0;
+    setIsDragging(false);
+
+    const items = e.dataTransfer?.items;
+    const collected: File[] = [];
+
+    if (items && items.length > 0 && typeof items[0].webkitGetAsEntry === "function") {
+      // Preferred path — lets us distinguish files from directories and walk them.
+      const entries: FileSystemEntry[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry();
+        if (entry) entries.push(entry);
+      }
+      for (const entry of entries) {
+        try {
+          const files = await walkEntry(entry);
+          collected.push(...files);
+        } catch { /* skip unreadable entries */ }
+      }
+    } else if (e.dataTransfer?.files) {
+      // Fallback — no entry API, just take the flat file list.
+      for (const f of Array.from(e.dataTransfer.files)) collected.push(f);
+    }
+
+    if (collected.length > 0) {
+      setCommitFiles((prev) => [...prev, ...collected]);
+    }
+  }, [walkEntry]);
 
   const handleCommit = useCallback(async () => {
     if (!selectedRepo || !arweaveWallet || commitFiles_.length === 0) return;
@@ -475,7 +577,15 @@ export default function PermawriteRepos() {
 
           <div>
             <label className="text-[10px] text-white/30 uppercase tracking-wider block mb-1.5">Select Files</label>
-            <div className={`${card} p-4 border-dashed`}>
+            <div
+              onDragEnter={onDropEnter}
+              onDragOver={onDropOver}
+              onDragLeave={onDropLeave}
+              onDrop={onDropHandler}
+              className={`${card} p-4 border-dashed transition-all ${
+                isDragging ? "border-purple-400/70 bg-purple-500/10 ring-2 ring-purple-500/30" : ""
+              }`}
+            >
               <div className="flex gap-2 flex-wrap justify-center">
                 <button type="button" onClick={() => fileInputRef.current?.click()}
                   className={`${btnGhost} inline-flex items-center gap-1.5`}>
@@ -492,7 +602,13 @@ export default function PermawriteRepos() {
                 /* @ts-expect-error webkitdirectory is non-standard */
                 webkitdirectory="" multiple className="hidden"
                 onChange={(e) => setCommitFiles((prev) => [...prev, ...Array.from(e.target.files || [])])} />
-              {commitFiles_.length === 0 && <p className="text-[10px] text-white/15 mt-2 text-center">Drag and drop or use the buttons above</p>}
+              <p className={`text-[10px] mt-2 text-center transition-colors ${isDragging ? "text-purple-300" : "text-white/15"}`}>
+                {isDragging
+                  ? "Drop to add — folders are walked, zips stay as-is"
+                  : commitFiles_.length === 0
+                    ? "Drag & drop files or folders here, or use the buttons above"
+                    : "Drop more files or folders to add — zip files are added as a single file"}
+              </p>
             </div>
           </div>
 
