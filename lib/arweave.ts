@@ -1,3 +1,4 @@
+import Arweave from "arweave";
 import { supabase } from "./supabase";
 import { ARWEAVE_GATEWAY_URL, ARWEAVE_DIRECT_GATEWAYS, ARWEAVE_PRIMARY_GATEWAY } from "./config";
 import { poolFetch, listGateways, type GatewayRole } from "./gateway-pool";
@@ -51,6 +52,23 @@ function winstonToAr(winston: string): string {
 function arToWinston(ar: string): string {
   return BigInt(Math.round(parseFloat(ar) * 1e12)).toString();
 }
+
+/* ------------------------------------------------------------------ */
+/*  arweave-js SDK instance                                            */
+/* ------------------------------------------------------------------ */
+/*
+ * Used for building + signing Arweave transactions. Signing requires the
+ * real spec — deepHash + RSA-PSS(saltLength=0) + Merkle data_root — which
+ * is easy to get wrong, so we delegate to arweave-js. We still POST the
+ * resulting tx via our own gateway waterfall (see writeToArweave) so the
+ * client keeps its self-hosted-first / multi-gateway failover story.
+ */
+const arweaveSdk = Arweave.init({
+  host: "arweave.net",
+  port: 443,
+  protocol: "https",
+  timeout: 20_000,
+});
 
 /* ------------------------------------------------------------------ */
 /*  GraphQL query builder                                              */
@@ -479,69 +497,47 @@ export class ArweaveGateway {
     return b64urlEncode(hash);
   }
 
-  static async signTransaction(
-    tx: { owner?: string; target: string; data?: string; quantity: string; reward: string; last_tx: string; tags: { name: string; value: string }[]; data_root: string; data_size: string },
-    jwk: JsonWebKey,
-  ): Promise<Record<string, unknown>> {
-    const msg = JSON.stringify({
-      owner: tx.owner, target: tx.target, data: tx.data, quantity: tx.quantity,
-      reward: tx.reward, last_tx: tx.last_tx, tags: tx.tags || [],
-      data_root: tx.data_root, data_size: tx.data_size,
-    });
-    const msgBuffer = new TextEncoder().encode(msg);
-    const privKey = await crypto.subtle.importKey("jwk", jwk, { name: "RSA-PSS", hash: "SHA-256" }, false, ["sign"]);
-    const signature = await crypto.subtle.sign({ name: "RSA-PSS", saltLength: 32 }, privKey, msgBuffer);
-    const sigB64 = b64urlEncode(signature);
-    const sigHash = await sha256(signature);
-    const id = b64urlEncode(sigHash);
-    return { ...tx, format: 2, signature: sigB64, id };
-  }
-
-  static async buildTransferTx(
-    target: string,
-    arAmount: string,
-    jwk: JsonWebKey,
-    anchor: string,
-    reward: string,
-  ): Promise<Record<string, unknown>> {
-    const quantity = arToWinston(arAmount);
-    const tx = {
-      owner: jwk.n,
-      target,
-      quantity,
-      reward,
-      last_tx: anchor,
-      tags: [] as { name: string; value: string }[],
-      data_size: "0",
-      data_root: "",
-    };
-    return ArweaveGateway.signTransaction(tx, jwk);
-  }
-
-  static async buildDataTx(
+  /**
+   * Signs a v2 Arweave data transaction using the official arweave-js SDK.
+   *
+   * We previously hand-rolled this with JSON.stringify + RSA-PSS(saltLength=32)
+   * which was NEVER spec-compliant — Arweave requires deepHash of the tx fields
+   * signed with RSA-PSS(saltLength=0). arweave-js also computes a valid Merkle
+   * `data_root` over the chunked data, which is required for any tx > 0 bytes.
+   *
+   * Returns the arweave-js Transaction instance. Call `tx.toJSON()` to get the
+   * wire format, and `tx.getChunk(i, data)` for chunked uploads > 256KB.
+   */
+  static async createSignedDataTx(
     data: Uint8Array,
     tags: ArweaveTag[],
     jwk: JsonWebKey,
     anchor: string,
     reward: string,
-  ): Promise<Record<string, unknown>> {
-    const dataRoot = await sha256(data);
-    const encodedTags = tags.map((t) => ({
-      name: btoa(t.name),
-      value: btoa(t.value),
-    }));
-    const tx = {
-      owner: jwk.n,
-      target: "",
-      quantity: "0",
-      reward,
-      last_tx: anchor,
-      tags: encodedTags,
-      data_size: data.byteLength.toString(),
-      data_root: b64urlEncode(dataRoot),
-      data: b64urlEncode(data),
-    };
-    return ArweaveGateway.signTransaction(tx, jwk);
+  ): Promise<import("arweave/web/lib/transaction").default> {
+    const tx = await arweaveSdk.createTransaction(
+      { data, last_tx: anchor, reward },
+      jwk as unknown as Parameters<typeof arweaveSdk.createTransaction>[1],
+    );
+    for (const t of tags) tx.addTag(t.name, t.value);
+    await arweaveSdk.transactions.sign(tx, jwk as unknown as Parameters<typeof arweaveSdk.transactions.sign>[1]);
+    return tx;
+  }
+
+  static async createSignedTransferTx(
+    target: string,
+    arAmount: string,
+    jwk: JsonWebKey,
+    anchor: string,
+    reward: string,
+  ): Promise<import("arweave/web/lib/transaction").default> {
+    const quantity = arToWinston(arAmount);
+    const tx = await arweaveSdk.createTransaction(
+      { target, quantity, last_tx: anchor, reward },
+      jwk as unknown as Parameters<typeof arweaveSdk.createTransaction>[1],
+    );
+    await arweaveSdk.transactions.sign(tx, jwk as unknown as Parameters<typeof arweaveSdk.transactions.sign>[1]);
+    return tx;
   }
 
   /* ---- Upload helpers ---- */
@@ -567,8 +563,9 @@ export class ArweaveGateway {
       { name: "App-Version", value: "1.0" },
     ];
 
-    const tx = await ArweaveGateway.buildDataTx(data, allTags, jwk, anchor, reward);
-    const txId = tx.id as string;
+    // Build + sign via arweave-js (proper deepHash signature + Merkle data_root).
+    const tx = await ArweaveGateway.createSignedDataTx(data, allTags, jwk, anchor, reward);
+    const txId = tx.id;
 
     // Track upload in DB (non-fatal if the logging table doesn't exist on
     // this project — Arweave submission is the source of truth).
@@ -588,9 +585,9 @@ export class ArweaveGateway {
       });
     }
 
-    // Small data: submit in one go
+    // Small data (<=256KB): one POST /tx with the data inline.
     if (data.byteLength <= 256 * 1024) {
-      const result = await this.submitTx(tx);
+      const result = await this.submitTx(tx.toJSON() as Record<string, unknown>);
       const ok = result.status === 200 || result.status === 202;
       const status = ok ? "submitted" : "failed";
       if (userId) await this.safeUploadUpdate(txId, { status });
@@ -598,33 +595,25 @@ export class ArweaveGateway {
       return { txId, status: result.status, cost };
     }
 
-    // Large data: chunked upload
-    const txWithoutData = { ...tx };
-    delete txWithoutData.data;
-    const submitResult = await this.submitTx(txWithoutData);
+    // Large data (>256KB): post tx header, then upload each chunk with
+    // its proper Merkle data_path (computed by arweave-js).
+    const txJson = tx.toJSON() as Record<string, unknown>;
+    delete txJson.data;
+    const submitResult = await this.submitTx(txJson);
     if (submitResult.status !== 200 && submitResult.status !== 202) {
       if (userId) await this.safeUploadUpdate(txId, { status: "failed" });
       return { txId, status: submitResult.status, cost };
     }
 
-    const chunkSize = 256 * 1024;
-    let offset = 0;
-    while (offset < data.byteLength) {
-      const chunk = data.slice(offset, offset + chunkSize);
-      offset += chunk.byteLength;
-      const chunkB64 = b64urlEncode(chunk);
-      const chunkResult = await this.submitChunk({
-        data_root: tx.data_root,
-        data_size: tx.data_size,
-        data_path: "",
-        offset: offset - chunk.byteLength,
-        chunk: chunkB64,
-      });
+    const totalChunks = tx.chunks?.chunks.length ?? 0;
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = tx.getChunk(i, data);
+      const chunkResult = await this.submitChunk(chunk as unknown as Record<string, unknown>);
       if (chunkResult.status !== 200 && chunkResult.status !== 202) {
         if (userId) await this.safeUploadUpdate(txId, { status: "failed" });
-        throw new Error(`Chunk upload failed at ${((offset / data.byteLength) * 100).toFixed(1)}%`);
+        throw new Error(`Chunk upload failed at chunk ${i + 1}/${totalChunks}`);
       }
-      onProgress?.(Math.round((offset / data.byteLength) * 100));
+      onProgress?.(Math.round(((i + 1) / totalChunks) * 100));
     }
 
     if (userId) await this.safeUploadUpdate(txId, { status: "submitted" });
