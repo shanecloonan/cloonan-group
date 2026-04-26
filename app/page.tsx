@@ -22,6 +22,35 @@ export default function Home() {
         }}
       />
 
+      {/* Paper-stock grain — fine high-frequency noise, desaturated, blended
+          softly over the dark base. Gives the hero a tactile banknote feel
+          without introducing motion or competing with the logo. */}
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.18] mix-blend-soft-light"
+      >
+        <filter id="paperGrain">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.9"
+            numOctaves="2"
+            stitchTiles="stitch"
+          />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#paperGrain)" />
+      </svg>
+
+      {/* Edge vignette — mimics the darkening around the border of a banknote
+          or archival paper stock. Pulls focus inward to the center. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 90% 70% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%)",
+        }}
+      />
+
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
         <MoneyFundLogo className="w-64 h-64 sm:w-72 sm:h-72 md:w-72 md:h-72 lg:w-80 lg:h-80 mb-4" />
 
