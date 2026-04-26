@@ -252,7 +252,8 @@ function isWithinDays(iso: string, days: number): boolean {
 /*  Filter types                                                       */
 /* ------------------------------------------------------------------ */
 
-type KindFilter = "all" | "upload" | "send" | "receive" | "permawrite" | "repo-created";
+type KindFilter = "all" | "upload" | "send" | "receive" | "permawrite";
+type PwSubFilter = "all" | "files" | "repos";
 type ContentFilter = "all" | ContentGroup;
 type StatusFilter = "all" | "confirmed" | "pending" | "failed" | "vault-only";
 type DateFilter = "all" | "today" | "week" | "month" | "year";
@@ -273,6 +274,7 @@ export default function ArweaveHistory() {
   const [loaded, setLoaded] = useState(false);
 
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
+  const [pwSubFilter, setPwSubFilter] = useState<PwSubFilter>("all");
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
@@ -341,7 +343,14 @@ export default function ArweaveHistory() {
   const filtered = useMemo(() => {
     let list = allEntries;
 
-    if (kindFilter !== "all") list = list.filter((e) => e.kind === kindFilter);
+    if (kindFilter === "permawrite") {
+      // PermaWrite is an umbrella: plain files + genesis repo declarations.
+      list = list.filter((e) => e.kind === "permawrite" || e.kind === "repo-created");
+      if (pwSubFilter === "files") list = list.filter((e) => e.kind === "permawrite");
+      else if (pwSubFilter === "repos") list = list.filter((e) => e.kind === "repo-created");
+    } else if (kindFilter !== "all") {
+      list = list.filter((e) => e.kind === kindFilter);
+    }
     if (contentFilter !== "all") list = list.filter((e) => e.contentGroup === contentFilter);
     if (statusFilter !== "all") list = list.filter((e) => e.status === statusFilter);
     if (dateFilter === "today") list = list.filter((e) => isWithinDays(e.timestamp, 1));
@@ -369,7 +378,7 @@ export default function ArweaveHistory() {
     });
 
     return list;
-  }, [allEntries, kindFilter, contentFilter, statusFilter, dateFilter, search, sortField, sortAsc]);
+  }, [allEntries, kindFilter, pwSubFilter, contentFilter, statusFilter, dateFilter, search, sortField, sortAsc]);
 
   /* ---- Stats ---- */
   const stats = useMemo(() => {
@@ -440,26 +449,77 @@ export default function ArweaveHistory() {
             {stats.byKind.upload > 0 && <span className="text-[10px] text-purple-300/60">{stats.byKind.upload} uploads</span>}
             {stats.byKind.send > 0 && <span className="text-[10px] text-orange-400/60">{stats.byKind.send} sends</span>}
             {stats.byKind.receive > 0 && <span className="text-[10px] text-emerald-400/60">{stats.byKind.receive} received</span>}
-            {stats.byKind.permawrite > 0 && <span className="text-[10px] text-cyan-400/60">{stats.byKind.permawrite} permawrite</span>}
+            {(stats.byKind.permawrite + stats.byKind["repo-created"]) > 0 && (
+              <span className="text-[10px] text-cyan-400/60">
+                {stats.byKind.permawrite + stats.byKind["repo-created"]} permawrite
+                {stats.byKind["repo-created"] > 0 && (
+                  <span className="text-violet-300/50"> · {stats.byKind["repo-created"]} repos</span>
+                )}
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       {/* ── Filter Bar ── */}
       <div className={`${card} p-3 space-y-3`}>
-        {/* Type filter pills */}
+        {/* Type filter pills — "Repo Created" lives as a sub-filter under PermaWrite */}
         <div className="flex gap-1 flex-wrap">
-          {(["all", "upload", "send", "receive", "permawrite", "repo-created"] as KindFilter[]).map((k) => (
-            <button key={k} type="button" onClick={() => setKindFilter(k)}
-              className={`h-7 px-3 rounded-full text-[11px] font-medium transition-all cursor-pointer ${kindFilter === k ? pillActive : pillInactive}`}>
-              {k === "all" ? "All"
-                : k === "permawrite" ? "PermaWrite"
-                : k === "repo-created" ? "Repo Created"
-                : k.charAt(0).toUpperCase() + k.slice(1)}
-              {k !== "all" && <span className="ml-1 opacity-50">({stats.byKind[k]})</span>}
-            </button>
-          ))}
+          {(["all", "upload", "send", "receive", "permawrite"] as KindFilter[]).map((k) => {
+            const count =
+              k === "permawrite"
+                ? stats.byKind.permawrite + stats.byKind["repo-created"]
+                : k === "all"
+                  ? 0
+                  : stats.byKind[k];
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => {
+                  setKindFilter(k);
+                  if (k !== "permawrite") setPwSubFilter("all");
+                }}
+                className={`h-7 px-3 rounded-full text-[11px] font-medium transition-all cursor-pointer ${kindFilter === k ? pillActive : pillInactive}`}
+              >
+                {k === "all"
+                  ? "All"
+                  : k === "permawrite"
+                    ? "PermaWrite"
+                    : k.charAt(0).toUpperCase() + k.slice(1)}
+                {k !== "all" && <span className="ml-1 opacity-50">({count})</span>}
+              </button>
+            );
+          })}
         </div>
+
+        {/* PermaWrite sub-filter — only shown when PermaWrite is the active category */}
+        {kindFilter === "permawrite" && (
+          <div className="flex items-center gap-1.5 flex-wrap pl-2 border-l-2 border-purple-500/20">
+            <span className="text-[9px] font-bold text-white/30 uppercase tracking-wider mr-1">Sub</span>
+            {(
+              [
+                { value: "all", label: "All", count: stats.byKind.permawrite + stats.byKind["repo-created"] },
+                { value: "files", label: "Files", count: stats.byKind.permawrite },
+                { value: "repos", label: "Repos", count: stats.byKind["repo-created"] },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPwSubFilter(opt.value)}
+                className={`h-6 px-2.5 rounded-full text-[10px] font-medium transition-all cursor-pointer ${
+                  pwSubFilter === opt.value
+                    ? "bg-violet-500/20 text-violet-200 border border-violet-500/30"
+                    : "text-white/35 hover:text-white/55 border border-transparent hover:border-white/[0.06]"
+                }`}
+              >
+                {opt.label}
+                <span className="ml-1 opacity-50">({opt.count})</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Second row: content, status, date, sort */}
         <div className="flex gap-2 flex-wrap items-center">
@@ -515,8 +575,8 @@ export default function ArweaveHistory() {
       {/* ── Results count ── */}
       <div className="flex items-center justify-between px-1">
         <span className="text-[10px] text-white/25">{filtered.length} of {allEntries.length} items</span>
-        {(kindFilter !== "all" || contentFilter !== "all" || statusFilter !== "all" || dateFilter !== "all" || search) && (
-          <button type="button" onClick={() => { setKindFilter("all"); setContentFilter("all"); setStatusFilter("all"); setDateFilter("all"); setSearch(""); }}
+        {(kindFilter !== "all" || pwSubFilter !== "all" || contentFilter !== "all" || statusFilter !== "all" || dateFilter !== "all" || search) && (
+          <button type="button" onClick={() => { setKindFilter("all"); setPwSubFilter("all"); setContentFilter("all"); setStatusFilter("all"); setDateFilter("all"); setSearch(""); }}
             className="text-[10px] text-purple-400/50 hover:text-purple-300 transition-colors cursor-pointer">Clear filters</button>
         )}
       </div>
