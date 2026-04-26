@@ -7,6 +7,7 @@ import {
   getMyRepos, createRepo, updateRepo, deleteRepo,
   getCommits, commitFiles, slugify, detectLanguage, formatBytes,
   computeDiff, diffSummary, fetchFileContent, isPreviewableText, isPreviewableImage,
+  RepoNameTakenError,
 } from "@/lib/permawrite-repos";
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
@@ -255,6 +256,7 @@ export default function PermawriteRepos() {
   const [newVis, setNewVis] = useState<"private" | "public">("private");
   const [creating, setCreating] = useState(false);
   const [createErr, setCreateErr] = useState("");
+  const [createStage, setCreateStage] = useState<"" | "validating" | "declaring" | "saving">("");
 
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -317,22 +319,38 @@ export default function PermawriteRepos() {
 
   const handleCreate = useCallback(async () => {
     if (!newName.trim()) { setCreateErr("Name is required"); return; }
+    if (!arweaveWallet) { setCreateErr("Arweave wallet required to declare a repo."); return; }
     setCreating(true);
     setCreateErr("");
+    setCreateStage("validating");
     try {
       const repo = await createRepo({
         slug: newSlug.trim() || undefined,
         displayName: newName.trim(),
         description: newDesc.trim() || undefined,
         visibility: newVis,
+        jwk: arweaveWallet.jwk,
+        ownerAddress: arweaveWallet.address,
+        onStage: (s) => setCreateStage(s),
       });
       setRepos((prev) => [repo, ...prev]);
       setView("list");
       setNewName(""); setNewSlug(""); setNewDesc(""); setNewVis("private");
     } catch (e: unknown) {
-      setCreateErr(e instanceof Error ? e.message : "Failed to create repo");
-    } finally { setCreating(false); }
-  }, [newName, newSlug, newDesc, newVis]);
+      if (e instanceof RepoNameTakenError) {
+        setCreateErr(
+          e.field === "name"
+            ? `That repository name is already taken. Repo names are unique across ${"moneyfund.com"}.`
+            : `That slug is already taken — try a different one.`,
+        );
+      } else {
+        setCreateErr(e instanceof Error ? e.message : "Failed to create repo");
+      }
+    } finally {
+      setCreating(false);
+      setCreateStage("");
+    }
+  }, [newName, newSlug, newDesc, newVis, arweaveWallet]);
 
   const handleSave = useCallback(async () => {
     if (!selectedRepo) return;
@@ -522,11 +540,26 @@ export default function PermawriteRepos() {
   /*  CREATE VIEW                                                      */
   /* ================================================================ */
   if (view === "create") {
+    const stageLabel =
+      createStage === "validating" ? "Checking name availability..."
+      : createStage === "declaring" ? "Declaring repository on Arweave..."
+      : createStage === "saving" ? "Finalizing..."
+      : "";
+
     return (
       <div className="space-y-4">
         <button type="button" onClick={() => setView("list")} className={`${btnGhost} mb-2`}>← Back</button>
         <div className={`${card} p-5 space-y-4`}>
           <h3 className="text-sm font-semibold text-white/80">New Repository</h3>
+
+          <div className={`${card} p-3 border-purple-500/10 flex items-start gap-2.5`}>
+            <span className="text-sm mt-0.5">⛓</span>
+            <p className="text-[11px] text-purple-200/60 leading-relaxed">
+              Creating a repo publishes a formal <strong className="text-purple-300/80">on-chain declaration</strong> to Arweave.
+              The repo name is then reserved platform-wide on <span className="font-mono text-purple-300/60">moneyfund.com</span>
+              {" "}and can never be reused by anyone else.
+            </p>
+          </div>
 
           <div>
             <label className="text-[10px] text-white/30 uppercase tracking-wider block mb-1.5">Repository Name</label>
@@ -555,8 +588,14 @@ export default function PermawriteRepos() {
             </div>
           </div>
           {createErr && <p className="text-xs text-red-400">{createErr}</p>}
+          {creating && stageLabel && (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-white/10 border-t-purple-400 rounded-full animate-spin shrink-0" />
+              <p className="text-xs text-purple-300/60">{stageLabel}</p>
+            </div>
+          )}
           <button type="button" onClick={handleCreate} disabled={creating || !newName.trim()} className={btnPrimary}>
-            {creating ? "Creating..." : "Create Repository"}
+            {creating ? "Declaring..." : "Create & Declare on Arweave"}
           </button>
         </div>
       </div>
@@ -701,6 +740,16 @@ export default function PermawriteRepos() {
               <p className="text-[10px] text-white/25 uppercase">Latest TX</p>
             </div>
           </div>
+
+          {selectedRepo.genesis_tx && (
+            <div className="mt-4 rounded-xl border border-purple-500/15 bg-purple-500/[0.04] px-3 py-2 flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] text-purple-300/60">⛓ Genesis</span>
+              <span className="font-mono text-[10px] text-purple-300/40 truncate">{selectedRepo.genesis_tx.slice(0, 18)}...</span>
+              <CopyBtn text={selectedRepo.genesis_tx} label="Copy" />
+              <a href={`https://arweave.net/${selectedRepo.genesis_tx}`} target="_blank" rel="noopener noreferrer"
+                className="text-[10px] text-purple-400/50 hover:text-purple-300 transition-colors ml-auto">View declaration →</a>
+            </div>
+          )}
 
           <div className="flex gap-2 mt-4 flex-wrap">
             <button type="button" onClick={() => setView("commit")} className={btnPrimary}>+ New Commit</button>

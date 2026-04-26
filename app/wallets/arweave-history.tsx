@@ -83,7 +83,7 @@ function contentGroupColor(group: ContentGroup): string {
 
 interface HistoryEntry {
   id: string;
-  kind: "upload" | "send" | "receive" | "permawrite";
+  kind: "upload" | "send" | "receive" | "permawrite" | "repo-created";
   txId: string | null;
   title: string;
   subtitle: string | null;
@@ -106,12 +106,19 @@ interface HistoryEntry {
 function uploadToEntry(u: ArweaveUploadRecord): HistoryEntry {
   const ct = u.content_type;
   const group = getContentGroup(ct);
+  const pwType = u.tags?.find((t) => t.name === "PermaWrite-Type")?.value;
+  const repoName = u.tags?.find((t) => t.name === "Repo-Name")?.value;
+  const repoSlug = u.tags?.find((t) => t.name === "Repo-Slug")?.value;
+  const isRepoCreated = pwType === "repo-created";
+
   return {
     id: u.id,
-    kind: "upload",
+    kind: isRepoCreated ? "repo-created" : "upload",
     txId: u.tx_id,
-    title: u.filename || u.description || u.tx_id?.slice(0, 12) || "Upload",
-    subtitle: ct,
+    title: isRepoCreated
+      ? (repoName ? `Repo Created — ${repoName}` : "Repo Created")
+      : (u.filename || u.description || u.tx_id?.slice(0, 12) || "Upload"),
+    subtitle: isRepoCreated ? (repoSlug ? `slug: ${repoSlug}` : "PermaWrite declaration") : ct,
     contentType: ct,
     contentGroup: group,
     codeLabel: getCodeLabel(ct),
@@ -159,17 +166,34 @@ function gqlToEntry(edge: ArweaveGqlEdge, myAddr: string): HistoryEntry {
   const isSend = (n.owner?.address === myAddr || n.owner?.key === myAddr);
   const ct = n.tags?.find((t) => t.name === "Content-Type")?.value || null;
   const appName = n.tags?.find((t) => t.name === "App-Name")?.value;
+  const pwType = n.tags?.find((t) => t.name === "PermaWrite-Type")?.value;
+  const repoName = n.tags?.find((t) => t.name === "Repo-Name")?.value;
+  const repoSlug = n.tags?.find((t) => t.name === "Repo-Slug")?.value;
   const group = getContentGroup(ct);
   const hasQuantity = n.quantity && parseFloat(n.quantity.ar) > 0;
 
+  // Genesis repo declaration? Promote it to a first-class action.
+  const isRepoCreated = pwType === "repo-created";
+
+  let kind: HistoryEntry["kind"];
+  let title: string;
+  if (isRepoCreated) {
+    kind = "repo-created";
+    title = repoName ? `Repo Created — ${repoName}` : "Repo Created";
+  } else if (hasQuantity) {
+    kind = isSend ? "send" : "receive";
+    title = `${isSend ? "Sent" : "Received"} ${parseFloat(n.quantity!.ar).toFixed(6)} AR`;
+  } else {
+    kind = "upload";
+    title = appName || ct || n.id.slice(0, 16);
+  }
+
   return {
     id: n.id,
-    kind: hasQuantity ? (isSend ? "send" : "receive") : "upload",
+    kind,
     txId: n.id,
-    title: hasQuantity
-      ? `${isSend ? "Sent" : "Received"} ${parseFloat(n.quantity!.ar).toFixed(6)} AR`
-      : appName || ct || n.id.slice(0, 16),
-    subtitle: ct,
+    title,
+    subtitle: isRepoCreated ? (repoSlug ? `slug: ${repoSlug}` : "PermaWrite declaration") : ct,
     contentType: ct,
     contentGroup: group,
     codeLabel: getCodeLabel(ct),
@@ -228,7 +252,7 @@ function isWithinDays(iso: string, days: number): boolean {
 /*  Filter types                                                       */
 /* ------------------------------------------------------------------ */
 
-type KindFilter = "all" | "upload" | "send" | "receive" | "permawrite";
+type KindFilter = "all" | "upload" | "send" | "receive" | "permawrite" | "repo-created";
 type ContentFilter = "all" | ContentGroup;
 type StatusFilter = "all" | "confirmed" | "pending" | "failed" | "vault-only";
 type DateFilter = "all" | "today" | "week" | "month" | "year";
@@ -293,11 +317,12 @@ export default function ArweaveHistory() {
       if (e.txId && seen.has(e.txId)) {
         const existing = merged.find((m) => m.txId === e.txId);
         if (existing) {
-          existing.kind = "permawrite";
+          // Don't demote repo-created genesis transactions to plain PermaWrite.
+          if (existing.kind !== "repo-created") existing.kind = "permawrite";
           existing.pwCategory = e.pwCategory;
           existing.pwVisibility = e.pwVisibility;
-          if (e.title && e.title !== "PermaWrite Item") existing.title = e.title;
-          if (e.subtitle) existing.subtitle = e.subtitle;
+          if (e.title && e.title !== "PermaWrite Item" && existing.kind !== "repo-created") existing.title = e.title;
+          if (e.subtitle && existing.kind !== "repo-created") existing.subtitle = e.subtitle;
         }
         continue;
       }
@@ -351,7 +376,7 @@ export default function ArweaveHistory() {
     const total = allEntries.length;
     const totalSize = allEntries.reduce((s, e) => s + e.size, 0);
     const totalCost = allEntries.reduce((s, e) => s + parseFloat(e.costAr || "0"), 0);
-    const byKind = { upload: 0, send: 0, receive: 0, permawrite: 0 };
+    const byKind = { upload: 0, send: 0, receive: 0, permawrite: 0, "repo-created": 0 };
     for (const e of allEntries) byKind[e.kind]++;
     const byContent: Record<string, number> = {};
     for (const e of allEntries) byContent[e.contentGroup] = (byContent[e.contentGroup] || 0) + 1;
@@ -376,6 +401,7 @@ export default function ArweaveHistory() {
       case "send": return <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase bg-orange-500/10 text-orange-400 border border-orange-500/20">Send</span>;
       case "receive": return <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Receive</span>;
       case "permawrite": return <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">PermaWrite</span>;
+      case "repo-created": return <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase bg-violet-500/15 text-violet-300 border border-violet-500/30">Repo Created</span>;
     }
   }
 
@@ -423,10 +449,13 @@ export default function ArweaveHistory() {
       <div className={`${card} p-3 space-y-3`}>
         {/* Type filter pills */}
         <div className="flex gap-1 flex-wrap">
-          {(["all", "upload", "send", "receive", "permawrite"] as KindFilter[]).map((k) => (
+          {(["all", "upload", "send", "receive", "permawrite", "repo-created"] as KindFilter[]).map((k) => (
             <button key={k} type="button" onClick={() => setKindFilter(k)}
               className={`h-7 px-3 rounded-full text-[11px] font-medium transition-all cursor-pointer ${kindFilter === k ? pillActive : pillInactive}`}>
-              {k === "all" ? "All" : k === "permawrite" ? "PermaWrite" : k.charAt(0).toUpperCase() + k.slice(1)}
+              {k === "all" ? "All"
+                : k === "permawrite" ? "PermaWrite"
+                : k === "repo-created" ? "Repo Created"
+                : k.charAt(0).toUpperCase() + k.slice(1)}
               {k !== "all" && <span className="ml-1 opacity-50">({stats.byKind[k]})</span>}
             </button>
           ))}

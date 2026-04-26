@@ -21,11 +21,18 @@ export interface Repo {
   description: string | null;
   visibility: "private" | "public";
   latest_commit_tx: string | null;
+  /** Arweave TX id of the "repo created" declaration. Permanent on-chain
+   *  proof that this repo name was claimed by this user. `null` only for
+   *  legacy repos created before the on-chain declaration was required. */
+  genesis_tx: string | null;
   commit_count: number;
   total_size: number;
   created_at: string;
   updated_at: string;
 }
+
+/** The platform name that gets stamped into every declaration and tag. */
+export const PERMAWRITE_PLATFORM = "moneyfund.com";
 
 export interface RepoCommit {
   id: string;
@@ -63,32 +70,223 @@ function generateSlug(): string {
 /*  Repo CRUD                                                          */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/*  Formal on-chain declaration                                        */
+/* ------------------------------------------------------------------ */
+
+/** Build the human-readable text body that gets permanently stored on Arweave
+ *  when a user claims a repo name. It's the genesis artifact — readable by a
+ *  human in Arweave explorers, machine-parseable via the tags we attach.
+ */
+export function buildRepoDeclaration(params: {
+  displayName: string;
+  slug: string;
+  visibility: "private" | "public";
+  description?: string | null;
+  ownerAddress: string;
+  declaredAt: Date;
+}): string {
+  const { displayName, slug, visibility, description, ownerAddress, declaredAt } = params;
+  const line = "=".repeat(60);
+  return [
+    `MoneyFund PermaWrite — Repository Declaration`,
+    line,
+    ``,
+    `Platform:        ${PERMAWRITE_PLATFORM}`,
+    `Repository:      ${displayName}`,
+    `Slug:            ${slug}`,
+    `Visibility:      ${visibility === "public" ? "Public" : "Private"}`,
+    description ? `Description:     ${description}` : null,
+    `Owner Address:   ${ownerAddress}`,
+    `Declared At:     ${declaredAt.toISOString()}`,
+    ``,
+    `Terms`,
+    `-----`,
+    `This transaction constitutes a permanent, on-chain declaration of a`,
+    `PermaWrite repository under the ${PERMAWRITE_PLATFORM} platform.`,
+    ``,
+    `By submitting this transaction, the declaring address above claims the`,
+    `repository name "${displayName}" (slug: "${slug}") within the MoneyFund`,
+    `PermaWrite namespace. The name is reserved from this transaction onward`,
+    `and cannot be reused by another party.`,
+    ``,
+    `Subsequent commits to this repository are cryptographically independent`,
+    `Arweave transactions that reference this declaration via the Repo-Slug`,
+    `and Repo-Id tags. All committed data is stored on the Arweave network`,
+    `and is permanent. No party — including the platform operator — can`,
+    `alter or remove it once it is confirmed by the network.`,
+    ``,
+    `Signed by:       ${ownerAddress}`,
+    `Genesis TX:      (this transaction)`,
+    ``,
+    line,
+  ].filter(Boolean).join("\n");
+}
+
+/* ------------------------------------------------------------------ */
+/*  Repo CRUD                                                          */
+/* ------------------------------------------------------------------ */
+
+/** Raised when the requested repo name / slug is already taken. */
+export class RepoNameTakenError extends Error {
+  constructor(public readonly field: "name" | "slug", message: string) {
+    super(message);
+    this.name = "RepoNameTakenError";
+  }
+}
+
+function isUniqueViolation(err: unknown): { field: "name" | "slug" | "other" } | null {
+  // Supabase surfaces Postgres errors with code and message. 23505 is the
+  // PostgreSQL code for unique_violation.
+  const e = err as { code?: string; message?: string };
+  if (!e?.code && !e?.message) return null;
+  const msg = (e.message || "").toLowerCase();
+  if (e.code === "23505" || msg.includes("duplicate key") || msg.includes("unique constraint")) {
+    if (msg.includes("display_name") || msg.includes("name")) return { field: "name" };
+    if (msg.includes("slug")) return { field: "slug" };
+    return { field: "other" };
+  }
+  return null;
+}
+
 export async function createRepo(opts: {
   slug?: string;
   displayName: string;
   description?: string;
   visibility?: "private" | "public";
+  /** Arweave wallet that will sign the declaration. Required. */
+  jwk: JsonWebKey;
+  /** Arweave address of the caller, embedded in the declaration text. */
+  ownerAddress: string;
+  /** Lifecycle callback so the UI can show where we are. */
+  onStage?: (stage: "validating" | "declaring" | "saving") => void;
 }): Promise<Repo> {
   const { data: session } = await supabase.auth.getSession();
   const userId = session.session?.user?.id;
   if (!userId) throw new Error("Not authenticated");
 
-  const slug = opts.slug ? slugify(opts.slug) : generateSlug();
+  const displayName = opts.displayName.trim();
+  if (!displayName) throw new Error("Repository name is required");
 
-  const { data, error } = await supabase
-    .from("permawrite_repos")
-    .insert({
-      user_id: userId,
+  opts.onStage?.("validating");
+
+  // 1. Fast-path duplicate check against names visible to this user under
+  //    RLS. The authoritative guarantee is the DB unique index — this just
+  //    catches the common "I already used this name" case before we spend
+  //    an Arweave write.
+  {
+    const { data: existing } = await supabase
+      .from("permawrite_repos")
+      .select("id, display_name")
+      .ilike("display_name", displayName)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      throw new RepoNameTakenError("name", `Repository name "${displayName}" is already taken.`);
+    }
+  }
+
+  // 2. Pick (or generate) a slug. If auto-generating, retry a handful of
+  //    times if we race into a slug collision.
+  let slug = opts.slug ? slugify(opts.slug) : generateSlug();
+  if (!slug) throw new Error("Could not derive a valid slug");
+
+  // 3. Reserve the row in Supabase first. The DB's unique indexes are the
+  //    real gate — if two users race, only one insert succeeds.
+  let reservedRow: Repo | null = null;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { data, error } = await supabase
+      .from("permawrite_repos")
+      .insert({
+        user_id: userId,
+        slug,
+        display_name: displayName,
+        description: opts.description?.trim() || null,
+        visibility: opts.visibility ?? "private",
+        genesis_tx: null,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      reservedRow = data as Repo;
+      break;
+    }
+    lastErr = error;
+    const dup = isUniqueViolation(error);
+    if (!dup) break;
+    if (dup.field === "name") {
+      throw new RepoNameTakenError("name", `Repository name "${displayName}" is already taken.`);
+    }
+    if (dup.field === "slug") {
+      if (opts.slug) {
+        throw new RepoNameTakenError("slug", `Slug "${slug}" is already taken.`);
+      }
+      // Auto-retry with a fresh random slug.
+      slug = generateSlug();
+      continue;
+    }
+    break;
+  }
+  if (!reservedRow) {
+    throw new Error(
+      `Failed to reserve repository: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+    );
+  }
+
+  // 4. Publish the on-chain declaration.
+  opts.onStage?.("declaring");
+  let genesisTx: string;
+  try {
+    const gw = new ArweaveGateway();
+    const declaration = buildRepoDeclaration({
+      displayName,
       slug,
-      display_name: opts.displayName,
-      description: opts.description || null,
-      visibility: opts.visibility ?? "private",
-    })
+      visibility: reservedRow.visibility,
+      description: reservedRow.description,
+      ownerAddress: opts.ownerAddress,
+      declaredAt: new Date(reservedRow.created_at),
+    });
+    const data = new TextEncoder().encode(declaration);
+    const tags: ArweaveTag[] = [
+      { name: "Content-Type", value: "text/plain; charset=utf-8" },
+      { name: "App-Name", value: "PermaWrite" },
+      { name: "App-Version", value: "1.0" },
+      { name: "Platform", value: PERMAWRITE_PLATFORM },
+      { name: "PermaWrite-Type", value: "repo-created" },
+      { name: "Repo-Id", value: reservedRow.id },
+      { name: "Repo-Slug", value: slug },
+      { name: "Repo-Name", value: displayName },
+      { name: "Repo-Visibility", value: reservedRow.visibility },
+      { name: "Action", value: "Repo Created" },
+    ];
+    // L1 is the default wallet path, matches the single source-of-truth
+    // intent of a genesis declaration. Turbo is still available for repo
+    // commits via `commitFiles`.
+    const result = await gw.smartUploadData(data, tags, opts.jwk, "l1", `repo-declaration:${slug}`);
+    if (result.status !== 200) throw new Error(`Arweave declaration failed (status ${result.status})`);
+    genesisTx = result.txId;
+  } catch (e) {
+    // Roll the reservation back so the name is free to try again.
+    await supabase.from("permawrite_repos").delete().eq("id", reservedRow.id);
+    throw e instanceof Error ? e : new Error(String(e));
+  }
+
+  // 5. Attach the genesis TX to the row and return.
+  opts.onStage?.("saving");
+  const { data: updated, error: updErr } = await supabase
+    .from("permawrite_repos")
+    .update({ genesis_tx: genesisTx, updated_at: new Date().toISOString() })
+    .eq("id", reservedRow.id)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  return data as Repo;
+  if (updErr || !updated) {
+    // Row exists and genesis is on-chain — degrade gracefully, return the
+    // reserved row with the TX stitched in client-side.
+    return { ...reservedRow, genesis_tx: genesisTx };
+  }
+  return updated as Repo;
 }
 
 export async function getMyRepos(): Promise<Repo[]> {
