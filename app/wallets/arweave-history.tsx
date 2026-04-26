@@ -650,71 +650,71 @@ export default function ArweaveHistory() {
 
                     {/* Detail grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[10px] text-white/25 uppercase">TX ID</span>
                         {entry.txId ? (
                           <button type="button" onClick={(e) => { e.stopPropagation(); handleCopy(entry.txId!, entry.id + "-tx"); }}
-                            className="block text-[11px] font-mono text-purple-300/60 hover:text-purple-300 truncate cursor-pointer transition-colors mt-0.5">
+                            className="block w-full text-left text-[11px] font-mono text-purple-300/60 hover:text-purple-300 truncate cursor-pointer transition-colors mt-0.5">
                             {copied === entry.id + "-tx" ? "Copied!" : entry.txId}
                           </button>
                         ) : (
                           <p className="text-[11px] text-white/20 mt-0.5">—</p>
                         )}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[10px] text-white/25 uppercase">Content Type</span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {entry.codeLabel && <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${contentGroupColor("code")}`}>{entry.codeLabel}</span>}
-                          <p className="text-[11px] text-white/40 truncate">{entry.contentType || "—"}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                          {entry.codeLabel && <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${contentGroupColor("code")}`}>{entry.codeLabel}</span>}
+                          <p className="text-[11px] text-white/40 truncate min-w-0">{entry.contentType || "—"}</p>
                         </div>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[10px] text-white/25 uppercase">Size</span>
                         <p className="text-[11px] text-white/50 mt-0.5">{entry.size > 0 ? fmtBytes(entry.size) : "—"}</p>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[10px] text-white/25 uppercase">Cost</span>
                         <p className="text-[11px] text-white/50 mt-0.5">{entry.costAr && parseFloat(entry.costAr) > 0 ? `${parseFloat(entry.costAr).toFixed(8)} AR` : "—"}</p>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[10px] text-white/25 uppercase">Date</span>
                         <p className="text-[11px] text-white/50 mt-0.5">{fmtDate(entry.timestamp)} {fmtTime(entry.timestamp)}</p>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[10px] text-white/25 uppercase">Method</span>
                         <p className="text-[11px] text-white/50 mt-0.5">
                           {entry.method === "turbo" ? "Turbo (Bundled)" : entry.method === "l1" ? "Standard (L1)" : "—"}
                         </p>
                       </div>
                       {entry.recipient && (
-                        <div className="col-span-2 sm:col-span-3">
+                        <div className="col-span-2 sm:col-span-3 min-w-0">
                           <span className="text-[10px] text-white/25 uppercase">Recipient</span>
                           <button type="button" onClick={(e) => { e.stopPropagation(); handleCopy(entry.recipient!, entry.id + "-rcpt"); }}
-                            className="block text-[11px] font-mono text-white/40 hover:text-white/60 truncate cursor-pointer transition-colors mt-0.5">
+                            className="block w-full text-left text-[11px] font-mono text-white/40 hover:text-white/60 truncate cursor-pointer transition-colors mt-0.5">
                             {copied === entry.id + "-rcpt" ? "Copied!" : entry.recipient}
                           </button>
                         </div>
                       )}
                       {entry.sender && entry.kind === "receive" && (
-                        <div className="col-span-2 sm:col-span-3">
+                        <div className="col-span-2 sm:col-span-3 min-w-0">
                           <span className="text-[10px] text-white/25 uppercase">Sender</span>
                           <p className="text-[11px] font-mono text-white/40 truncate mt-0.5">{entry.sender}</p>
                         </div>
                       )}
                       {entry.pwCategory && (
-                        <div>
+                        <div className="min-w-0">
                           <span className="text-[10px] text-white/25 uppercase">Category</span>
-                          <p className="text-[11px] text-cyan-400/60 mt-0.5">{entry.pwCategory}</p>
+                          <p className="text-[11px] text-cyan-400/60 mt-0.5 truncate">{entry.pwCategory}</p>
                         </div>
                       )}
                       {entry.pwVisibility && (
-                        <div>
+                        <div className="min-w-0">
                           <span className="text-[10px] text-white/25 uppercase">Visibility</span>
                           <p className="text-[11px] text-white/50 mt-0.5">{entry.pwVisibility === "permawrite" ? "Public (Arweave)" : "Private (Vault)"}</p>
                         </div>
                       )}
                       {entry.bundleId && (
-                        <div>
+                        <div className="min-w-0">
                           <span className="text-[10px] text-white/25 uppercase">Bundle ID</span>
                           <p className="text-[11px] font-mono text-white/30 truncate mt-0.5">{entry.bundleId}</p>
                         </div>
