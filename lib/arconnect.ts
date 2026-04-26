@@ -10,6 +10,10 @@
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
+// Keep the permission union aligned with the `arconnect` package's
+// PermissionType (pulled in transitively via `arweave`). Our custom value
+// `"ACCESS_TOKENS"` was never used in REQUIRED_PERMISSIONS and caused a
+// type collision on Vercel builds once the arconnect globals took over.
 type ArConnectPermission =
   | "ACCESS_ADDRESS"
   | "ACCESS_PUBLIC_KEY"
@@ -19,8 +23,7 @@ type ArConnectPermission =
   | "DECRYPT"
   | "SIGNATURE"
   | "ACCESS_ARWEAVE_CONFIG"
-  | "DISPATCH"
-  | "ACCESS_TOKENS";
+  | "DISPATCH";
 
 interface ArConnectAppInfo {
   name?: string;
@@ -157,7 +160,9 @@ export async function dispatchTransaction(
     signature: "",
   };
 
-  return window.arweaveWallet.dispatch(tx) as Promise<DispatchResult>;
+  // ArConnect's typings expect an arweave-js Transaction; our minimal
+  // object is shape-compatible at runtime, so we bypass the nominal check.
+  return window.arweaveWallet.dispatch(tx as unknown as Parameters<typeof window.arweaveWallet.dispatch>[0]) as Promise<DispatchResult>;
 }
 
 function bufferToB64Url(buffer: Uint8Array): string {
@@ -166,22 +171,6 @@ function bufferToB64Url(buffer: Uint8Array): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
-/* ------------------------------------------------------------------ */
-/*  Window type augmentation                                           */
-/* ------------------------------------------------------------------ */
-
-declare global {
-  interface Window {
-    arweaveWallet: {
-      connect: (permissions: ArConnectPermission[], appInfo?: ArConnectAppInfo, gateway?: { host: string; port: number; protocol: string }) => Promise<void>;
-      disconnect: () => Promise<void>;
-      getActiveAddress: () => Promise<string>;
-      getActivePublicKey: () => Promise<string>;
-      getAllAddresses: () => Promise<string[]>;
-      sign: (transaction: unknown, options?: unknown) => Promise<unknown>;
-      dispatch: (transaction: unknown) => Promise<unknown>;
-      walletName?: string;
-      walletVersion?: string;
-    };
-  }
-}
+// `window.arweaveWallet` is declared globally by the `arconnect` package
+// (a transitive dep of `arweave`). We don't re-declare it here to avoid
+// merging two conflicting shapes.
