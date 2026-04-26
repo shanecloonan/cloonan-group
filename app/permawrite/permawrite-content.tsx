@@ -38,36 +38,6 @@ export default function PermawriteContent() {
 
   return (
     <div className="space-y-5">
-      {/* How it works */}
-      <div className={`${card} p-5`}>
-        <div className="flex items-start gap-3 mb-3">
-          <span className="text-2xl mt-0.5">📜</span>
-          <div className="flex-1">
-            <p className="text-xs text-white/50 leading-relaxed">
-              PermaWrite stores your files permanently on Arweave — a decentralized network where data persists forever with a single upfront payment. Files are organized by category and tags, making them easy to browse and discover.
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] text-white/30">
-          <div className="flex items-center gap-2 bg-white/[0.02] rounded-lg px-3 py-2">
-            <span className="text-sm">💾</span>
-            <span>Store forever</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white/[0.02] rounded-lg px-3 py-2">
-            <span className="text-sm">🗂</span>
-            <span>44 categories</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white/[0.02] rounded-lg px-3 py-2">
-            <span className="text-sm">⚡</span>
-            <span>Instant via Turbo</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white/[0.02] rounded-lg px-3 py-2">
-            <span className="text-sm">🔒</span>
-            <span>Private or public</span>
-          </div>
-        </div>
-      </div>
-
       {/* Tab switcher */}
       <div className={`${card} p-1.5 flex gap-1`}>
         <button

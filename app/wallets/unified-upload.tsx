@@ -11,7 +11,6 @@ import {
   permawriteSmart,
   permawriteTextSmart,
   estimatePermawriteCost,
-  estimateTurboCost,
   detectCategory,
   formatBytes,
   GROUP_COLORS,
@@ -19,7 +18,12 @@ import {
   type PermawriteCategory,
   type PermawriteCategoryGroup,
 } from "@/lib/permawrite";
-import type { ArweaveTag, ArweaveCostEstimate, UploadMethod } from "@/lib/wallet-types";
+import type { ArweaveTag, ArweaveCostEstimate } from "@/lib/wallet-types";
+
+// Wallet uploads always take the L1 path — standard, direct Arweave base-layer
+// submission. Turbo (bundled instant) is still available internally for repo
+// commits (see permawrite-repos), it's just not a user-facing option here.
+const UPLOAD_METHOD = "l1" as const;
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/30 transition-all";
@@ -30,7 +34,6 @@ export default function UnifiedUpload() {
   const { arweaveWallet } = useWallet();
   const gw = useMemo(() => new ArweaveGateway(), []);
 
-  const [method, setMethod] = useState<UploadMethod>("l1");
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragDepthRef = useRef(0);
@@ -55,8 +58,6 @@ export default function UnifiedUpload() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const [l1Cost, setL1Cost] = useState<ArweaveCostEstimate | null>(null);
-  const [turboCost, setTurboCost] = useState<{ winc: string; ar: string } | null>(null);
-  const [turboBalance, setTurboBalance] = useState<{ winc: string; ar: string } | null>(null);
 
   const [progress, setProgress] = useState<number | null>(null);
   const [status, setStatus] = useState<{ msg: string; type: "success" | "error" | "loading" } | null>(null);
@@ -125,18 +126,12 @@ export default function UnifiedUpload() {
     let size = 0;
     if (file) size = file.size;
     else if (text) size = new TextEncoder().encode(text).byteLength;
-    if (size === 0) { setL1Cost(null); setTurboCost(null); return; }
+    if (size === 0) { setL1Cost(null); return; }
     const t = setTimeout(() => {
       estimatePermawriteCost(size).then(setL1Cost);
-      estimateTurboCost(size).then(setTurboCost);
     }, 500);
     return () => clearTimeout(t);
   }, [file, text]);
-
-  useEffect(() => {
-    if (!arweaveWallet) { setTurboBalance(null); return; }
-    ArweaveGateway.getTurboBalance(arweaveWallet.address).then(setTurboBalance).catch(() => setTurboBalance(null));
-  }, [arweaveWallet]);
 
   const acceptFile = useCallback((f: File | null) => {
     setFile(f);
@@ -230,7 +225,7 @@ export default function UnifiedUpload() {
         description: desc || undefined,
         category,
         tags: pwTags,
-        preferredMethod: method,
+        preferredMethod: UPLOAD_METHOD,
         visibility: vis,
         customTags: customTags.length > 0 ? customTags : undefined,
       };
@@ -238,16 +233,12 @@ export default function UnifiedUpload() {
       setStatus({ msg: `PermaWriting ${visLabel}...`, type: "loading" });
       setProgress(0);
       try {
-        let uploadMethod: UploadMethod = method;
         if (f) {
-          const result = await permawriteSmart(f, arweaveWallet.jwk, pwOpts, (pct) => setProgress(pct));
-          uploadMethod = result?.method ?? method;
+          await permawriteSmart(f, arweaveWallet.jwk, pwOpts, (pct) => setProgress(pct));
         } else {
-          const result = await permawriteTextSmart(t, arweaveWallet.jwk, pwOpts, (pct) => setProgress(pct));
-          uploadMethod = result?.method ?? method;
+          await permawriteTextSmart(t, arweaveWallet.jwk, pwOpts, (pct) => setProgress(pct));
         }
-        const methodMsg = uploadMethod === "turbo" ? "instantly via Turbo" : "via L1 (~10-30 min confirmation)";
-        setStatus({ msg: `PermaWritten ${visLabel} ${methodMsg}!`, type: "success" });
+        setStatus({ msg: `PermaWritten ${visLabel} — ~10-30 min network confirmation.`, type: "success" });
         getCategoryCounts();
         resetForm();
       } catch (e) {
@@ -256,22 +247,20 @@ export default function UnifiedUpload() {
         setProgress(null);
       }
     } else {
-      const methodLabel = method === "turbo" ? "Bundling via Turbo" : "Uploading to L1";
-      setStatus({ msg: `${methodLabel}...`, type: "loading" });
+      setStatus({ msg: "Uploading to Arweave...", type: "loading" });
       setProgress(0);
       try {
         const tags: ArweaveTag[] = [...customTags];
         let result;
         if (f) {
-          result = await gw.smartUploadFile(f, tags, arweaveWallet.jwk, method, desc || undefined, (pct) => setProgress(pct));
+          result = await gw.smartUploadFile(f, tags, arweaveWallet.jwk, UPLOAD_METHOD, desc || undefined, (pct) => setProgress(pct));
         } else {
           const data = new TextEncoder().encode(t);
           const allTags: ArweaveTag[] = [{ name: "Content-Type", value: "text/plain" }, ...tags];
-          result = await gw.smartUploadData(data, allTags, arweaveWallet.jwk, method, desc || undefined, (pct) => setProgress(pct));
+          result = await gw.smartUploadData(data, allTags, arweaveWallet.jwk, UPLOAD_METHOD, desc || undefined, (pct) => setProgress(pct));
         }
         if (result.status === 200) {
-          const methodMsg = result.method === "turbo" ? " (instant via Turbo)" : " (L1 — ~10-30 min confirmation)";
-          setStatus({ msg: `Uploaded! TX: ${result.txId}${methodMsg}`, type: "success" });
+          setStatus({ msg: `Uploaded! TX: ${result.txId} — ~10-30 min network confirmation.`, type: "success" });
           resetForm();
         } else {
           setStatus({ msg: `Upload failed (status ${result.status})`, type: "error" });
@@ -282,7 +271,7 @@ export default function UnifiedUpload() {
         setProgress(null);
       }
     }
-  }, [arweaveWallet, file, text, permawrite, category, title, desc, pwTags, method, visibility, customTags, gw, resetForm]);
+  }, [arweaveWallet, file, text, permawrite, category, title, desc, pwTags, visibility, customTags, gw, resetForm]);
 
   if (!arweaveWallet) {
     return (
@@ -303,7 +292,7 @@ export default function UnifiedUpload() {
           </div>
           <div className="flex items-center gap-2 text-[10px] text-white/25">
             <span className="w-5 h-5 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-300/60">2</span>
-            <span>Fund with AR or Turbo credits</span>
+            <span>Fund it with AR</span>
           </div>
           <div className="flex items-center gap-2 text-[10px] text-white/25">
             <span className="w-5 h-5 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-300/60">3</span>
@@ -318,58 +307,14 @@ export default function UnifiedUpload() {
     ? "Uploading..."
     : permawrite
       ? `PermaWrite ${visibility === "public" ? "to Public Feed" : "to Personal Feed"}`
-      : method === "turbo"
-        ? "Upload via Turbo"
-        : "Upload to Arweave (L1)";
+      : "Upload to Arweave";
 
   const uploadBtnCls = permawrite
     ? "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-    : method === "turbo"
-      ? "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-      : "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+    : "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
   return (
     <div className="space-y-4">
-      {/* Upload Method */}
-      <div className={`${card} p-1.5 flex gap-1`}>
-        <button type="button" onClick={() => setMethod("l1")} className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${method === "l1" ? "bg-purple-500/15 text-purple-300 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
-          <span className="w-2 h-2 rounded-full bg-purple-400" style={{ opacity: method === "l1" ? 1 : 0.3 }} />Standard (L1)
-        </button>
-        <button type="button" onClick={() => setMethod("turbo")} className={`flex-1 h-10 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${method === "turbo" ? "bg-emerald-500/15 text-emerald-300 shadow-[inset_0_1px_0_rgba(52,211,153,0.2)]" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"}`}>
-          <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ opacity: method === "turbo" ? 1 : 0.3 }} />Turbo (Instant)
-        </button>
-      </div>
-
-      <div className={`${card} p-4 ${method === "turbo" ? "border-emerald-500/10" : "border-purple-500/10"}`}>
-        {method === "turbo" ? (
-          <div className="flex items-start gap-3">
-            <span className="text-lg mt-0.5">⚡</span>
-            <div>
-              <p className="text-xs font-medium text-emerald-300/70">Instant confirmation via bundling</p>
-              <p className="text-[11px] text-emerald-300/40 mt-0.5 leading-relaxed">Files are bundled into ANS-104 data items and confirmed instantly. Uses Turbo credits (fund at app.ardrive.io). Falls back to L1 automatically if credits are low.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-start gap-3">
-            <span className="text-lg mt-0.5">🔗</span>
-            <div>
-              <p className="text-xs font-medium text-purple-300/70">Direct L1 base layer submission</p>
-              <p className="text-[11px] text-purple-300/40 mt-0.5 leading-relaxed">Submitted directly to the Arweave network. Confirmation takes ~10-30 minutes. Only requires AR in your wallet — no Turbo credits needed.</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {method === "turbo" && turboBalance && (
-        <div className={`${card} p-4`}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-emerald-300/40 uppercase tracking-wider font-medium">Turbo Credits</span>
-            <a href="https://app.ardrive.io" target="_blank" rel="noopener noreferrer" className={btnSmall}>Fund Account</a>
-          </div>
-          <p className="text-lg font-bold text-white mt-1">{parseFloat(turboBalance.ar).toFixed(8)} <span className="text-sm font-normal text-white/30">AR equivalent</span></p>
-        </div>
-      )}
-
       {/* Content */}
       <div className={`${card} p-5 space-y-4`}>
         <div className="flex items-center justify-between">
@@ -601,23 +546,15 @@ export default function UnifiedUpload() {
       </div>
 
       {/* Cost Estimate */}
-      {(l1Cost || turboCost) && (
+      {l1Cost && (
         <div className={`${card} p-4`}>
-          <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Estimated Cost</span>
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            {turboCost && (
-              <div className={method === "turbo" ? "" : "opacity-40"}>
-                <p className="text-sm font-bold text-emerald-300">{parseFloat(turboCost.ar).toFixed(8)}</p>
-                <p className="text-[10px] text-emerald-300/40">AR via Turbo</p>
-              </div>
-            )}
-            {l1Cost && (
-              <div className={method === "l1" ? "" : "opacity-40"}>
-                <p className="text-sm font-bold text-white/60">{parseFloat(l1Cost.ar).toFixed(8)}</p>
-                <p className="text-[10px] text-white/20">AR via L1</p>
-              </div>
-            )}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Estimated Cost</span>
+            <span className="text-[10px] text-white/20">~10-30 min confirmation</span>
           </div>
+          <p className="text-lg font-bold text-white mt-1">
+            {parseFloat(l1Cost.ar).toFixed(8)} <span className="text-sm font-normal text-white/30">AR</span>
+          </p>
         </div>
       )}
 
@@ -626,7 +563,7 @@ export default function UnifiedUpload() {
         <div className={`${card} p-4`}>
           <div className="flex items-center gap-3">
             <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-              <div className={`h-full rounded-full transition-all ${permawrite ? "bg-gradient-to-r from-violet-500 to-purple-500" : method === "turbo" ? "bg-gradient-to-r from-emerald-500 to-teal-500" : "bg-gradient-to-r from-purple-500 to-violet-500"}`} style={{ width: `${progress}%` }} />
+              <div className={`h-full rounded-full transition-all ${permawrite ? "bg-gradient-to-r from-violet-500 to-purple-500" : "bg-gradient-to-r from-purple-500 to-violet-500"}`} style={{ width: `${progress}%` }} />
             </div>
             <span className="text-xs text-white/50 w-12 text-right">{progress}%</span>
           </div>
