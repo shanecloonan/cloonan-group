@@ -189,21 +189,42 @@ async function main() {
   }
 
   // Register in supabase_migrations.schema_migrations so this shows up in
-  // the Dashboard → Database → Migrations tab. Idempotent: ON CONFLICT
-  // DO NOTHING. We wrap the file body in a dollar-tagged literal with a
-  // unique tag to avoid collisions with DO $$ blocks inside the SQL.
+  // the Dashboard → Database → Migrations tab. Idempotent on the
+  // combination of (version, name): if a migration with the same NAME
+  // already exists we skip, otherwise we allocate the next free version
+  // slot on the same date so two migrations on one day don't collide.
   process.stdout.write("  ↳ Recording in schema_migrations ... ");
   try {
-    const tag = `MIG_${Date.now().toString(36)}`;
-    const registerSql = `insert into supabase_migrations.schema_migrations (version, name, statements)
+    // Skip if this migration name is already tracked.
+    const existing = await runQuery({
+      ref, token,
+      sql: `select version from supabase_migrations.schema_migrations where name = '${meta.name.replace(/'/g, "''")}' limit 1;`,
+    });
+    if (Array.isArray(existing) && existing.length > 0) {
+      console.log(`already tracked (version ${existing[0].version})`);
+    } else {
+      // Find next free version on this date (YYYYMMDDxxxxxx).
+      const datePrefix = meta.version.slice(0, 8);
+      const used = await runQuery({
+        ref, token,
+        sql: `select version from supabase_migrations.schema_migrations where version like '${datePrefix}%' order by version desc limit 1;`,
+      });
+      let version = meta.version;
+      if (Array.isArray(used) && used.length > 0) {
+        const topUsed = used[0].version;
+        const nextNum = (parseInt(topUsed.slice(8), 10) || 0) + 1;
+        version = `${datePrefix}${String(nextNum).padStart(6, "0")}`;
+      }
+      const tag = `MIG_${Date.now().toString(36)}`;
+      const registerSql = `insert into supabase_migrations.schema_migrations (version, name, statements)
 values (
-  '${meta.version}',
+  '${version}',
   '${meta.name}',
   array[$${tag}$${sql}$${tag}$]::text[]
-)
-on conflict (version) do nothing;`;
-    await runQuery({ ref, token, sql: registerSql });
-    console.log("ok");
+);`;
+      await runQuery({ ref, token, sql: registerSql });
+      console.log(`ok (version ${version})`);
+    }
   } catch (e) {
     // Non-fatal: the DDL is applied even if tracking fails. Schema may
     // not exist yet on brand-new projects, or permissions may differ.

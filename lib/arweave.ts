@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { ARWEAVE_GATEWAY_URL, ARWEAVE_DIRECT_GATEWAYS } from "./config";
+import { ARWEAVE_GATEWAY_URL, ARWEAVE_DIRECT_GATEWAYS, ARWEAVE_PRIMARY_GATEWAY } from "./config";
 import { poolFetch, listGateways, type GatewayRole } from "./gateway-pool";
 import { uploadToTurbo, uploadFileToTurbo, getTurboPrice, getTurboBalance, wincToAr } from "./turbo";
 import { isArConnectAvailable, dispatchTransaction, type DispatchResult } from "./arconnect";
@@ -114,6 +114,24 @@ export class ArweaveGateway {
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl || ARWEAVE_GATEWAY_URL;
+  }
+
+  /** Safe insert into arweave_uploads. The table is optional infrastructure —
+   *  if it doesn't exist on this project yet, logging just silently no-ops
+   *  so core upload paths still succeed. */
+  private async safeUploadLog(row: Record<string, unknown>): Promise<void> {
+    try {
+      const { error } = await supabase.from("arweave_uploads").insert(row);
+      if (error && process.env.NODE_ENV !== "production") {
+        console.warn("[arweave_uploads] insert skipped:", error.message);
+      }
+    } catch { /* non-fatal */ }
+  }
+
+  private async safeUploadUpdate(txId: string, patch: Record<string, unknown>): Promise<void> {
+    try {
+      await supabase.from("arweave_uploads").update(patch).eq("tx_id", txId);
+    } catch { /* non-fatal */ }
   }
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
@@ -282,22 +300,78 @@ export class ArweaveGateway {
     };
   }
 
+  /**
+   * Write waterfall for POSTing signed transactions / chunks:
+   *
+   *   1. Self-hosted primary gateway  (if ARWEAVE_PRIMARY_GATEWAY set)
+   *   2. Supabase edge function proxy (if the function is deployed —
+   *      authenticated, gives us centralized logging)
+   *   3. arweave.net                   (always the baseline)
+   *   4. Other public gateways         (ar-io.net, arweave.dev, ...)
+   *
+   * First 2xx/202 response wins. The edge-function layer is optional —
+   * if it isn't deployed on this project, we silently fall through to
+   * direct Arweave submission.
+   */
+  private async writeToArweave(path: string, body: string): Promise<{ status: number; body: string; servedBy: string }> {
+    const candidates: Array<{ url: string; role: "primary" | "supabase" | "public" }> = [];
+    if (ARWEAVE_PRIMARY_GATEWAY) candidates.push({ url: ARWEAVE_PRIMARY_GATEWAY.replace(/\/+$/, ""), role: "primary" });
+    // Supabase proxy: only worth trying if it looks configured.
+    candidates.push({ url: this.baseUrl, role: "supabase" });
+    for (const g of ARWEAVE_DIRECT_GATEWAYS) {
+      candidates.push({ url: g.replace(/\/+$/, ""), role: "public" });
+    }
+
+    const errors: string[] = [];
+    for (const { url, role } of candidates) {
+      try {
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (role === "supabase") {
+          Object.assign(headers, await this.getAuthHeaders());
+        }
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 20_000);
+        const res = await fetch(`${url}${path}`, {
+          method: "POST",
+          headers,
+          body,
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+
+        // Accept 200 and 202 (Arweave accepts-for-processing)
+        if (res.status === 200 || res.status === 202) {
+          const text = await res.text();
+          this.lastServedBy = url;
+          this.lastServedByRole = role === "supabase" ? "supabase" : role === "primary" ? "primary" : "pool";
+          return { status: res.status, body: text, servedBy: url };
+        }
+        // Supabase proxy not deployed — 404 comes back as html. Treat any
+        // non-2xx from the supabase role as "fall through silently".
+        if (role === "supabase") {
+          errors.push(`${url} → ${res.status} (proxy unavailable, falling through)`);
+          continue;
+        }
+        const errBody = await res.text().catch(() => "");
+        errors.push(`${url} → ${res.status}: ${errBody.slice(0, 200)}`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`${url} → ${msg}`);
+      }
+    }
+    throw new Error(
+      `Arweave ${path} submission failed on all gateways:\n` + errors.map((e) => `  • ${e}`).join("\n"),
+    );
+  }
+
   async submitTx(tx: Record<string, unknown>): Promise<{ status: number; body: string }> {
-    const res = await this.gw("/tx", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(tx),
-    });
-    return { status: res.status, body: await res.text() };
+    const { status, body } = await this.writeToArweave("/tx", JSON.stringify(tx));
+    return { status, body };
   }
 
   async submitChunk(chunk: Record<string, unknown>): Promise<{ status: number }> {
-    const res = await this.gw("/chunk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(chunk),
-    });
-    return { status: res.status };
+    const { status } = await this.writeToArweave("/chunk", JSON.stringify(chunk));
+    return { status };
   }
 
   /* ---- Pricing ---- */
@@ -496,11 +570,12 @@ export class ArweaveGateway {
     const tx = await ArweaveGateway.buildDataTx(data, allTags, jwk, anchor, reward);
     const txId = tx.id as string;
 
-    // Track upload in DB
+    // Track upload in DB (non-fatal if the logging table doesn't exist on
+    // this project — Arweave submission is the source of truth).
     const { data: session } = await supabase.auth.getSession();
     const userId = session.session?.user?.id;
     if (userId) {
-      await supabase.from("arweave_uploads").insert({
+      await this.safeUploadLog({
         user_id: userId,
         tx_id: txId,
         data_size: data.byteLength,
@@ -516,10 +591,9 @@ export class ArweaveGateway {
     // Small data: submit in one go
     if (data.byteLength <= 256 * 1024) {
       const result = await this.submitTx(tx);
-      const status = result.status === 200 ? "submitted" : "failed";
-      if (userId) {
-        await supabase.from("arweave_uploads").update({ status }).eq("tx_id", txId);
-      }
+      const ok = result.status === 200 || result.status === 202;
+      const status = ok ? "submitted" : "failed";
+      if (userId) await this.safeUploadUpdate(txId, { status });
       onProgress?.(100);
       return { txId, status: result.status, cost };
     }
@@ -528,10 +602,8 @@ export class ArweaveGateway {
     const txWithoutData = { ...tx };
     delete txWithoutData.data;
     const submitResult = await this.submitTx(txWithoutData);
-    if (submitResult.status !== 200) {
-      if (userId) {
-        await supabase.from("arweave_uploads").update({ status: "failed" }).eq("tx_id", txId);
-      }
+    if (submitResult.status !== 200 && submitResult.status !== 202) {
+      if (userId) await this.safeUploadUpdate(txId, { status: "failed" });
       return { txId, status: submitResult.status, cost };
     }
 
@@ -548,18 +620,14 @@ export class ArweaveGateway {
         offset: offset - chunk.byteLength,
         chunk: chunkB64,
       });
-      if (chunkResult.status !== 200) {
-        if (userId) {
-          await supabase.from("arweave_uploads").update({ status: "failed" }).eq("tx_id", txId);
-        }
+      if (chunkResult.status !== 200 && chunkResult.status !== 202) {
+        if (userId) await this.safeUploadUpdate(txId, { status: "failed" });
         throw new Error(`Chunk upload failed at ${((offset / data.byteLength) * 100).toFixed(1)}%`);
       }
       onProgress?.(Math.round((offset / data.byteLength) * 100));
     }
 
-    if (userId) {
-      await supabase.from("arweave_uploads").update({ status: "submitted" }).eq("tx_id", txId);
-    }
+    if (userId) await this.safeUploadUpdate(txId, { status: "submitted" });
     return { txId, status: 200, cost };
   }
 
@@ -611,7 +679,7 @@ export class ArweaveGateway {
     const { id: txId, turboResult } = await uploadToTurbo(data, jwk, allTags, onProgress);
 
     if (userId) {
-      await supabase.from("arweave_uploads").insert({
+      await this.safeUploadLog({
         user_id: userId,
         tx_id: txId,
         data_size: data.byteLength,
@@ -713,7 +781,7 @@ export class ArweaveGateway {
     const { data: session } = await supabase.auth.getSession();
     const userId = session.session?.user?.id;
     if (userId) {
-      await supabase.from("arweave_uploads").insert({
+      await this.safeUploadLog({
         user_id: userId,
         tx_id: result.id,
         data_size: data.byteLength,
