@@ -149,6 +149,17 @@ function isUniqueViolation(err: unknown): { field: "name" | "slug" | "other" } |
   return null;
 }
 
+/** True if the error indicates a column doesn't exist — meaning the migration
+ *  hasn't been applied yet. PostgREST code PGRST204, or Postgres 42703, or
+ *  any message mentioning "could not find the '<col>' column". */
+function isMissingColumn(err: unknown, column: string): boolean {
+  const e = err as { code?: string; message?: string };
+  if (!e) return false;
+  const msg = (e.message || "").toLowerCase();
+  if (e.code === "PGRST204" || e.code === "42703") return msg.includes(column.toLowerCase());
+  return msg.includes(`'${column.toLowerCase()}' column`) || msg.includes(`column "${column.toLowerCase()}"`) || msg.includes(`find the '${column.toLowerCase()}' column`);
+}
+
 export async function createRepo(opts: {
   slug?: string;
   displayName: string;
@@ -191,20 +202,25 @@ export async function createRepo(opts: {
   if (!slug) throw new Error("Could not derive a valid slug");
 
   // 3. Reserve the row in Supabase first. The DB's unique indexes are the
-  //    real gate — if two users race, only one insert succeeds.
+  //    real gate — if two users race, only one insert succeeds. We try WITH
+  //    genesis_tx first; if the column doesn't exist yet (migration not
+  //    applied), we automatically retry without it so creation still works.
   let reservedRow: Repo | null = null;
   let lastErr: unknown = null;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  let schemaSupportsGenesis = true;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const payload: Record<string, unknown> = {
+      user_id: userId,
+      slug,
+      display_name: displayName,
+      description: opts.description?.trim() || null,
+      visibility: opts.visibility ?? "private",
+    };
+    if (schemaSupportsGenesis) payload.genesis_tx = null;
+
     const { data, error } = await supabase
       .from("permawrite_repos")
-      .insert({
-        user_id: userId,
-        slug,
-        display_name: displayName,
-        description: opts.description?.trim() || null,
-        visibility: opts.visibility ?? "private",
-        genesis_tx: null,
-      })
+      .insert(payload)
       .select()
       .single();
 
@@ -213,6 +229,13 @@ export async function createRepo(opts: {
       break;
     }
     lastErr = error;
+    if (isMissingColumn(error, "genesis_tx")) {
+      // DB migration hasn't been applied yet. Fall back silently — the repo
+      // still gets an on-chain declaration, we just can't persist the TX id
+      // until the column is added.
+      schemaSupportsGenesis = false;
+      continue;
+    }
     const dup = isUniqueViolation(error);
     if (!dup) break;
     if (dup.field === "name") {
@@ -272,8 +295,15 @@ export async function createRepo(opts: {
     throw e instanceof Error ? e : new Error(String(e));
   }
 
-  // 5. Attach the genesis TX to the row and return.
+  // 5. Attach the genesis TX to the row and return. If the column isn't
+  //    there yet (schema migration pending) we still return the reserved
+  //    row with the on-chain TX stitched in client-side, so the UI can
+  //    surface it. Once the migration is applied, future edits can
+  //    back-fill the column.
   opts.onStage?.("saving");
+  if (!schemaSupportsGenesis) {
+    return { ...reservedRow, genesis_tx: genesisTx };
+  }
   const { data: updated, error: updErr } = await supabase
     .from("permawrite_repos")
     .update({ genesis_tx: genesisTx, updated_at: new Date().toISOString() })
@@ -282,8 +312,9 @@ export async function createRepo(opts: {
     .single();
 
   if (updErr || !updated) {
-    // Row exists and genesis is on-chain — degrade gracefully, return the
-    // reserved row with the TX stitched in client-side.
+    if (isMissingColumn(updErr, "genesis_tx")) {
+      return { ...reservedRow, genesis_tx: genesisTx };
+    }
     return { ...reservedRow, genesis_tx: genesisTx };
   }
   return updated as Repo;
