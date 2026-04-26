@@ -9,25 +9,81 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="relative flex flex-col items-center justify-center overflow-hidden min-h-[calc(100vh-56px)]">
-      <div className="absolute inset-0 bg-brand-950" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(212,168,67,0.08),transparent)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_120%,rgba(212,168,67,0.04),transparent)]" />
+      {/*
+        Banknote paper stack — each layer is intentionally subtle so the
+        hero artwork/text stays the focal point. Layering from bottom up:
+
+          1. Deep intaglio-green base gradient (US currency ink colour)
+          2. Warm central glow (paper catching light behind a portrait)
+          3. Guilloché ring pattern (engine-turned currency rosettes)
+          4. Crossed engraving hairlines (intaglio line art)
+          5. High-frequency fractal grain (paper fibre tooth)
+          6. Edge vignette (archival paper falloff)
+      */}
 
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0"
         style={{
-          backgroundImage:
-            "linear-gradient(rgba(212,168,67,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(212,168,67,0.3) 1px, transparent 1px)",
-          backgroundSize: "80px 80px",
+          background:
+            "radial-gradient(ellipse 100% 80% at 50% 35%, #132922 0%, #0b1b14 55%, #050e0a 100%)",
         }}
       />
 
-      {/* Paper-stock grain — fine high-frequency noise, desaturated, blended
-          softly over the dark base. Gives the hero a tactile banknote feel
-          without introducing motion or competing with the logo. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 55% 45% at 50% 42%, rgba(212,168,67,0.10), transparent 70%)",
+        }}
+      />
+
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.18] mix-blend-soft-light"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.65]"
+      >
+        <defs>
+          <pattern
+            id="guilloche"
+            x="0"
+            y="0"
+            width="240"
+            height="240"
+            patternUnits="userSpaceOnUse"
+          >
+            <g stroke="rgba(176,214,188,0.14)" strokeWidth="0.5" fill="none">
+              <circle cx="120" cy="120" r="100" />
+              <circle cx="120" cy="120" r="85" />
+              <circle cx="120" cy="120" r="70" />
+              <circle cx="120" cy="120" r="55" />
+              <circle cx="120" cy="120" r="40" />
+              <circle cx="120" cy="120" r="25" />
+              <circle cx="40" cy="40" r="36" />
+              <circle cx="200" cy="40" r="36" />
+              <circle cx="40" cy="200" r="36" />
+              <circle cx="200" cy="200" r="36" />
+              <circle cx="40" cy="40" r="22" />
+              <circle cx="200" cy="40" r="22" />
+              <circle cx="40" cy="200" r="22" />
+              <circle cx="200" cy="200" r="22" />
+            </g>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#guilloche)" />
+      </svg>
+
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        style={{
+          backgroundImage: `
+            repeating-linear-gradient(45deg, transparent 0, transparent 3px, rgba(176,214,188,0.055) 3px, rgba(176,214,188,0.055) 4px),
+            repeating-linear-gradient(-45deg, transparent 0, transparent 3px, rgba(176,214,188,0.04) 3px, rgba(176,214,188,0.04) 4px)
+          `,
+        }}
+      />
+
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.22] mix-blend-soft-light"
       >
         <filter id="paperGrain">
           <feTurbulence
@@ -41,13 +97,11 @@ export default function Home() {
         <rect width="100%" height="100%" filter="url(#paperGrain)" />
       </svg>
 
-      {/* Edge vignette — mimics the darkening around the border of a banknote
-          or archival paper stock. Pulls focus inward to the center. */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 90% 70% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%)",
+            "radial-gradient(ellipse 90% 70% at 50% 50%, transparent 55%, rgba(0,0,0,0.6) 100%)",
         }}
       />
 
