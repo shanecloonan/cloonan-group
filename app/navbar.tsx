@@ -36,7 +36,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <span className="text-base font-bold tracking-tight text-brand-100 group-hover:text-gold transition-colors">
-              Money<span className="text-gold">Fund</span>
+              MoneyFund
             </span>
           </Link>
 
