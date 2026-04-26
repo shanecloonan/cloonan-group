@@ -54,6 +54,33 @@ function arToWinston(ar: string): string {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Platform fee                                                       */
+/* ------------------------------------------------------------------ */
+/*
+ * A fixed percentage of the L1 storage reward on every data upload is
+ * attached as an atomic AR transfer to PLATFORM_FEE_ADDRESS. We lean on
+ * Arweave's ability to carry both a transfer (target + quantity) and a
+ * data payload in a single signed transaction, so the storage and the
+ * fee commit or fail together — no double-signing, no race conditions,
+ * no partial-payment recovery logic required.
+ *
+ * Scope: L1 data uploads only. Turbo/ANS-104 bundles cannot include a
+ * transfer (bundled data items have no target/quantity field), and the
+ * ArConnect dispatch path is bundle-first, so both are exempt.
+ */
+export const PLATFORM_FEE_ADDRESS = "eS5YbYQhuDOjDttzgM2YP7_26q37k_Me5czIoMwVlfw";
+export const PLATFORM_FEE_BPS = 100; // 100 bps = 1%
+
+export function computePlatformFeeWinston(rewardWinston: string): string {
+  try {
+    const reward = BigInt(rewardWinston);
+    return ((reward * BigInt(PLATFORM_FEE_BPS)) / BigInt(10_000)).toString();
+  } catch {
+    return "0";
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  arweave-js SDK instance                                            */
 /* ------------------------------------------------------------------ */
 /*
@@ -508,15 +535,36 @@ export class ArweaveGateway {
    * Returns the arweave-js Transaction instance. Call `tx.toJSON()` to get the
    * wire format, and `tx.getChunk(i, data)` for chunked uploads > 256KB.
    */
+  /**
+   * Build and sign an L1 data transaction.
+   *
+   * If `transfer` is provided the resulting tx carries BOTH the data
+   * payload AND an AR transfer (target + quantity) — Arweave's v2 tx
+   * format allows this, miners process both effects atomically, and
+   * we use it to piggy-back the platform fee on the storage tx with
+   * no extra signature or gateway round-trip.
+   */
   static async createSignedDataTx(
     data: Uint8Array,
     tags: ArweaveTag[],
     jwk: JsonWebKey,
     anchor: string,
     reward: string,
+    transfer?: { target: string; quantity: string },
   ): Promise<import("arweave/web/lib/transaction").default> {
+    const txParams: {
+      data: Uint8Array;
+      last_tx: string;
+      reward: string;
+      target?: string;
+      quantity?: string;
+    } = { data, last_tx: anchor, reward };
+    if (transfer && transfer.quantity !== "0" && transfer.target) {
+      txParams.target = transfer.target;
+      txParams.quantity = transfer.quantity;
+    }
     const tx = await arweaveSdk.createTransaction(
-      { data, last_tx: anchor, reward },
+      txParams,
       jwk as unknown as Parameters<typeof arweaveSdk.createTransaction>[1],
     );
     for (const t of tags) tx.addTag(t.name, t.value);
@@ -557,14 +605,29 @@ export class ArweaveGateway {
     const contentTag = tags.find((t) => t.name.toLowerCase() === "content-type");
     const ct = contentTag?.value || "application/octet-stream";
 
+    // Compute the platform fee (1% of the storage reward) and piggy-back
+    // it onto the same signed tx as an atomic AR transfer — see the
+    // createSignedDataTx docstring for why this works.
+    const feeWinston = computePlatformFeeWinston(reward);
+
     const allTags: ArweaveTag[] = [
       ...tags,
       { name: "App-Name", value: "MoneyFund" },
       { name: "App-Version", value: "1.0" },
+      { name: "App-Fee-Bps", value: String(PLATFORM_FEE_BPS) },
+      { name: "App-Fee-Target", value: PLATFORM_FEE_ADDRESS },
+      { name: "App-Fee-Winston", value: feeWinston },
     ];
 
     // Build + sign via arweave-js (proper deepHash signature + Merkle data_root).
-    const tx = await ArweaveGateway.createSignedDataTx(data, allTags, jwk, anchor, reward);
+    const tx = await ArweaveGateway.createSignedDataTx(
+      data,
+      allTags,
+      jwk,
+      anchor,
+      reward,
+      { target: PLATFORM_FEE_ADDRESS, quantity: feeWinston },
+    );
     const txId = tx.id;
 
     // Track upload in DB (non-fatal if the logging table doesn't exist on

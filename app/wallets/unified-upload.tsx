@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useWallet } from "@/lib/wallet-context";
-import ArweaveGateway from "@/lib/arweave";
+import ArweaveGateway, { PLATFORM_FEE_BPS, computePlatformFeeWinston } from "@/lib/arweave";
 import {
   getCategories,
   getCategoryGroups,
@@ -497,17 +497,27 @@ export default function UnifiedUpload() {
       </div>
 
       {/* Cost Estimate */}
-      {l1Cost && (
-        <div className={`${card} p-4`}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Estimated Cost</span>
-            <span className="text-[10px] text-white/20">~10-30 min confirmation</span>
+      {l1Cost && (() => {
+        const storageAr = parseFloat(l1Cost.ar);
+        const feeAr = Number(computePlatformFeeWinston(l1Cost.winston)) / 1e12;
+        const totalAr = storageAr + feeAr;
+        const feePct = (PLATFORM_FEE_BPS / 100).toFixed(PLATFORM_FEE_BPS % 100 === 0 ? 0 : 2);
+        return (
+          <div className={`${card} p-4`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Estimated Cost</span>
+              <span className="text-[10px] text-white/20">~10-30 min confirmation</span>
+            </div>
+            <p className="text-lg font-bold text-white mt-1">
+              {totalAr.toFixed(8)} <span className="text-sm font-normal text-white/30">AR</span>
+            </p>
+            <div className="mt-2 pt-2 border-t border-white/[0.04] space-y-0.5 text-[10px] text-white/30 tabular-nums">
+              <div className="flex justify-between"><span>Storage (L1 reward)</span><span>{storageAr.toFixed(8)} AR</span></div>
+              <div className="flex justify-between"><span>Platform fee ({feePct}%)</span><span>{feeAr.toFixed(8)} AR</span></div>
+            </div>
           </div>
-          <p className="text-lg font-bold text-white mt-1">
-            {parseFloat(l1Cost.ar).toFixed(8)} <span className="text-sm font-normal text-white/30">AR</span>
-          </p>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Progress */}
       {progress !== null && (
