@@ -1,0 +1,140 @@
+# -----------------------------------------------------------------------------
+# Self-hosted Arweave gateway (ar.io reference node).
+#
+# This is the minimum viable stack to serve uncensored HTTP + GraphQL + ArNS
+# access to the Arweave network. It pulls from peers on demand and caches
+# locally — you do NOT need to store the entire weave.
+#
+# Before first run:
+#   1. Copy .env.example -> .env and fill it in.
+#   2. Point gateway.<your-domain> + *.gateway.<your-domain> A-records here.
+#   3. docker compose up -d
+#
+# See README.md for the full walkthrough.
+# -----------------------------------------------------------------------------
+
+services:
+  # ---- Core gateway node (HTTP data + GraphQL + indexer) --------------------
+  core:
+    image: ghcr.io/ar-io/ar-io-core:${AR_IO_NODE_RELEASE:-latest}
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      # Identity
+      ARNS_ROOT_HOST: ${ARNS_ROOT_HOST}
+      TRUSTED_NODE_URL: ${TRUSTED_NODE_URL:-https://arweave.net}
+      TRUSTED_GATEWAY_URL: ${TRUSTED_GATEWAY_URL:-https://arweave.net}
+      TRUSTED_ARNS_GATEWAY_URL: ${TRUSTED_ARNS_GATEWAY_URL:-https://__NAME__.arweave.net}
+
+      # Indexer / sync
+      START_HEIGHT: ${START_HEIGHT:-1407552}
+      STOP_HEIGHT: ${STOP_HEIGHT:-Infinity}
+      BACKFILL_BUNDLE_RECORDS: ${BACKFILL_BUNDLE_RECORDS:-true}
+      FILTER_CHANGE_REPROCESS: ${FILTER_CHANGE_REPROCESS:-false}
+      ANS104_UNBUNDLE_FILTER: ${ANS104_UNBUNDLE_FILTER:-{"never": true}}
+      ANS104_INDEX_FILTER: ${ANS104_INDEX_FILTER:-{"never": true}}
+
+      # Storage
+      CHUNKS_DATA_PATH: /data/chunks
+      CONTIGUOUS_DATA_PATH: /data/contiguous
+      HEADERS_DATA_PATH: /data/headers
+      SQLITE_DATA_PATH: /data/sqlite
+      SQLITE_WAL_CLEANUP_THRESHOLD: "1000000"
+
+      # Caching
+      REDIS_CACHE_URL: redis://redis:6379
+      REDIS_CACHE_TTL_SECONDS: "28800"
+
+      # Admin API (for blocklist mgmt, debug stats). Required for /admin/*.
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+
+      # Node identity (must be set if you want to observe/earn)
+      OBSERVER_WALLET: ${OBSERVER_WALLET:-}
+      AR_IO_WALLET: ${AR_IO_WALLET:-}
+
+      # --- CENSORSHIP POLICY ---
+      # Empty by default. This is YOUR gateway — you choose what to serve.
+      # If you want to ignore arweave.net's public blocklist, leave empty.
+      # If you want to honor it, set to: https://arweave.net/ar-io/admin/block-list
+      ARNS_NAMES_BLACKLIST_URL: ${ARNS_NAMES_BLACKLIST_URL:-}
+      CONTENT_MODERATION_MODE: ${CONTENT_MODERATION_MODE:-allow-all}
+
+      # Log level
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-simple}
+    volumes:
+      - ar-io-data:/data
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/ar-io/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  # ---- Redis (hot cache for chunks, GraphQL, ArNS) --------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAX_MEMORY:-2gb}
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+    volumes:
+      - redis-data:/data
+
+  # ---- Envoy front-end (routing, CORS, sandbox subdomains) ------------------
+  envoy:
+    image: ghcr.io/ar-io/ar-io-envoy:${AR_IO_NODE_RELEASE:-latest}
+    restart: unless-stopped
+    environment:
+      ARNS_ROOT_HOST: ${ARNS_ROOT_HOST}
+      TVAL_AR_IO_HOST: core
+      TVAL_AR_IO_PORT: "4000"
+      TVAL_ARNS_ROOT_HOST: ${ARNS_ROOT_HOST}
+    depends_on:
+      - core
+    ports:
+      - "3000:3000"
+
+  # ---- Observer (optional: submits health reports for ARIO rewards) ---------
+  observer:
+    image: ghcr.io/ar-io/ar-io-observer:${AR_IO_NODE_RELEASE:-latest}
+    restart: unless-stopped
+    profiles: ["observer"]
+    depends_on:
+      - core
+    environment:
+      AR_IO_NODE_URL: http://core:4000
+      OBSERVER_WALLET: ${OBSERVER_WALLET}
+      OBSERVED_GATEWAY_HOSTS_LIST_URL: https://raw.githubusercontent.com/ar-io/ar-io-node/main/gateway-lists.json
+    volumes:
+      - observer-data:/app/data
+
+  # ---- Caddy TLS + reverse proxy (auto HTTPS) -------------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - envoy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      ARNS_ROOT_HOST: ${ARNS_ROOT_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+
+volumes:
+  ar-io-data:
+  redis-data:
+  observer-data:
+  caddy-data:
+  caddy-config:

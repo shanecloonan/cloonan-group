@@ -4,7 +4,8 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useWallet } from "@/lib/wallet-context";
 import ArweaveGateway, { buildGqlQuery, winstonToAr } from "@/lib/arweave";
-import { ARWEAVE_DIRECT_GATEWAYS } from "@/lib/config";
+import { ARWEAVE_DIRECT_GATEWAYS, ARWEAVE_PRIMARY_GATEWAY } from "@/lib/config";
+import { getPoolStats, type GatewayStat } from "@/lib/gateway-pool";
 import {
   discoverGateways,
   resolveToTxId,
@@ -109,6 +110,27 @@ export default function GatewayContent() {
   const [poolStatus, setPoolStatus] = useState<ArweavePoolStatus | null>(null);
   const [poolRefreshing, setPoolRefreshing] = useState(false);
 
+  /* Self-hosted node health (populated from /api/gateway/health) */
+  interface NodeHealth {
+    configured: boolean;
+    primary: {
+      url: string;
+      healthy: boolean;
+      height: number | null;
+      release: number | null;
+      latencyMs: number;
+      error?: string;
+      blockList: number | null;
+      syncLag: number | null;
+    } | null;
+    network: { height: number | null };
+    pool: { url: string; healthy: boolean; height: number | null; latencyMs: number }[];
+    checkedAt: number;
+  }
+  const [nodeHealth, setNodeHealth] = useState<NodeHealth | null>(null);
+  const [nodeLoading, setNodeLoading] = useState(false);
+  const [clientPoolStats, setClientPoolStats] = useState<GatewayStat[]>([]);
+
   const [expQuery, setExpQuery] = useState("");
   const [expType, setExpType] = useState<"txid" | "owner" | "recipient" | "tags">("txid");
   const [expResults, setExpResults] = useState<ArweaveGqlEdge[]>([]);
@@ -176,6 +198,19 @@ export default function GatewayContent() {
   const [bmType, setBmType] = useState<"transaction" | "address" | "content">("transaction");
   const [bmNotes, setBmNotes] = useState("");
 
+  const loadNodeHealth = useCallback(async () => {
+    setNodeLoading(true);
+    try {
+      const res = await fetch("/api/gateway/health", { cache: "no-store" });
+      if (res.ok) {
+        const data = (await res.json()) as NodeHealth;
+        setNodeHealth(data);
+      }
+    } catch { /* silent */ }
+    finally { setNodeLoading(false); }
+    setClientPoolStats(getPoolStats());
+  }, []);
+
   const loadNetworkInfo = useCallback(async () => {
     try {
       const [info, cost] = await Promise.all([gw.getNetworkInfo(), gw.estimateCost(1024 * 1024)]);
@@ -184,6 +219,7 @@ export default function GatewayContent() {
     } catch { /* silent */ }
     try { const stats = await ArweaveGateway.getGatewayStats(); setGwStats(stats); } catch { /* silent */ }
     try { setPoolStatus(await gw.getPoolStatus()); } catch { /* silent */ }
+    loadNodeHealth();
     for (const gateway of ARWEAVE_DIRECT_GATEWAYS) {
       setGwHealth((prev) => ({ ...prev, [gateway]: "checking" }));
       try {
@@ -191,7 +227,7 @@ export default function GatewayContent() {
         setGwHealth((prev) => ({ ...prev, [gateway]: res.ok ? "up" : "down" }));
       } catch { setGwHealth((prev) => ({ ...prev, [gateway]: "down" })); }
     }
-  }, [gw]);
+  }, [gw, loadNodeHealth]);
 
   const loadWalletBalance = useCallback(async () => {
     if (!arweaveWallet?.address) { setWalletBal(null); return; }
@@ -449,6 +485,28 @@ export default function GatewayContent() {
               )}
             </>
           )}
+          <span className="h-3 w-px bg-white/10" />
+          {ARWEAVE_PRIMARY_GATEWAY ? (
+            <button
+              type="button"
+              onClick={() => setTab("network")}
+              className="inline-flex items-center gap-1.5 text-purple-300/70 hover:text-purple-300 transition-colors cursor-pointer"
+              title={`Reads served by ${ARWEAVE_PRIMARY_GATEWAY}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${nodeHealth?.primary?.healthy ? "bg-emerald-400" : "bg-yellow-400"}`} />
+              <span className="font-mono text-[10px]">{ARWEAVE_PRIMARY_GATEWAY.replace(/^https?:\/\//, "")}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setTab("network")}
+              className="inline-flex items-center gap-1.5 text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+              title="Self-hosted gateway not configured"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
+              <span className="text-[10px] uppercase tracking-wider">Self-host →</span>
+            </button>
+          )}
           <span className="ml-auto text-white/20">|</span>
           <a href="/wallets" className="text-purple-400/60 hover:text-purple-300 text-[10px] uppercase tracking-wider transition-colors">Wallet</a>
           <a href="/permawrite" className="text-purple-400/60 hover:text-purple-300 text-[10px] uppercase tracking-wider transition-colors">PermaWrite</a>
@@ -475,6 +533,195 @@ export default function GatewayContent() {
       {/* NETWORK */}
       {tab === "network" && (
         <div className="space-y-4">
+          {/* ============ MY GATEWAY NODE (self-hosted ar.io) ============ */}
+          <div
+            className={`${card} p-5 relative overflow-hidden`}
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(168,85,247,0.08) 0%, rgba(255,255,255,0.03) 60%)",
+              borderColor: nodeHealth?.primary?.healthy
+                ? "rgba(52,211,153,0.25)"
+                : ARWEAVE_PRIMARY_GATEWAY
+                  ? "rgba(251,146,60,0.25)"
+                  : "rgba(255,255,255,0.06)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  My Gateway Node
+                </span>
+                {ARWEAVE_PRIMARY_GATEWAY ? (
+                  nodeHealth?.primary ? (
+                    <span
+                      className={`text-[9px] px-2 py-0.5 rounded-full font-semibold border ${
+                        nodeHealth.primary.healthy
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          : "bg-red-500/10 text-red-400 border-red-500/20"
+                      }`}
+                    >
+                      {nodeHealth.primary.healthy
+                        ? nodeHealth.primary.syncLag != null && nodeHealth.primary.syncLag > 50
+                          ? "SYNCING"
+                          : "LIVE"
+                        : "DOWN"}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                      CHECKING
+                    </span>
+                  )
+                ) : (
+                  <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold bg-white/[0.04] text-white/40 border border-white/[0.08]">
+                    NOT CONFIGURED
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={loadNodeHealth}
+                disabled={nodeLoading}
+                className={pillBtn}
+              >
+                {nodeLoading ? (
+                  <span className="w-3 h-3 border border-white/40 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  "Refresh"
+                )}
+              </button>
+            </div>
+
+            {!ARWEAVE_PRIMARY_GATEWAY && (
+              <div className="space-y-3">
+                <p className="text-xs text-white/50 leading-relaxed">
+                  Running our own Arweave gateway means nothing we care about can be
+                  censored, throttled, or quietly removed by a third party. Deploy
+                  the ar.io node in <code className="px-1 py-0.5 rounded bg-white/[0.06] font-mono text-[10px] text-white/70">infra/arweave-gateway/</code>,
+                  then set{" "}
+                  <code className="px-1 py-0.5 rounded bg-white/[0.06] font-mono text-[10px] text-white/70">
+                    NEXT_PUBLIC_ARWEAVE_PRIMARY_GATEWAY
+                  </code>{" "}
+                  to start serving every read through it.
+                </p>
+                <div className="flex gap-2">
+                  <a
+                    href="https://github.com/shanecloonan/cloonan-group/blob/main/infra/arweave-gateway/README.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={pillBtn}
+                  >
+                    Deployment Guide
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {ARWEAVE_PRIMARY_GATEWAY && nodeHealth?.primary && (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-2 h-2 rounded-full bg-purple-400/80 shrink-0" />
+                  <a
+                    href={nodeHealth.primary.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-mono text-purple-300/80 hover:text-purple-300 truncate"
+                  >
+                    {nodeHealth.primary.url.replace(/^https?:\/\//, "")}
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-2xl font-bold text-white tracking-tight tabular-nums">
+                      {nodeHealth.primary.height != null
+                        ? nodeHealth.primary.height.toLocaleString()
+                        : "—"}
+                    </p>
+                    <p className="text-[10px] text-white/30 mt-0.5 uppercase">Node Height</p>
+                  </div>
+                  <div>
+                    <p
+                      className={`text-2xl font-bold tracking-tight tabular-nums ${
+                        nodeHealth.primary.syncLag != null && nodeHealth.primary.syncLag > 50
+                          ? "text-yellow-400"
+                          : "text-emerald-400"
+                      }`}
+                    >
+                      {nodeHealth.primary.syncLag != null
+                        ? nodeHealth.primary.syncLag === 0
+                          ? "0"
+                          : `-${nodeHealth.primary.syncLag.toLocaleString()}`
+                        : "—"}
+                    </p>
+                    <p className="text-[10px] text-white/30 mt-0.5 uppercase">Sync Lag</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-white tracking-tight tabular-nums">
+                      {nodeHealth.primary.latencyMs}
+                      <span className="text-sm font-semibold text-white/40">ms</span>
+                    </p>
+                    <p className="text-[10px] text-white/30 mt-0.5 uppercase">Latency</p>
+                  </div>
+                  <div>
+                    <p
+                      className={`text-2xl font-bold tracking-tight tabular-nums ${
+                        nodeHealth.primary.blockList === 0
+                          ? "text-emerald-400"
+                          : nodeHealth.primary.blockList == null
+                            ? "text-white/40"
+                            : "text-yellow-400"
+                      }`}
+                    >
+                      {nodeHealth.primary.blockList != null
+                        ? nodeHealth.primary.blockList
+                        : "—"}
+                    </p>
+                    <p className="text-[10px] text-white/30 mt-0.5 uppercase">Blocklist</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/[0.04] flex items-start gap-2">
+                  <span className="w-1 h-1 mt-1.5 rounded-full bg-purple-400/60 shrink-0" />
+                  <p className="text-[11px] text-white/40 leading-relaxed">
+                    {nodeHealth.primary.blockList === 0
+                      ? "Blocklist is empty — this gateway serves every transaction on Arweave without filtering."
+                      : nodeHealth.primary.blockList == null
+                        ? "Admin API key not configured server-side, so the public blocklist size can't be verified from the browser. Set ARWEAVE_GATEWAY_ADMIN_KEY in Vercel to display it."
+                        : `This gateway has ${nodeHealth.primary.blockList} entries on its local blocklist. Edit via /ar-io/admin/block-list.`}
+                  </p>
+                </div>
+
+                {clientPoolStats.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-white/[0.04]">
+                    <p className="text-[10px] text-white/30 uppercase mb-2">Last reads served by</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {clientPoolStats.slice(0, 6).map((s) => (
+                        <span
+                          key={s.url}
+                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono border ${
+                            s.role === "primary"
+                              ? "bg-purple-500/10 text-purple-300 border-purple-500/20"
+                              : "bg-white/[0.03] text-white/40 border-white/[0.06]"
+                          }`}
+                          title={`${s.wins} wins / ${s.losses} losses, last ${s.lastLatencyMs}ms`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              (s.lastError ? "bg-red-400" : "bg-emerald-400")
+                            }`}
+                          />
+                          {s.url.replace(/^https?:\/\//, "")}
+                          <span className="text-white/25">·</span>
+                          <span className="tabular-nums">{s.wins}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
           <div className={`${card} p-5`}>
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Network Status</span>
@@ -651,10 +898,10 @@ export default function GatewayContent() {
             </div>
           )}
           <div className={`${card} p-4 text-center`}>
-            <p className="text-[10px] text-white/20 leading-relaxed">
-              Requests route through directly-discovered Arweave peer nodes.
-              Public gateways are only used as a last resort if all peers are unreachable.
-              Peer pool self-sustains through peer-to-peer discovery after initial bootstrap.
+            <p className="text-[10px] text-white/25 leading-relaxed">
+              {ARWEAVE_PRIMARY_GATEWAY
+                ? "Reads route primary node → peer pool → public gateways. The self-hosted node is hit first for every request; pool members only serve as failover."
+                : "Reads currently route peer pool → public gateways. Configure NEXT_PUBLIC_ARWEAVE_PRIMARY_GATEWAY to promote our own node to the top of the waterfall."}
             </p>
           </div>
         </div>

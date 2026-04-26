@@ -18,8 +18,26 @@ export const EXPECTED_CHAIN_ID = 1;
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xvjqxjakckkbfsdrntwk.supabase.co";
 
+// Supabase edge function that handles auth-gated writes (submitTx, uploads,
+// peer-pool management, gateway usage logging). This is a *privileged* path,
+// not the default read path — see ARWEAVE_PRIMARY_GATEWAY below.
 export const ARWEAVE_GATEWAY_URL = `${SUPABASE_URL}/functions/v1/arweave-gateway`;
 
+/**
+ * Our own self-hosted ar.io gateway node (see infra/arweave-gateway/).
+ * When set, it is the FIRST stop for every Arweave read — we are not
+ * dependent on any third party, and nothing we care about can be censored.
+ *
+ * Set via NEXT_PUBLIC_ARWEAVE_PRIMARY_GATEWAY. If blank, the app falls
+ * straight through to the public pool below.
+ */
+export const ARWEAVE_PRIMARY_GATEWAY: string =
+  process.env.NEXT_PUBLIC_ARWEAVE_PRIMARY_GATEWAY?.trim() || "";
+
+/**
+ * Fallback pool used when the primary is missing, unreachable, or returns 5xx.
+ * Order matters — the pool is tried top-to-bottom.
+ */
 export const ARWEAVE_DIRECT_GATEWAYS = [
   "https://arweave.net",
   "https://ar-io.net",

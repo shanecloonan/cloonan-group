@@ -1,0 +1,31 @@
+# Drop in /etc/systemd/system/arweave-gateway.service on the server:
+#
+#   sudo cp infra/arweave-gateway/systemd/arweave-gateway.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now arweave-gateway
+#
+# Adjust WorkingDirectory + User to match where you checked the repo out.
+
+[Unit]
+Description=Cloonan Group self-hosted Arweave (ar.io) gateway
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/cloonan-group/infra/arweave-gateway
+User=deploy
+Group=docker
+
+EnvironmentFile=/opt/cloonan-group/infra/arweave-gateway/.env
+
+ExecStartPre=/usr/bin/docker compose pull
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

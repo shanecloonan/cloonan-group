@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { ARWEAVE_GATEWAY_URL, ARWEAVE_DIRECT_GATEWAYS } from "./config";
+import { poolFetch, listGateways, type GatewayRole } from "./gateway-pool";
 import { uploadToTurbo, uploadFileToTurbo, getTurboPrice, getTurboBalance, wincToAr } from "./turbo";
 import { isArConnectAvailable, dispatchTransaction, type DispatchResult } from "./arconnect";
 import type {
@@ -106,6 +107,11 @@ export function buildGqlQuery(params: GqlQueryParams): string {
 export class ArweaveGateway {
   private baseUrl: string;
 
+  /** Last read that went through fetchWithFallback — surfaced to UI so users
+   *  can see which gateway served their data (or that our own node did). */
+  public lastServedBy: string | null = null;
+  public lastServedByRole: GatewayRole | "supabase" | null = null;
+
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl || ARWEAVE_GATEWAY_URL;
   }
@@ -125,6 +131,11 @@ export class ArweaveGateway {
     return headers;
   }
 
+  /**
+   * Privileged Supabase-edge-function call. Used for auth-gated operations
+   * (submitTx, submitChunk, pool-status, refresh-peers). Do NOT use this
+   * for public reads — those should go through the gateway-pool.
+   */
   private async gw(path: string, opts: RequestInit = {}): Promise<Response> {
     const authHeaders = await this.getAuthHeaders();
     const res = await fetch(`${this.baseUrl}${path}`, {
@@ -135,30 +146,59 @@ export class ArweaveGateway {
   }
 
   /**
-   * Falls back to direct gateway access if the edge function isn't reachable
-   * (e.g. user not authenticated). Tries each gateway in order.
+   * Read waterfall:
+   *   1. Self-hosted primary node  (lib/gateway-pool.ts)
+   *   2. Public gateway pool       (arweave.net, ar-io.net, arweave.dev, ...)
+   *
+   * Writes / non-GET requests bypass the pool and go straight to the Supabase
+   * edge function (authenticated). This keeps user-generated state (uploads,
+   * peer-pool state) flowing through our own auth layer.
    */
-  private async directFetch(path: string): Promise<Response> {
+  private async fetchWithFallback(path: string, opts?: RequestInit): Promise<Response> {
+    const method = opts?.method?.toUpperCase() || "GET";
+    if (method !== "GET" && method !== "HEAD") {
+      // Writes go through the privileged Supabase proxy
+      const res = await this.gw(path, opts);
+      this.lastServedBy = this.baseUrl;
+      this.lastServedByRole = "supabase";
+      return res;
+    }
+
+    // Reads: primary node → pool → (last resort) supabase proxy
+    try {
+      const { response, servedBy, role } = await poolFetch(path, { ...opts, timeoutMs: 12_000 });
+      this.lastServedBy = servedBy;
+      this.lastServedByRole = role;
+      return response;
+    } catch {
+      // Pool completely down — one last attempt through Supabase proxy
+      try {
+        const res = await this.gw(path, opts);
+        if (res.ok || res.status < 500) {
+          this.lastServedBy = this.baseUrl;
+          this.lastServedByRole = "supabase";
+          return res;
+        }
+      } catch { /* fall through */ }
+    }
+
+    // Absolute last resort — direct hit to the pool's first entry
     for (const gw of ARWEAVE_DIRECT_GATEWAYS) {
       try {
         const res = await fetch(`${gw}${path}`, { signal: AbortSignal.timeout(12000) });
-        if (res.ok || res.status < 500) return res;
-      } catch {
-        continue;
-      }
+        if (res.ok || res.status < 500) {
+          this.lastServedBy = gw;
+          this.lastServedByRole = "pool";
+          return res;
+        }
+      } catch { continue; }
     }
     return new Response("All gateways failed", { status: 502 });
   }
 
-  private async fetchWithFallback(path: string, opts?: RequestInit): Promise<Response> {
-    try {
-      const res = await this.gw(path, opts);
-      if (res.ok || res.status < 500) return res;
-    } catch { /* fall through */ }
-    if (!opts || opts.method === "GET" || !opts.method) {
-      return this.directFetch(path);
-    }
-    throw new Error("Gateway request failed");
+  /** Inspect the read waterfall that will be used (useful for dashboards). */
+  getReadPath(): Array<{ url: string; role: GatewayRole }> {
+    return listGateways();
   }
 
   /* ---- Network ---- */
