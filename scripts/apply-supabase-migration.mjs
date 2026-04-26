@@ -24,9 +24,36 @@
  */
 
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 
 const endpoint = (ref) => `https://api.supabase.com/v1/projects/${ref}/database/query`;
+
+/**
+ * Derive a CLI-compatible migration version + name from the filename.
+ * `2026-04-25-permawrite-repo-uniqueness.sql` → `{ version: "20260425000000",
+ * name: "permawrite_repo_uniqueness" }`. This matches the
+ * YYYYMMDDHHMMSS convention Supabase's CLI uses for
+ * `supabase_migrations.schema_migrations` so the dashboard lists it
+ * alongside CLI-applied migrations.
+ */
+function parseMigrationMeta(filePath) {
+  const base = basename(filePath).replace(/\.sql$/i, "");
+  const m = base.match(/^(\d{4})-(\d{2})-(\d{2})[-_](.+)$/);
+  if (m) {
+    const [, y, mo, d, rest] = m;
+    return {
+      version: `${y}${mo}${d}000000`,
+      name: rest.replace(/[-\s]+/g, "_").replace(/[^a-z0-9_]/gi, "").toLowerCase(),
+    };
+  }
+  // Fallback: current timestamp + whole filename.
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return {
+    version: `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`,
+    name: base.replace(/[-\s]+/g, "_").replace(/[^a-z0-9_]/gi, "").toLowerCase(),
+  };
+}
 
 function splitSqlStatements(sql) {
   const out = [];
@@ -140,8 +167,10 @@ async function main() {
 
   const sql = readFileSync(resolve(file), "utf8");
   const statements = splitSqlStatements(sql);
+  const meta = parseMigrationMeta(file);
   console.log(`→ Applying ${statements.length} statement(s) from ${file}`);
   console.log(`  Project: ${ref}`);
+  console.log(`  Version: ${meta.version}  Name: ${meta.name}`);
 
   for (let i = 0; i < statements.length; i++) {
     const stmt = statements[i];
@@ -158,6 +187,29 @@ async function main() {
       process.exit(2);
     }
   }
+
+  // Register in supabase_migrations.schema_migrations so this shows up in
+  // the Dashboard → Database → Migrations tab. Idempotent: ON CONFLICT
+  // DO NOTHING. We wrap the file body in a dollar-tagged literal with a
+  // unique tag to avoid collisions with DO $$ blocks inside the SQL.
+  process.stdout.write("  ↳ Recording in schema_migrations ... ");
+  try {
+    const tag = `MIG_${Date.now().toString(36)}`;
+    const registerSql = `insert into supabase_migrations.schema_migrations (version, name, statements)
+values (
+  '${meta.version}',
+  '${meta.name}',
+  array[$${tag}$${sql}$${tag}$]::text[]
+)
+on conflict (version) do nothing;`;
+    await runQuery({ ref, token, sql: registerSql });
+    console.log("ok");
+  } catch (e) {
+    // Non-fatal: the DDL is applied even if tracking fails. Schema may
+    // not exist yet on brand-new projects, or permissions may differ.
+    console.log(`skipped (${e.message.split("\n")[0]})`);
+  }
+
   console.log("\n✓ All statements applied successfully.");
 }
 
