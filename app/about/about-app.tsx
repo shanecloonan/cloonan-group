@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
+import { Menu, X } from "lucide-react";
 
 Chart.register(...registerables);
 
@@ -587,6 +588,7 @@ function SectionHeading({ children, sub }: { children: React.ReactNode; sub?: st
 
 export default function AboutApp() {
   const [activeSection, setActiveSection] = useState("overview");
+  const [navOpen, setNavOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
   const [divCount, setDivCount] = useState(0);
   const [orbScale, setOrbScale] = useState(1);
@@ -725,7 +727,21 @@ export default function AboutApp() {
 
   const scrollTo = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setNavOpen(false);
   }, []);
+
+  /* ---- Escape to close drawer + lock body scroll while open ---- */
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setNavOpen(false); };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [navOpen]);
 
   /* ================================================================ */
   /*  RENDER                                                           */
@@ -734,27 +750,77 @@ export default function AboutApp() {
   return (
     <div className="min-h-screen" style={{ background: "#08090e" }}>
 
-      {/* ═══════════ STICKY SECTION NAV ═══════════ */}
-      <div className="sticky top-14 z-40 border-b border-white/[0.04]" style={{ background: "rgba(8,9,14,0.92)", backdropFilter: "blur(12px)" }}>
-        <div className="max-w-[1100px] mx-auto px-4 overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-0.5 py-2 min-w-max">
-            {SECTIONS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => scrollTo(s.id)}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-semibold tracking-wide uppercase whitespace-nowrap transition-all cursor-pointer ${
-                  activeSection === s.id
-                    ? "text-cyan-400 bg-cyan-400/10"
-                    : "text-white/30 hover:text-white/60 hover:bg-white/[0.03]"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+      {/* ═══════════ FLOATING SECTION NAV ═══════════ */}
+      {/*
+        Fixed hamburger button (top-right, under the site nav) opens a
+        slide-over drawer with the full section list. Replaces the old
+        15-pill sticky strip, which felt cluttered on desktop.
+      */}
+      <button
+        type="button"
+        onClick={() => setNavOpen(true)}
+        aria-label="Open section navigation"
+        aria-expanded={navOpen}
+        className={`fixed top-[72px] right-4 sm:right-6 z-40 w-11 h-11 rounded-full flex items-center justify-center text-white/70 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] backdrop-blur-md transition-all cursor-pointer shadow-lg shadow-black/30 ${navOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+      >
+        <Menu className="w-[18px] h-[18px]" />
+        {/* Active section indicator dot */}
+        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-cyan-400 border-2 border-[#08090e]" aria-hidden="true" />
+      </button>
+
+      {/* Backdrop */}
+      <div
+        onClick={() => setNavOpen(false)}
+        aria-hidden="true"
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${navOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+      />
+
+      {/* Drawer */}
+      <aside
+        role="dialog"
+        aria-label="Section navigation"
+        aria-modal="true"
+        className={`fixed top-0 right-0 bottom-0 z-50 w-[88vw] max-w-[320px] border-l border-white/[0.06] flex flex-col transform transition-transform duration-300 ease-out ${navOpen ? "translate-x-0" : "translate-x-full"}`}
+        style={{ background: "rgba(8,9,14,0.98)", backdropFilter: "blur(14px)" }}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.25em]">On this page</p>
+          <button
+            type="button"
+            onClick={() => setNavOpen(false)}
+            aria-label="Close section navigation"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-      </div>
+        <nav className="flex-1 overflow-y-auto px-3 py-3">
+          <ul className="space-y-0.5">
+            {SECTIONS.map((s, i) => {
+              const active = activeSection === s.id;
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => scrollTo(s.id)}
+                    className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all cursor-pointer ${
+                      active
+                        ? "bg-cyan-400/10 text-cyan-300"
+                        : "text-white/50 hover:text-white hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-mono tabular-nums w-5 text-right ${active ? "text-cyan-400/70" : "text-white/20 group-hover:text-white/40"}`}>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="text-[13px] font-medium tracking-tight">{s.label}</span>
+                    {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </aside>
 
       <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 pt-8 pb-16 space-y-20">
 
