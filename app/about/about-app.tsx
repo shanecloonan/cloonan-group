@@ -856,13 +856,13 @@ export default function AboutApp() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {([
-              { value: "31,400+", label: "Lines of Code", sub: "TypeScript, Solidity, CSS" },
-              { value: "95", label: "Source Files", sub: "Components, libraries, configs" },
+              { value: "27,500+", label: "Lines of Code", sub: "TypeScript, SQL, CSS" },
+              { value: "85", label: "Source Files", sub: "Components, libraries, scripts" },
               { value: "23", label: "App Routes", sub: "Next.js pages" },
-              { value: "17", label: "Library Modules", sub: "Shared logic layer" },
+              { value: "18", label: "Library Modules", sub: "Shared logic layer" },
               { value: "8", label: "Factory Contracts", sub: "On-chain launchers" },
               { value: "16", label: "Smart Contracts", sub: "Deployed on Ethereum + Solana" },
-              { value: "12", label: "Supabase Tables", sub: "Database schema" },
+              { value: "8", label: "Supabase Tables", sub: "Database schema" },
               { value: "3", label: "Blockchains", sub: "Ethereum, Arweave, Solana" },
             ] as const).map((s) => (
               <div key={s.label} className={`${card} p-4 text-center`}>
@@ -879,10 +879,10 @@ export default function AboutApp() {
                 <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Codebase Breakdown</p>
                 <div className="space-y-1.5">
                   {([
-                    { label: "TypeScript / TSX", value: "22,800+", pct: 73 },
-                    { label: "JSON / Config", value: "6,500+", pct: 21 },
-                    { label: "CSS / Styles", value: "1,100+", pct: 3 },
-                    { label: "Solidity ABIs", value: "1,000+", pct: 3 },
+                    { label: "React / TSX", value: "20,500+", pct: 74 },
+                    { label: "TypeScript / TS", value: "6,400+", pct: 23 },
+                    { label: "SQL migrations", value: "285", pct: 2 },
+                    { label: "Scripts / CSS", value: "360", pct: 1 },
                   ] as const).map((row) => (
                     <div key={row.label}>
                       <div className="flex items-center justify-between text-[10px] mb-0.5">
@@ -919,13 +919,12 @@ export default function AboutApp() {
           </div>
 
           <div className={`${card} p-5`}>
-            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Supabase Tables (12)</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Supabase Tables (8)</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
               {([
-                "user_wallets", "user_preferences", "user_roles", "tx_history",
-                "arweave_uploads", "arweave_bookmarks", "arweave_gateway_logs",
-                "permawrite_items", "permawrite_categories", "permawrite_category_groups",
-                "permawrite_repos", "permawrite_repo_commits",
+                "user_wallets", "user_preferences", "tx_history",
+                "arweave_uploads", "arweave_bookmarks",
+                "permawrite_items", "permawrite_repos", "permawrite_repo_commits",
               ] as const).map((t) => (
                 <p key={t} className="text-[10px] font-mono text-purple-300/30">{t}</p>
               ))}
