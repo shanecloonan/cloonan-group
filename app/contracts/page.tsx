@@ -185,11 +185,8 @@ export default function ContractsPage() {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-brand-100">
-            Money<span className="text-gold">Fund</span> Contracts
+            MoneyFund Contracts
           </h1>
-          <p className="text-xs text-brand-500 mt-1.5">
-            On-chain addresses and explorer links
-          </p>
           <div className="mx-auto mt-3 w-12 h-px bg-gold/30" />
         </div>
 
