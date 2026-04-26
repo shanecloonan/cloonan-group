@@ -585,39 +585,27 @@ export class ArweaveGateway {
       });
     }
 
-    // Small data (<=256KB): one POST /tx with the data inline.
-    if (data.byteLength <= 256 * 1024) {
-      const result = await this.submitTx(tx.toJSON() as Record<string, unknown>);
-      const ok = result.status === 200 || result.status === 202;
-      const status = ok ? "submitted" : "failed";
-      if (userId) await this.safeUploadUpdate(txId, { status });
-      onProgress?.(100);
-      return { txId, status: result.status, cost };
-    }
-
-    // Large data (>256KB): post tx header, then upload each chunk with
-    // its proper Merkle data_path (computed by arweave-js).
-    const txJson = tx.toJSON() as Record<string, unknown>;
-    delete txJson.data;
-    const submitResult = await this.submitTx(txJson);
-    if (submitResult.status !== 200 && submitResult.status !== 202) {
-      if (userId) await this.safeUploadUpdate(txId, { status: "failed" });
-      return { txId, status: submitResult.status, cost };
-    }
-
-    const totalChunks = tx.chunks?.chunks.length ?? 0;
-    for (let i = 0; i < totalChunks; i++) {
-      const chunk = tx.getChunk(i, data);
-      const chunkResult = await this.submitChunk(chunk as unknown as Record<string, unknown>);
-      if (chunkResult.status !== 200 && chunkResult.status !== 202) {
-        if (userId) await this.safeUploadUpdate(txId, { status: "failed" });
-        throw new Error(`Chunk upload failed at chunk ${i + 1}/${totalChunks}`);
+    // Submit via arweave-js's TransactionUploader. This is the canonical
+    // path for POSTing signed transactions — it handles both small (single
+    // /tx POST) and large (/tx header + /chunk stream) uploads uniformly,
+    // uses axios under the hood (which arweave.net's CORS whitelist
+    // accepts), and knows how to format the request body exactly the way
+    // the gateway expects. Our hand-rolled JSON.stringify(tx.toJSON())
+    // path was being rejected by arweave.net with "400: Invalid JSON".
+    try {
+      const uploader = await arweaveSdk.transactions.getUploader(tx);
+      while (!uploader.isComplete) {
+        await uploader.uploadChunk();
+        onProgress?.(uploader.pctComplete);
       }
-      onProgress?.(Math.round(((i + 1) / totalChunks) * 100));
+      if (userId) await this.safeUploadUpdate(txId, { status: "submitted" });
+      onProgress?.(100);
+      return { txId, status: 200, cost };
+    } catch (err) {
+      if (userId) await this.safeUploadUpdate(txId, { status: "failed" });
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Arweave upload failed: ${msg}`);
     }
-
-    if (userId) await this.safeUploadUpdate(txId, { status: "submitted" });
-    return { txId, status: 200, cost };
   }
 
   async uploadFile(
