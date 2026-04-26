@@ -132,7 +132,6 @@ export default function WalletsApp() {
   const [moneyBal, setMoneyBal] = useState("0.00");
 
   const [tab, setTab] = useState<"home" | "apps" | "explorer" | "iframe">("home");
-  const [vanityMode, setVanityMode] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<StatusEntry[]>([]);
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
@@ -198,25 +197,14 @@ export default function WalletsApp() {
   const createWallet = useCallback(async () => {
     addStatus("Creating wallet...");
     try {
-      let wallet: ethers.Wallet;
-      if (vanityMode) {
-        let attempts = 0;
-        while (true) {
-          attempts++;
-          wallet = ethers.Wallet.createRandom();
-          if (wallet.address.toLowerCase().startsWith("0x100")) break;
-          if (attempts > 10000) { addStatus("Failed after 10000 attempts for 0x100 prefix", "error"); return; }
-        }
-      } else {
-        wallet = ethers.Wallet.createRandom();
-      }
+      const wallet = ethers.Wallet.createRandom();
       await addEthWallet({ address: wallet.address, privateKey: wallet.privateKey, type: "moneyfund" });
       selectEthWallet(wallet.address);
       addStatus(`Wallet created: ${shorten(wallet.address)}`, "success");
     } catch (e: unknown) {
       addStatus(`Failed: ${e instanceof Error ? e.message : String(e)}`, "error");
     }
-  }, [vanityMode, addEthWallet, selectEthWallet, addStatus]);
+  }, [addEthWallet, selectEthWallet, addStatus]);
 
   const exportWallets = useCallback(() => {
     if (ethWallets.length === 0) { addStatus("No wallets to export", "error"); return; }
@@ -562,22 +550,7 @@ export default function WalletsApp() {
 
                 {/* Wallet selector */}
                 <div className={`${card} p-4 space-y-3`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Active Wallet</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-white/25">0x100</span>
-                      <label className="relative w-9 h-5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={vanityMode}
-                          onChange={(e) => { setVanityMode(e.target.checked); addStatus(`0x100 Mode ${e.target.checked ? "ON" : "OFF"}`, "success"); }}
-                          className="sr-only peer"
-                        />
-                        <span className="absolute inset-0 bg-white/[0.08] rounded-full peer-checked:bg-blue-500/40 transition-all" />
-                        <span className="absolute left-[2px] top-[2px] w-4 h-4 bg-white/60 rounded-full peer-checked:translate-x-4 peer-checked:bg-blue-400 transition-all" />
-                      </label>
-                    </div>
-                  </div>
+                  <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Active Wallet</span>
                   <div className="flex gap-2">
                     <select
                       value={selectedEthAddress ?? ""}
