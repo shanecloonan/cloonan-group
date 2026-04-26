@@ -41,10 +41,6 @@ export default function UnifiedUpload() {
   const [desc, setDesc] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [customTags, setCustomTags] = useState<ArweaveTag[]>([]);
-  const [newTagName, setNewTagName] = useState("");
-  const [newTagValue, setNewTagValue] = useState("");
-
   const [permawrite, setPermawrite] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
@@ -177,13 +173,6 @@ export default function UnifiedUpload() {
     }
   }, [acceptFile]);
 
-  const addCustomTag = useCallback(() => {
-    if (!newTagName.trim()) return;
-    setCustomTags((prev) => [...prev, { name: newTagName.trim(), value: newTagValue.trim() }]);
-    setNewTagName("");
-    setNewTagValue("");
-  }, [newTagName, newTagValue]);
-
   const addPwTag = useCallback((tag?: string) => {
     const t = (tag ?? newPwTag).trim().toLowerCase();
     if (!t || pwTags.includes(t)) return;
@@ -207,7 +196,6 @@ export default function UnifiedUpload() {
     setTitle("");
     setCategory("");
     setPwTags([]);
-    setCustomTags([]);
     if (fileRef.current) fileRef.current.value = "";
   }, []);
 
@@ -227,7 +215,6 @@ export default function UnifiedUpload() {
         tags: pwTags,
         preferredMethod: UPLOAD_METHOD,
         visibility: vis,
-        customTags: customTags.length > 0 ? customTags : undefined,
       };
       const visLabel = visibility === "public" ? "to Public Feed" : "to Personal Feed";
       setStatus({ msg: `PermaWriting ${visLabel}...`, type: "loading" });
@@ -250,13 +237,12 @@ export default function UnifiedUpload() {
       setStatus({ msg: "Uploading to Arweave...", type: "loading" });
       setProgress(0);
       try {
-        const tags: ArweaveTag[] = [...customTags];
         let result;
         if (f) {
-          result = await gw.smartUploadFile(f, tags, arweaveWallet.jwk, UPLOAD_METHOD, desc || undefined, (pct) => setProgress(pct));
+          result = await gw.smartUploadFile(f, [], arweaveWallet.jwk, UPLOAD_METHOD, desc || undefined, (pct) => setProgress(pct));
         } else {
           const data = new TextEncoder().encode(t);
-          const allTags: ArweaveTag[] = [{ name: "Content-Type", value: "text/plain" }, ...tags];
+          const allTags: ArweaveTag[] = [{ name: "Content-Type", value: "text/plain" }];
           result = await gw.smartUploadData(data, allTags, arweaveWallet.jwk, UPLOAD_METHOD, desc || undefined, (pct) => setProgress(pct));
         }
         if (result.status === 200) {
@@ -271,7 +257,7 @@ export default function UnifiedUpload() {
         setProgress(null);
       }
     }
-  }, [arweaveWallet, file, text, permawrite, category, title, desc, pwTags, visibility, customTags, gw, resetForm]);
+  }, [arweaveWallet, file, text, permawrite, category, title, desc, pwTags, visibility, gw, resetForm]);
 
   if (!arweaveWallet) {
     return (
@@ -367,26 +353,6 @@ export default function UnifiedUpload() {
         <div>
           <label className={labelCls}>Description (optional)</label>
           <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Brief description of this upload" className={inputCls} />
-        </div>
-      </div>
-
-      {/* Custom Tags */}
-      <div className={`${card} p-5 space-y-3`}>
-        <span className="text-xs font-medium text-white/30 uppercase tracking-wider">Custom Arweave Tags</span>
-        {customTags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {customTags.map((t, i) => (
-              <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300/60">
-                {t.name}: {t.value}
-                <button type="button" onClick={() => setCustomTags((prev) => prev.filter((_, idx) => idx !== i))} className="text-red-400/60 hover:text-red-400 cursor-pointer">×</button>
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <input value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Tag name" className={`flex-1 ${inputCls}`} />
-          <input value={newTagValue} onChange={(e) => setNewTagValue(e.target.value)} placeholder="Tag value" className={`flex-1 ${inputCls}`} onKeyDown={(e) => e.key === "Enter" && addCustomTag()} />
-          <button type="button" onClick={addCustomTag} className={btnSmall}>Add</button>
         </div>
       </div>
 
