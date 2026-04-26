@@ -153,7 +153,8 @@ export default function ArweaveWallet() {
   const refreshBalance = useCallback(async (addr: string) => {
     try {
       const winston = await getBalance(addr);
-      const ar = (BigInt(winston) / BigInt(10 ** 12)).toString();
+      // 1 AR = 10^12 winston. Show 2 decimal places for readable balances.
+      const ar = (Number(winston) / 1e12).toFixed(2);
       setBalance(ar);
     } catch {
       setBalance("Error");
