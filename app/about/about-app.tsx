@@ -13,7 +13,6 @@ Chart.register(...registerables);
 const SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "start", label: "Get Started" },
-  { id: "architecture", label: "Architecture" },
   { id: "diagrams", label: "U-Diagrams" },
   { id: "dividends", label: "Dividend Pool" },
   { id: "trilayer", label: "Tri-Layer" },
@@ -21,6 +20,7 @@ const SECTIONS = [
   { id: "contracts", label: "Contracts" },
   { id: "security", label: "Security" },
   { id: "arweave", label: "Arweave" },
+  { id: "architecture", label: "Architecture" },
   { id: "stats", label: "Platform Stats" },
   { id: "fees", label: "Fee Structure" },
   { id: "faq", label: "FAQ" },
@@ -880,65 +880,6 @@ export default function AboutApp() {
           </div>
         </section>
 
-        {/* ═══════════ ARCHITECTURE ═══════════ */}
-        <section id="architecture" className="space-y-8 scroll-mt-28">
-          <SectionHeading sub="How the frontend, backend, Ethereum, and Arweave layers connect">System Architecture</SectionHeading>
-
-          <div className={`${card} p-6 sm:p-8`}>
-            <p className="text-[13px] text-white/60 leading-relaxed">
-              MoneyFund is a multi-chain application spanning two blockchains (Ethereum and Arweave) with a Supabase backend for authentication, metadata storage, and serverless gateway proxying. The frontend is a single Next.js 16 application that communicates directly with both chains from the browser — private keys never leave the client. The architecture is designed for zero SDK dependencies on the Arweave side, using direct HTTP and GraphQL calls for maximum control and minimal bundle size.
-            </p>
-          </div>
-
-          {/* Connection diagram */}
-          <div className={`${card} p-5 sm:p-6`}>
-            <div className="flex items-center justify-center gap-2 flex-wrap text-[10px] font-mono text-white/30 mb-4">
-              <span className="px-2 py-1 rounded bg-cyan-500/10 text-cyan-300/60 border border-cyan-500/20">Browser</span>
-              <span className="text-white/15">→</span>
-              <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-300/60 border border-blue-500/20">Supabase</span>
-              <span className="text-white/15">→</span>
-              <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-300/60 border border-emerald-500/20">Ethereum</span>
-              <span className="text-white/15">+</span>
-              <span className="px-2 py-1 rounded bg-violet-500/10 text-violet-300/60 border border-violet-500/20">Arweave</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-center">
-              {[
-                { label: "Client Signing", desc: "All TX signing happens in the browser. Keys are AES-GCM encrypted in local vault.", color: "border-cyan-500/20" },
-                { label: "Edge Proxy", desc: "Supabase Edge Functions route Arweave requests through the peer pool.", color: "border-blue-500/20" },
-                { label: "Direct Peers", desc: "Arweave data fetched from discovered peer nodes. Public gateways as fallback only.", color: "border-violet-500/20" },
-                { label: "Multi-RPC", desc: "Ethereum calls load-balanced across Infura, Ankr, and Cloudflare RPCs.", color: "border-emerald-500/20" },
-              ].map((item) => (
-                <div key={item.label} className={`rounded-xl bg-white/[0.02] border ${item.color} p-3`}>
-                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1">{item.label}</p>
-                  <p className="text-[10px] text-white/30 leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stack layers */}
-          <div className="space-y-4">
-            {ARCH_LAYERS.map((layer) => (
-              <div key={layer.label} className={`${layer.color} rounded-2xl border border-white/[0.06] overflow-hidden`}>
-                <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
-                  <span className={`w-2 h-2 rounded-full ${layer.dotColor}`} />
-                  <h3 className="text-base font-bold text-white">{layer.label}</h3>
-                </div>
-                <div className="p-5 sm:p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {layer.components.map((comp) => (
-                      <div key={comp.name} className="space-y-1">
-                        <p className="text-xs font-semibold text-white/70">{comp.name}</p>
-                        <p className="text-[11px] text-white/40 leading-relaxed">{comp.detail}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* ═══════════ U-DIAGRAMS ═══════════ */}
         <section id="diagrams" className="space-y-8 scroll-mt-28">
           <SectionHeading sub="How MoneyFund compares to equities and shitcoins">Value Flow Diagrams</SectionHeading>
@@ -1201,6 +1142,65 @@ export default function AboutApp() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════ ARCHITECTURE ═══════════ */}
+        <section id="architecture" className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="How the frontend, backend, Ethereum, and Arweave layers connect">System Architecture</SectionHeading>
+
+          <div className={`${card} p-6 sm:p-8`}>
+            <p className="text-[13px] text-white/60 leading-relaxed">
+              MoneyFund is a multi-chain application spanning two blockchains (Ethereum and Arweave) with a Supabase backend for authentication, metadata storage, and serverless gateway proxying. The frontend is a single Next.js 16 application that communicates directly with both chains from the browser — private keys never leave the client. The architecture is designed for zero SDK dependencies on the Arweave side, using direct HTTP and GraphQL calls for maximum control and minimal bundle size.
+            </p>
+          </div>
+
+          {/* Connection diagram */}
+          <div className={`${card} p-5 sm:p-6`}>
+            <div className="flex items-center justify-center gap-2 flex-wrap text-[10px] font-mono text-white/30 mb-4">
+              <span className="px-2 py-1 rounded bg-cyan-500/10 text-cyan-300/60 border border-cyan-500/20">Browser</span>
+              <span className="text-white/15">→</span>
+              <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-300/60 border border-blue-500/20">Supabase</span>
+              <span className="text-white/15">→</span>
+              <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-300/60 border border-emerald-500/20">Ethereum</span>
+              <span className="text-white/15">+</span>
+              <span className="px-2 py-1 rounded bg-violet-500/10 text-violet-300/60 border border-violet-500/20">Arweave</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-center">
+              {[
+                { label: "Client Signing", desc: "All TX signing happens in the browser. Keys are AES-GCM encrypted in local vault.", color: "border-cyan-500/20" },
+                { label: "Edge Proxy", desc: "Supabase Edge Functions route Arweave requests through the peer pool.", color: "border-blue-500/20" },
+                { label: "Direct Peers", desc: "Arweave data fetched from discovered peer nodes. Public gateways as fallback only.", color: "border-violet-500/20" },
+                { label: "Multi-RPC", desc: "Ethereum calls load-balanced across Infura, Ankr, and Cloudflare RPCs.", color: "border-emerald-500/20" },
+              ].map((item) => (
+                <div key={item.label} className={`rounded-xl bg-white/[0.02] border ${item.color} p-3`}>
+                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1">{item.label}</p>
+                  <p className="text-[10px] text-white/30 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Stack layers */}
+          <div className="space-y-4">
+            {ARCH_LAYERS.map((layer) => (
+              <div key={layer.label} className={`${layer.color} rounded-2xl border border-white/[0.06] overflow-hidden`}>
+                <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full ${layer.dotColor}`} />
+                  <h3 className="text-base font-bold text-white">{layer.label}</h3>
+                </div>
+                <div className="p-5 sm:p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {layer.components.map((comp) => (
+                      <div key={comp.name} className="space-y-1">
+                        <p className="text-xs font-semibold text-white/70">{comp.name}</p>
+                        <p className="text-[11px] text-white/40 leading-relaxed">{comp.detail}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
