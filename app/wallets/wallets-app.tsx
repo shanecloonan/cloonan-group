@@ -8,7 +8,6 @@ import ArweaveWallet from "./arweave-wallet";
 import dynamic from "next/dynamic";
 
 const UnifiedUpload = dynamic(() => import("./unified-upload"), { ssr: false });
-const PermaFeed = dynamic(() => import("./permafeed"), { ssr: false });
 const ArweaveHistory = dynamic(() => import("./arweave-history"), { ssr: false });
 
 /* ------------------------------------------------------------------ */
@@ -124,7 +123,7 @@ export default function WalletsApp() {
   } = useWallet();
 
   const [chain, setChain] = useState<"ethereum" | "arweave">("ethereum");
-  const [arTab, setArTab] = useState<"wallet" | "upload" | "feed" | "history">("wallet");
+  const [arTab, setArTab] = useState<"wallet" | "upload" | "history">("wallet");
   const provider = useMemo(() => new ethers.providers.JsonRpcProvider(RPC), []);
 
   const selected = selectedEthWallet;
@@ -503,7 +502,6 @@ export default function WalletsApp() {
               {([
                 { id: "wallet" as const, label: "Wallet", icon: "◈" },
                 { id: "upload" as const, label: "Upload", icon: "☁" },
-                { id: "feed" as const, label: "Feed", icon: "◫" },
                 { id: "history" as const, label: "History", icon: "⏱" },
               ]).map((t) => (
                 <button
@@ -523,7 +521,6 @@ export default function WalletsApp() {
             </div>
             {arTab === "wallet" && <ArweaveWallet />}
             {arTab === "upload" && <UnifiedUpload />}
-            {arTab === "feed" && <PermaFeed />}
             {arTab === "history" && <ArweaveHistory />}
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm px-4 py-2.5 flex items-center gap-3 text-xs">
               <span className="text-white/25">Quick links:</span>
