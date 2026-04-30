@@ -118,13 +118,13 @@ async function postTx(tx: ArweaveTx): Promise<Response> {
 /*  Shared design tokens (must match wallets-app.tsx)                   */
 /* ================================================================== */
 
-const card = "rounded-2xl border border-white/[0.1] bg-brand-950/85 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)]";
+const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 const input = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/30 transition-all";
 const textarea = `${input} h-auto py-3`;
 const btnPrimary = "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 const btnGhost = "w-full h-11 rounded-xl font-medium text-sm border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06] active:scale-[0.98] transition-all cursor-pointer";
 const label = "block text-white/40 text-xs font-medium uppercase tracking-wider mb-1.5";
-const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.1] bg-black/30 text-white/60 hover:text-white hover:bg-black/45 active:scale-95 transition-all cursor-pointer";
+const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
 
 /* ================================================================== */
 /*  COMPONENT                                                          */

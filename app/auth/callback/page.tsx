@@ -82,7 +82,7 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-6">
+    <div className="min-h-[80vh] flex items-center justify-center px-6" style={{ background: "#08090e" }}>
       <div className="text-center space-y-4 max-w-sm">
         {status === "loading" && (
           <div className="mx-auto w-8 h-8 border-2 border-white/10 border-t-gold rounded-full animate-spin" />

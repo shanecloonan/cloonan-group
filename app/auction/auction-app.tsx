@@ -411,7 +411,7 @@ export default function AuctionApp() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen p-4 sm:p-8">
+      <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
         <div className="w-full max-w-[720px] mx-auto pt-12">
           <AuthPanel />
         </div>
@@ -420,7 +420,7 @@ export default function AuctionApp() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-8">
+    <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
       <div className="w-full max-w-[720px] mx-auto space-y-5">
 
         {/* Title */}

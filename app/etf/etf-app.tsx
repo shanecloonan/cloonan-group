@@ -461,7 +461,7 @@ export default function EtfApp() {
   /* ================================================================ */
 
   return (
-    <div className="min-h-screen px-4 py-6 sm:p-10 text-white/90" style={{ fontFamily: "'Manrope', sans-serif" }}>
+    <div className="min-h-screen px-4 py-6 sm:p-10 text-white/90" style={{ background: "#08090e", fontFamily: "'Manrope', sans-serif" }}>
       <div className="max-w-[1100px] mx-auto flex flex-col gap-8">
         {/* ============================================================ */}
         {/*  Launch ETF                                                  */}

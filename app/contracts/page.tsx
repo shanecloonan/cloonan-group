@@ -181,7 +181,7 @@ function GoLink({ c }: { c: Contract }) {
 
 export default function ContractsPage() {
   return (
-    <div className="min-h-screen px-4 py-10 sm:px-6 sm:py-14">
+    <div className="min-h-screen bg-brand-950 px-4 py-10 sm:px-6 sm:py-14">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-brand-100">
@@ -190,7 +190,7 @@ export default function ContractsPage() {
           <div className="mx-auto mt-3 w-12 h-px bg-gold/30" />
         </div>
 
-        <div className="rounded-2xl border border-white/[0.1] bg-brand-950/85 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)] overflow-hidden">
+        <div className="rounded-2xl border border-brand-800/60 bg-brand-950 overflow-hidden">
           {/* Desktop table */}
           <div className="hidden sm:block">
             <table className="w-full text-left">
@@ -278,7 +278,7 @@ export default function ContractsPage() {
         </div>
 
         {/* Simulate Dividends CTA */}
-        <div className="mt-6 rounded-2xl border border-white/[0.1] bg-brand-950/85 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)] px-6 py-6 text-center">
+        <div className="mt-6 rounded-2xl border border-brand-800/60 bg-brand-950 px-6 py-6 text-center">
           <p className="text-lg sm:text-xl font-bold text-brand-100 mb-1">
             Simulate Dividends
           </p>

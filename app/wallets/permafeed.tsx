@@ -22,9 +22,9 @@ import {
   type CategoryCount,
 } from "@/lib/permawrite";
 
-const card = "rounded-2xl border border-white/[0.1] bg-brand-950/85 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)]";
-const inputCls = "w-full h-11 px-4 rounded-xl bg-black/40 border border-white/[0.1] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/30 transition-all";
-const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.1] bg-black/30 text-white/60 hover:text-white hover:bg-black/45 active:scale-95 transition-all cursor-pointer";
+const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/30 transition-all";
+const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
 
 function relativeTime(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime();

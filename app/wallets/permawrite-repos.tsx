@@ -10,8 +10,8 @@ import {
   RepoNameTakenError,
 } from "@/lib/permawrite-repos";
 
-const card = "rounded-2xl border border-white/[0.1] bg-brand-950/85 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)]";
-const inputCls = "w-full h-9 px-3.5 rounded-xl bg-black/40 border border-white/[0.1] text-white/85 text-xs placeholder:text-white/30 outline-none focus:border-purple-400/50 focus:ring-1 focus:ring-purple-400/30 transition-all";
+const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+const inputCls = "w-full h-9 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/80 text-xs placeholder:text-white/20 outline-none focus:border-purple-400/40 focus:ring-1 focus:ring-purple-400/20 transition-all";
 const btnPrimary = "h-9 px-5 rounded-xl text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/20 hover:bg-purple-500/30 active:scale-[0.97] transition-all cursor-pointer disabled:opacity-40";
 const btnGhost = "h-8 px-3.5 rounded-lg text-[11px] font-medium bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer";
 

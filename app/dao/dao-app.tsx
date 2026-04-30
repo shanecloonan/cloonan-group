@@ -336,7 +336,7 @@ export default function DaoApp() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen p-4 sm:p-10">
+      <div className="min-h-screen p-4 sm:p-10" style={{ background: "#08090e" }}>
         <div className="w-full max-w-[1100px] mx-auto pt-12">
           <AuthPanel />
         </div>
@@ -345,7 +345,7 @@ export default function DaoApp() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-10">
+    <div className="min-h-screen p-4 sm:p-10" style={{ background: "#08090e" }}>
       {/* ── Top bar: wallet select ── */}
       <div className="max-w-[1100px] mx-auto mb-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <select

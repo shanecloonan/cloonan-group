@@ -593,6 +593,7 @@ export default function DividendsApp() {
   return (
     <div
       className="min-h-screen p-4 sm:p-10"
+      style={{ background: "#08090e" }}
     >
       <div className="max-w-[1100px] mx-auto flex flex-col gap-8">
 

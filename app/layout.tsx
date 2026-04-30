@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./navbar";
-import BanknoteBackground from "./banknote-background";
 import { WalletProvider } from "@/lib/wallet-context";
 
 const geistSans = Geist({
@@ -34,7 +33,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased pt-14`}
       >
         <WalletProvider>
-          <BanknoteBackground />
           <Navbar />
           {children}
         </WalletProvider>
