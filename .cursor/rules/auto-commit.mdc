@@ -1,0 +1,48 @@
+---
+description: Always commit and push to main when finishing a task
+alwaysApply: true
+---
+
+# Auto-commit and push when done
+
+When a task is complete, commit the changes you made and push to `origin main`. The user has standing approval — do not ask first.
+
+## Scope: only commit your own changes
+
+`git status` will often show pre-existing modifications from other work. **Only stage the specific files you edited or created in this session.** Use `git add <path1> <path2>` (never `git add .` or `git add -A`).
+
+If unsure whether a stray modified file is yours, leave it alone.
+
+## Commit message style
+
+Match the existing repo style: a single-line subject in Title Case, no conventional-commit prefix, no body.
+
+Recent examples from `git log`:
+
+```
+Platform fee: 1% of storage reward on every L1 Arweave upload
+Move /about System Architecture next to Arweave + Stats
+Reorder /about: move Platform Stats next to Fee Structure
+```
+
+Use a HEREDOC even for one-liners so quoting stays clean:
+
+```bash
+git commit -m "$(cat <<'EOF'
+Homepage: drop edge vignette overlay
+EOF
+)"
+```
+
+## Push
+
+```bash
+git push origin main
+```
+
+If push fails (non-fast-forward, hook rejection, etc.) report the error — do not force-push.
+
+## Never commit
+
+- `.env*` files (other than `.env.example`)
+- Anything containing a real `SUPABASE_ACCESS_TOKEN`, private key, or wallet seed

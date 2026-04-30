@@ -18,7 +18,6 @@ export default function Home() {
           3. Guilloché ring pattern (engine-turned currency rosettes)
           4. Crossed engraving hairlines (intaglio line art)
           5. High-frequency fractal grain (paper fibre tooth)
-          6. Edge vignette (archival paper falloff)
       */}
 
       <div
@@ -109,14 +108,6 @@ export default function Home() {
         </filter>
         <rect width="100%" height="100%" filter="url(#paperGrain)" />
       </svg>
-
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 90% 70% at 50% 50%, transparent 55%, rgba(0,0,0,0.6) 100%)",
-        }}
-      />
 
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
         <MoneyFundLogo className="w-64 h-64 sm:w-72 sm:h-72 md:w-72 md:h-72 lg:w-80 lg:h-80 mb-4" />
