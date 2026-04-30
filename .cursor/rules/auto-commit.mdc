@@ -25,14 +25,13 @@ Move /about System Architecture next to Arweave + Stats
 Reorder /about: move Platform Stats next to Fee Structure
 ```
 
-Use a HEREDOC even for one-liners so quoting stays clean:
+This repo runs on **PowerShell**, not bash — do NOT use `cat <<'EOF'` heredocs (they fail with "The '<' operator is reserved for future use"). For single-line subjects, just use plain `-m`:
 
-```bash
-git commit -m "$(cat <<'EOF'
-Homepage: drop edge vignette overlay
-EOF
-)"
+```powershell
+git commit -m "Homepage: drop edge vignette overlay"
 ```
+
+If you ever need a multi-line commit message, use a PowerShell here-string and pipe through a temp file, or use `-m` multiple times (one per paragraph).
 
 ## Push
 
