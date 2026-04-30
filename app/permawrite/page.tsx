@@ -9,7 +9,7 @@ export default function PermawritePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#08090e" }}>
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="w-6 h-6 border-2 border-white/10 border-t-sky-400 rounded-full animate-spin mx-auto" />
           <p className="text-white/30 text-xs">Loading PermaWrite...</p>
@@ -20,7 +20,7 @@ export default function PermawritePage() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8" style={{ background: "#08090e" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md space-y-5">
           <div className="text-center space-y-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">
@@ -36,7 +36,7 @@ export default function PermawritePage() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+    <div className="min-h-screen p-4 sm:p-8">
       <div className="w-full max-w-[960px] mx-auto space-y-5">
         <div className="text-center pt-4 pb-2">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">

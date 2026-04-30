@@ -298,7 +298,7 @@ export default function MoneyDividendsApp() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen" style={{ background: "#08090e" }}>
+      <div className="min-h-screen">
         <div className="w-full max-w-[680px] mx-auto px-4 sm:px-6 py-10">
           <AuthPanel />
         </div>
@@ -307,7 +307,7 @@ export default function MoneyDividendsApp() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#08090e" }}>
+    <div className="min-h-screen">
       <div className="w-full max-w-[680px] mx-auto px-4 sm:px-6 py-10 space-y-6">
 
         {/* Header */}

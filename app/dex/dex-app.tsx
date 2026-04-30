@@ -439,7 +439,7 @@ export default function DexApp() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen flex items-start justify-center p-4 sm:p-8" style={{ background: "#08090e" }}>
+      <div className="min-h-screen flex items-start justify-center p-4 sm:p-8">
         <div className="w-full max-w-[720px] mx-auto pt-12">
           <AuthPanel />
         </div>
@@ -450,7 +450,6 @@ export default function DexApp() {
   return (
     <div
       className="min-h-screen flex items-start justify-center p-4 sm:p-8"
-      style={{ background: "#08090e" }}
     >
       <div className="w-full max-w-[720px] mx-auto space-y-6 pt-12">
         <h1 className="text-3xl sm:text-4xl font-bold text-white/90 text-center">

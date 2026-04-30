@@ -407,7 +407,7 @@ export default function WalletsApp() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#08090e" }}>
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-white/30 text-sm animate-pulse">Loading...</p>
       </div>
     );
@@ -417,7 +417,6 @@ export default function WalletsApp() {
     return (
       <div
         className="min-h-[calc(100vh-56px)] flex items-center justify-center p-4 sm:p-8"
-        style={{ background: "#08090e" }}
       >
         <div className="w-full max-w-[720px] space-y-6">
           <div className="text-center">
@@ -443,7 +442,7 @@ export default function WalletsApp() {
   ];
 
   return (
-    <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+    <div className="min-h-screen p-4 sm:p-8">
       <div className="w-full max-w-[720px] mx-auto space-y-5">
 
         {/* ── Page title + account ── */}

@@ -101,7 +101,7 @@ export default function AuthPanel({ inline }: { inline?: boolean }) {
   if (user && !vaultUnlocked) {
     return (
       <div className={`${inline ? "" : "flex items-center justify-center min-h-[60vh]"}`}>
-        <div className={`${card} p-8 w-full max-w-sm space-y-5`}>
+        <div className={`${card} p-8 w-full max-w-sm mx-auto space-y-5`}>
           <div className="text-center space-y-1">
             <h2 className="text-lg font-bold text-white">Unlock Vault</h2>
             <p className="text-xs text-white/40">Enter your password to decrypt your wallets.</p>

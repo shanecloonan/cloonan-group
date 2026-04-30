@@ -204,7 +204,7 @@ export default function PlanPage() {
     : COMPLETED.filter((it) => it.priority === filterPriority);
 
   return (
-    <div className="min-h-screen" style={{ background: "#08090e" }}>
+    <div className="min-h-screen">
       <div className="max-w-[1100px] mx-auto px-4 sm:px-8 pt-8 pb-20">
 
         {/* Header */}

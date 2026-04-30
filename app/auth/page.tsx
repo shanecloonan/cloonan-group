@@ -30,7 +30,7 @@ export default function AuthPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[80vh] flex items-center justify-center" style={{ background: "#08090e" }}>
+        <div className="min-h-[80vh] flex items-center justify-center">
           <div className="w-6 h-6 border-2 border-white/10 border-t-indigo-400 rounded-full animate-spin" />
         </div>
       }
@@ -132,7 +132,7 @@ function AuthPageInner() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center" style={{ background: "#08090e" }}>
+      <div className="min-h-[80vh] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-white/10 border-t-gold rounded-full animate-spin" />
       </div>
     );
@@ -140,7 +140,7 @@ function AuthPageInner() {
 
   if (user && !vaultUnlocked) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center px-6" style={{ background: "#08090e" }}>
+      <div className="min-h-[80vh] flex items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-lg font-bold text-white">Unlock Vault</h1>
@@ -188,7 +188,7 @@ function AuthPageInner() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-6" style={{ background: "#08090e" }}>
+    <div className="min-h-[80vh] flex items-center justify-center px-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-lg font-bold text-white">{titles[mode]}</h1>

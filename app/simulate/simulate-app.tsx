@@ -625,7 +625,7 @@ export default function SimulateApp() {
   /* ================================================================ */
 
   return (
-    <div className="min-h-screen" style={{ background: "#08090e" }}>
+    <div className="min-h-screen">
       <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 pt-8 pb-16 space-y-12">
         {/* Header */}
         <div className="text-center space-y-3 pt-6">

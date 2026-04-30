@@ -432,7 +432,7 @@ export default function StorefrontApp() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+      <div className="min-h-screen p-4 sm:p-8">
         <div className="w-full max-w-[900px] mx-auto pt-12">
           <AuthPanel />
         </div>
@@ -441,7 +441,7 @@ export default function StorefrontApp() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+    <div className="min-h-screen p-4 sm:p-8">
       <div className="w-full max-w-[900px] mx-auto space-y-5">
 
         {/* Title */}

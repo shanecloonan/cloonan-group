@@ -409,7 +409,6 @@ export default function EnsApp() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: "#08090e" }}
       >
         <p className="text-white/30 text-sm animate-pulse">Loading...</p>
       </div>
@@ -418,7 +417,7 @@ export default function EnsApp() {
 
   if (!user || !vaultUnlocked) {
     return (
-      <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+      <div className="min-h-screen p-4 sm:p-8">
         <div className="w-full max-w-[720px] mx-auto space-y-5">
           <div className="text-center pt-4 pb-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white/90">
@@ -435,7 +434,7 @@ export default function EnsApp() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+    <div className="min-h-screen p-4 sm:p-8">
       <div className="w-full max-w-[720px] mx-auto space-y-5">
 
         {/* ── Page title + account ── */}

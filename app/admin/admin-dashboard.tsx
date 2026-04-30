@@ -512,7 +512,6 @@ export default function AdminDashboard() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: "#08090e" }}
       >
         <p className="text-white/30 text-sm animate-pulse">Loading...</p>
       </div>
@@ -548,7 +547,7 @@ export default function AdminDashboard() {
   /* ================================================================== */
 
   return (
-    <div className="min-h-screen p-4 sm:p-8" style={{ background: "#08090e" }}>
+    <div className="min-h-screen p-4 sm:p-8">
       <div className="w-full max-w-6xl mx-auto space-y-5">
         {/* Header */}
         <div className="text-center pt-4 pb-2">
