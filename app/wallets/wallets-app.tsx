@@ -104,13 +104,13 @@ function shorten(a: string) {
 /*  Shared design tokens                                               */
 /* ================================================================== */
 
-const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
-const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-blue-400/60 focus:ring-1 focus:ring-blue-400/30 transition-all";
+const card = "rounded-2xl border border-white/[0.1] bg-brand-950/85 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)]";
+const inputCls = "w-full h-11 px-4 rounded-xl bg-black/40 border border-white/[0.1] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-blue-400/60 focus:ring-1 focus:ring-blue-400/30 transition-all";
 const selectCls = `${inputCls} appearance-none cursor-pointer`;
 const btnPrimary = "w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center";
-const btnSmall = "h-9 px-4 rounded-xl font-medium text-xs bg-white/[0.06] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.1] active:scale-95 transition-all cursor-pointer";
-const labelCls = "block text-white/40 text-xs font-medium uppercase tracking-wider mb-1.5";
-const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all cursor-pointer";
+const btnSmall = "h-9 px-4 rounded-xl font-medium text-xs bg-black/30 border border-white/[0.1] text-white/70 hover:text-white hover:bg-black/45 active:scale-95 transition-all cursor-pointer";
+const labelCls = "block text-white/50 text-xs font-medium uppercase tracking-wider mb-1.5";
+const pillBtn = "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium border border-white/[0.1] bg-black/30 text-white/60 hover:text-white hover:bg-black/45 active:scale-95 transition-all cursor-pointer";
 
 /* ================================================================== */
 /*  COMPONENT                                                          */

@@ -5,9 +5,9 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useWallet } from "@/lib/wallet-context";
 
-const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+const card = "rounded-2xl border border-white/[0.1] bg-brand-950/85 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)]";
 const inputCls =
-  "w-full h-11 px-4 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-400/30 transition-all";
+  "w-full h-11 px-4 rounded-xl bg-black/40 border border-white/[0.1] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-400/30 transition-all";
 const btnPrimary =
   "h-11 px-6 rounded-xl font-semibold text-sm bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
 const btnGhost =

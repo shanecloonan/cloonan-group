@@ -119,7 +119,7 @@ export default function CompanyChart() {
   }, [exporting]);
 
   return (
-    <section className="relative bg-brand-950 overflow-visible">
+    <section className="relative overflow-visible">
       {/* Section header */}
       <div className="relative px-5 sm:px-8 pt-14 pb-6 sm:pt-20 sm:pb-10">
         <div className="absolute inset-0 bg-gradient-to-b from-forest/20 to-transparent" />
@@ -149,9 +149,10 @@ export default function CompanyChart() {
 
       {/* Chart */}
       <div className="px-5 sm:px-8 pb-16 sm:pb-20 overflow-visible">
+        <div className="max-w-4xl mx-auto rounded-2xl border border-white/[0.08] bg-brand-950/80 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)] py-6 px-4 sm:py-8 sm:px-6">
         <div
           ref={chartRef}
-          className="max-w-4xl mx-auto py-2 px-2 overflow-visible"
+          className="overflow-visible"
         >
           {/* Level 1: MoneyFund */}
           <div className="flex flex-col items-center">
@@ -237,6 +238,7 @@ export default function CompanyChart() {
               </a>
             ))}
           </div>
+        </div>
         </div>
       </div>
     </section>

@@ -6,7 +6,7 @@ import ArweaveGateway, { winstonToAr } from "@/lib/arweave";
 import { getMyItems, type PermawriteItem } from "@/lib/permawrite";
 import type { ArweaveUploadRecord, ArweaveTag, ArweaveGqlEdge } from "@/lib/wallet-types";
 
-const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+const card = "rounded-2xl border border-white/[0.1] bg-brand-950/85 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)]";
 const pillActive = "bg-purple-500/20 text-purple-300 shadow-[inset_0_1px_0_rgba(168,85,247,0.2)]";
 const pillInactive = "text-white/35 hover:text-white/55 hover:bg-white/[0.03]";
 

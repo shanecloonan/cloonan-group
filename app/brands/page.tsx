@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function BrandsPage() {
   return (
-    <div className="min-h-screen bg-brand-950 pt-14">
+    <div className="min-h-screen pt-14">
       <CompanyChart />
     </div>
   );
