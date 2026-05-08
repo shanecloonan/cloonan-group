@@ -351,14 +351,14 @@ function ArchitectureIllustration() {
 
         {/* EXECUTION → ENDOWMENT (Permanence Tax / Gas) */}
         <path
-          d="M 250 420 Q 250 510 450 580"
+          d="M 250 420 Q 250 510 450 560"
           fill="none"
           stroke="#d4a843"
           strokeWidth="2.5"
           markerEnd="url(#arrowG)"
         />
         <circle r="5" fill="#d4a843" filter="url(#glow)">
-          <animateMotion dur="3.5s" repeatCount="indefinite" path="M 250 420 Q 250 510 450 580" />
+          <animateMotion dur="3.5s" repeatCount="indefinite" path="M 250 420 Q 250 510 450 560" />
           <animate
             attributeName="opacity"
             values="0;1;1;0"
@@ -368,7 +368,7 @@ function ArchitectureIllustration() {
           />
         </circle>
         <circle r="5" fill="#d4a843" filter="url(#glow)">
-          <animateMotion dur="3.5s" repeatCount="indefinite" path="M 250 420 Q 250 510 450 580" begin="1.7s" />
+          <animateMotion dur="3.5s" repeatCount="indefinite" path="M 250 420 Q 250 510 450 560" begin="1.7s" />
           <animate
             attributeName="opacity"
             values="0;1;1;0"
@@ -387,14 +387,14 @@ function ArchitectureIllustration() {
 
         {/* ENDOWMENT → STORAGE (Sustains Network) */}
         <path
-          d="M 850 580 Q 850 510 850 420"
+          d="M 650 560 Q 850 510 850 420"
           fill="none"
           stroke="#d4a843"
           strokeWidth="2.5"
           markerEnd="url(#arrowG)"
         />
         <circle r="5" fill="#d4a843" filter="url(#glow)">
-          <animateMotion dur="3.5s" repeatCount="indefinite" path="M 850 580 Q 850 510 850 420" begin="0.8s" />
+          <animateMotion dur="3.5s" repeatCount="indefinite" path="M 650 560 Q 850 510 850 420" begin="0.8s" />
           <animate
             attributeName="opacity"
             values="0;1;1;0"
