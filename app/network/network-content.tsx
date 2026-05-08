@@ -585,6 +585,110 @@ const COMPARISON_ROWS: {
   },
 ];
 
+/* ------------------------------------------------------------------ */
+/*  CAVEATS · OPEN PROBLEMS & REAL-WORLD FAILURE MODES                 */
+/*  Honest engineering review of where the v6.1 model is fragile.      */
+/* ------------------------------------------------------------------ */
+
+type Severity = "existential" | "critical" | "material";
+
+const CAVEATS: {
+  number: string;
+  title: string;
+  severity: Severity;
+  problem: string;
+  detail: string;
+  mitigation: string;
+}[] = [
+  {
+    number: "01",
+    title: "The r > i Guarantee Is a Hypothesis, Not a Theorem",
+    severity: "existential",
+    problem:
+      "We can require r > i in the protocol. We cannot produce r > i in the market.",
+    detail:
+      "Yield is a function of exogenous compute demand and $MONEY market price — both macro-driven and beyond protocol control. The endowment series E₀ = C₀(1+i)/(r−i) does not gracefully degrade when r < i; the denominator goes negative and the model breaks. Arweave's bet on hardware deflation has been replaced with a bet on perpetual compute-fee growth. That bet is plausibly more defensible — compute demand has been elastic and growing — but it remains a macro hypothesis, not a mathematical guarantee.",
+    mitigation:
+      "Frame r > i as a credible economic hypothesis with stress-tested fallbacks (insurance fund, graceful-degradation tiers) rather than as a theorem.",
+  },
+  {
+    number: "02",
+    title: "Reflexive Single-Token Economy",
+    severity: "existential",
+    problem:
+      "Endowment principal, gas, fees, and POL are all denominated in $MONEY — a single demand shock cascades through every layer at once.",
+    detail:
+      "If compute demand softens, fee accrual falls, $MONEY price drops, the endowment loses USD value, storage operators receive less, confidence erodes, and the cycle compounds. Arweave isolates this by denominating its endowment in AR alone; here the storage and compute economies are fused. A correlated drawdown across all three (price, demand, yield) does not require any single failure — it only requires the same macro condition that hits crypto every cycle.",
+    mitigation:
+      "Hold endowment POL as a basket (stablecoins + ETH + $MONEY) so a $MONEY drawdown does not directly threaten storage solvency.",
+  },
+  {
+    number: "03",
+    title: "Data Availability Has No Replication Proof",
+    severity: "existential",
+    problem:
+      "A succinct proof verifies state-transition validity — not that the underlying bytes were actually stored.",
+    detail:
+      "A malicious prover can publish a valid SNARK over a commitment to data that never reaches the storage layer. Storage operators are then economically incentivized to not store the data and just collect endowment yield. Arweave addresses this with SPoRA (Succinct Proofs of Random Access); Filecoin uses Proof-of-Replication + Proof-of-Spacetime; Celestia uses DA sampling. v6.1 specifies none of these. Without an analogous mechanism, the entire storage layer is theater.",
+    mitigation:
+      "Add a Proof-of-Replication / Proof-of-Spacetime layer with random-challenge audits and slashable stakes for non-responsive operators.",
+  },
+  {
+    number: "04",
+    title: "zkVM Proving Overhead vs. Centralized Compute",
+    severity: "critical",
+    problem:
+      "General-purpose zkVMs impose 10,000×–1,000,000× overhead vs. native execution. That is a steep premium to charge.",
+    detail:
+      "Recursive SNARKs over restricted arithmetic circuits (e.g., Nova/Hypernova) can plausibly hit the 1MB-increment throughput target, but arbitrary business logic on a general zkVM (RiscZero, SP1, Jolt) is well beyond current SOTA at that scale. The economic question for a user is: why pay 10,000× the AWS price when the alternative is a centralized prover with a hardware attestation? The honest answer is permanence + privacy — but that confines the addressable workload to a narrower set than the paper currently implies.",
+    mitigation:
+      "Identify the specific compute workloads where permanence + privacy justify the premium, and benchmark proving time per workload class.",
+  },
+  {
+    number: "05",
+    title: "Bootstrap Requires an Explicit Subsidy Phase",
+    severity: "critical",
+    problem:
+      "At t=0 there is no compute demand, so r ≈ 0, so E₀ → ∞. The first uploads cannot be priced under the model.",
+    detail:
+      "The closed-form deposit formula breaks at network genesis precisely when the network most needs to attract its first users. The protocol implicitly requires a subsidy phase — token emission, treasury reserves, or ICO proceeds — to seed the endowment until organic compute fees can sustain it. The transition curve from subsidized to self-funded has not been specified, and that curve is the single most fragile period in the network's life.",
+    mitigation:
+      "Specify a subsidy schedule, target self-sufficiency milestone (e.g., r ≥ 5% measured over rolling 12 months), and explicit conditions for subsidy removal.",
+  },
+  {
+    number: "06",
+    title: "Permanence + Untraceability = Maximum Regulatory Surface",
+    severity: "material",
+    problem:
+      "Combining Arweave's permanence with Monero's unlinkability is strictly additive in regulatory exposure, not neutral.",
+    detail:
+      "Arweave alone faces continuous pressure over CSAM, copyright, and sanctioned content. Monero alone has been delisted from Binance, Kraken EU, OKX, and most major Western exchanges. A network that is forever and untraceable presents storage operators with legal liability they cannot mitigate via takedown — and the privacy primitives prevent any user-level compliance affordance. This is not solvable with engineering; it is a posture decision.",
+    mitigation:
+      "Explicitly choose a posture: (a) Tor-grade — expect no exchange listings, target privacy-maximalist users; or (b) hybrid — optional view-keys / compliance hooks that selectively de-anonymize on legal request, at the cost of some unlinkability.",
+  },
+];
+
+const SEVERITY_COPY: Record<Severity, { label: string; pill: string; ring: string; dot: string }> = {
+  existential: {
+    label: "Existential",
+    pill: "bg-rose-500/10 text-rose-300 border-rose-400/30",
+    ring: "border-rose-400/20",
+    dot: "bg-rose-400",
+  },
+  critical: {
+    label: "Critical",
+    pill: "bg-amber-500/10 text-amber-300 border-amber-400/30",
+    ring: "border-amber-400/20",
+    dot: "bg-amber-400",
+  },
+  material: {
+    label: "Material",
+    pill: "bg-white/[0.05] text-white/60 border-white/[0.1]",
+    ring: "border-white/[0.08]",
+    dot: "bg-white/40",
+  },
+};
+
 /* ================================================================== */
 /*  PAGE                                                                */
 /* ================================================================== */
@@ -947,6 +1051,133 @@ export default function NetworkContent() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </section>
+
+        {/* ─────────────────────── CAVEATS ─────────────────────── */}
+        <section className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="Honest engineering review of where the v6.1 model is fragile">
+            §6 · Caveats &amp; Open Problems
+          </SectionHeading>
+
+          <div className={`${card} p-6 sm:p-8`}>
+            <p className="text-[13px] text-white/70 leading-relaxed">
+              The architecture above is the version we want to build. This
+              section is the version we have to defend in front of a hostile
+              audit committee. Each item below identifies a real-world
+              failure mode the v6.1 paper does not adequately address, ranked
+              by severity. None are individually disqualifying. The
+              combination of items 01–03, left unresolved, is.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {CAVEATS.map((c) => {
+              const s = SEVERITY_COPY[c.severity];
+              return (
+                <div
+                  key={c.number}
+                  className={`rounded-2xl border ${s.ring} bg-white/[0.02] backdrop-blur-sm overflow-hidden`}
+                >
+                  <div className="p-5 sm:p-6 sm:pl-7">
+                    <div className="flex items-start gap-4 mb-3">
+                      <span className="text-[11px] font-mono tabular-nums text-white/30 pt-1 shrink-0 w-7">
+                        {c.number}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="text-sm sm:text-base font-bold text-white/90 leading-snug">
+                            {c.title}
+                          </h3>
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] tracking-[0.18em] uppercase font-bold border ${s.pill} shrink-0`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                            {s.label}
+                          </span>
+                        </div>
+                        <p className="text-[12.5px] text-white/75 italic leading-relaxed">
+                          {c.problem}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="ml-0 sm:ml-11 space-y-3 mt-4">
+                      <p className="text-xs text-white/55 leading-relaxed">
+                        {c.detail}
+                      </p>
+
+                      <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+                        <p className="text-[9.5px] tracking-[0.25em] uppercase text-white/35 font-bold mb-1.5">
+                          v6.2 Mitigation
+                        </p>
+                        <p className="text-xs text-white/65 leading-relaxed">
+                          {c.mitigation}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Closing path-forward card */}
+          <div
+            className={`${card} p-6 sm:p-8 border-cyan-400/20 bg-gradient-to-br from-cyan-500/[0.04] to-transparent`}
+          >
+            <p className="text-[10px] tracking-[0.3em] uppercase text-cyan-300/80 font-bold mb-3">
+              Path Forward · v6.2 Targets
+            </p>
+            <p className="text-[13px] text-white/70 leading-relaxed mb-4">
+              The combination of caveats 01, 02, and 03 is the project-killer.
+              Resolving them is the minimum bar for a defensible v6.2 paper.
+              The architecture itself remains sound — these are gaps in the
+              economic and cryptographic specification, not in the underlying
+              vision of decoupled consensus.
+            </p>
+            <ul className="space-y-2 text-xs text-white/60">
+              <li className="flex gap-3">
+                <span className="text-cyan-300/70 font-mono shrink-0">→</span>
+                <span>
+                  <span className="text-white/80 font-semibold">Reframe r &gt; i</span> as a
+                  stress-tested economic hypothesis with insurance fund and
+                  graceful-degradation tiers — not a mathematical guarantee.
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-cyan-300/70 font-mono shrink-0">→</span>
+                <span>
+                  <span className="text-white/80 font-semibold">Diversify endowment denomination</span>
+                  {" "}into a basket (stables + ETH + $MONEY) to break the
+                  single-token reflexivity loop.
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-cyan-300/70 font-mono shrink-0">→</span>
+                <span>
+                  <span className="text-white/80 font-semibold">Specify Proof-of-Replication</span>
+                  {" "}with slashable stakes and random-challenge audits so
+                  storage payment is contingent on actually storing.
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-cyan-300/70 font-mono shrink-0">→</span>
+                <span>
+                  <span className="text-white/80 font-semibold">Publish a subsidy schedule</span>
+                  {" "}with explicit self-sufficiency milestones and a
+                  documented exit ramp.
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-cyan-300/70 font-mono shrink-0">→</span>
+                <span>
+                  <span className="text-white/80 font-semibold">Choose a regulatory posture</span>
+                  {" "}explicitly — Tor-grade or compliance-hybrid — and
+                  design the privacy primitives accordingly.
+                </span>
+              </li>
+            </ul>
           </div>
         </section>
 
