@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useMemo } from "react";
+
 /* ================================================================== */
 /*  NETWORK / MONEYFUND L1 WHITEPAPER PAGE                             */
 /*  Source: The MoneyFund Network Whitepaper v6.1 (Shane Cloonan)      */
@@ -27,6 +29,656 @@ function SectionHeading({
       </h2>
       {sub && <p className="text-xs text-white/40">{sub}</p>}
       <div className="mx-auto mt-3 w-16 h-[2px] rounded-full bg-gradient-to-r from-cyan-500/60 to-purple-500/60" />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  INTERACTIVE ENDOWMENT SIMULATOR                                    */
+/*  Lets users feel the hyperbolic sensitivity of E₀ = C₀(1+i)/(r−i)   */
+/*  by manipulating C₀ (storage cost), i (hardware inflation), and     */
+/*  r (compute-fee yield) directly. Surfaces the central fragility of  */
+/*  the model in a tactile way.                                        */
+/* ------------------------------------------------------------------ */
+
+type Status = "safe" | "warning" | "critical" | "insolvent";
+
+const STATUS_COPY: Record<
+  Status,
+  {
+    label: string;
+    color: string;
+    bg: string;
+    dot: string;
+    num: string;
+  }
+> = {
+  safe: {
+    label: "Safe",
+    color: "text-cyan-300",
+    bg: "bg-cyan-500/10 border-cyan-400/30",
+    dot: "bg-cyan-400",
+    num: "text-cyan-200",
+  },
+  warning: {
+    label: "Warning",
+    color: "text-amber-300",
+    bg: "bg-amber-500/10 border-amber-400/30",
+    dot: "bg-amber-400",
+    num: "text-amber-200",
+  },
+  critical: {
+    label: "Critical",
+    color: "text-orange-300",
+    bg: "bg-orange-500/10 border-orange-400/30",
+    dot: "bg-orange-400",
+    num: "text-orange-200",
+  },
+  insolvent: {
+    label: "Insolvent",
+    color: "text-rose-300",
+    bg: "bg-rose-500/10 border-rose-400/30",
+    dot: "bg-rose-400",
+    num: "text-rose-200",
+  },
+};
+
+const SIM_PRESETS: {
+  label: string;
+  hint: string;
+  c0: number;
+  i: number;
+  r: number;
+}[] = [
+  {
+    label: "Optimistic",
+    hint: "Bull-market POL yield",
+    c0: 50,
+    i: 2,
+    r: 8,
+  },
+  {
+    label: "Realistic",
+    hint: "Paper's stated assumption",
+    c0: 50,
+    i: 2,
+    r: 5,
+  },
+  {
+    label: "Stress",
+    hint: "Stagnant compute, post-Kryder",
+    c0: 60,
+    i: 3.5,
+    r: 4,
+  },
+  {
+    label: "Failure",
+    hint: "Bear market — endowment breaks",
+    c0: 60,
+    i: 3.5,
+    r: 3,
+  },
+];
+
+function fmtUsd(n: number): string {
+  if (!isFinite(n)) return "∞";
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `$${Math.round(n).toLocaleString()}`;
+  return `$${n.toFixed(2)}`;
+}
+
+function fmtSize(gb: number): string {
+  if (gb >= 1_000_000) return `${(gb / 1_000_000).toFixed(2)} PB`;
+  if (gb >= 1_000) return `${(gb / 1_000).toFixed(2)} TB`;
+  if (gb >= 1) return `${gb.toFixed(0)} GB`;
+  return `${(gb * 1_000).toFixed(0)} MB`;
+}
+
+function EndowmentSimulator() {
+  const [c0, setC0] = useState<number>(50);
+  const [iPct, setIPct] = useState<number>(2);
+  const [rPct, setRPct] = useState<number>(5);
+  const [sizeGB, setSizeGB] = useState<number>(1_000); // 1 TB
+
+  /* ----- core math ----- */
+  const spread = rPct - iPct;
+  const i = iPct / 100;
+
+  const endowmentPerTB = useMemo(() => {
+    if (spread <= 0) return Infinity;
+    return (c0 * (1 + i)) / (spread / 100);
+  }, [c0, i, spread]);
+
+  const sizeTB = sizeGB / 1_000;
+  const totalCost = isFinite(endowmentPerTB)
+    ? endowmentPerTB * sizeTB
+    : Infinity;
+
+  const ARWEAVE_REF_TB = 5_000;
+  const vsArweave = isFinite(endowmentPerTB)
+    ? endowmentPerTB / ARWEAVE_REF_TB
+    : Infinity;
+
+  const status: Status =
+    spread <= 0
+      ? "insolvent"
+      : spread < 0.5
+        ? "critical"
+        : spread < 2
+          ? "warning"
+          : "safe";
+
+  const S = STATUS_COPY[status];
+
+  /* ----- chart geometry ----- */
+  const chartW = 520;
+  const chartH = 220;
+  const padL = 44;
+  const padR = 16;
+  const padT = 14;
+  const padB = 32;
+  const innerW = chartW - padL - padR;
+  const innerH = chartH - padT - padB;
+
+  const xMin = 0.05;
+  const xMax = 6;
+  const yMin = 100;
+  const yMax = 30_000;
+  const logYRange = Math.log10(yMax) - Math.log10(yMin);
+
+  const toSX = (x: number) =>
+    padL + ((x - xMin) / (xMax - xMin)) * innerW;
+  const toSY = (y: number) => {
+    const clamped = Math.max(yMin, Math.min(yMax, y));
+    return (
+      padT + (1 - (Math.log10(clamped) - Math.log10(yMin)) / logYRange) * innerH
+    );
+  };
+
+  const curvePath = useMemo(() => {
+    const pts: string[] = [];
+    for (let s = xMin; s <= xMax + 0.0001; s += 0.05) {
+      const e = (c0 * (1 + i)) / (s / 100);
+      pts.push(
+        `${pts.length === 0 ? "M" : "L"} ${toSX(s).toFixed(1)} ${toSY(e).toFixed(1)}`
+      );
+    }
+    return pts.join(" ");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c0, i]);
+
+  const yTicks = [100, 500, 1_000, 5_000, 10_000, 30_000];
+  const xTicks = [0.5, 1, 2, 3, 4, 5, 6];
+
+  const showCurrent =
+    spread > 0 && isFinite(endowmentPerTB) && endowmentPerTB <= yMax;
+  const currX = toSX(Math.max(xMin, Math.min(xMax, spread)));
+  const currY = showCurrent ? toSY(endowmentPerTB) : padT;
+  const arweaveY = toSY(ARWEAVE_REF_TB);
+
+  /* ----- renderer ----- */
+  return (
+    <div className="space-y-5">
+      {/* ─────────── TOP METRICS ─────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div
+          className={`rounded-xl border p-4 text-center ${S.bg}`}
+          aria-label="Endowment per TB"
+        >
+          <p className="text-[9px] tracking-[0.25em] uppercase text-white/50 font-bold mb-1.5">
+            Endowment / TB
+          </p>
+          <p
+            className={`text-2xl sm:text-3xl font-bold font-mono ${S.num}`}
+          >
+            {fmtUsd(endowmentPerTB)}
+          </p>
+          <p className="text-[9px] text-white/30 mt-1 font-mono">
+            E₀ = C₀(1+i)/(r−i)
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-center">
+          <p className="text-[9px] tracking-[0.25em] uppercase text-white/50 font-bold mb-1.5">
+            Total upload cost
+          </p>
+          <p className="text-2xl sm:text-3xl font-bold font-mono text-white/90">
+            {fmtUsd(totalCost)}
+          </p>
+          <p className="text-[9px] text-white/30 mt-1">
+            for {fmtSize(sizeGB)}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-center">
+          <p className="text-[9px] tracking-[0.25em] uppercase text-white/50 font-bold mb-1.5">
+            vs Arweave
+          </p>
+          <p
+            className={`text-2xl sm:text-3xl font-bold font-mono ${
+              vsArweave < 1 ? "text-emerald-300" : "text-rose-300"
+            }`}
+          >
+            {isFinite(vsArweave) ? `${vsArweave.toFixed(2)}×` : "∞"}
+          </p>
+          <p className="text-[9px] text-white/30 mt-1">
+            {isFinite(vsArweave) && vsArweave < 1
+              ? "cheaper"
+              : "more expensive"}{" "}
+            · ref ≈ $5k/TB
+          </p>
+        </div>
+
+        <div className={`rounded-xl border p-4 text-center ${S.bg}`}>
+          <p className="text-[9px] tracking-[0.25em] uppercase text-white/50 font-bold mb-1.5">
+            Solvency
+          </p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${S.dot}`} />
+            <p
+              className={`text-xl sm:text-2xl font-bold tracking-tight ${S.color}`}
+            >
+              {S.label}
+            </p>
+          </div>
+          <p className="text-[9px] text-white/30 mt-1.5 font-mono">
+            spread {spread.toFixed(1)}% · (r − i)
+          </p>
+        </div>
+      </div>
+
+      {/* ─────────── BODY: SLIDERS + CHART ─────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* ───── sliders ───── */}
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-5">
+          {/* C₀ */}
+          <div>
+            <div className="flex items-baseline justify-between mb-2">
+              <label className="text-[12px] text-white/80 font-semibold">
+                <span className="font-mono text-cyan-300">C₀</span>
+                <span className="text-white/50 ml-2">
+                  annual storage cost / TB
+                </span>
+              </label>
+              <span className="text-sm text-white font-mono font-bold tabular-nums">
+                ${c0}/yr
+              </span>
+            </div>
+            <input
+              type="range"
+              min={20}
+              max={150}
+              step={5}
+              value={c0}
+              onChange={(e) => setC0(Number(e.target.value))}
+              aria-label="Annual storage cost per TB"
+              className="w-full h-1.5 bg-white/[0.08] rounded-full appearance-none cursor-pointer accent-cyan-400"
+            />
+            <div className="flex justify-between text-[9px] text-white/35 mt-1.5 font-mono">
+              <span>$20 (lean)</span>
+              <span>$50 (target)</span>
+              <span>$150 (heavy replication)</span>
+            </div>
+          </div>
+
+          {/* i */}
+          <div>
+            <div className="flex items-baseline justify-between mb-2">
+              <label className="text-[12px] text-white/80 font-semibold">
+                <span className="font-mono text-rose-300">i</span>
+                <span className="text-white/50 ml-2">
+                  annual hardware inflation
+                </span>
+              </label>
+              <span className="text-sm text-white font-mono font-bold tabular-nums">
+                {iPct >= 0 ? "+" : ""}
+                {iPct.toFixed(1)}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min={-5}
+              max={10}
+              step={0.5}
+              value={iPct}
+              onChange={(e) => setIPct(Number(e.target.value))}
+              aria-label="Annual hardware inflation rate"
+              className="w-full h-1.5 bg-white/[0.08] rounded-full appearance-none cursor-pointer accent-rose-400"
+            />
+            <div className="flex justify-between text-[9px] text-white/35 mt-1.5 font-mono">
+              <span>−5% (Kryder still works)</span>
+              <span>0–3% (post-Kryder)</span>
+              <span>+10% (shortage)</span>
+            </div>
+          </div>
+
+          {/* r */}
+          <div>
+            <div className="flex items-baseline justify-between mb-2">
+              <label className="text-[12px] text-white/80 font-semibold">
+                <span className="font-mono text-amber-300">r</span>
+                <span className="text-white/50 ml-2">
+                  annual yield from compute fees
+                </span>
+              </label>
+              <span className="text-sm text-white font-mono font-bold tabular-nums">
+                {rPct.toFixed(1)}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={15}
+              step={0.5}
+              value={rPct}
+              onChange={(e) => setRPct(Number(e.target.value))}
+              aria-label="Annual yield rate from compute fees"
+              className="w-full h-1.5 bg-white/[0.08] rounded-full appearance-none cursor-pointer accent-amber-400"
+            />
+            <div className="flex justify-between text-[9px] text-white/35 mt-1.5 font-mono">
+              <span>0% (no demand)</span>
+              <span>5–8% (steady-state)</span>
+              <span>15% (boom)</span>
+            </div>
+          </div>
+
+          {/* size (log scale) */}
+          <div>
+            <div className="flex items-baseline justify-between mb-2">
+              <label className="text-[12px] text-white/80 font-semibold">
+                <span className="font-mono text-violet-300">size</span>
+                <span className="text-white/50 ml-2">upload size</span>
+              </label>
+              <span className="text-sm text-white font-mono font-bold tabular-nums">
+                {fmtSize(sizeGB)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={6}
+              step={0.05}
+              value={Math.log10(Math.max(1, sizeGB))}
+              onChange={(e) =>
+                setSizeGB(Math.round(10 ** Number(e.target.value)))
+              }
+              aria-label="Upload size in GB (log scale)"
+              className="w-full h-1.5 bg-white/[0.08] rounded-full appearance-none cursor-pointer accent-violet-400"
+            />
+            <div className="flex justify-between text-[9px] text-white/35 mt-1.5 font-mono">
+              <span>1 GB</span>
+              <span>1 TB</span>
+              <span>1 PB</span>
+            </div>
+          </div>
+
+          {/* Presets */}
+          <div className="pt-2 border-t border-white/[0.05]">
+            <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-2.5">
+              Scenarios
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {SIM_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => {
+                    setC0(p.c0);
+                    setIPct(p.i);
+                    setRPct(p.r);
+                  }}
+                  className="text-left rounded-lg border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.14] px-3 py-2 transition-colors cursor-pointer group"
+                >
+                  <p className="text-[11px] font-bold text-white/85 group-hover:text-white">
+                    {p.label}
+                  </p>
+                  <p className="text-[9px] text-white/40 group-hover:text-white/55 mt-0.5 leading-snug">
+                    {p.hint}
+                  </p>
+                  <p className="text-[8.5px] font-mono text-white/30 group-hover:text-white/50 mt-1 tabular-nums">
+                    r {p.r}% · i {p.i}% · C₀ ${p.c0}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ───── chart ───── */}
+        <div className="rounded-xl border border-white/[0.06] bg-black/40 p-3 sm:p-4 flex flex-col">
+          <div className="flex items-baseline justify-between mb-2">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-white/55 font-bold">
+              Sensitivity to (r − i)
+            </p>
+            <p className="text-[9px] text-white/30 font-mono">log scale</p>
+          </div>
+
+          <svg
+            viewBox={`0 0 ${chartW} ${chartH}`}
+            className="w-full h-auto"
+            role="img"
+            aria-label="Endowment sensitivity to yield spread"
+          >
+            <defs>
+              <linearGradient id="curveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="rgba(244,63,94,0.85)" />
+                <stop offset="50%" stopColor="rgba(251,191,36,0.85)" />
+                <stop offset="100%" stopColor="rgba(34,211,238,0.85)" />
+              </linearGradient>
+              <linearGradient
+                id="dangerZone"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="0%"
+              >
+                <stop offset="0%" stopColor="rgba(244,63,94,0.18)" />
+                <stop offset="100%" stopColor="rgba(244,63,94,0)" />
+              </linearGradient>
+            </defs>
+
+            {/* Danger zone shading (spread < 1%) */}
+            <rect
+              x={padL}
+              y={padT}
+              width={toSX(1) - padL}
+              height={innerH}
+              fill="url(#dangerZone)"
+            />
+            <text
+              x={padL + 6}
+              y={padT + 12}
+              fill="rgba(244,63,94,0.7)"
+              fontSize="8"
+              fontWeight="700"
+              letterSpacing="1.5"
+            >
+              DANGER
+            </text>
+
+            {/* Y grid + ticks */}
+            {yTicks.map((y) => (
+              <g key={y}>
+                <line
+                  x1={padL}
+                  x2={chartW - padR}
+                  y1={toSY(y)}
+                  y2={toSY(y)}
+                  stroke="rgba(255,255,255,0.05)"
+                  strokeWidth="1"
+                />
+                <text
+                  x={padL - 6}
+                  y={toSY(y) + 3}
+                  fill="rgba(255,255,255,0.35)"
+                  fontSize="9"
+                  textAnchor="end"
+                  fontFamily="ui-monospace, monospace"
+                >
+                  ${y >= 1_000 ? `${y / 1_000}k` : y}
+                </text>
+              </g>
+            ))}
+
+            {/* X ticks */}
+            {xTicks.map((x) => (
+              <g key={x}>
+                <line
+                  x1={toSX(x)}
+                  x2={toSX(x)}
+                  y1={chartH - padB}
+                  y2={chartH - padB + 3}
+                  stroke="rgba(255,255,255,0.25)"
+                  strokeWidth="1"
+                />
+                <text
+                  x={toSX(x)}
+                  y={chartH - padB + 14}
+                  fill="rgba(255,255,255,0.35)"
+                  fontSize="9"
+                  textAnchor="middle"
+                  fontFamily="ui-monospace, monospace"
+                >
+                  {x}%
+                </text>
+              </g>
+            ))}
+
+            {/* Arweave reference line */}
+            <line
+              x1={padL}
+              x2={chartW - padR}
+              y1={arweaveY}
+              y2={arweaveY}
+              stroke="rgba(255,255,255,0.25)"
+              strokeWidth="1"
+              strokeDasharray="4 3"
+            />
+            <text
+              x={chartW - padR - 4}
+              y={arweaveY - 4}
+              fill="rgba(255,255,255,0.5)"
+              fontSize="9"
+              textAnchor="end"
+              fontFamily="ui-monospace, monospace"
+            >
+              Arweave ≈ $5k
+            </text>
+
+            {/* Curve */}
+            <path
+              d={curvePath}
+              fill="none"
+              stroke="url(#curveGrad)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Current position */}
+            {showCurrent && (
+              <>
+                <line
+                  x1={currX}
+                  x2={currX}
+                  y1={padT}
+                  y2={chartH - padB}
+                  stroke="rgba(255,255,255,0.18)"
+                  strokeWidth="1"
+                  strokeDasharray="2 3"
+                />
+                <line
+                  x1={padL}
+                  x2={chartW - padR}
+                  y1={currY}
+                  y2={currY}
+                  stroke="rgba(255,255,255,0.18)"
+                  strokeWidth="1"
+                  strokeDasharray="2 3"
+                />
+                <circle
+                  cx={currX}
+                  cy={currY}
+                  r="7"
+                  fill="#0c0a09"
+                  stroke="white"
+                  strokeWidth="2"
+                />
+                <circle cx={currX} cy={currY} r="3" fill="white" />
+              </>
+            )}
+
+            {/* Insolvent badge if applicable */}
+            {!showCurrent && (
+              <g>
+                <rect
+                  x={padL + innerW / 2 - 60}
+                  y={padT + innerH / 2 - 14}
+                  width="120"
+                  height="28"
+                  rx="6"
+                  ry="6"
+                  fill="rgba(244,63,94,0.15)"
+                  stroke="rgba(244,63,94,0.5)"
+                  strokeWidth="1"
+                />
+                <text
+                  x={padL + innerW / 2}
+                  y={padT + innerH / 2 + 4}
+                  fill="#fda4af"
+                  fontSize="11"
+                  fontWeight="700"
+                  textAnchor="middle"
+                  letterSpacing="2"
+                >
+                  INSOLVENT
+                </text>
+              </g>
+            )}
+
+            {/* X axis */}
+            <line
+              x1={padL}
+              x2={chartW - padR}
+              y1={chartH - padB}
+              y2={chartH - padB}
+              stroke="rgba(255,255,255,0.18)"
+              strokeWidth="1"
+            />
+
+            {/* X axis label */}
+            <text
+              x={padL + innerW / 2}
+              y={chartH - 4}
+              fill="rgba(255,255,255,0.4)"
+              fontSize="9"
+              textAnchor="middle"
+              letterSpacing="2"
+            >
+              YIELD SPREAD (r − i)
+            </text>
+          </svg>
+
+          <p className="text-[10px] text-white/40 leading-relaxed mt-2 px-1">
+            Curve is the cost per TB across all yield spreads at your current
+            C₀ and i. The dot is your current configuration. The dashed line
+            is Arweave&rsquo;s rough $5k/TB reference.
+          </p>
+        </div>
+      </div>
+
+      {/* ─────────── FOOTER HINT ─────────── */}
+      <div className="rounded-xl border border-amber-400/15 bg-amber-500/[0.03] px-4 py-3">
+        <p className="text-[11px] text-white/55 leading-relaxed">
+          <span className="text-amber-300/90 font-semibold">
+            Notice the curve&apos;s shape.
+          </span>{" "}
+          Below ~1% spread the endowment cost goes hyperbolic — small changes
+          in macro assumptions produce huge changes in user-facing cost. This
+          is the central fragility called out in{" "}
+          <span className="text-cyan-300/80 font-semibold">§7 · Caveats</span>.
+        </p>
+      </div>
     </div>
   );
 }
@@ -863,10 +1515,34 @@ export default function NetworkContent() {
           </div>
         </section>
 
+        {/* ─────────────────────── INTERACTIVE SIMULATOR ─────────────────────── */}
+        <section className="space-y-8 scroll-mt-28">
+          <SectionHeading sub="Live simulator · feel the math from §2 in your hands">
+            §3 · Endowment Simulator
+          </SectionHeading>
+
+          <div className={`${card} p-4 sm:p-6`}>
+            <p className="text-[12.5px] text-white/65 leading-relaxed mb-5">
+              The formula above is easy to read and brutal in practice. Drag
+              the sliders to set your assumptions about{" "}
+              <span className="font-mono text-cyan-300">C₀</span> (storage
+              cost),{" "}
+              <span className="font-mono text-rose-300">i</span> (hardware
+              inflation), and{" "}
+              <span className="font-mono text-amber-300">r</span> (compute-fee
+              yield). The cost per TB and total upload price update live, and
+              the chart shows the full sensitivity curve so you can see exactly
+              where the model becomes fragile.
+            </p>
+
+            <EndowmentSimulator />
+          </div>
+        </section>
+
         {/* ─────────────────────── $MONEY PRIVACY ─────────────────────── */}
         <section className="space-y-8 scroll-mt-28">
           <SectionHeading sub="Untraceable utility, confidential storage allocations">
-            §3 · $MONEY · Privacy-Integrated Utility Token
+            §4 · $MONEY · Privacy-Integrated Utility Token
           </SectionHeading>
 
           <div className={`${card} p-6 sm:p-8`}>
@@ -906,7 +1582,7 @@ export default function NetworkContent() {
         {/* ─────────────────────── DECOUPLED CONSENSUS ─────────────────────── */}
         <section className="space-y-6 scroll-mt-28">
           <SectionHeading sub="Two strictly bifurcated node classes">
-            §4 · Decoupled Consensus Architecture
+            §5 · Decoupled Consensus Architecture
           </SectionHeading>
 
           <div className={`${card} p-6 sm:p-8`}>
@@ -992,7 +1668,7 @@ export default function NetworkContent() {
         {/* ─────────────────────── COMPARATIVE ECONOMICS ─────────────────────── */}
         <section className="space-y-6 scroll-mt-28">
           <SectionHeading sub="MoneyFund vs. legacy permanence networks">
-            §5 · Comparative Economics
+            §6 · Comparative Economics
           </SectionHeading>
 
           <div className={`${card} p-6 sm:p-8`}>
@@ -1057,7 +1733,7 @@ export default function NetworkContent() {
         {/* ─────────────────────── CAVEATS ─────────────────────── */}
         <section className="space-y-8 scroll-mt-28">
           <SectionHeading sub="Honest engineering review of where the v6.1 model is fragile">
-            §6 · Caveats &amp; Open Problems
+            §7 · Caveats &amp; Open Problems
           </SectionHeading>
 
           <div className={`${card} p-6 sm:p-8`}>
