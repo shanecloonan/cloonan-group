@@ -57,7 +57,7 @@ import {
   hashToPoint,
   type CurvePoint,
 } from "./primitives";
-import { Writer, dhash64, DOMAIN } from "./codec";
+import { Writer, Reader, dhash64, DOMAIN } from "./codec";
 
 /* ------------------------------------------------------------------ */
 /*  FIELD HELPERS                                                      */
@@ -172,7 +172,7 @@ function genU(N: number): CurvePoint {
  *  Each round halves the vector lengths and emits one (L, R) pair.    */
 /* ------------------------------------------------------------------ */
 
-interface IPAProof {
+export interface IPAProof {
   Lvec: CurvePoint[]; // log₂(N) entries
   Rvec: CurvePoint[]; // log₂(N) entries
   a: bigint;          // final l[0]
@@ -574,4 +574,49 @@ export function bpProofSize(N: number): number {
   // 2·logN points (Lvec, Rvec)
   // 2 scalars (a, b)
   return 32 * (4 + 2 * logN) + 32 * (3 + 2);
+}
+
+/* ------------------------------------------------------------------ */
+/*  CONSENSUS ENCODING                                                  *
+ *                                                                     *
+ *  MFBN-1 byte form for the range proof. V (the public commitment)    *
+ *  is NOT included — that's the output's amount commitment, encoded   *
+ *  separately in the transaction body.                                */
+/* ------------------------------------------------------------------ */
+
+export function encodeBulletproof(p: BulletproofRange): Uint8Array {
+  const w = new Writer();
+  w.varint(p.N);
+  w.point(p.A);
+  w.point(p.S);
+  w.point(p.T1);
+  w.point(p.T2);
+  w.scalar(p.tHat);
+  w.scalar(p.taux);
+  w.scalar(p.mu);
+  w.points(p.ipa.Lvec);
+  w.points(p.ipa.Rvec);
+  w.scalar(p.ipa.a);
+  w.scalar(p.ipa.b);
+  return w.bytes();
+}
+
+export function decodeBulletproof(
+  V: CurvePoint,
+  bytes: Uint8Array
+): BulletproofRange {
+  const r = new Reader(bytes);
+  const N = Number(r.varint());
+  const A = r.point();
+  const S = r.point();
+  const T1 = r.point();
+  const T2 = r.point();
+  const tHat = r.scalar();
+  const taux = r.scalar();
+  const mu = r.scalar();
+  const Lvec = r.points();
+  const Rvec = r.points();
+  const a = r.scalar();
+  const b = r.scalar();
+  return { N, V, A, S, T1, T2, tHat, taux, mu, ipa: { Lvec, Rvec, a, b } };
 }

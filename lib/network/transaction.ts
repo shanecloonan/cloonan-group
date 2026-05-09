@@ -46,11 +46,11 @@ import {
   type ClsagSignature,
 } from "./clsag";
 import {
-  rangeProve,
-  rangeVerify,
-  encodeRangeProof,
-  type RangeProof,
-} from "./range";
+  bpProve,
+  bpVerify,
+  encodeBulletproof,
+  type BulletproofRange,
+} from "./bulletproofs";
 import {
   storageCommitmentHash,
   type StorageCommitment,
@@ -74,13 +74,17 @@ export interface TxInputWire {
   sig: ClsagSignature;
 }
 
+/** Default range-proof width: amounts are 64-bit unsigned. */
+export const TX_RANGE_BITS = 64;
+
 export interface TxOutputWire {
   /** Stealth one-time address P. */
   oneTimeAddr: CurvePoint;
   /** Pedersen commitment to the hidden output amount. */
   amount: CurvePoint;
-  /** Range proof for the amount commitment. */
-  rangeProof: RangeProof;
+  /** Bulletproof range proof for the amount commitment.
+   *  proof.V === amount (must be enforced at verify time). */
+  rangeProof: BulletproofRange;
   /** Optional permanence binding — non-null if this output stores data. */
   storage: StorageCommitment | null;
 }
@@ -130,7 +134,7 @@ export function txPreimage(tx: TransactionWire): Uint8Array {
   for (const out of tx.outputs) {
     w.point(out.oneTimeAddr);
     w.point(out.amount);
-    w.blob(encodeRangeProof(out.rangeProof));
+    w.blob(encodeBulletproof(out.rangeProof));
     if (out.storage) {
       w.u8(1);
       w.push(storageCommitmentHash(out.storage));
@@ -221,7 +225,7 @@ export function signTransaction(
   /* ---- Pick output blinding factors freely; range-prove each ---- */
   const outputBlindings: bigint[] = new Array(outputs.length);
   const outputCommits: CurvePoint[] = new Array(outputs.length);
-  const rangeProofs: RangeProof[] = new Array(outputs.length);
+  const rangeProofs: BulletproofRange[] = new Array(outputs.length);
   let outBlindingSum = 0n;
 
   for (let i = 0; i < outputs.length; i++) {
@@ -229,8 +233,8 @@ export function signTransaction(
     outputBlindings[i] = r_out;
     outBlindingSum = (outBlindingSum + r_out) % L;
 
-    const { C, proof } = rangeProve(outputs[i].value, r_out);
-    outputCommits[i] = C;
+    const { V, proof } = bpProve(outputs[i].value, r_out, TX_RANGE_BITS);
+    outputCommits[i] = V;
     rangeProofs[i] = proof;
   }
 
@@ -341,10 +345,23 @@ export function verifyTransaction(tx: TransactionWire): VerifyResult {
   if (tx.outputs.length === 0) errors.push("no outputs");
   if (tx.fee < 0n) errors.push("negative fee");
 
-  /* ---- Range proofs on every output ---- */
+  /* ---- Range proofs on every output ----
+   *  We bind the proof's V to the output's amount commitment. A malicious
+   *  prover that supplies a different V cannot produce a valid range proof
+   *  whose verifier-derived equation matches the on-chain amount.        */
   for (let i = 0; i < tx.outputs.length; i++) {
     const out = tx.outputs[i];
-    if (!rangeVerify(out.amount, out.rangeProof)) {
+    if (!out.amount.equals(out.rangeProof.V)) {
+      errors.push(`output ${i}: range-proof V does not match output amount`);
+      continue;
+    }
+    if (out.rangeProof.N !== TX_RANGE_BITS) {
+      errors.push(
+        `output ${i}: range-proof bit-width ${out.rangeProof.N} ≠ canonical ${TX_RANGE_BITS}`
+      );
+      continue;
+    }
+    if (!bpVerify(out.rangeProof)) {
       errors.push(`output ${i}: range proof invalid`);
     }
   }
