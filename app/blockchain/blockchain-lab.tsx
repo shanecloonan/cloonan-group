@@ -12,6 +12,10 @@
 /*    2.  Pedersen commitments (amber)   — RingCT confidential amounts  */
 /*    3.  Stealth addresses    (violet)  — CryptoNote one-time outputs  */
 /*    4.  LSAG ring signatures (emerald) — Monero-style anonymity       */
+/*    5.  Range proofs         (rose)    — bit-decomp confidential v ≥0 */
+/*    6.  Storage commitments  (sky)     — content-addressed permanence */
+/*    7.  Transactions         (fuchsia) — full RingCT-style tx flow    */
+/*    8.  Blocks & state       (lime)    — chain validation, dbl-spend  */
 /* ================================================================== */
 
 import { useCallback, useMemo, useState } from "react";
@@ -21,6 +25,7 @@ import {
   L,
   scalarToHex,
   pointToHex,
+  bytesToHex,
   schnorrKeygen,
   schnorrSign,
   schnorrVerify,
@@ -43,6 +48,36 @@ import {
   type LsagSignature,
   type CurvePoint,
 } from "@/lib/network/primitives";
+import {
+  rangeProve,
+  rangeVerify,
+  type RangeProof,
+} from "@/lib/network/range";
+import {
+  buildStorageCommitment,
+  storageCommitmentHash,
+  challengeFromSeed,
+  respondToChallenge,
+  verifyChallengeResponse,
+  type StorageCommitment,
+  type MerkleTree,
+} from "@/lib/network/storage";
+import {
+  signTransaction,
+  verifyTransaction,
+  txId,
+  type TransactionWire,
+  type InputSpec,
+} from "@/lib/network/transaction";
+import {
+  buildGenesis,
+  applyGenesis,
+  buildBlock,
+  applyBlock,
+  blockId,
+  type ChainState,
+  type Block,
+} from "@/lib/network/block";
 
 /* ------------------------------------------------------------------ */
 /*  DESIGN TOKENS                                                      */
@@ -51,13 +86,17 @@ import {
 const card =
   "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 
-type Accent = "cyan" | "amber" | "violet" | "emerald";
+type Accent = "cyan" | "amber" | "violet" | "emerald" | "rose" | "sky" | "fuchsia" | "lime";
 
 const ACCENT: Record<Accent, { text: string; ring: string; bg: string; soft: string; chip: string; glow: string }> = {
   cyan:    { text: "text-cyan-300",    ring: "border-cyan-400/30",    bg: "bg-cyan-500/10",    soft: "from-cyan-500/[0.06] to-transparent",    chip: "bg-cyan-500/15 text-cyan-200 border-cyan-400/30",    glow: "shadow-cyan-500/10" },
   amber:   { text: "text-amber-300",   ring: "border-amber-400/30",   bg: "bg-amber-500/10",   soft: "from-amber-500/[0.06] to-transparent",   chip: "bg-amber-500/15 text-amber-200 border-amber-400/30",   glow: "shadow-amber-500/10" },
   violet:  { text: "text-violet-300",  ring: "border-violet-400/30",  bg: "bg-violet-500/10",  soft: "from-violet-500/[0.06] to-transparent",  chip: "bg-violet-500/15 text-violet-200 border-violet-400/30", glow: "shadow-violet-500/10" },
   emerald: { text: "text-emerald-300", ring: "border-emerald-400/30", bg: "bg-emerald-500/10", soft: "from-emerald-500/[0.06] to-transparent", chip: "bg-emerald-500/15 text-emerald-200 border-emerald-400/30", glow: "shadow-emerald-500/10" },
+  rose:    { text: "text-rose-300",    ring: "border-rose-400/30",    bg: "bg-rose-500/10",    soft: "from-rose-500/[0.06] to-transparent",    chip: "bg-rose-500/15 text-rose-200 border-rose-400/30",    glow: "shadow-rose-500/10" },
+  sky:     { text: "text-sky-300",     ring: "border-sky-400/30",     bg: "bg-sky-500/10",     soft: "from-sky-500/[0.06] to-transparent",     chip: "bg-sky-500/15 text-sky-200 border-sky-400/30",     glow: "shadow-sky-500/10" },
+  fuchsia: { text: "text-fuchsia-300", ring: "border-fuchsia-400/30", bg: "bg-fuchsia-500/10", soft: "from-fuchsia-500/[0.06] to-transparent", chip: "bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/30", glow: "shadow-fuchsia-500/10" },
+  lime:    { text: "text-lime-300",    ring: "border-lime-400/30",    bg: "bg-lime-500/10",    soft: "from-lime-500/[0.06] to-transparent",    chip: "bg-lime-500/15 text-lime-200 border-lime-400/30",    glow: "shadow-lime-500/10" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -899,6 +938,967 @@ function RingPanel() {
 }
 
 /* ================================================================== */
+/*  PANEL 5 · RANGE PROOFS                                              */
+/* ================================================================== */
+
+function RangePanel() {
+  const [value, setValue] = useState<number>(42);
+  const [N, setN] = useState<number>(8);
+  const [result, setResult] = useState<{
+    C: CurvePoint;
+    proof: RangeProof;
+    blinding: bigint;
+    value: bigint;
+  } | null>(null);
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [tampered, setTampered] = useState<boolean>(false);
+
+  const max = (1 << N) - 1;
+  const clampedValue = Math.min(value, max);
+
+  const onProve = () => {
+    const r = randomScalar();
+    const { C, proof } = rangeProve(BigInt(clampedValue), r, N);
+    setResult({ C, proof, blinding: r, value: BigInt(clampedValue) });
+    setVerified(null);
+    setTampered(false);
+  };
+
+  const onVerify = () => {
+    if (!result) return;
+    let p = result.proof;
+    if (tampered) {
+      const newS0 = [...p.s0];
+      newS0[0] = (newS0[0] + 1n) % L;
+      p = { ...p, s0: newS0 };
+    }
+    setVerified(rangeVerify(result.C, p));
+  };
+
+  const proofBytes = result
+    ? 32 + 32 * result.proof.bitCommits.length + 32 + 32 * 3 * result.proof.N
+    : 0;
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent="rose"
+        n="05"
+        title="Range Proof"
+        sub={
+          "Proves a Pedersen commitment C = r·G + v·H hides a value v ∈ [0, 2^N) without revealing v. Without this an attacker could commit to v = L − 1 (negative wraparound) and silently inflate the supply. Bit-decomposition + 1-of-2 sigma OR-proof per bit, batched via Fiat–Shamir."
+        }
+      />
+
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Hidden value v
+            </p>
+            <input
+              type="range"
+              min={0}
+              max={max}
+              step={1}
+              value={clampedValue}
+              onChange={(e) => setValue(Number(e.target.value))}
+              className="w-full accent-rose-400"
+            />
+            <div className="mt-2 flex items-baseline gap-3">
+              <span className="text-2xl font-mono tabular-nums text-rose-300 font-bold">
+                {clampedValue}
+              </span>
+              <span className="text-[11px] text-white/40 font-mono">
+                in [0, 2^{N}) = [0, {max + 1})
+              </span>
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Bit width N
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {[4, 8, 16, 32].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => {
+                    setN(n);
+                    setValue(Math.min(value, (1 << n) - 1));
+                    setResult(null);
+                    setVerified(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold tracking-[0.15em] uppercase cursor-pointer transition-all ${
+                    n === N
+                      ? "bg-rose-500/15 text-rose-200 border-rose-400/40"
+                      : "bg-white/[0.02] text-white/50 border-white/[0.06] hover:text-white/80"
+                  }`}
+                >
+                  N = {n}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-white/35 mt-2 leading-relaxed">
+              Production uses N = 64 (full u64). Smaller N here so the proof
+              builds in the browser without long pauses.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          <PrimaryButton accent="rose" onClick={onProve}>
+            Build range proof
+          </PrimaryButton>
+          {result && (
+            <>
+              <GhostButton onClick={onVerify}>Verify</GhostButton>
+              <label className="flex items-center gap-2 ml-auto text-[11px] text-white/60 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={tampered}
+                  onChange={(e) => {
+                    setTampered(e.target.checked);
+                    setVerified(null);
+                  }}
+                  className="accent-rose-400"
+                />
+                Tamper with one response scalar
+              </label>
+            </>
+          )}
+        </div>
+      </div>
+
+      {result && (
+        <div className={`${card} p-5 space-y-4`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Public commitment + proof
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <HexRow
+              label="C = r·G + v·H"
+              hex={pointToHex(result.C)}
+              accent="rose"
+              hint="hides v"
+            />
+            <HexRow
+              label="r · blinding (private)"
+              hex={scalarToHex(result.blinding)}
+              accent="rose"
+              hint="never published"
+            />
+          </div>
+
+          <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-[10px] tracking-[0.2em] uppercase text-rose-300 font-bold">
+                Bit decomposition
+              </p>
+              <p className="text-[10px] text-white/35 font-mono">
+                {result.proof.N} commitments, ~{proofBytes} bytes total
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {Array.from({ length: result.proof.N }, (_, i) => {
+                const bit = Number(
+                  (result.value >> BigInt(result.proof.N - 1 - i)) & 1n
+                );
+                return (
+                  <div
+                    key={i}
+                    className={`w-7 h-7 rounded-md border flex items-center justify-center text-xs font-mono font-bold ${
+                      bit === 1
+                        ? "bg-rose-500/20 text-rose-200 border-rose-400/40"
+                        : "bg-white/[0.02] text-white/30 border-white/[0.06]"
+                    }`}
+                    title={`b_${result.proof.N - 1 - i} = ${bit}`}
+                  >
+                    {bit}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-white/35 mt-2 leading-relaxed font-mono">
+              v = Σ b<sub>i</sub>·2<sup>i</sup> = {result.value.toString()}
+            </p>
+          </div>
+
+          {verified !== null && (
+            <Badge ok={verified} label="range proof verifies" accent="rose" />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  PANEL 6 · STORAGE COMMITMENTS                                       */
+/* ================================================================== */
+
+function StoragePanel() {
+  const [text, setText] = useState<string>(
+    "MoneyFund Network · permanent payload v0.1\n\nThis text is being chunked, hashed, and Merkle-rooted live in your browser. The resulting storage commitment is the on-chain identity of this data — operators store the bytes, the chain stores the root."
+  );
+  const [chunkBits, setChunkBits] = useState<number>(7); // 128 B
+  const [endowment, setEndowment] = useState<string>("1000000");
+
+  const data = useMemo(() => new TextEncoder().encode(text), [text]);
+
+  const built = useMemo(() => {
+    try {
+      const chunkSize = 1 << chunkBits;
+      const e = BigInt(endowment || "0");
+      return buildStorageCommitment(data, e, { chunkSize, replication: 3 });
+    } catch {
+      return null;
+    }
+  }, [data, chunkBits, endowment]);
+
+  const [auditIdx, setAuditIdx] = useState<number>(0);
+  const [auditResult, setAuditResult] = useState<boolean | null>(null);
+  const [tamperAudit, setTamperAudit] = useState<boolean>(false);
+
+  const numChunks = built?.commit.numChunks ?? 0;
+  const validIdx = Math.min(auditIdx, Math.max(0, numChunks - 1));
+
+  const onAudit = () => {
+    if (!built) return;
+    const seed = new Uint8Array([0xa1, 0xb2, 0xc3, 0xd4]);
+    const challenge = challengeFromSeed(built.commit, seed);
+    challenge.chunkIndex = validIdx;
+    const resp = respondToChallenge(
+      data,
+      built.tree,
+      built.commit.chunkSize,
+      challenge
+    );
+    let respChunk = resp.chunk;
+    if (tamperAudit && respChunk.length > 0) {
+      respChunk = new Uint8Array(resp.chunk);
+      respChunk[0] ^= 0xff;
+    }
+    setAuditResult(
+      verifyChallengeResponse(built.commit, challenge, {
+        chunk: respChunk,
+        proof: resp.proof,
+      })
+    );
+  };
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent="sky"
+        n="06"
+        title="Storage Commitment"
+        sub={
+          "The permanence layer. Data is chunked, each chunk hashed, and the chunks Merkle-rooted into a single 32-byte data root. The root + size + replication factor + a Pedersen-committed endowment forms the on-chain storage commitment. SPoRA-style audits later prove operators still hold the bytes."
+        }
+      />
+
+      <div className={`${card} p-5 space-y-4`}>
+        <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+          Payload
+        </p>
+        <textarea
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setAuditResult(null);
+          }}
+          className="w-full min-h-[120px] rounded-lg border border-white/[0.08] bg-black/30 text-white/85 text-sm font-mono px-3 py-2 outline-none focus:border-sky-400/50 transition-colors resize-y"
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div>
+            <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Chunk size
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {[6, 7, 8, 10].map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setChunkBits(b)}
+                  className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold tracking-[0.15em] uppercase cursor-pointer transition-all ${
+                    b === chunkBits
+                      ? "bg-sky-500/15 text-sky-200 border-sky-400/40"
+                      : "bg-white/[0.02] text-white/50 border-white/[0.06] hover:text-white/80"
+                  }`}
+                >
+                  {1 << b} B
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Endowment (hidden)
+            </p>
+            <input
+              type="text"
+              value={endowment}
+              onChange={(e) => setEndowment(e.target.value.replace(/[^0-9]/g, ""))}
+              className="w-full rounded-lg border border-white/[0.08] bg-black/40 text-white/85 text-sm font-mono px-3 py-2 outline-none focus:border-sky-400/50 transition-colors"
+            />
+            <p className="text-[10px] text-white/35 mt-1">
+              Pedersen-committed; verifiers see the binding, not the amount.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {built && (
+        <div className={`${card} p-5 space-y-4`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            On-chain storage commitment
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+              <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+                Size
+              </p>
+              <p className="text-sm font-mono text-white/85">
+                {Number(built.commit.sizeBytes).toLocaleString()} B
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+              <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+                Chunks
+              </p>
+              <p className="text-sm font-mono text-white/85">
+                {built.commit.numChunks}
+              </p>
+              <p className="text-[10px] text-white/35 mt-0.5">
+                @ {built.commit.chunkSize} B each
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+              <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+                Replication
+              </p>
+              <p className="text-sm font-mono text-white/85">
+                {built.commit.replication}×
+              </p>
+              <p className="text-[10px] text-white/35 mt-0.5">
+                operators slashable on miss
+              </p>
+            </div>
+          </div>
+
+          <HexRow
+            label="data root · Merkle"
+            hex={bytesToHex(built.commit.dataRoot)}
+            accent="sky"
+            hint="32 B BLAKE-of-leaves binding the entire payload"
+          />
+          <HexRow
+            label="endowment · Pedersen commit"
+            hex={pointToHex(built.commit.endowment)}
+            accent="sky"
+            hint="amount hidden behind r·G + v·H"
+          />
+          <HexRow
+            label="storage commitment hash"
+            hex={bytesToHex(storageCommitmentHash(built.commit))}
+            accent="sky"
+            hint="this is what blocks Merkle-ize"
+          />
+        </div>
+      )}
+
+      {built && built.commit.numChunks > 0 && (
+        <div className={`${card} p-5 space-y-4`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            SPoRA-style audit
+          </p>
+          <p className="text-[11px] text-white/55 leading-relaxed">
+            The protocol challenges a storage operator to produce chunk{" "}
+            <span className="font-mono text-sky-300">i</span> along with a
+            Merkle path to the data root. An operator who lost the data fails
+            the audit and is slashed.
+          </p>
+
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-white/40 tracking-[0.2em] uppercase">
+              Audit chunk index
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={numChunks - 1}
+              value={validIdx}
+              onChange={(e) => {
+                setAuditIdx(Number(e.target.value));
+                setAuditResult(null);
+              }}
+              className="w-20 rounded-lg border border-white/[0.08] bg-black/40 text-white/85 text-sm font-mono px-2 py-1.5 outline-none focus:border-sky-400/50"
+            />
+            <span className="text-[10px] text-white/30 font-mono">
+              of {numChunks}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <PrimaryButton accent="sky" onClick={onAudit}>
+              Run audit
+            </PrimaryButton>
+            <label className="flex items-center gap-2 ml-auto text-[11px] text-white/60 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={tamperAudit}
+                onChange={(e) => {
+                  setTamperAudit(e.target.checked);
+                  setAuditResult(null);
+                }}
+                className="accent-rose-400"
+              />
+              Operator tampers with one byte before responding
+            </label>
+          </div>
+
+          {auditResult !== null && (
+            <Badge
+              ok={auditResult}
+              label={
+                auditResult ? "audit passed" : "audit failed (slash event)"
+              }
+              accent="sky"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  PANEL 7 · TRANSACTIONS                                              */
+/* ================================================================== */
+
+interface TxScenario {
+  sender: StealthWallet;
+  recipient: StealthWallet;
+  fundingOutput: StealthOutput;
+  spendPriv: bigint;
+  inputValue: bigint;
+  inputBlinding: bigint;
+  inputCommit: CurvePoint;
+  ringP: CurvePoint[];
+  ringC: CurvePoint[];
+  signerIdx: number;
+  recipientOut: StealthOutput;
+}
+
+function makeScenario(): TxScenario {
+  const sender = stealthGen();
+  const recipient = stealthGen();
+  const fundingOutput = stealthSendTo(sender);
+  const spendPriv = stealthSpendKey(fundingOutput, sender);
+
+  const inputValue = 100n;
+  const inputBlinding = randomScalar();
+  const inputCommit = pedersenCommit(inputValue, inputBlinding).C;
+
+  const ringP: CurvePoint[] = [];
+  const ringC: CurvePoint[] = [];
+  for (let i = 0; i < 4; i++) {
+    const dummy = stealthGen();
+    const out = stealthSendTo(dummy);
+    ringP.push(out.oneTimeAddr);
+    ringC.push(pedersenCommit(BigInt(50 + i), randomScalar()).C);
+  }
+  const signerIdx = 2;
+  ringP.splice(signerIdx, 0, fundingOutput.oneTimeAddr);
+  ringC.splice(signerIdx, 0, inputCommit);
+
+  const recipientOut = stealthSendTo(recipient);
+
+  return {
+    sender,
+    recipient,
+    fundingOutput,
+    spendPriv,
+    inputValue,
+    inputBlinding,
+    inputCommit,
+    ringP,
+    ringC,
+    signerIdx,
+    recipientOut,
+  };
+}
+
+function TxPanel() {
+  const [scenario, setScenario] = useState<TxScenario>(() => makeScenario());
+  const [signed, setSigned] = useState<{
+    tx: TransactionWire;
+  } | null>(null);
+  const [verifyResult, setVerifyResult] = useState<{
+    ok: boolean;
+    errors: string[];
+  } | null>(null);
+  const [doubleSpendResult, setDoubleSpendResult] = useState<boolean | null>(null);
+
+  const onRegen = () => {
+    setScenario(makeScenario());
+    setSigned(null);
+    setVerifyResult(null);
+    setDoubleSpendResult(null);
+  };
+
+  const onSign = () => {
+    const inputs: InputSpec[] = [
+      {
+        ring: { P: scenario.ringP, C: scenario.ringC },
+        signerIdx: scenario.signerIdx,
+        spendPriv: scenario.spendPriv,
+        value: scenario.inputValue,
+        blinding: scenario.inputBlinding,
+      },
+    ];
+    const result = signTransaction(
+      inputs,
+      [{ oneTimeAddr: scenario.recipientOut.oneTimeAddr, value: 99n }],
+      1n
+    );
+    setSigned({ tx: result.tx });
+    setVerifyResult(null);
+    setDoubleSpendResult(null);
+  };
+
+  const onVerify = () => {
+    if (!signed) return;
+    const v = verifyTransaction(signed.tx);
+    setVerifyResult({ ok: v.ok, errors: v.errors });
+  };
+
+  const onDoubleSpend = () => {
+    if (!signed) return;
+    // Sign a SECOND tx spending the same input — different output.
+    const recipient2 = stealthGen();
+    const out2 = stealthSendTo(recipient2);
+    const inputs: InputSpec[] = [
+      {
+        ring: { P: scenario.ringP, C: scenario.ringC },
+        signerIdx: scenario.signerIdx,
+        spendPriv: scenario.spendPriv,
+        value: scenario.inputValue,
+        blinding: scenario.inputBlinding,
+      },
+    ];
+    const second = signTransaction(
+      inputs,
+      [{ oneTimeAddr: out2.oneTimeAddr, value: 99n }],
+      1n
+    );
+    const ki1 = signed.tx.inputs[0].sig.I;
+    const ki2 = second.tx.inputs[0].sig.I;
+    setDoubleSpendResult(ki1.equals(ki2));
+  };
+
+  const tx = signed?.tx;
+  const ki = tx?.inputs[0].sig.I;
+  const txid = tx ? bytesToHex(txId(tx)) : null;
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent="fuchsia"
+        n="07"
+        title="Confidential Transaction"
+        sub={
+          "Full RingCT-style ceremony: stealth wallets · ring of decoys · CLSAG ring signature · range proof on every output amount · Pedersen balance check (Σ pseudo − Σ out − fee·H = 0). Spending the same input twice yields the same key image — that's how the chain catches double-spends without learning the spender."
+        }
+      />
+
+      {/* Scenario */}
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Scenario · 1 input → 1 output, fee 1, ring of 5 (1 real + 4 decoys)
+          </p>
+          <PrimaryButton accent="fuchsia" onClick={onRegen}>
+            Reroll wallets &amp; ring
+          </PrimaryButton>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <HexRow
+            label="sender · funding output P"
+            hex={pointToHex(scenario.fundingOutput.oneTimeAddr)}
+            accent="fuchsia"
+            hint="stealth address of the input being spent"
+          />
+          <HexRow
+            label="recipient · one-time P"
+            hex={pointToHex(scenario.recipientOut.oneTimeAddr)}
+            accent="fuchsia"
+            hint="fresh, unlinkable to recipient's wallet"
+          />
+        </div>
+
+        <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-fuchsia-300 font-bold mb-2">
+            Anonymity ring (signer hidden among decoys)
+          </p>
+          <div className="space-y-1.5">
+            {scenario.ringP.map((p, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 font-mono text-[11px]"
+              >
+                <span
+                  className={`shrink-0 w-7 text-[10px] tracking-[0.15em] uppercase font-bold ${
+                    i === scenario.signerIdx
+                      ? "text-fuchsia-300"
+                      : "text-white/30"
+                  }`}
+                >
+                  P{i}
+                </span>
+                <span
+                  className={`truncate ${
+                    i === scenario.signerIdx ? "text-fuchsia-200" : "text-white/45"
+                  }`}
+                >
+                  {shorten(pointToHex(p), 14, 8)}
+                </span>
+                {i === scenario.signerIdx && (
+                  <span className="text-[9px] text-fuchsia-300 tracking-[0.2em] uppercase font-bold">
+                    real
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-white/35 mt-2">
+            (You can see which entry is real because this is a demo; on-chain
+            the position is uniformly random and indistinguishable.)
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton accent="fuchsia" onClick={onSign}>
+            Sign transaction
+          </PrimaryButton>
+          {signed && (
+            <>
+              <GhostButton onClick={onVerify}>Verify</GhostButton>
+              <GhostButton onClick={onDoubleSpend}>
+                Attempt double-spend
+              </GhostButton>
+            </>
+          )}
+        </div>
+      </div>
+
+      {tx && ki && txid && (
+        <div className={`${card} p-5 space-y-4`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Signed transaction
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+              <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+                Inputs
+              </p>
+              <p className="text-sm font-mono text-white/85">{tx.inputs.length}</p>
+            </div>
+            <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+              <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+                Outputs
+              </p>
+              <p className="text-sm font-mono text-white/85">{tx.outputs.length}</p>
+            </div>
+            <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+              <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+                Fee
+              </p>
+              <p className="text-sm font-mono text-white/85">
+                {tx.fee.toString()}
+              </p>
+            </div>
+          </div>
+
+          <HexRow label="tx id" hex={txid} accent="fuchsia" hint="blocks Merkle-ize this" />
+          <HexRow
+            label="key image I = x · H_p(P_π)"
+            hex={pointToHex(ki)}
+            accent="fuchsia"
+            hint="any future tx with the same I = double-spend"
+          />
+          <HexRow
+            label="output amount commitment C_out"
+            hex={pointToHex(tx.outputs[0].amount)}
+            accent="fuchsia"
+            hint="value hidden; range proof attached"
+          />
+          <HexRow
+            label="pseudo commitment C_pseudo"
+            hex={pointToHex(tx.inputs[0].cPseudo)}
+            accent="fuchsia"
+            hint="links input commitment to balance proof"
+          />
+
+          {verifyResult && (
+            <div className="space-y-2">
+              <Badge
+                ok={verifyResult.ok}
+                label={verifyResult.ok ? "tx valid" : "tx invalid"}
+                accent="fuchsia"
+              />
+              {verifyResult.errors.length > 0 && (
+                <ul className="text-[11px] text-rose-300/80 list-disc list-inside">
+                  {verifyResult.errors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {doubleSpendResult !== null && (
+            <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3 space-y-2">
+              <Badge
+                ok={doubleSpendResult}
+                label={
+                  doubleSpendResult
+                    ? "key images match — chain rejects 2nd spend"
+                    : "key images differ — bug"
+                }
+                accent="fuchsia"
+              />
+              <p className="text-[11px] text-white/55 leading-relaxed">
+                A second transaction spending the same input — even with a
+                different output, different ring decoys, different recipient —
+                produces the <span className="font-mono text-fuchsia-300">same I</span>.
+                Validators reject the second one without learning who you are.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  PANEL 8 · BLOCKS & STATE                                            */
+/* ================================================================== */
+
+interface ChainSnapshot {
+  state: ChainState;
+  lastBlock: Block | null;
+}
+
+function BlockPanel() {
+  const [snapshot, setSnapshot] = useState<ChainSnapshot>(() => {
+    const cfg = { timestamp: 0, initialOutputs: [], initialStorage: [] };
+    const genesis = buildGenesis(cfg);
+    const state = applyGenesis(genesis, cfg);
+    return { state, lastBlock: genesis };
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [doubleSpendError, setDoubleSpendError] = useState<string | null>(null);
+  const [lastTx, setLastTx] = useState<TransactionWire | null>(null);
+
+  const onMintBlock = useCallback(() => {
+    setError(null);
+    setDoubleSpendError(null);
+
+    // Build a fresh "funded" wallet + tx that spends to a recipient.
+    const fundOwner = stealthGen();
+    const fundOut = stealthSendTo(fundOwner);
+    const x = stealthSpendKey(fundOut, fundOwner);
+    const v = 100n;
+    const r = randomScalar();
+    const c = pedersenCommit(v, r).C;
+    const ring = { P: [fundOut.oneTimeAddr], C: [c] };
+    const recipient = stealthGen();
+    const recipientOut = stealthSendTo(recipient);
+
+    const signed = signTransaction(
+      [
+        {
+          ring,
+          signerIdx: 0,
+          spendPriv: x,
+          value: v,
+          blinding: r,
+        },
+      ],
+      [{ oneTimeAddr: recipientOut.oneTimeAddr, value: 99n }],
+      1n
+    );
+
+    const block = buildBlock({
+      state: snapshot.state,
+      txs: [signed.tx],
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+    const result = applyBlock(snapshot.state, block);
+    if (!result.ok) {
+      setError(result.errors.join("; "));
+      return;
+    }
+    setSnapshot({ state: result.state, lastBlock: block });
+    setLastTx(signed.tx);
+  }, [snapshot.state]);
+
+  const onAttemptReplay = useCallback(() => {
+    setDoubleSpendError(null);
+    if (!lastTx) {
+      setDoubleSpendError("Mint at least one block first.");
+      return;
+    }
+    const block = buildBlock({
+      state: snapshot.state,
+      txs: [lastTx],
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+    const result = applyBlock(snapshot.state, block);
+    setDoubleSpendError(
+      result.ok ? "(unexpected: replay accepted)" : result.errors.join("; ")
+    );
+  }, [lastTx, snapshot.state]);
+
+  const onReset = () => {
+    const cfg = { timestamp: 0, initialOutputs: [], initialStorage: [] };
+    const genesis = buildGenesis(cfg);
+    const state = applyGenesis(genesis, cfg);
+    setSnapshot({ state, lastBlock: genesis });
+    setError(null);
+    setDoubleSpendError(null);
+    setLastTx(null);
+  };
+
+  const tip = snapshot.lastBlock;
+  const tipId = tip ? bytesToHex(blockId(tip.header)) : "";
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent="lime"
+        n="08"
+        title="Blocks &amp; Chain State"
+        sub={
+          "Pure state transition: applyBlock(state, block) → state' or error. Validates every transaction, every range proof, every CLSAG, every balance, plus chain-wide double-spend across all key images ever spent. Re-execute it on any node and you get the same answer — that's consensus."
+        }
+      />
+
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+            <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+              Tip height
+            </p>
+            <p className="text-2xl font-mono tabular-nums text-lime-300 font-bold">
+              {snapshot.state.height}
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+            <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+              UTXO set
+            </p>
+            <p className="text-2xl font-mono tabular-nums text-lime-300 font-bold">
+              {snapshot.state.utxo.size}
+            </p>
+            <p className="text-[10px] text-white/35 mt-0.5">unspent outputs</p>
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
+            <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
+              Spent key images
+            </p>
+            <p className="text-2xl font-mono tabular-nums text-lime-300 font-bold">
+              {snapshot.state.spentKeyImages.size}
+            </p>
+            <p className="text-[10px] text-white/35 mt-0.5">double-spend filter</p>
+          </div>
+        </div>
+
+        {tip && (
+          <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3 space-y-2">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-lime-300 font-bold">
+              Tip block
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono">
+              <div>
+                <span className="text-white/40">id  </span>
+                <span className="text-white/80">{shorten(tipId, 14, 10)}</span>
+              </div>
+              <div>
+                <span className="text-white/40">height  </span>
+                <span className="text-white/80">{tip.header.height}</span>
+              </div>
+              <div>
+                <span className="text-white/40">prev  </span>
+                <span className="text-white/80">
+                  {shorten(bytesToHex(tip.header.prevHash), 14, 10)}
+                </span>
+              </div>
+              <div>
+                <span className="text-white/40">txs  </span>
+                <span className="text-white/80">{tip.txs.length}</span>
+              </div>
+              <div>
+                <span className="text-white/40">tx-root  </span>
+                <span className="text-white/80">
+                  {shorten(bytesToHex(tip.header.txRoot), 14, 10)}
+                </span>
+              </div>
+              <div>
+                <span className="text-white/40">storage-root  </span>
+                <span className="text-white/80">
+                  {shorten(bytesToHex(tip.header.storageRoot), 14, 10)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          <PrimaryButton accent="lime" onClick={onMintBlock}>
+            Build &amp; apply block
+          </PrimaryButton>
+          {lastTx && (
+            <GhostButton onClick={onAttemptReplay}>
+              Replay last tx (double-spend)
+            </GhostButton>
+          )}
+          <GhostButton onClick={onReset}>Reset to genesis</GhostButton>
+        </div>
+
+        {error && (
+          <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-3">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-rose-300 font-bold mb-1">
+              Block rejected
+            </p>
+            <p className="text-[11px] text-rose-200/80 font-mono break-all">{error}</p>
+          </div>
+        )}
+
+        {doubleSpendError && (
+          <div className="rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/10 p-3">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-fuchsia-300 font-bold mb-1">
+              Double-spend filter caught it
+            </p>
+            <p className="text-[11px] text-fuchsia-200/80 font-mono break-all">
+              {doubleSpendError}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
 /*  TAB SHELL                                                           */
 /* ================================================================== */
 
@@ -907,6 +1907,10 @@ const TABS: { id: string; label: string; accent: Accent; component: React.FC }[]
   { id: "pedersen", label: "Pedersen", accent: "amber", component: PedersenPanel },
   { id: "stealth", label: "Stealth", accent: "violet", component: StealthPanel },
   { id: "ring", label: "Ring Sigs", accent: "emerald", component: RingPanel },
+  { id: "range", label: "Range", accent: "rose", component: RangePanel },
+  { id: "storage", label: "Storage", accent: "sky", component: StoragePanel },
+  { id: "tx", label: "Transaction", accent: "fuchsia", component: TxPanel },
+  { id: "block", label: "Blocks", accent: "lime", component: BlockPanel },
 ];
 
 export default function BlockchainLab() {
