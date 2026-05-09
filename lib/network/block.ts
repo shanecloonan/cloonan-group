@@ -39,6 +39,13 @@ import {
   dhash,
   bytesToHex,
 } from "./codec";
+import {
+  decodeFinalityProof,
+  verifyFinalityProof,
+  type FinalityProof,
+  type Validator,
+  type SlotContext,
+} from "./consensus";
 
 /* ------------------------------------------------------------------ */
 /*  HEADER + BLOCK                                                     */
@@ -51,6 +58,10 @@ export interface BlockHeader {
   prevHash: Uint8Array;
   /** Block height (genesis = 0). */
   height: number;
+  /** Slot number this block was produced for. Bound into the VRF seed so
+   *  blocks at the same height but different slots get distinct producer
+   *  eligibility lotteries. */
+  slot: number;
   /** Wall-clock timestamp (seconds). Validator may reject blocks too far
    *  in the future relative to local clock — that policy lives at the
    *  network/consensus layer, not here. */
@@ -59,8 +70,8 @@ export interface BlockHeader {
   txRoot: Uint8Array;
   /** Merkle root of all storage commitments newly anchored in this block. */
   storageRoot: Uint8Array;
-  /** Producer-supplied tag (consensus proof / VRF / nonce / signature —
-   *  the consensus layer fills this in). 32 bytes by convention. */
+  /** MFBN-encoded FinalityProof: VRF eligibility + BLS aggregate finality.
+   *  Genesis is the only block where this is allowed to be empty. */
   producerProof: Uint8Array;
 }
 
@@ -78,11 +89,27 @@ export function blockHeaderBytes(h: BlockHeader): Uint8Array {
   w.varint(h.version);
   w.push(h.prevHash);
   w.u32(h.height);
+  w.u32(h.slot);
   w.u64(BigInt(h.timestamp));
   w.push(h.txRoot);
   w.push(h.storageRoot);
   w.blob(h.producerProof);
   return w.bytes();
+}
+
+/** Hash of the header WITHOUT the producerProof. This is the message       *
+ *  the producer + committee BLS-sign — has to be deterministic and exclude *
+ *  the very signature it's signing.                                         */
+export function headerSigningHash(h: BlockHeader): Uint8Array {
+  const w = new Writer();
+  w.varint(h.version);
+  w.push(h.prevHash);
+  w.u32(h.height);
+  w.u32(h.slot);
+  w.u64(BigInt(h.timestamp));
+  w.push(h.txRoot);
+  w.push(h.storageRoot);
+  return dhash(DOMAIN.BLOCK_HEADER, w.bytes());
 }
 
 /** Block id = dhash("block-id", encoded header). */
@@ -114,6 +141,21 @@ export function storageMerkleRoot(
 /*  CHAIN STATE                                                        */
 /* ------------------------------------------------------------------ */
 
+/** Consensus parameters baked into the chain at genesis. Changing these
+ *  is a hard fork. */
+export interface ConsensusParams {
+  /** Average number of validators eligible to propose per slot.            *
+   *  ≈ 1.0 for Algorand-style "one expected leader per slot".              */
+  expectedProposersPerSlot: number;
+  /** Stake-weighted quorum threshold in basis points. 6667 = 2/3 + 1bp.    */
+  quorumStakeBps: number;
+}
+
+export const DEFAULT_CONSENSUS_PARAMS: ConsensusParams = {
+  expectedProposersPerSlot: 1.5,
+  quorumStakeBps: 6667,
+};
+
 /**
  *  State is keyed by string forms (hex) for convenient JS-object use.
  *  In a production node these would be on-disk merkle-Patricia tries
@@ -134,15 +176,22 @@ export interface ChainState {
   storage: Map<string, StorageCommitment>;
   /** Accepted block id chain: [genesis_id, block0_id, ...]. */
   blockIds: Uint8Array[];
+  /** Active validator set. Fixed at genesis in v0.1; epoch transitions    *
+   *  are a future upgrade.                                                */
+  validators: Validator[];
+  /** Consensus parameters. */
+  params: ConsensusParams;
 }
 
-export function emptyState(): ChainState {
+export function emptyState(params: ConsensusParams = DEFAULT_CONSENSUS_PARAMS): ChainState {
   return {
     height: -1,
     utxo: new Map(),
     spentKeyImages: new Set(),
     storage: new Map(),
     blockIds: [],
+    validators: [],
+    params,
   };
 }
 
@@ -158,6 +207,12 @@ export interface GenesisConfig {
   timestamp: number;
   initialOutputs: { oneTimeAddr: CurvePoint; amount: CurvePoint }[];
   initialStorage: StorageCommitment[];
+  /** Initial validator set baked into genesis. Stake weights determine    *
+   *  proposer eligibility starting at slot 0. If omitted or empty, the    *
+   *  chain runs WITHOUT consensus validation — useful only for tests.     */
+  validators?: Validator[];
+  /** Consensus parameters; default if omitted. */
+  params?: ConsensusParams;
   producerProof?: Uint8Array;
 }
 
@@ -166,17 +221,18 @@ export function buildGenesis(cfg: GenesisConfig): Block {
     version: 1,
     prevHash: new Uint8Array(32),
     height: 0,
+    slot: 0,
     timestamp: cfg.timestamp,
     txRoot: new Uint8Array(32),
     storageRoot: storageMerkleRoot(cfg.initialStorage),
-    producerProof: cfg.producerProof ?? new Uint8Array(32),
+    producerProof: cfg.producerProof ?? new Uint8Array(0),
   };
   return { header, txs: [] };
 }
 
 export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
   if (genesis.header.height !== 0) throw new Error("genesis height must be 0");
-  const state = emptyState();
+  const state = emptyState(cfg.params ?? DEFAULT_CONSENSUS_PARAMS);
   for (const o of cfg.initialOutputs) {
     state.utxo.set(o.oneTimeAddr.toHex(), o.amount);
   }
@@ -185,6 +241,7 @@ export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
   }
   state.height = 0;
   state.blockIds = [blockId(genesis.header)];
+  state.validators = cfg.validators ?? [];
   return state;
 }
 
@@ -234,6 +291,38 @@ export function applyBlock(
     errors.push("txRoot mismatch");
   }
 
+  /* ---- Producer proof (VRF eligibility + BLS finality) ---- *
+   *  When the chain has a validator set baked into genesis, every block   *
+   *  at height ≥ 1 MUST carry a valid FinalityProof. When validators is   *
+   *  empty (test / legacy mode) the proof is skipped — the chain is then  *
+   *  effectively centralized and only useful for development.             */
+  if (state.validators.length > 0) {
+    if (block.header.producerProof.length === 0) {
+      errors.push("missing producer proof");
+    } else {
+      try {
+        const fin = decodeFinalityProof(block.header.producerProof);
+        const ctx: SlotContext = {
+          height: block.header.height,
+          slot: block.header.slot,
+          prevHash: block.header.prevHash,
+        };
+        const headerHash = headerSigningHash(block.header);
+        const v = verifyFinalityProof(
+          ctx,
+          fin,
+          state.validators,
+          state.params.expectedProposersPerSlot,
+          state.params.quorumStakeBps,
+          headerHash
+        );
+        if (!v.ok) errors.push(`producer proof: ${v.reason}`);
+      } catch (e) {
+        errors.push(`producer proof decode failed: ${(e as Error).message}`);
+      }
+    }
+  }
+
   /* ---- Tentative state copy (apply if everything passes) ---- */
   const next: ChainState = {
     height: state.height + 1,
@@ -241,6 +330,8 @@ export function applyBlock(
     spentKeyImages: new Set(state.spentKeyImages),
     storage: new Map(state.storage),
     blockIds: [...state.blockIds],
+    validators: state.validators,
+    params: state.params,
   };
 
   // Storage anchors mentioned in the header must be supplied so we can
@@ -313,30 +404,65 @@ export function applyBlock(
 export interface BuildBlockArgs {
   state: ChainState;
   txs: TransactionWire[];
+  /** Slot number for this block. Defaults to height (1 slot per height)   *
+   *  when omitted — fine for tests, real consensus passes an explicit     *
+   *  slot from the network's slot timer.                                   */
+  slot?: number;
   timestamp: number;
+  /** Pre-encoded FinalityProof bytes (ie. the result of                    *
+   *  encodeFinalityProof(...)). Optional only for tests; production blocks *
+   *  must always include it.                                                */
   producerProof?: Uint8Array;
 }
 
-export function buildBlock(args: BuildBlockArgs): Block {
-  // Collect storage commitments anchored by these txs.
+/** Build a block header WITHOUT a producer proof. Use this to compute the  *
+ *  signing hash a producer + committee will sign over, then attach the     *
+ *  encoded FinalityProof and call sealBlock(). */
+export function buildUnsealedHeader(args: {
+  state: ChainState;
+  txs: TransactionWire[];
+  slot: number;
+  timestamp: number;
+}): BlockHeader {
   const newStorages: StorageCommitment[] = [];
   for (const tx of args.txs) {
     for (const out of tx.outputs) if (out.storage) newStorages.push(out.storage);
   }
-
   const prevHash =
     args.state.blockIds[args.state.blockIds.length - 1] ?? new Uint8Array(32);
-
-  const header: BlockHeader = {
+  return {
     version: 1,
     prevHash,
     height: args.state.height + 1,
+    slot: args.slot,
     timestamp: args.timestamp,
     txRoot: txMerkleRoot(args.txs),
     storageRoot: storageMerkleRoot(newStorages),
-    producerProof: args.producerProof ?? new Uint8Array(32),
+    producerProof: new Uint8Array(0),
   };
-  return { header, txs: args.txs };
+}
+
+/** Attach an encoded producer/finality proof to a header. */
+export function sealBlock(
+  header: BlockHeader,
+  txs: TransactionWire[],
+  producerProof: Uint8Array
+): Block {
+  return {
+    header: { ...header, producerProof },
+    txs,
+  };
+}
+
+export function buildBlock(args: BuildBlockArgs): Block {
+  const slot = args.slot ?? args.state.height + 1;
+  const header = buildUnsealedHeader({
+    state: args.state,
+    txs: args.txs,
+    slot,
+    timestamp: args.timestamp,
+  });
+  return sealBlock(header, args.txs, args.producerProof ?? new Uint8Array(0));
 }
 
 /* ------------------------------------------------------------------ */

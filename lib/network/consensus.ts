@@ -64,13 +64,16 @@ import {
   blsVerify,
   aggregateCommitteeVotes,
   verifyCommitteeAggregate,
+  decodeSignature,
+  encodeSignature,
   type BlsKeypair,
   type BlsPublicKey,
   type BlsSignature,
   type CommitteeAggregate,
   type CommitteeVote,
 } from "./bls";
-import { Writer, dhash, DOMAIN, bytesToHex } from "./codec";
+import { encodeVrfProof, decodeVrfProof } from "./vrf";
+import { Writer, Reader, dhash, DOMAIN, bytesToHex } from "./codec";
 import { Point, type CurvePoint } from "./primitives";
 
 /* ------------------------------------------------------------------ */
@@ -410,6 +413,64 @@ function lt(a: Uint8Array, b: Uint8Array): boolean {
 export function shortBeta(b: Uint8Array, n = 8): string {
   const h = bytesToHex(b);
   return `${h.slice(0, n)}…${h.slice(-4)}`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  CONSENSUS-CRITICAL ENCODING                                        *
+ *                                                                     *
+ *  This is the byte form that lives inside BlockHeader.producerProof. *
+ *  Any change here is a hard fork.                                    */
+/* ------------------------------------------------------------------ */
+
+export function encodeProducerProof(p: ProducerProof): Uint8Array {
+  const w = new Writer();
+  w.u32(p.validatorIndex);
+  w.push(p.beta);
+  w.push(encodeVrfProof(p.vrfProof));
+  w.push(encodeSignature(p.producerSig));
+  return w.bytes();
+}
+
+export function decodeProducerProof(bytes: Uint8Array): ProducerProof {
+  const r = new Reader(bytes);
+  const validatorIndex = r.u32();
+  const beta = r.bytes(32);
+  const vrfProof = decodeVrfProof(r.bytes(80));
+  const producerSig = decodeSignature(r.bytes(96));
+  return { validatorIndex, beta, vrfProof, producerSig };
+}
+
+export function encodeCommitteeAggregate(c: CommitteeAggregate): Uint8Array {
+  const w = new Writer();
+  w.blob(c.msg);
+  w.blob(c.bitmap);
+  w.push(encodeSignature(c.aggSig));
+  return w.bytes();
+}
+
+export function decodeCommitteeAggregate(bytes: Uint8Array): CommitteeAggregate {
+  const r = new Reader(bytes);
+  const msg = r.blob();
+  const bitmap = r.blob();
+  const aggSig = decodeSignature(r.bytes(96));
+  return { msg, bitmap, aggSig };
+}
+
+/** Encode a full FinalityProof. This is what goes into header.producerProof. */
+export function encodeFinalityProof(p: FinalityProof): Uint8Array {
+  const w = new Writer();
+  w.blob(encodeProducerProof(p.producer));
+  w.blob(encodeCommitteeAggregate(p.finality));
+  w.u64(p.signingStake);
+  return w.bytes();
+}
+
+export function decodeFinalityProof(bytes: Uint8Array): FinalityProof {
+  const r = new Reader(bytes);
+  const producer = decodeProducerProof(r.blob());
+  const finality = decodeCommitteeAggregate(r.blob());
+  const signingStake = r.u64();
+  return { producer, finality, signingStake };
 }
 
 void Point;
