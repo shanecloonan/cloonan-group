@@ -10,7 +10,8 @@ const BASE_NAV = [
   { label: "Wallets", href: "/wallets" },
   { label: "Contracts", href: "/contracts" },
   { label: "Brands", href: "/brands" },
-  { label: "Network", href: "/network" },
+  { label: "Whitepaper", href: "/whitepaper" },
+  { label: "Blockchain", href: "/blockchain" },
   { label: "About", href: "/about" },
 ];
 

@@ -12,6 +12,8 @@
     "db:migrate:all": "node scripts/apply-all-migrations.mjs"
   },
   "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0",
     "@supabase/supabase-js": "^2.99.1",
     "arweave": "^1.15.7",
     "chart.js": "^4.5.1",

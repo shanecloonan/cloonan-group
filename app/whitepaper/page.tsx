@@ -4,11 +4,11 @@ import dynamic from "next/dynamic";
 const NetworkContent = dynamic(() => import("./network-content"));
 
 export const metadata: Metadata = {
-  title: "Network | MoneyFund",
+  title: "Whitepaper | MoneyFund",
   description:
-    "The MoneyFund Network — decoupled zkVM consensus for yield-sustained data permanence. Whitepaper v6.1 + architecture illustration v6.2.",
+    "The MoneyFund Network whitepaper — decoupled zkVM consensus for yield-sustained data permanence. v6.1 + architecture illustration v6.2.",
 };
 
-export default function NetworkPage() {
+export default function WhitepaperPage() {
   return <NetworkContent />;
 }
