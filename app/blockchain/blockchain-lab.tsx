@@ -78,6 +78,49 @@ import {
   type ChainState,
   type Block,
 } from "@/lib/network/block";
+import {
+  bpProve,
+  bpVerify,
+  bpProofSize,
+  type BulletproofRange,
+} from "@/lib/network/bulletproofs";
+import {
+  vrfKeygen,
+  vrfProve,
+  vrfVerify,
+  vrfOutputAsIndex,
+  type VrfKeypair,
+  type VrfProof,
+} from "@/lib/network/vrf";
+import {
+  blsKeygen,
+  blsSign,
+  blsVerify,
+  aggregateCommitteeVotes,
+  verifyCommitteeAggregate,
+  type BlsKeypair,
+  type CommitteeAggregate,
+} from "@/lib/network/bls";
+import {
+  kzgInsecureSetup,
+  kzgCommit,
+  kzgOpen,
+  kzgVerify,
+  polyEval,
+  type KzgSrs,
+} from "@/lib/network/kzg";
+import {
+  tryProduceSlot,
+  verifyProducerProof,
+  pickWinner,
+  castVote,
+  finalize,
+  verifyFinalityProof,
+  type Validator,
+  type ValidatorSecrets,
+  type SlotContext,
+  type FinalityProof,
+} from "@/lib/network/consensus";
 
 /* ------------------------------------------------------------------ */
 /*  DESIGN TOKENS                                                      */
@@ -86,7 +129,9 @@ import {
 const card =
   "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 
-type Accent = "cyan" | "amber" | "violet" | "emerald" | "rose" | "sky" | "fuchsia" | "lime";
+type Accent =
+  | "cyan" | "amber" | "violet" | "emerald" | "rose" | "sky" | "fuchsia" | "lime"
+  | "teal" | "indigo" | "yellow" | "orange" | "red";
 
 const ACCENT: Record<Accent, { text: string; ring: string; bg: string; soft: string; chip: string; glow: string }> = {
   cyan:    { text: "text-cyan-300",    ring: "border-cyan-400/30",    bg: "bg-cyan-500/10",    soft: "from-cyan-500/[0.06] to-transparent",    chip: "bg-cyan-500/15 text-cyan-200 border-cyan-400/30",    glow: "shadow-cyan-500/10" },
@@ -97,6 +142,11 @@ const ACCENT: Record<Accent, { text: string; ring: string; bg: string; soft: str
   sky:     { text: "text-sky-300",     ring: "border-sky-400/30",     bg: "bg-sky-500/10",     soft: "from-sky-500/[0.06] to-transparent",     chip: "bg-sky-500/15 text-sky-200 border-sky-400/30",     glow: "shadow-sky-500/10" },
   fuchsia: { text: "text-fuchsia-300", ring: "border-fuchsia-400/30", bg: "bg-fuchsia-500/10", soft: "from-fuchsia-500/[0.06] to-transparent", chip: "bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/30", glow: "shadow-fuchsia-500/10" },
   lime:    { text: "text-lime-300",    ring: "border-lime-400/30",    bg: "bg-lime-500/10",    soft: "from-lime-500/[0.06] to-transparent",    chip: "bg-lime-500/15 text-lime-200 border-lime-400/30",    glow: "shadow-lime-500/10" },
+  teal:    { text: "text-teal-300",    ring: "border-teal-400/30",    bg: "bg-teal-500/10",    soft: "from-teal-500/[0.06] to-transparent",    chip: "bg-teal-500/15 text-teal-200 border-teal-400/30",    glow: "shadow-teal-500/10" },
+  indigo:  { text: "text-indigo-300",  ring: "border-indigo-400/30",  bg: "bg-indigo-500/10",  soft: "from-indigo-500/[0.06] to-transparent",  chip: "bg-indigo-500/15 text-indigo-200 border-indigo-400/30", glow: "shadow-indigo-500/10" },
+  yellow:  { text: "text-yellow-300",  ring: "border-yellow-400/30",  bg: "bg-yellow-500/10",  soft: "from-yellow-500/[0.06] to-transparent",  chip: "bg-yellow-500/15 text-yellow-200 border-yellow-400/30", glow: "shadow-yellow-500/10" },
+  orange:  { text: "text-orange-300",  ring: "border-orange-400/30",  bg: "bg-orange-500/10",  soft: "from-orange-500/[0.06] to-transparent",  chip: "bg-orange-500/15 text-orange-200 border-orange-400/30", glow: "shadow-orange-500/10" },
+  red:     { text: "text-red-300",     ring: "border-red-400/30",     bg: "bg-red-500/10",     soft: "from-red-500/[0.06] to-transparent",     chip: "bg-red-500/15 text-red-200 border-red-400/30",     glow: "shadow-red-500/10" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -1899,6 +1949,805 @@ function BlockPanel() {
 }
 
 /* ================================================================== */
+/*  PANEL 9 · BULLETPROOFS                                              */
+/* ================================================================== */
+
+function BulletproofsPanel() {
+  const ACC: Accent = "teal";
+  const [N, setN] = useState<number>(8);
+  const [valueStr, setValueStr] = useState<string>("42");
+  const [busy, setBusy] = useState<boolean>(false);
+  const [proof, setProof] = useState<BulletproofRange | null>(null);
+  const [proveMs, setProveMs] = useState<number>(0);
+  const [verifyMs, setVerifyMs] = useState<number>(0);
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [tampered, setTampered] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const valueValid = useMemo(() => {
+    try {
+      const v = BigInt(valueStr);
+      return v >= 0n && v < 1n << BigInt(N);
+    } catch {
+      return false;
+    }
+  }, [valueStr, N]);
+
+  const onProve = async () => {
+    setError(null);
+    if (!valueValid) {
+      setError(`value must be in [0, 2^${N}) = [0, ${(1n << BigInt(N)).toString()})`);
+      return;
+    }
+    setBusy(true);
+    setProof(null);
+    setVerified(null);
+    setTampered(false);
+
+    await new Promise((r) => setTimeout(r, 0));
+    try {
+      const t0 = performance.now();
+      const v = BigInt(valueStr);
+      const blinding = randomScalar();
+      const { proof: p } = bpProve(v, blinding, N);
+      const t1 = performance.now();
+      setProveMs(t1 - t0);
+      setProof(p);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onVerify = () => {
+    if (!proof) return;
+    const t0 = performance.now();
+    const target = tampered
+      ? { ...proof, tHat: (proof.tHat + 1n) % L }
+      : proof;
+    const r = bpVerify(target);
+    const t1 = performance.now();
+    setVerifyMs(t1 - t0);
+    setVerified(r);
+  };
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent={ACC}
+        n="09"
+        title="Bulletproofs · O(log N) Range Proofs"
+        sub="A logarithmic-size successor to the Borromean range proofs in tab 5. At N=64 bits the proof shrinks from ~8.2 KB to 672 bytes — same security, no trusted setup. The exact construction every modern privacy chain ships."
+      />
+
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              N (bits)
+            </label>
+            <select
+              value={N}
+              onChange={(e) => { setN(Number(e.target.value)); setProof(null); setVerified(null); }}
+              className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm"
+            >
+              {[4, 8, 16, 32, 64].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              v ∈ [0, 2^{N})
+            </label>
+            <input
+              value={valueStr}
+              onChange={(e) => { setValueStr(e.target.value); setProof(null); setVerified(null); }}
+              className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm font-mono"
+            />
+            {!valueValid && (
+              <p className="text-[10px] text-rose-300 mt-1">out of range</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
+            <p className="text-[9px] tracking-[0.2em] uppercase text-white/30 font-bold">Proof size</p>
+            <p className={`text-sm font-mono ${ACCENT[ACC].text}`}>{bpProofSize(N)} B</p>
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
+            <p className="text-[9px] tracking-[0.2em] uppercase text-white/30 font-bold">Borromean equiv.</p>
+            <p className="text-sm font-mono text-white/40">~{32 + 32 * 3 * N}B</p>
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
+            <p className="text-[9px] tracking-[0.2em] uppercase text-white/30 font-bold">Prove time</p>
+            <p className="text-sm font-mono text-white/70">{proveMs > 0 ? `${proveMs.toFixed(0)} ms` : "—"}</p>
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
+            <p className="text-[9px] tracking-[0.2em] uppercase text-white/30 font-bold">Verify time</p>
+            <p className="text-sm font-mono text-white/70">{verifyMs > 0 ? `${verifyMs.toFixed(0)} ms` : "—"}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton accent={ACC} onClick={onProve}>
+            {busy ? "proving…" : "Generate Bulletproof"}
+          </PrimaryButton>
+          <PrimaryButton accent={ACC} onClick={onVerify}>
+            Verify
+          </PrimaryButton>
+          <GhostButton onClick={() => setTampered(!tampered)}>
+            {tampered ? "✓ tampered" : "Tamper"}
+          </GhostButton>
+        </div>
+
+        {error && <p className="text-[12px] text-rose-300">{error}</p>}
+      </div>
+
+      {proof && (
+        <div className={`${card} p-5 space-y-3`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">Proof bytes</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <HexRow label="V · commitment" hex={pointToHex(proof.V)} accent={ACC} />
+            <HexRow label="A" hex={pointToHex(proof.A)} accent={ACC} />
+            <HexRow label="S" hex={pointToHex(proof.S)} accent={ACC} />
+            <HexRow label="T₁" hex={pointToHex(proof.T1)} accent={ACC} />
+            <HexRow label="T₂" hex={pointToHex(proof.T2)} accent={ACC} />
+            <HexRow label="t̂" hex={scalarToHex(proof.tHat)} accent={ACC} />
+            <HexRow label="τ_x" hex={scalarToHex(proof.taux)} accent={ACC} />
+            <HexRow label="μ" hex={scalarToHex(proof.mu)} accent={ACC} />
+          </div>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mt-4">
+            IPA · {proof.ipa.Lvec.length} rounds · log₂({N}) = {Math.log2(N)}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {proof.ipa.Lvec.map((Lp, i) => (
+              <HexRow key={`L${i}`} label={`L_${i}`} hex={pointToHex(Lp)} accent={ACC} />
+            ))}
+            {proof.ipa.Rvec.map((Rp, i) => (
+              <HexRow key={`R${i}`} label={`R_${i}`} hex={pointToHex(Rp)} accent={ACC} />
+            ))}
+            <HexRow label="a · final" hex={scalarToHex(proof.ipa.a)} accent={ACC} />
+            <HexRow label="b · final" hex={scalarToHex(proof.ipa.b)} accent={ACC} />
+          </div>
+          {verified !== null && (
+            <div className="pt-2">
+              <Badge
+                ok={verified}
+                label={tampered ? "rejects tampered proof" : "proof verifies"}
+                accent={ACC}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  PANEL 10 · VRF                                                      */
+/* ================================================================== */
+
+function VrfPanel() {
+  const ACC: Accent = "indigo";
+  const [kp, setKp] = useState<VrfKeypair>(() => vrfKeygen());
+  const [seed, setSeed] = useState<string>("slot:42");
+  const [proof, setProof] = useState<VrfProof | null>(null);
+  const [output, setOutput] = useState<Uint8Array | null>(null);
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [tampered, setTampered] = useState<boolean>(false);
+
+  const onRegen = () => {
+    setKp(vrfKeygen());
+    setProof(null);
+    setOutput(null);
+    setVerified(null);
+    setTampered(false);
+  };
+
+  const onProve = () => {
+    const seedBytes = new TextEncoder().encode(seed);
+    const { proof: p, output: o } = vrfProve(kp, seedBytes);
+    setProof(p);
+    setOutput(o);
+    setVerified(null);
+  };
+
+  const onVerify = () => {
+    if (!proof) return;
+    const target = tampered
+      ? { ...proof, s: (proof.s + 1n) % L }
+      : proof;
+    const r = vrfVerify(kp.pk, new TextEncoder().encode(seed), target);
+    setVerified(r.ok);
+  };
+
+  // Distribution demo: 1024 different seeds bucketed into 16 boxes.
+  const distribution = useMemo(() => {
+    const buckets = new Array(16).fill(0);
+    for (let i = 0; i < 1024; i++) {
+      const m = new TextEncoder().encode(`bucket-seed-${i}`);
+      const r = vrfProve(kp, m);
+      buckets[vrfOutputAsIndex(r.output, 16)]++;
+    }
+    return buckets;
+  }, [kp]);
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent={ACC}
+        n="10"
+        title="Verifiable Random Function (ECVRF)"
+        sub="Deterministic, unpredictable, publicly verifiable randomness. The cryptographic basis for slot leader election, ring decoy selection, and storage audit challenges. RFC-9381-style over ed25519."
+      />
+
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Validator keypair
+          </p>
+          <PrimaryButton accent={ACC} onClick={onRegen}>
+            Regenerate
+          </PrimaryButton>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <HexRow label="sk · seed" hex={bytesToHex(kp.sk)} accent={ACC} />
+          <HexRow label="pk = x·G" hex={pointToHex(kp.pk)} accent={ACC} />
+        </div>
+      </div>
+
+      <div className={`${card} p-5 space-y-4`}>
+        <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+          Slot input (e.g. concat of prevHash + slot number)
+        </p>
+        <input
+          value={seed}
+          onChange={(e) => { setSeed(e.target.value); setProof(null); setVerified(null); }}
+          className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm font-mono"
+        />
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton accent={ACC} onClick={onProve}>Prove (deterministic)</PrimaryButton>
+          <PrimaryButton accent={ACC} onClick={onVerify}>Verify</PrimaryButton>
+          <GhostButton onClick={() => setTampered(!tampered)}>
+            {tampered ? "✓ tampered" : "Tamper"}
+          </GhostButton>
+        </div>
+
+        {proof && output && (
+          <div className="space-y-3 pt-2">
+            <HexRow label="β · VRF output" hex={bytesToHex(output)} accent={ACC} hint="32 B uniform" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <HexRow label="Γ · proof point" hex={pointToHex(proof.Gamma)} accent={ACC} />
+              <HexRow label="c · challenge" hex={scalarToHex(proof.c)} accent={ACC} />
+              <HexRow label="s · response" hex={scalarToHex(proof.s)} accent={ACC} />
+            </div>
+            {verified !== null && (
+              <Badge ok={verified} label={tampered ? "rejects tampered" : "VRF verifies"} accent={ACC} />
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className={`${card} p-5 space-y-3`}>
+        <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+          Distribution check · 1024 distinct seeds → 16 buckets
+        </p>
+        <div className="grid grid-cols-16 gap-1" style={{ gridTemplateColumns: "repeat(16, minmax(0, 1fr))" }}>
+          {distribution.map((c, i) => (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <div
+                className={`w-full ${ACCENT[ACC].bg} ${ACCENT[ACC].ring} border rounded`}
+                style={{ height: `${Math.max(4, c * 0.6)}px` }}
+                title={`${c}`}
+              />
+              <span className="text-[8px] text-white/30 font-mono">{c}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-white/40">
+          Expected ~64 per bucket (ideal uniform). Any honest validator's VRF passes this test.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  PANEL 11 · BLS                                                      */
+/* ================================================================== */
+
+function BlsPanel() {
+  const ACC: Accent = "yellow";
+  const [N, setN] = useState<number>(8);
+  const [keypairs, setKeypairs] = useState<BlsKeypair[]>(() =>
+    Array.from({ length: 8 }, () => blsKeygen())
+  );
+  const [msg, setMsg] = useState<string>("BLOCK_HEADER · MoneyFund #1");
+  const [voted, setVoted] = useState<boolean[]>(() => new Array(8).fill(true));
+  const [agg, setAgg] = useState<CommitteeAggregate | null>(null);
+  const [verified, setVerified] = useState<boolean | null>(null);
+
+  const ensureSize = (n: number) => {
+    setKeypairs((kps) => {
+      if (kps.length === n) return kps;
+      if (kps.length < n) {
+        return [...kps, ...Array.from({ length: n - kps.length }, () => blsKeygen())];
+      }
+      return kps.slice(0, n);
+    });
+    setVoted(() => new Array(n).fill(true));
+    setAgg(null);
+    setVerified(null);
+  };
+
+  const onAggregate = () => {
+    const msgBytes = new TextEncoder().encode(msg);
+    const votes = keypairs
+      .map((kp, i) => ({ index: i, kp }))
+      .filter(({ index }) => voted[index])
+      .map(({ index, kp }) => ({ index, sig: blsSign(msgBytes, kp.sk) }));
+    if (votes.length === 0) return;
+    const a = aggregateCommitteeVotes(msgBytes, votes, keypairs.length);
+    setAgg(a);
+    setVerified(null);
+  };
+
+  const onVerify = () => {
+    if (!agg) return;
+    setVerified(verifyCommitteeAggregate(agg, keypairs.map((k) => k.pk)));
+  };
+
+  const sigBytes = useMemo(() => {
+    if (!agg) return null;
+    return agg.aggSig.toBytes();
+  }, [agg]);
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent={ACC}
+        n="11"
+        title="BLS12-381 · Aggregate Signatures"
+        sub="N validators sign the same block header; their signatures compress into a single 96-byte aggregate. Verification is one pairing check regardless of N. The math that makes 100k-validator finality scale."
+      />
+
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Committee size
+            </label>
+            <select
+              value={N}
+              onChange={(e) => { const n = Number(e.target.value); setN(n); ensureSize(n); }}
+              className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm"
+            >
+              {[4, 8, 16, 32].map((n) => (<option key={n} value={n}>{n}</option>))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Block header msg
+            </label>
+            <input
+              value={msg}
+              onChange={(e) => { setMsg(e.target.value); setAgg(null); setVerified(null); }}
+              className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm font-mono"
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+            Validator votes (toggle to abstain)
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {voted.map((on, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setVoted((v) => v.map((x, j) => (j === i ? !x : x)));
+                  setAgg(null);
+                  setVerified(null);
+                }}
+                className={`w-9 h-9 rounded text-[10px] font-mono font-bold border transition-all ${
+                  on
+                    ? `${ACCENT[ACC].bg} ${ACCENT[ACC].text} ${ACCENT[ACC].ring}`
+                    : "bg-white/[0.02] text-white/30 border-white/[0.06]"
+                }`}
+              >
+                {i}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-white/40 mt-2">
+            {voted.filter(Boolean).length}/{voted.length} voted
+            {" · "}quorum 2/3 = {Math.ceil((voted.length * 2) / 3)}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton accent={ACC} onClick={onAggregate}>Aggregate signatures</PrimaryButton>
+          <PrimaryButton accent={ACC} onClick={onVerify}>Verify aggregate</PrimaryButton>
+          <GhostButton onClick={() => { setKeypairs(Array.from({ length: N }, () => blsKeygen())); setAgg(null); setVerified(null); }}>
+            Regenerate validators
+          </GhostButton>
+        </div>
+      </div>
+
+      {agg && sigBytes && (
+        <div className={`${card} p-5 space-y-3`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Aggregate output · {sigBytes.length} bytes total (vs {voted.filter(Boolean).length * 96}B if not aggregated)
+          </p>
+          <HexRow label="bitmap · who voted" hex={bytesToHex(agg.bitmap)} accent={ACC} />
+          <HexRow label="aggSig · single 96B point" hex={bytesToHex(sigBytes)} accent={ACC} />
+          {verified !== null && (
+            <Badge
+              ok={verified}
+              label="aggregate sig verifies against bitmap-selected pks"
+              accent={ACC}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  PANEL 12 · KZG                                                      */
+/* ================================================================== */
+
+function KzgPanel() {
+  const ACC: Accent = "orange";
+  const SETUP_DEG = 16;
+  const [srs] = useState<KzgSrs>(() => {
+    const seed = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) seed[i] = (i * 31 + 7) & 0xff;
+    return kzgInsecureSetup(SETUP_DEG, seed);
+  });
+  const [polyStr, setPolyStr] = useState<string>("1, 2, 3, 4");
+  const [xStr, setXStr] = useState<string>("5");
+  const [busy, setBusy] = useState<boolean>(false);
+  const [commitment, setCommitment] = useState<Uint8Array | null>(null);
+  const [proof, setProof] = useState<Uint8Array | null>(null);
+  const [yValue, setYValue] = useState<bigint | null>(null);
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const poly = useMemo(() => {
+    try {
+      return polyStr.split(",").map((s) => BigInt(s.trim()));
+    } catch { return null; }
+  }, [polyStr]);
+
+  const onProve = async () => {
+    setError(null);
+    if (!poly) { setError("invalid polynomial"); return; }
+    if (poly.length > SETUP_DEG + 1) { setError(`degree exceeds SRS max (${SETUP_DEG})`); return; }
+    let x: bigint;
+    try { x = BigInt(xStr); } catch { setError("invalid x"); return; }
+    setBusy(true);
+    setCommitment(null);
+    setProof(null);
+    setVerified(null);
+
+    await new Promise((r) => setTimeout(r, 0));
+    try {
+      const C = kzgCommit(srs, poly);
+      const op = kzgOpen(srs, poly, x);
+      setCommitment(C.toBytes());
+      setProof(op.proof.toBytes());
+      setYValue(op.y);
+    } catch (e) { setError(String(e)); }
+    finally { setBusy(false); }
+  };
+
+  const onVerify = async () => {
+    if (!poly || commitment === null || proof === null || yValue === null) return;
+    setBusy(true);
+    await new Promise((r) => setTimeout(r, 0));
+    try {
+      const C = (await import("@noble/curves/bls12-381.js")).bls12_381.G1.Point.fromBytes(commitment);
+      const proofPt = (await import("@noble/curves/bls12-381.js")).bls12_381.G1.Point.fromBytes(proof);
+      const x = BigInt(xStr);
+      const ok = kzgVerify(srs, C, { x, y: yValue, proof: proofPt });
+      setVerified(ok);
+    } catch (e) { setError(String(e)); }
+    finally { setBusy(false); }
+  };
+
+  const expected = poly && (() => {
+    try { return polyEval(poly, BigInt(xStr)); } catch { return null; }
+  })();
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent={ACC}
+        n="12"
+        title="KZG Polynomial Commitments"
+        sub={`Commit to a polynomial of degree ≤ ${SETUP_DEG} with one G1 point. Open at any x with one G1 proof. Verifier checks p(x) = y in constant time via a pairing equation. The cryptographic spine of Plonk, KZG-DA, and most modern zk-SNARKs.`}
+      />
+
+      <div className={`${card} p-5 space-y-3`}>
+        <p className="text-[10px] tracking-[0.2em] uppercase text-amber-300 font-bold">
+          ⚠ Trusted-setup notice
+        </p>
+        <p className="text-[12px] text-white/55 leading-relaxed">
+          The SRS used here is locally generated for demonstration. In production the network would
+          consume a multi-party powers-of-tau ceremony output. The math is identical; only the SRS source differs.
+        </p>
+      </div>
+
+      <div className={`${card} p-5 space-y-4`}>
+        <div>
+          <label className="block text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+            Polynomial coefficients (ascending: c₀, c₁, c₂, …)
+          </label>
+          <input
+            value={polyStr}
+            onChange={(e) => { setPolyStr(e.target.value); setCommitment(null); setVerified(null); }}
+            className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm font-mono"
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Evaluation point x
+            </label>
+            <input
+              value={xStr}
+              onChange={(e) => { setXStr(e.target.value); setCommitment(null); setVerified(null); }}
+              className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm font-mono"
+            />
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
+            <p className="text-[9px] tracking-[0.2em] uppercase text-white/30 font-bold">Expected p(x)</p>
+            <p className="text-sm font-mono text-white/70 truncate">{expected !== null ? expected.toString() : "—"}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton accent={ACC} onClick={onProve}>{busy ? "computing…" : "Commit + Open"}</PrimaryButton>
+          <PrimaryButton accent={ACC} onClick={onVerify}>Verify pairing</PrimaryButton>
+        </div>
+        {error && <p className="text-[12px] text-rose-300">{error}</p>}
+      </div>
+
+      {commitment && proof && yValue !== null && (
+        <div className={`${card} p-5 space-y-3`}>
+          <HexRow label="C · commitment (48B G1)" hex={bytesToHex(commitment)} accent={ACC} />
+          <HexRow label="π · opening proof (48B G1)" hex={bytesToHex(proof)} accent={ACC} />
+          <HexRow label="y = p(x)" hex={"0x" + yValue.toString(16)} accent={ACC} />
+          {verified !== null && (
+            <Badge
+              ok={verified}
+              label="e(C − y·G₁, G₂) = e(π, τ·G₂ − x·G₂)"
+              accent={ACC}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  PANEL 13 · CONSENSUS                                                */
+/* ================================================================== */
+
+function ConsensusPanel() {
+  const ACC: Accent = "red";
+  const NUM_VAL = 8;
+  const [secrets] = useState<ValidatorSecrets[]>(() =>
+    Array.from({ length: NUM_VAL }, (_, i) => ({
+      index: i,
+      vrf: vrfKeygen(),
+      bls: blsKeygen(),
+    }))
+  );
+  const stakes = useMemo<bigint[]>(() => [200n, 100n, 100n, 80n, 80n, 60n, 60n, 50n], []);
+  const validators = useMemo<Validator[]>(
+    () => secrets.map((s, i) => ({ index: i, vrfPk: s.vrf.pk, blsPk: s.bls.pk, stake: stakes[i] })),
+    [secrets, stakes]
+  );
+  const totalStake = useMemo(() => stakes.reduce((a, b) => a + b, 0n), [stakes]);
+
+  const [slot, setSlot] = useState<number>(0);
+  const [F, setF] = useState<number>(2.0);
+  const [eligible, setEligible] = useState<{ idx: number; beta: Uint8Array }[]>([]);
+  const [winner, setWinner] = useState<number | null>(null);
+  const [votes, setVotes] = useState<number>(0);
+  const [finProof, setFinProof] = useState<FinalityProof | null>(null);
+  const [verified, setVerified] = useState<boolean | null>(null);
+
+  const ctx: SlotContext = useMemo(() => ({
+    height: 1,
+    slot,
+    prevHash: new Uint8Array(32).fill(0xa1),
+  }), [slot]);
+
+  const headerHash = useMemo(() => {
+    const h = new Uint8Array(32);
+    h[0] = slot & 0xff;
+    h[1] = (slot >> 8) & 0xff;
+    return h;
+  }, [slot]);
+
+  const onRunSlot = () => {
+    const elig: { idx: number; beta: Uint8Array }[] = [];
+    let win = null;
+    for (let i = 0; i < NUM_VAL; i++) {
+      const cand = tryProduceSlot(ctx, secrets[i], validators[i], totalStake, F, headerHash);
+      if (cand) elig.push({ idx: i, beta: cand.beta });
+    }
+    setEligible(elig);
+
+    const allCands = elig
+      .map(({ idx }) => tryProduceSlot(ctx, secrets[idx], validators[idx], totalStake, F, headerHash))
+      .filter((c): c is NonNullable<typeof c> => c !== null);
+    const w = pickWinner(allCands);
+    win = w?.validatorIndex ?? null;
+    setWinner(win);
+    setFinProof(null);
+    setVerified(null);
+
+    if (w) {
+      const wValidator = validators[w.validatorIndex];
+      const committeeVotes = secrets.map((sec) => {
+        try {
+          return castVote(headerHash, sec, ctx, w, wValidator, totalStake, F);
+        } catch { return null; }
+      }).filter((x): x is NonNullable<typeof x> => x !== null);
+      setVotes(committeeVotes.length);
+      const fin = finalize(headerHash, committeeVotes, NUM_VAL);
+      let signedStake = 0n;
+      for (let i = 0; i < NUM_VAL; i++) {
+        if ((fin.bitmap[i >> 3] & (1 << (i & 7))) !== 0) signedStake += stakes[i];
+      }
+      setFinProof({ producer: w, finality: fin, signingStake: signedStake });
+    }
+  };
+
+  const onVerifyFinality = () => {
+    if (!finProof) return;
+    const r = verifyFinalityProof(ctx, finProof, validators, F, 6667, headerHash);
+    setVerified(r.ok);
+  };
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent={ACC}
+        n="13"
+        title="Slot-Based PoS · VRF leader + BLS finality"
+        sub="The actual consensus layer. Each validator's VRF output decides eligibility (stake-weighted lottery). The smallest β wins. Committee BLS-signs; a stake-weighted ≥ 2/3 quorum gives the block instant finality. Equivocation is BLS-provable and slashable."
+      />
+
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Slot number
+            </label>
+            <input
+              type="number"
+              value={slot}
+              onChange={(e) => { setSlot(Number(e.target.value || 0)); setEligible([]); setWinner(null); setFinProof(null); setVerified(null); }}
+              className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm font-mono"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+              Expected proposers per slot
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0.1"
+              max="8"
+              value={F}
+              onChange={(e) => { setF(Number(e.target.value || 1)); setEligible([]); setWinner(null); setFinProof(null); setVerified(null); }}
+              className="w-full bg-black/30 border border-white/[0.08] rounded-lg px-3 py-2 text-white text-sm font-mono"
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold mb-2">
+            Validator stakes
+          </p>
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+            {validators.map((v) => (
+              <div
+                key={v.index}
+                className={`rounded text-[10px] font-mono text-center px-2 py-1.5 border ${
+                  winner === v.index
+                    ? `${ACCENT[ACC].bg} ${ACCENT[ACC].text} ${ACCENT[ACC].ring}`
+                    : eligible.find((e) => e.idx === v.index)
+                      ? "bg-white/[0.06] text-white/80 border-white/[0.15]"
+                      : "bg-white/[0.02] text-white/40 border-white/[0.05]"
+                }`}
+              >
+                <div className="font-bold">v{v.index}</div>
+                <div className="text-[9px]">{v.stake.toString()}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-white/40 mt-2">
+            Total stake {totalStake.toString()} · highlighted = eligible · solid = winner
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton accent={ACC} onClick={onRunSlot}>Run slot</PrimaryButton>
+          <PrimaryButton accent={ACC} onClick={onVerifyFinality}>Verify finality</PrimaryButton>
+        </div>
+      </div>
+
+      {eligible.length > 0 && (
+        <div className={`${card} p-5 space-y-3`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Eligible candidates (VRF β below stake-weighted threshold)
+          </p>
+          <div className="space-y-1.5">
+            {eligible.map((e) => (
+              <div
+                key={e.idx}
+                className={`flex items-center justify-between rounded border px-3 py-1.5 ${
+                  e.idx === winner ? `${ACCENT[ACC].bg} ${ACCENT[ACC].ring}` : "border-white/[0.06] bg-black/20"
+                }`}
+              >
+                <span className="font-mono text-[11px] text-white/70">v{e.idx}</span>
+                <span className="font-mono text-[10px] text-white/50 truncate">{bytesToHex(e.beta).slice(0, 24)}…</span>
+                {e.idx === winner && (
+                  <span className={`text-[9px] tracking-[0.15em] uppercase font-bold ${ACCENT[ACC].text}`}>
+                    winner
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {finProof && (
+        <div className={`${card} p-5 space-y-3`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Finality bundle
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
+              <p className="text-[9px] tracking-[0.2em] uppercase text-white/30 font-bold">Producer</p>
+              <p className="text-sm font-mono text-white/80">v{finProof.producer.validatorIndex}</p>
+            </div>
+            <div className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
+              <p className="text-[9px] tracking-[0.2em] uppercase text-white/30 font-bold">Voters</p>
+              <p className="text-sm font-mono text-white/80">{votes}/{NUM_VAL} · stake {finProof.signingStake.toString()}/{totalStake.toString()}</p>
+            </div>
+          </div>
+          <HexRow label="aggSig · 96B BLS aggregate" hex={bytesToHex(finProof.finality.aggSig.toBytes())} accent={ACC} />
+          <HexRow label="bitmap" hex={bytesToHex(finProof.finality.bitmap)} accent={ACC} />
+          {verified !== null && (
+            <Badge
+              ok={verified}
+              label={verified ? "block FINAL · ≥ 2/3 stake-weighted quorum" : "below quorum"}
+              accent={ACC}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
 /*  TAB SHELL                                                           */
 /* ================================================================== */
 
@@ -1911,6 +2760,11 @@ const TABS: { id: string; label: string; accent: Accent; component: React.FC }[]
   { id: "storage", label: "Storage", accent: "sky", component: StoragePanel },
   { id: "tx", label: "Transaction", accent: "fuchsia", component: TxPanel },
   { id: "block", label: "Blocks", accent: "lime", component: BlockPanel },
+  { id: "bp", label: "Bulletproofs", accent: "teal", component: BulletproofsPanel },
+  { id: "vrf", label: "VRF", accent: "indigo", component: VrfPanel },
+  { id: "bls", label: "BLS", accent: "yellow", component: BlsPanel },
+  { id: "kzg", label: "KZG", accent: "orange", component: KzgPanel },
+  { id: "consensus", label: "Consensus", accent: "red", component: ConsensusPanel },
 ];
 
 export default function BlockchainLab() {
