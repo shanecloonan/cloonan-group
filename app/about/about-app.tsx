@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
 import { Menu, X } from "lucide-react";
+import WhitepaperContent from "./whitepaper-content";
 
 Chart.register(...registerables);
 
@@ -11,6 +12,7 @@ Chart.register(...registerables);
 /* ================================================================== */
 
 const SECTIONS = [
+  { id: "whitepaper", label: "Whitepaper" },
   { id: "overview", label: "Overview" },
   { id: "start", label: "Get Started" },
   { id: "diagrams", label: "U-Diagrams" },
@@ -823,6 +825,9 @@ export default function AboutApp() {
       </aside>
 
       <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 pt-8 pb-16 space-y-20">
+
+        {/* ═══════════ WHITEPAPER (embedded) ═══════════ */}
+        <WhitepaperContent />
 
         {/* ═══════════ OVERVIEW ═══════════ */}
         <section id="overview" className="space-y-8 scroll-mt-28">

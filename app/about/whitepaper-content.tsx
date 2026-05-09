@@ -1342,13 +1342,12 @@ const SEVERITY_COPY: Record<Severity, { label: string; pill: string; ring: strin
 };
 
 /* ================================================================== */
-/*  PAGE                                                                */
+/*  EMBEDDED WHITEPAPER (rendered at top of /about)                    */
 /* ================================================================== */
 
-export default function NetworkContent() {
+export default function WhitepaperContent() {
   return (
-    <div className="min-h-screen" style={{ background: "#08090e" }}>
-      <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 pt-8 pb-16 space-y-20">
+    <section id="whitepaper" className="space-y-20 scroll-mt-28">
         {/* ─────────────────────── HERO ─────────────────────── */}
         <section className="space-y-6 scroll-mt-28">
           <div className="text-center space-y-3 pt-6">
@@ -1869,7 +1868,6 @@ export default function NetworkContent() {
             </p>
           </div>
         </section>
-      </div>
-    </div>
+    </section>
   );
 }
