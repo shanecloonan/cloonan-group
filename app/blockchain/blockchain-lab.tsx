@@ -1921,58 +1921,10 @@ export default function BlockchainLab() {
     <div className="min-h-screen" style={{ background: "#08090e" }}>
       <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 pt-8 pb-16 space-y-10">
         {/* Hero */}
-        <section className="space-y-4 pt-6">
-          <div className="text-center space-y-3">
-            <p className="text-[10px] tracking-[0.4em] uppercase text-emerald-400/70 font-semibold">
-              MoneyFund · Blockchain · Foundations
-            </p>
-            <h1 className="text-3xl sm:text-[42px] font-extrabold text-white uppercase tracking-wider">
-              Cryptographic Lab
-            </h1>
-            <p className="text-[13px] text-white/50 max-w-2xl mx-auto leading-relaxed">
-              Live, in-browser implementation of the Tier-1 primitives from §4 of the
-              whitepaper. Every byte below is computed by audited{" "}
-              <span className="font-mono text-emerald-300/80">@noble/curves</span> running
-              over <span className="font-mono text-emerald-300/80">ed25519</span>. Click
-              anything — it really runs.
-            </p>
-            <div className="mx-auto mt-2 w-24 h-[2px] rounded-full bg-gradient-to-r from-cyan-500/40 via-amber-500/40 via-violet-500/40 to-emerald-500/40" />
-          </div>
-
-          {/* Curve constants */}
-          <div className={`${card} p-4 sm:p-5`}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
-                <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
-                  Curve
-                </p>
-                <p className="text-sm font-mono text-white/85">ed25519 (Edwards)</p>
-                <p className="text-[10px] text-white/35 mt-1">
-                  prime-order subgroup, cofactor 8
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
-                <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
-                  Subgroup order L
-                </p>
-                <p className="text-[11px] font-mono text-white/65 break-all leading-snug">
-                  {shorten(L.toString(16), 14, 12)}
-                </p>
-                <p className="text-[10px] text-white/35 mt-1">
-                  2<sup>252</sup> + 27742317…6493
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/[0.06] bg-black/30 p-3">
-                <p className="text-[9px] tracking-[0.25em] uppercase text-white/40 font-bold mb-1">
-                  Hash family
-                </p>
-                <p className="text-sm font-mono text-white/85">SHA-512</p>
-                <p className="text-[10px] text-white/35 mt-1">
-                  H_s · scalar · H_p · point (try-and-increment)
-                </p>
-              </div>
-            </div>
-          </div>
+        <section className="pt-6 text-center">
+          <h1 className="text-3xl sm:text-[42px] font-extrabold text-white uppercase tracking-wider">
+            MoneyFund Blockchain Primitives
+          </h1>
         </section>
 
         {/* Tabs */}
