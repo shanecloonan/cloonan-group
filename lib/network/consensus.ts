@@ -89,6 +89,19 @@ export interface Validator {
   blsPk: BlsPublicKey;
   /** Effective stake weight. Integer for determinism. */
   stake: bigint;
+  /** Stealth payout destination. The protocol mints this validator's    *
+   *  coinbase reward (block subsidy + collected fees) directly to the   *
+   *  one-time stealth address derived from this view+spend keypair.     *
+   *  Putting it on the validator record (rather than learning it at     *
+   *  block-production time) keeps applyBlock pure: any node replaying   *
+   *  history can reconstruct the coinbase output deterministically      *
+   *  from the validator set alone.                                      *
+   *                                                                      *
+   *  OPTIONAL for backward compatibility — old validator registrations   *
+   *  predate this field. When `payoutAddress` is missing, the chain      *
+   *  burns the coinbase (it's still minted into the supply for accounting *
+   *  but no UTXO is created). New mainnet validators MUST set it.       */
+  payoutAddress?: { viewPub: CurvePoint; spendPub: CurvePoint };
 }
 
 export interface ValidatorSecrets {

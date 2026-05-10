@@ -476,7 +476,7 @@ export function indexedStealthSpendKey(
  *  recipient's view, derived deterministically by both parties).       *
  * ------------------------------------------------------------------ */
 
-import { dhash, DOMAIN, Writer, Reader } from "./codec";
+import { dhash, DOMAIN, Writer } from "./codec";
 
 export const ENC_AMOUNT_BYTES = 8 + 32;
 
@@ -551,8 +551,6 @@ export function decryptOutputAmount(
   const bBytes = xor(enc.slice(8), maskB(sharedSecret, outputIndex));
   return { value: leToBigint(vBytes), blinding: leToBigint(bBytes) };
 }
-
-void Reader;
 
 /* ================================================================== *
  *  PRIMITIVE 4 · LSAG RING SIGNATURE                                  *

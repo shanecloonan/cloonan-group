@@ -261,6 +261,17 @@ export function encodeValidator(v: Validator): Uint8Array {
   w.point(v.vrfPk);
   w.push(encodePublicKey(v.blsPk));
   w.u64(v.stake);
+  // payoutAddress is an OPTIONAL trailer for backward compat with the     //
+  // pre-tokenomics wire format. We flag presence with a single byte so a  //
+  // future migration can distinguish "no payout" from "payout = null".    //
+  // Encoders that didn't write this byte are still decodable: the outer   //
+  // length-prefix in encodeValidatorSet's `w.blob()` lets the decoder     //
+  // detect end-of-record cleanly.                                         //
+  if (v.payoutAddress) {
+    w.u8(1);
+    w.point(v.payoutAddress.viewPub);
+    w.point(v.payoutAddress.spendPub);
+  }
   return w.bytes();
 }
 
@@ -270,7 +281,16 @@ export function decodeValidator(bytes: Uint8Array): Validator {
   const vrfPk = r.point();
   const blsPk = decodePublicKey(r.bytes(48));
   const stake = r.u64();
-  return { index, vrfPk, blsPk, stake };
+  // Tolerate older records that don't have the payoutAddress trailer.
+  if (r.end()) return { index, vrfPk, blsPk, stake };
+  const hasPayout = r.u8();
+  if (hasPayout === 0) return { index, vrfPk, blsPk, stake };
+  if (hasPayout !== 1) {
+    throw new Error(`decodeValidator: unknown payout-flag ${hasPayout}`);
+  }
+  const viewPub = r.point();
+  const spendPub = r.point();
+  return { index, vrfPk, blsPk, stake, payoutAddress: { viewPub, spendPub } };
 }
 
 export function encodeValidatorSet(vs: Validator[]): Uint8Array {
