@@ -46,6 +46,7 @@ import {
 import {
   DOMAIN,
   Writer,
+  Reader,
   dhash,
   bytesToHex,
 } from "./codec";
@@ -319,6 +320,125 @@ export function verifyChallengeResponse(
   }
   if (response.proof.index !== challenge.chunkIndex) return false;
   return verifyMerkleProof(response.chunk, response.proof, commit.dataRoot);
+}
+
+/* ------------------------------------------------------------------ */
+/*  PER-BLOCK STORAGE CHALLENGE                                        */
+/*                                                                     *
+ *  Every block deterministically challenges every active storage     *
+ *  commitment to produce ONE random chunk. The chunk index is         *
+ *  derived from (prevBlockId || slot || commitHash) so that every    *
+ *  node arrives at the same expected challenge without coordination. *
+ *                                                                     *
+ *  Producers MAY answer challenges by including StorageProof items   *
+ *  in the block they propose. A successful proof updates the         *
+ *  commitment's `lastProvenAt` height; commitments that go unproven  *
+ *  for too long are subject to slashing / eviction (out of scope     *
+ *  for the on-chain primitives but read by network policy).          *
+ * ------------------------------------------------------------------ */
+
+export function chunkIndexForChallenge(
+  prevBlockId: Uint8Array,
+  slot: number,
+  commitHash: Uint8Array,
+  numChunks: number
+): number {
+  if (numChunks <= 0) return 0;
+  const w = new Writer();
+  w.push(prevBlockId);
+  w.u32(slot);
+  w.push(commitHash);
+  const h = dhash(DOMAIN.CHUNK_HASH, w.bytes());
+  const dv = new DataView(h.buffer, h.byteOffset, 8);
+  const r = dv.getBigUint64(0, false);
+  return Number(r % BigInt(numChunks));
+}
+
+/** Wire-format storage proof. Included in Block.storageProofs.       *
+ *  The block's (prevBlockId, slot) plus the on-chain commit         *
+ *  determine the expected chunkIndex uniquely, so we don't put it    *
+ *  in the proof itself — the verifier recomputes.                    */
+export interface StorageProof {
+  commitHash: Uint8Array;
+  chunk: Uint8Array;
+  proof: MerkleProof;
+}
+
+export function encodeStorageProof(p: StorageProof): Uint8Array {
+  const w = new Writer();
+  w.push(p.commitHash);
+  w.blob(p.chunk);
+  w.varint(p.proof.index);
+  w.varint(p.proof.siblings.length);
+  for (let i = 0; i < p.proof.siblings.length; i++) {
+    w.push(p.proof.siblings[i]);
+    w.u8(p.proof.rightSide[i]);
+  }
+  return w.bytes();
+}
+
+export function decodeStorageProof(bytes: Uint8Array): StorageProof {
+  const r = new Reader(bytes);
+  const commitHash = r.bytes(32);
+  const chunk = r.blob();
+  const index = Number(r.varint());
+  const n = Number(r.varint());
+  const siblings: Uint8Array[] = new Array(n);
+  const rightSide: number[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    siblings[i] = r.bytes(32);
+    rightSide[i] = r.u8();
+  }
+  return { commitHash, chunk, proof: { index, siblings, rightSide } };
+}
+
+/** Verify a storage proof against an on-chain commitment and the         *
+ *  block context that issued the challenge. Returns ok=true iff:        *
+ *    - the proof's chunk-index matches chunkIndexForChallenge(...)      *
+ *    - the Merkle proof correctly opens the chunk under commit.dataRoot */
+export function verifyStorageProof(
+  commit: StorageCommitment,
+  prevBlockId: Uint8Array,
+  slot: number,
+  proof: StorageProof
+): { ok: boolean; reason?: string } {
+  const cHash = storageCommitmentHash(commit);
+  if (cHash.length !== proof.commitHash.length) {
+    return { ok: false, reason: "commitHash length mismatch" };
+  }
+  for (let i = 0; i < cHash.length; i++) {
+    if (cHash[i] !== proof.commitHash[i]) {
+      return { ok: false, reason: "commitHash mismatch" };
+    }
+  }
+  const expectedIdx = chunkIndexForChallenge(prevBlockId, slot, cHash, commit.numChunks);
+  if (proof.proof.index !== expectedIdx) {
+    return { ok: false, reason: `wrong chunk index: expected ${expectedIdx}, got ${proof.proof.index}` };
+  }
+  if (!verifyMerkleProof(proof.chunk, proof.proof, commit.dataRoot)) {
+    return { ok: false, reason: "merkle proof invalid" };
+  }
+  return { ok: true };
+}
+
+/** Producer helper: given the FULL data + Merkle tree the prover         *
+ *  is holding for a commitment, build the storage proof for the          *
+ *  current block context.                                                */
+export function buildStorageProof(
+  commit: StorageCommitment,
+  prevBlockId: Uint8Array,
+  slot: number,
+  data: Uint8Array,
+  tree: MerkleTree
+): StorageProof {
+  const cHash = storageCommitmentHash(commit);
+  const idx = chunkIndexForChallenge(prevBlockId, slot, cHash, commit.numChunks);
+  const chunks = chunkData(data, commit.chunkSize);
+  return {
+    commitHash: cHash,
+    chunk: chunks[idx],
+    proof: merkleProof(tree, idx),
+  };
 }
 
 /* ------------------------------------------------------------------ */

@@ -41,6 +41,12 @@
  * ================================================================== */
 
 import { ChainStore } from "../network/store";
+import {
+  buildStorageProof,
+  verifyStorageProof,
+  type StorageProof,
+  type MerkleTree,
+} from "../network/storage";
 import { Mempool, type AddResult } from "./mempool";
 import {
   buildUnsealedHeader,
@@ -93,8 +99,23 @@ export interface NodeConfig {
   secrets?: ValidatorSecrets;
   /** Mempool to use; defaults to a fresh one with default policy.     */
   mempool?: Mempool;
+  /** Local storage cache: any storage commitments this node is acting *
+   *  as a prover for. When proposing a block, the node will answer    *
+   *  per-block challenges for every commitHash in this cache.         */
+  storageCache?: StorageHoldings;
   /** Logger callback. Defaults to silent. */
   log?: (entry: NodeLogEntry) => void;
+}
+
+/** Per-commitment full data + pre-computed Merkle tree. Anyone holding *
+ *  this can answer SPoRA-style challenges in O(log N) time.            */
+export interface StorageHoldings {
+  /** Map from commitHash hex → { data, tree } */
+  byCommit: Map<string, { data: Uint8Array; tree: MerkleTree }>;
+}
+
+export function emptyStorageHoldings(): StorageHoldings {
+  return { byCommit: new Map() };
 }
 
 export interface NodeLogEntry {
@@ -139,6 +160,7 @@ export class ConsensusNode {
   private readonly mempool: Mempool;
   private readonly bus: GossipBus;
   private readonly secrets: ValidatorSecrets | undefined;
+  private readonly storageCache: StorageHoldings;
   private readonly log: (entry: NodeLogEntry) => void;
 
   private unsubscribe: (() => void) | null = null;
@@ -150,7 +172,14 @@ export class ConsensusNode {
     this.bus = cfg.bus;
     this.secrets = cfg.secrets;
     this.mempool = cfg.mempool ?? new Mempool();
+    this.storageCache = cfg.storageCache ?? emptyStorageHoldings();
     this.log = cfg.log ?? (() => {});
+  }
+
+  /** Register data this node is willing to prove storage of. Returns   *
+   *  the commitment hash hex of the resulting registration.            */
+  registerStorageData(commitHashHex: string, data: Uint8Array, tree: MerkleTree): void {
+    this.storageCache.byCommit.set(commitHashHex, { data, tree });
   }
 
   /* ---------------------------------------------------------------- */
@@ -221,6 +250,28 @@ export class ConsensusNode {
     const unsealed = buildUnsealedHeader({ state, txs, slot, timestamp: now });
     const headerHash = headerSigningHash(unsealed);
 
+    // Build storage proofs for any commitment in state.storage that we
+    // also have cached data for. Skip proofs for commits being anchored
+    // in this same block (they're not in state.storage yet) -- those
+    // will be answerable starting next block.
+    const storageProofs: StorageProof[] = [];
+    for (const [cHashHex, entry] of state.storage) {
+      const held = this.storageCache.byCommit.get(cHashHex);
+      if (!held) continue;
+      try {
+        const sp = buildStorageProof(
+          entry.commit,
+          unsealed.prevHash,
+          slot,
+          held.data,
+          held.tree
+        );
+        storageProofs.push(sp);
+      } catch (e) {
+        this.warn("storage-proof-build-failed", { commit: cHashHex.slice(0, 12), error: (e as Error).message });
+      }
+    }
+
     const me = state.validators[this.secrets.index];
     if (!me) {
       this.warn("not-in-validator-set", { idx: this.secrets.index });
@@ -247,12 +298,13 @@ export class ConsensusNode {
       return;
     }
 
-    const proposalMsg: ProposalMsg = { header: unsealed, txs, producer };
+    const proposalMsg: ProposalMsg = { header: unsealed, txs, producer, storageProofs };
     this.info("propose", {
       slot,
       height: nextHeight,
       betaPrefix: bytesToHex(producer.beta).slice(0, 12),
       txCount: txs.length,
+      storageProofs: storageProofs.length,
     });
 
     // Locally ingest the proposal first, then broadcast.
@@ -320,6 +372,28 @@ export class ConsensusNode {
     if (!v.ok) {
       this.warn("proposal-producer-invalid", { reason: v.reason });
       return;
+    }
+
+    // Validate every storage proof against the on-chain registry.
+    const seenStorageProof = new Set<string>();
+    for (let i = 0; i < p.storageProofs.length; i++) {
+      const sp = p.storageProofs[i];
+      const cHashHex = bytesToHex(sp.commitHash);
+      if (seenStorageProof.has(cHashHex)) {
+        this.warn("proposal-storage-proof-duplicate", { i });
+        return;
+      }
+      seenStorageProof.add(cHashHex);
+      const entry = state.storage.get(cHashHex);
+      if (!entry) {
+        this.warn("proposal-storage-proof-unknown-commit", { i, commit: cHashHex.slice(0, 12) });
+        return;
+      }
+      const v = verifyStorageProof(entry.commit, p.header.prevHash, p.header.slot, sp);
+      if (!v.ok) {
+        this.warn("proposal-storage-proof-invalid", { i, reason: v.reason });
+        return;
+      }
     }
 
     // Validate every tx without mutating the mempool. Three checks:
@@ -445,7 +519,12 @@ export class ConsensusNode {
       signingStake: rec.stakeSigned,
     };
 
-    const sealed = sealBlock(rec.msg.header, rec.msg.txs, encodeFinalityProof(finalityProof));
+    const sealed = sealBlock(
+      rec.msg.header,
+      rec.msg.txs,
+      encodeFinalityProof(finalityProof),
+      rec.msg.storageProofs
+    );
     sl.sealed = true;
 
     // Apply locally first, then broadcast the sealed block.
@@ -461,6 +540,7 @@ export class ConsensusNode {
       slot: sealed.header.slot,
       txs: sealed.txs.length,
       signers: votes.length,
+      storageProofs: sealed.storageProofs.length,
       blockId: bytesToHex(result.blockId).slice(0, 16),
     });
 

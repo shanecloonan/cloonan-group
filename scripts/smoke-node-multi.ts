@@ -87,14 +87,15 @@ for (let i = 0; i < N; i++) {
 }
 ok(`spawned ${N} nodes`, nodes.length === N);
 
-console.log("• drive 20 slots; expect every slot to finalize");
+console.log("• drive up to 60 slots; expect ≥ 20 to finalize");
+// With expectedProposersPerSlot = 1.5 each slot has p ≈ 78% to land a
+// block (1 − e^-1.5). So getting 20 of 60 is overwhelmingly reliable
+// across runs.
 let producedHeight = 0;
-const SLOTS = 30;
+const SLOTS = 60;
 for (let slot = 0; slot < SLOTS; slot++) {
   const now = 1700001000 + slot * 6;
   for (const node of nodes) node.beginSlot(slot, now);
-  // After every node has ticked, the synchronous bus has run the
-  // full slot. Check that all heads advanced to the same height.
   const tips = nodes.map((n) => n.head().height);
   if (tips.every((h) => h === producedHeight + 1)) {
     producedHeight++;

@@ -152,7 +152,7 @@ if (cheater) {
 
 console.log("• reject block with bad slot (VRF seed mismatch)");
 const wrongSlotHeader = { ...unsealed, slot: 999 };
-const r3 = applyBlock(state0, { header: { ...wrongSlotHeader, producerProof: encoded }, txs: [] });
+const r3 = applyBlock(state0, { header: { ...wrongSlotHeader, producerProof: encoded }, txs: [], storageProofs: [] });
 ok("rejected (slot tampered)", !r3.ok);
 
 console.log("• header bytes are deterministic");

@@ -12,6 +12,11 @@
 import { Writer, Reader } from "./codec";
 import { type CurvePoint, ENC_AMOUNT_BYTES } from "./primitives";
 import {
+  encodeStorageProof,
+  decodeStorageProof,
+  type StorageProof,
+} from "./storage";
+import {
   encodeClsag,
   decodeClsag,
   type ClsagRing,
@@ -211,6 +216,8 @@ export function encodeBlock(b: Block): Uint8Array {
   w.blob(encodeBlockHeader(b.header));
   w.varint(b.txs.length);
   for (const tx of b.txs) w.blob(encodeTransaction(tx));
+  w.varint(b.storageProofs.length);
+  for (const p of b.storageProofs) w.blob(encodeStorageProof(p));
   return w.bytes();
 }
 
@@ -220,7 +227,15 @@ export function decodeBlock(bytes: Uint8Array): Block {
   const nTx = Number(r.varint());
   const txs: TransactionWire[] = new Array(nTx);
   for (let i = 0; i < nTx; i++) txs[i] = decodeTransaction(r.blob());
-  return { header, txs };
+  // storageProofs were added after the initial release; tolerate decoders
+  // that ran out of bytes (i.e. legacy blocks have no proofs).
+  let storageProofs: StorageProof[] = [];
+  if (!r.end()) {
+    const nP = Number(r.varint());
+    storageProofs = new Array(nP);
+    for (let i = 0; i < nP; i++) storageProofs[i] = decodeStorageProof(r.blob());
+  }
+  return { header, txs, storageProofs };
 }
 
 /* ------------------------------------------------------------------ */

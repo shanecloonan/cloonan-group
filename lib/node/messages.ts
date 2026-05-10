@@ -34,6 +34,11 @@ import {
   type ProducerProof,
 } from "../network/consensus";
 import {
+  encodeStorageProof,
+  decodeStorageProof,
+  type StorageProof,
+} from "../network/storage";
+import {
   encodeSignature,
   decodeSignature,
   type BlsSignature,
@@ -65,6 +70,8 @@ export interface ProposalMsg {
    *  header hash (the same signature that ends up in the producer  *
    *  slot of the final FinalityProof).                              */
   producer: ProducerProof;
+  /** Storage proofs the producer is offering this block. */
+  storageProofs: StorageProof[];
 }
 
 export function encodeProposal(p: ProposalMsg): Uint8Array {
@@ -73,6 +80,8 @@ export function encodeProposal(p: ProposalMsg): Uint8Array {
   w.varint(p.txs.length);
   for (const tx of p.txs) w.blob(encodeTransaction(tx));
   w.blob(encodeProducerProof(p.producer));
+  w.varint(p.storageProofs.length);
+  for (const sp of p.storageProofs) w.blob(encodeStorageProof(sp));
   return w.bytes();
 }
 
@@ -83,7 +92,13 @@ export function decodeProposal(bytes: Uint8Array): ProposalMsg {
   const txs: TransactionWire[] = new Array(nTx);
   for (let i = 0; i < nTx; i++) txs[i] = decodeTransaction(r.blob());
   const producer = decodeProducerProof(r.blob());
-  return { header, txs, producer };
+  let storageProofs: StorageProof[] = [];
+  if (!r.end()) {
+    const n = Number(r.varint());
+    storageProofs = new Array(n);
+    for (let i = 0; i < n; i++) storageProofs[i] = decodeStorageProof(r.blob());
+  }
+  return { header, txs, producer, storageProofs };
 }
 
 /* ------------------------------------------------------------------ */

@@ -30,9 +30,19 @@ import {
 } from "./transaction";
 import {
   storageCommitmentHash,
+  verifyStorageProof,
   type StorageCommitment,
+  type StorageProof,
   merkleTreeFromLeaves,
 } from "./storage";
+
+export interface StorageEntry {
+  commit: StorageCommitment;
+  /** Block height at which this commitment's audit was last satisfied.   *
+   *  Initialized to the height at which the commitment was anchored on   *
+   *  chain. Updated every time a successful StorageProof is included.    */
+  lastProvenAt: number;
+}
 import {
   DOMAIN,
   Writer,
@@ -78,6 +88,11 @@ export interface BlockHeader {
 export interface Block {
   header: BlockHeader;
   txs: TransactionWire[];
+  /** Storage proofs answering this block's deterministic challenges.    *
+   *  Producers fill this in when they hold (or coordinate with provers  *
+   *  who hold) the underlying chunks. Empty when no proofs are          *
+   *  produced this block — commitments simply stay unproven longer.    */
+  storageProofs: StorageProof[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -172,8 +187,10 @@ export interface ChainState {
   /** Spent key images. Used for double-spend detection. */
   spentKeyImages: Set<string>;
   /** Storage commitments anchored on-chain, keyed by their commitment
-   *  hash hex. Value is the commitment object. */
-  storage: Map<string, StorageCommitment>;
+   *  hash hex. Each entry tracks the commitment object plus the block    *
+   *  height at which the commitment was most recently proven via a       *
+   *  StorageProof. New entries start with lastProvenAt = anchor height.  */
+  storage: Map<string, StorageEntry>;
   /** Accepted block id chain: [genesis_id, block0_id, ...]. */
   blockIds: Uint8Array[];
   /** Active validator set. Fixed at genesis in v0.1; epoch transitions    *
@@ -227,7 +244,7 @@ export function buildGenesis(cfg: GenesisConfig): Block {
     storageRoot: storageMerkleRoot(cfg.initialStorage),
     producerProof: cfg.producerProof ?? new Uint8Array(0),
   };
-  return { header, txs: [] };
+  return { header, txs: [], storageProofs: [] };
 }
 
 export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
@@ -237,7 +254,7 @@ export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
     state.utxo.set(o.oneTimeAddr.toHex(), o.amount);
   }
   for (const s of cfg.initialStorage) {
-    state.storage.set(bytesToHex(storageCommitmentHash(s)), s);
+    state.storage.set(bytesToHex(storageCommitmentHash(s)), { commit: s, lastProvenAt: 0 });
   }
   state.height = 0;
   state.blockIds = [blockId(genesis.header)];
@@ -364,10 +381,47 @@ export function applyBlock(
       next.utxo.set(out.oneTimeAddr.toHex(), out.amount);
       if (out.storage) {
         const h = bytesToHex(storageCommitmentHash(out.storage));
-        next.storage.set(h, out.storage);
-        newStorages.push(out.storage);
+        if (!next.storage.has(h)) {
+          // First time we see this commitment — anchor it.
+          next.storage.set(h, {
+            commit: out.storage,
+            lastProvenAt: block.header.height,
+          });
+          newStorages.push(out.storage);
+        }
       }
     }
+  }
+
+  /* ---- Validate storage proofs (per-block SPoRA audit) ---- */
+  const seenProofs = new Set<string>();
+  for (let pi = 0; pi < block.storageProofs.length; pi++) {
+    const proof = block.storageProofs[pi];
+    const cHashHex = bytesToHex(proof.commitHash);
+    if (seenProofs.has(cHashHex)) {
+      errors.push(`storageProof[${pi}]: duplicate proof for ${cHashHex.slice(0, 12)}…`);
+      continue;
+    }
+    seenProofs.add(cHashHex);
+    const entry = next.storage.get(cHashHex);
+    if (!entry) {
+      errors.push(`storageProof[${pi}]: commit ${cHashHex.slice(0, 12)}… not in storage registry`);
+      continue;
+    }
+    const verdict = verifyStorageProof(
+      entry.commit,
+      block.header.prevHash,
+      block.header.slot,
+      proof
+    );
+    if (!verdict.ok) {
+      errors.push(`storageProof[${pi}]: ${verdict.reason}`);
+      continue;
+    }
+    next.storage.set(cHashHex, {
+      commit: entry.commit,
+      lastProvenAt: block.header.height,
+    });
   }
 
   /* ---- Storage root must match what the txs anchored ---- */
@@ -413,6 +467,9 @@ export interface BuildBlockArgs {
    *  encodeFinalityProof(...)). Optional only for tests; production blocks *
    *  must always include it.                                                */
   producerProof?: Uint8Array;
+  /** Storage proofs the producer is offering this block. Optional;        *
+   *  empty list is valid (no slot-audits answered). */
+  storageProofs?: StorageProof[];
 }
 
 /** Build a block header WITHOUT a producer proof. Use this to compute the  *
@@ -446,11 +503,13 @@ export function buildUnsealedHeader(args: {
 export function sealBlock(
   header: BlockHeader,
   txs: TransactionWire[],
-  producerProof: Uint8Array
+  producerProof: Uint8Array,
+  storageProofs: StorageProof[] = []
 ): Block {
   return {
     header: { ...header, producerProof },
     txs,
+    storageProofs,
   };
 }
 
@@ -462,7 +521,12 @@ export function buildBlock(args: BuildBlockArgs): Block {
     slot,
     timestamp: args.timestamp,
   });
-  return sealBlock(header, args.txs, args.producerProof ?? new Uint8Array(0));
+  return sealBlock(
+    header,
+    args.txs,
+    args.producerProof ?? new Uint8Array(0),
+    args.storageProofs ?? []
+  );
 }
 
 /* ------------------------------------------------------------------ */
