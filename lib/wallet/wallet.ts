@@ -238,6 +238,13 @@ export class Wallet {
     return { viewPub: this.keys.viewPub, spendPub: this.keys.spendPub };
   }
 
+  /** Wire-format stealth address: 64 hex chars of viewPub || 64 hex   *
+   *  chars of spendPub = 128-char hex string. This is what the wallet *
+   *  CLI prints and what `mfbn-wallet send --to <hex>` accepts.        */
+  addressHex(): string {
+    return this.keys.viewPub.toHex() + this.keys.spendPub.toHex();
+  }
+
   /* ---------------------------------------------------------------- */
   /*  SCAN                                                             */
   /* ---------------------------------------------------------------- */
