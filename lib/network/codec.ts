@@ -232,6 +232,8 @@ export const DOMAIN = {
   RANGE_FINAL:     "MFBN-1/range-final",
   AMT_MASK_V:      "MFBN-1/amount-mask-v",
   AMT_MASK_B:      "MFBN-1/amount-mask-b",
+  COINBASE_TX_KEY: "MFBN-1/coinbase-tx-key",
+  COINBASE_BLIND:  "MFBN-1/coinbase-blind",
 } as const;
 
 export type Domain = (typeof DOMAIN)[keyof typeof DOMAIN];
