@@ -56,6 +56,8 @@ import {
 } from "../network/transaction";
 import { type ChainStore } from "../network/store";
 import { bytesToHex, hexToBytes } from "../network/codec";
+import { type Block } from "../network/block";
+import { type RpcClient } from "./rpc-client";
 
 /* ------------------------------------------------------------------ */
 /*  TYPES                                                              */
@@ -245,11 +247,58 @@ export class Wallet {
    *  blocks added since the last call.                                  */
   scan(store: ChainStore): { newOutputs: number; height: number } {
     const head = store.head();
-    let newOutputs = 0;
     const state = store.currentState();
+    const spentKi = state.spentKeyImages;
+    const result = this.scanRange(
+      this.scannedHeight + 1,
+      head.height,
+      (h) => store.getBlock(h),
+      spentKi
+    );
+    this.scannedHeight = head.height;
+    return result;
+  }
 
-    for (let h = this.scannedHeight + 1; h <= head.height; h++) {
-      const block = store.getBlock(h);
+  /** Same as `scan()` but pulls blocks over HTTP RPC instead of from a    *
+   *  local ChainStore. Used by remote-light wallets that don't run a    *
+   *  full node.                                                          */
+  async scanRpc(client: RpcClient): Promise<{ newOutputs: number; height: number }> {
+    const info = await client.info();
+    const from = this.scannedHeight + 1;
+    const to = info.height;
+    if (from > to) return { newOutputs: 0, height: to };
+    const blocks = await client.getBlocks(from, to);
+    // Re-derive `spentKi` from the blocks themselves: every key image of
+    // every input in every tx is now spent. This is what an SPV wallet
+    // would do offline (it doesn't have access to chain state map).
+    const spent = new Set<string>();
+    for (const b of blocks) {
+      for (const tx of b.txs) {
+        for (const inp of tx.inputs) {
+          // The signature's key image I is the canonical "spent" marker.
+          spent.add(inp.sig.I.toHex());
+        }
+      }
+    }
+    const byHeight = new Map<number, Block>();
+    for (let i = 0; i < blocks.length; i++) byHeight.set(from + i, blocks[i]);
+    const result = this.scanRange(from, to, (h) => byHeight.get(h) ?? null, spent);
+    this.scannedHeight = to;
+    return result;
+  }
+
+  /** Shared core: iterate [from..to], detect outputs, decrypt amounts,   *
+   *  record key images. Abstracted over the block source so that we      *
+   *  can drive it from either a local store or an RPC stream.            */
+  private scanRange(
+    from: number,
+    to: number,
+    fetchBlock: (h: number) => Block | null,
+    spentKi: Set<string>
+  ): { newOutputs: number; height: number } {
+    let newOutputs = 0;
+    for (let h = from; h <= to; h++) {
+      const block = fetchBlock(h);
       if (!block) continue;
 
       for (const tx of block.txs) {
@@ -291,7 +340,7 @@ export class Wallet {
 
           const ki = computeKeyImage(spendKey, out.oneTimeAddr);
           const kiHex = ki.toHex();
-          const spent = state.spentKeyImages.has(kiHex);
+          const spent = spentKi.has(kiHex);
 
           const wo: WalletOutput = {
             height: h,
@@ -315,13 +364,12 @@ export class Wallet {
     // Refresh `spent` flags for previously-known outputs (in case we
     // missed a spend that happened in this scan window).
     for (const wo of this.outputs.values()) {
-      if (!wo.spent && state.spentKeyImages.has(wo.keyImageHex)) {
+      if (!wo.spent && spentKi.has(wo.keyImageHex)) {
         wo.spent = true;
       }
     }
 
-    this.scannedHeight = head.height;
-    return { newOutputs, height: head.height };
+    return { newOutputs, height: to };
   }
 
   /* ---------------------------------------------------------------- */
