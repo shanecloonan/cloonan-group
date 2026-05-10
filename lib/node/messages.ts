@@ -39,6 +39,11 @@ import {
   type StorageProof,
 } from "../network/storage";
 import {
+  encodeEvidence,
+  decodeEvidence,
+  type SlashEvidence,
+} from "../network/slashing";
+import {
   encodeSignature,
   decodeSignature,
   type BlsSignature,
@@ -72,6 +77,8 @@ export interface ProposalMsg {
   producer: ProducerProof;
   /** Storage proofs the producer is offering this block. */
   storageProofs: StorageProof[];
+  /** Slashing evidence the producer is bundling into this block. */
+  slashings: SlashEvidence[];
 }
 
 export function encodeProposal(p: ProposalMsg): Uint8Array {
@@ -82,6 +89,8 @@ export function encodeProposal(p: ProposalMsg): Uint8Array {
   w.blob(encodeProducerProof(p.producer));
   w.varint(p.storageProofs.length);
   for (const sp of p.storageProofs) w.blob(encodeStorageProof(sp));
+  w.varint(p.slashings.length);
+  for (const s of p.slashings) w.blob(encodeEvidence(s));
   return w.bytes();
 }
 
@@ -93,12 +102,18 @@ export function decodeProposal(bytes: Uint8Array): ProposalMsg {
   for (let i = 0; i < nTx; i++) txs[i] = decodeTransaction(r.blob());
   const producer = decodeProducerProof(r.blob());
   let storageProofs: StorageProof[] = [];
+  let slashings: SlashEvidence[] = [];
   if (!r.end()) {
     const n = Number(r.varint());
     storageProofs = new Array(n);
     for (let i = 0; i < n; i++) storageProofs[i] = decodeStorageProof(r.blob());
   }
-  return { header, txs, producer, storageProofs };
+  if (!r.end()) {
+    const n = Number(r.varint());
+    slashings = new Array(n);
+    for (let i = 0; i < n; i++) slashings[i] = decodeEvidence(r.blob());
+  }
+  return { header, txs, producer, storageProofs, slashings };
 }
 
 /* ------------------------------------------------------------------ */

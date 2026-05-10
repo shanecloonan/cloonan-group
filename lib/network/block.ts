@@ -35,6 +35,11 @@ import {
   type StorageProof,
   merkleTreeFromLeaves,
 } from "./storage";
+import {
+  verifyEvidence,
+  canonicalize,
+  type SlashEvidence,
+} from "./slashing";
 
 export interface StorageEntry {
   commit: StorageCommitment;
@@ -93,6 +98,10 @@ export interface Block {
    *  who hold) the underlying chunks. Empty when no proofs are          *
    *  produced this block — commitments simply stay unproven longer.    */
   storageProofs: StorageProof[];
+  /** Slashing evidence collected since the previous block. Any         *
+   *  validator referenced here has their stake reduced to 0 in the     *
+   *  next state. Verified by applyBlock.                               */
+  slashings: SlashEvidence[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -244,7 +253,7 @@ export function buildGenesis(cfg: GenesisConfig): Block {
     storageRoot: storageMerkleRoot(cfg.initialStorage),
     producerProof: cfg.producerProof ?? new Uint8Array(0),
   };
-  return { header, txs: [], storageProofs: [] };
+  return { header, txs: [], storageProofs: [], slashings: [] };
 }
 
 export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
@@ -393,6 +402,38 @@ export function applyBlock(
     }
   }
 
+  /* ---- Validate slashing evidence ---- *
+   *  Each piece of evidence proves a single validator double-signed at  *
+   *  a specific (height, slot). On success we zero their stake in the   *
+   *  next state's validator list. Stake is the only field we mutate —   *
+   *  the validator's BLS/VRF pubkeys remain for future reference.       */
+  const slashedThisBlock = new Set<number>();
+  let nextValidators = next.validators;
+  for (let si = 0; si < block.slashings.length; si++) {
+    const ev = canonicalize(block.slashings[si]);
+    if (slashedThisBlock.has(ev.voterIndex)) {
+      errors.push(`slashings[${si}]: duplicate evidence for validator ${ev.voterIndex}`);
+      continue;
+    }
+    const v = verifyEvidence(ev, nextValidators);
+    if (!v.ok) {
+      errors.push(`slashings[${si}]: ${v.reason}`);
+      continue;
+    }
+    slashedThisBlock.add(ev.voterIndex);
+    // Lazy-clone validator list on first slash this block.
+    if (nextValidators === next.validators) {
+      nextValidators = nextValidators.map((vv) => ({ ...vv }));
+    }
+    nextValidators[ev.voterIndex] = {
+      ...nextValidators[ev.voterIndex],
+      stake: 0n,
+    };
+  }
+  if (nextValidators !== next.validators) {
+    next.validators = nextValidators;
+  }
+
   /* ---- Validate storage proofs (per-block SPoRA audit) ---- */
   const seenProofs = new Set<string>();
   for (let pi = 0; pi < block.storageProofs.length; pi++) {
@@ -470,6 +511,8 @@ export interface BuildBlockArgs {
   /** Storage proofs the producer is offering this block. Optional;        *
    *  empty list is valid (no slot-audits answered). */
   storageProofs?: StorageProof[];
+  /** Slashing evidence to include. */
+  slashings?: SlashEvidence[];
 }
 
 /** Build a block header WITHOUT a producer proof. Use this to compute the  *
@@ -504,12 +547,14 @@ export function sealBlock(
   header: BlockHeader,
   txs: TransactionWire[],
   producerProof: Uint8Array,
-  storageProofs: StorageProof[] = []
+  storageProofs: StorageProof[] = [],
+  slashings: SlashEvidence[] = []
 ): Block {
   return {
     header: { ...header, producerProof },
     txs,
     storageProofs,
+    slashings,
   };
 }
 
@@ -525,7 +570,8 @@ export function buildBlock(args: BuildBlockArgs): Block {
     header,
     args.txs,
     args.producerProof ?? new Uint8Array(0),
-    args.storageProofs ?? []
+    args.storageProofs ?? [],
+    args.slashings ?? []
   );
 }
 

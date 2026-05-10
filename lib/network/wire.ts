@@ -17,6 +17,11 @@ import {
   type StorageProof,
 } from "./storage";
 import {
+  encodeEvidence,
+  decodeEvidence,
+  type SlashEvidence,
+} from "./slashing";
+import {
   encodeClsag,
   decodeClsag,
   type ClsagRing,
@@ -218,6 +223,8 @@ export function encodeBlock(b: Block): Uint8Array {
   for (const tx of b.txs) w.blob(encodeTransaction(tx));
   w.varint(b.storageProofs.length);
   for (const p of b.storageProofs) w.blob(encodeStorageProof(p));
+  w.varint(b.slashings.length);
+  for (const s of b.slashings) w.blob(encodeEvidence(s));
   return w.bytes();
 }
 
@@ -227,15 +234,21 @@ export function decodeBlock(bytes: Uint8Array): Block {
   const nTx = Number(r.varint());
   const txs: TransactionWire[] = new Array(nTx);
   for (let i = 0; i < nTx; i++) txs[i] = decodeTransaction(r.blob());
-  // storageProofs were added after the initial release; tolerate decoders
-  // that ran out of bytes (i.e. legacy blocks have no proofs).
+  // storageProofs / slashings were added after initial release; tolerate
+  // decoders that run out of bytes.
   let storageProofs: StorageProof[] = [];
+  let slashings: SlashEvidence[] = [];
   if (!r.end()) {
     const nP = Number(r.varint());
     storageProofs = new Array(nP);
     for (let i = 0; i < nP; i++) storageProofs[i] = decodeStorageProof(r.blob());
   }
-  return { header, txs, storageProofs };
+  if (!r.end()) {
+    const nS = Number(r.varint());
+    slashings = new Array(nS);
+    for (let i = 0; i < nS; i++) slashings[i] = decodeEvidence(r.blob());
+  }
+  return { header, txs, storageProofs, slashings };
 }
 
 /* ------------------------------------------------------------------ */

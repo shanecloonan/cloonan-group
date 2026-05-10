@@ -70,6 +70,11 @@ import {
   blsVerify,
   type CommitteeVote,
 } from "../network/bls";
+import {
+  canonicalize as canonicalizeEvidence,
+  verifyEvidence,
+  type SlashEvidence,
+} from "../network/slashing";
 import { bytesToHex } from "../network/codec";
 import {
   verifyTransaction,
@@ -165,6 +170,15 @@ export class ConsensusNode {
 
   private unsubscribe: (() => void) | null = null;
   private slot: SlotState | null = null;
+
+  /** All votes we've ever seen, keyed by "height:slot:voterIdx". When     *
+   *  the SAME validator signs a DIFFERENT headerHash at the same slot,   *
+   *  we have provable equivocation and queue it for inclusion.            */
+  private seenVotes: Map<string, { headerHash: Uint8Array; sig: import("../network/bls").BlsSignature }> = new Map();
+
+  /** Equivocation evidence we've assembled but not yet included.          */
+  private pendingEvidence: SlashEvidence[] = [];
+  private pendingEvidenceKeys: Set<string> = new Set();
 
   constructor(cfg: NodeConfig) {
     this.nodeId = cfg.nodeId;
@@ -298,13 +312,19 @@ export class ConsensusNode {
       return;
     }
 
-    const proposalMsg: ProposalMsg = { header: unsealed, txs, producer, storageProofs };
+    // Pull any pending equivocation evidence we know about. We deliberately
+    // attach this to the proposal so validators see (and re-verify) the same
+    // evidence the producer is about to bake into the block.
+    const slashings = this.drainPendingEvidence();
+
+    const proposalMsg: ProposalMsg = { header: unsealed, txs, producer, storageProofs, slashings };
     this.info("propose", {
       slot,
       height: nextHeight,
       betaPrefix: bytesToHex(producer.beta).slice(0, 12),
       txCount: txs.length,
       storageProofs: storageProofs.length,
+      slashings: slashings.length,
     });
 
     // Locally ingest the proposal first, then broadcast.
@@ -372,6 +392,24 @@ export class ConsensusNode {
     if (!v.ok) {
       this.warn("proposal-producer-invalid", { reason: v.reason });
       return;
+    }
+
+    // Validate slashing evidence the producer is bundling. We don't apply
+    // it here — applyBlock will do that — but we won't vote for a block
+    // that carries bogus evidence.
+    const slashedThisProposal = new Set<number>();
+    for (let i = 0; i < p.slashings.length; i++) {
+      const ev = p.slashings[i];
+      const verdict = verifyEvidence(ev, state.validators);
+      if (!verdict.ok) {
+        this.warn("proposal-slashing-invalid", { i, reason: verdict.reason });
+        return;
+      }
+      if (slashedThisProposal.has(ev.voterIndex)) {
+        this.warn("proposal-slashing-duplicate", { i, voterIndex: ev.voterIndex });
+        return;
+      }
+      slashedThisProposal.add(ev.voterIndex);
     }
 
     // Validate every storage proof against the on-chain registry.
@@ -473,16 +511,10 @@ export class ConsensusNode {
 
   private ingestVote(v: VoteMsg): void {
     const state = this.store.currentState();
-    const sl = this.slot;
-    if (!sl || sl.sealed) return;
-    if (v.slot !== sl.slot || v.height !== sl.height) return;
 
-    const headerHashHex = bytesToHex(v.headerHash);
-    const rec = sl.proposals.get(headerHashHex);
-    if (!rec) return; // we haven't seen the corresponding proposal yet
-
-    if (rec.votes.has(v.voterIndex)) return; // dedup
-
+    // Verify the BLS signature against the claimed voter — regardless of
+    // whether the slot is still open. Even if we're past the slot we want
+    // to USE this vote as evidence if it conflicts with one we already saw.
     const validator = state.validators[v.voterIndex];
     if (!validator) {
       this.warn("vote-unknown-voter", { idx: v.voterIndex });
@@ -493,10 +525,80 @@ export class ConsensusNode {
       return;
     }
 
+    // Always run the equivocation check — it's timeless.
+    this.checkAndRecordEquivocation(v);
+
+    // Below here is slot-bookkeeping that only makes sense while the slot
+    // is still open.
+    const sl = this.slot;
+    if (!sl || sl.sealed) return;
+    if (v.slot !== sl.slot || v.height !== sl.height) return;
+
+    const headerHashHex = bytesToHex(v.headerHash);
+    const rec = sl.proposals.get(headerHashHex);
+    if (!rec) return;
+    if (rec.votes.has(v.voterIndex)) return;
+
     rec.votes.set(v.voterIndex, { index: v.voterIndex, sig: v.sig });
     rec.stakeSigned += validator.stake;
-
     this.maybeFinalize(rec);
+  }
+
+  /** Record a fresh vote in the cross-slot seenVotes map; if this voter   *
+   *  has already signed a different header at the same (height, slot),   *
+   *  build a SlashEvidence and queue it for the next proposal we make.   */
+  private checkAndRecordEquivocation(v: VoteMsg): void {
+    const key = `${v.height}:${v.slot}:${v.voterIndex}`;
+    const prior = this.seenVotes.get(key);
+    if (!prior) {
+      this.seenVotes.set(key, { headerHash: v.headerHash, sig: v.sig });
+      return;
+    }
+    if (eqBytes(prior.headerHash, v.headerHash)) return;
+    // Equivocation!
+    const evidence: SlashEvidence = canonicalizeEvidence({
+      height: v.height,
+      slot: v.slot,
+      voterIndex: v.voterIndex,
+      headerHashA: prior.headerHash,
+      sigA: prior.sig,
+      headerHashB: v.headerHash,
+      sigB: v.sig,
+    });
+    // Defensive: verify against the current validator set before queuing.
+    const state = this.store.currentState();
+    const verdict = verifyEvidence(evidence, state.validators);
+    if (!verdict.ok) {
+      this.warn("self-built-evidence-failed-verify", { reason: verdict.reason });
+      return;
+    }
+    const evidenceKey = `${evidence.height}:${evidence.slot}:${evidence.voterIndex}`;
+    if (this.pendingEvidenceKeys.has(evidenceKey)) return;
+    this.pendingEvidenceKeys.add(evidenceKey);
+    this.pendingEvidence.push(evidence);
+    this.warn("equivocation-detected", {
+      voter: v.voterIndex,
+      height: v.height,
+      slot: v.slot,
+      hashA: bytesToHex(prior.headerHash).slice(0, 16),
+      hashB: bytesToHex(v.headerHash).slice(0, 16),
+    });
+  }
+
+  /** Pull pending evidence to include in a block we're producing. Pending  *
+   *  evidence is removed from the queue; if our block fails to be sealed   *
+   *  it stays in this node's seenVotes, so a later proposal can re-include.*/
+  private drainPendingEvidence(): SlashEvidence[] {
+    const state = this.store.currentState();
+    // Filter out evidence that refers to validators who already have stake 0
+    // (they were slashed in an earlier block).
+    const valid = this.pendingEvidence.filter((ev) => {
+      const v = state.validators[ev.voterIndex];
+      return v && v.stake > 0n;
+    });
+    this.pendingEvidence = [];
+    this.pendingEvidenceKeys = new Set();
+    return valid;
   }
 
   private maybeFinalize(rec: ProposalRecord): void {
@@ -523,7 +625,8 @@ export class ConsensusNode {
       rec.msg.header,
       rec.msg.txs,
       encodeFinalityProof(finalityProof),
-      rec.msg.storageProofs
+      rec.msg.storageProofs,
+      rec.msg.slashings
     );
     sl.sealed = true;
 
@@ -541,6 +644,7 @@ export class ConsensusNode {
       txs: sealed.txs.length,
       signers: votes.length,
       storageProofs: sealed.storageProofs.length,
+      slashings: sealed.slashings.length,
       blockId: bytesToHex(result.blockId).slice(0, 16),
     });
 
@@ -586,6 +690,12 @@ export class ConsensusNode {
 /* ------------------------------------------------------------------ */
 /*  HELPERS                                                            */
 /* ------------------------------------------------------------------ */
+
+function eqBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
 
 function ltBytes(a: Uint8Array, b: Uint8Array): boolean {
   const n = Math.min(a.length, b.length);
