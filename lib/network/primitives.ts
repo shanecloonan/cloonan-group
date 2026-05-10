@@ -392,6 +392,168 @@ export function stealthSpendKey(
   return mod(Hs + wallet.spendPriv, L);
 }
 
+/* ------------------------------------------------------------------ *
+ *  INDEXED STEALTH DERIVATION (Monero-style)                          *
+ *                                                                     *
+ *  When a single transaction has multiple outputs sharing one tx       *
+ *  pubkey R, each output's stealth address is derived with an extra    *
+ *  per-output index salt:                                              *
+ *                                                                      *
+ *      P_i = G · H_s( r·A || i_be4 ) + B                              *
+ *      x_i = H_s( a·R || i_be4 ) + b   (recipient's spend key)         *
+ *                                                                      *
+ *  This prevents distinct outputs sharing a stealth address even when  *
+ *  the same recipient is sent to twice in one tx, and matches the     *
+ *  Monero / RingCT scheme.                                            *
+ * ------------------------------------------------------------------ */
+
+function indexLE(idx: number): Uint8Array {
+  const b = new Uint8Array(4);
+  new DataView(b.buffer).setUint32(0, idx, false); // big-endian
+  return b;
+}
+
+function indexedSharedHash(sharedSecret: CurvePoint, outputIndex: number): bigint {
+  const ss = sharedSecret.toBytes();
+  const out = new Uint8Array(ss.length + 4);
+  out.set(ss, 0);
+  out.set(indexLE(outputIndex), ss.length);
+  return hashToScalar(out);
+}
+
+/** Sender: derive the indexed one-time address for output `outputIndex`,  *
+ *  given the transaction-level scalar `txPriv` (with R = txPriv·G). */
+export function indexedStealthAddress(
+  txPriv: bigint,
+  recipient: { viewPub: CurvePoint; spendPub: CurvePoint },
+  outputIndex: number
+): CurvePoint {
+  const sharedSecret = recipient.viewPub.multiply(txPriv);
+  const Hs = indexedSharedHash(sharedSecret, outputIndex);
+  return G.multiply(Hs).add(recipient.spendPub);
+}
+
+/** Recipient: detect whether output i with stealth address P belongs   *
+ *  to them, given the tx's pubkey R.                                    */
+export function indexedStealthDetect(
+  R: CurvePoint,
+  oneTimeAddr: CurvePoint,
+  outputIndex: number,
+  wallet: { viewPriv: bigint; spendPub: CurvePoint }
+): boolean {
+  const sharedSecret = R.multiply(wallet.viewPriv);
+  const Hs = indexedSharedHash(sharedSecret, outputIndex);
+  const expected = G.multiply(Hs).add(wallet.spendPub);
+  return expected.equals(oneTimeAddr);
+}
+
+/** Recipient: recover the spend key for the detected output. */
+export function indexedStealthSpendKey(
+  R: CurvePoint,
+  outputIndex: number,
+  wallet: { viewPriv: bigint; spendPriv: bigint }
+): bigint {
+  const sharedSecret = R.multiply(wallet.viewPriv);
+  const Hs = indexedSharedHash(sharedSecret, outputIndex);
+  return mod(Hs + wallet.spendPriv, L);
+}
+
+/* ------------------------------------------------------------------ *
+ *  ENCRYPTED AMOUNT (RingCT-style)                                    *
+ *                                                                     *
+ *  Once the recipient detects an output, they still need to *open*    *
+ *  the Pedersen commitment C = G·r + H·v. That requires knowing v     *
+ *  (the value) and r (the blinding factor). We transmit both encrypted *
+ *  under a key derived from the shared secret + output index, packed   *
+ *  in the tx wire format alongside the commitment.                     *
+ *                                                                      *
+ *  Layout (40 bytes):                                                  *
+ *     bytes  0..  7   value  XOR  H_s(sharedSecret || i || "v")[0..8]  *
+ *     bytes  8.. 39   r       XOR  H_s(sharedSecret || i || "b")       *
+ *                                                                      *
+ *  Encrypting r under a 32-byte mask is information-theoretically      *
+ *  secure as a one-time-pad (mask is uniformly random in the           *
+ *  recipient's view, derived deterministically by both parties).       *
+ * ------------------------------------------------------------------ */
+
+import { dhash, DOMAIN, Writer, Reader } from "./codec";
+
+export const ENC_AMOUNT_BYTES = 8 + 32;
+
+function maskV(sharedSecret: CurvePoint, outputIndex: number): Uint8Array {
+  const w = new Writer();
+  w.push(sharedSecret.toBytes());
+  w.u32(outputIndex);
+  return dhash(DOMAIN.AMT_MASK_V, w.bytes()).slice(0, 8);
+}
+
+function maskB(sharedSecret: CurvePoint, outputIndex: number): Uint8Array {
+  const w = new Writer();
+  w.push(sharedSecret.toBytes());
+  w.u32(outputIndex);
+  return dhash(DOMAIN.AMT_MASK_B, w.bytes()); // 32 bytes
+}
+
+function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const out = new Uint8Array(a.length);
+  for (let i = 0; i < a.length; i++) out[i] = a[i] ^ b[i];
+  return out;
+}
+
+function bigintToLE(v: bigint, len: number): Uint8Array {
+  const out = new Uint8Array(len);
+  let x = v;
+  for (let i = 0; i < len; i++) {
+    out[i] = Number(x & 0xffn);
+    x >>= 8n;
+  }
+  return out;
+}
+
+function leToBigint(b: Uint8Array): bigint {
+  let x = 0n;
+  for (let i = b.length - 1; i >= 0; i--) {
+    x = (x << 8n) | BigInt(b[i]);
+  }
+  return x;
+}
+
+/** Sender: encrypt (value, blinding) for output `i` using shared secret. */
+export function encryptOutputAmount(
+  txPriv: bigint,
+  recipientViewPub: CurvePoint,
+  outputIndex: number,
+  value: bigint,
+  blinding: bigint
+): Uint8Array {
+  if (value < 0n || value >= 1n << 64n) {
+    throw new Error("encryptOutputAmount: value out of u64 range");
+  }
+  const sharedSecret = recipientViewPub.multiply(txPriv);
+  const out = new Uint8Array(ENC_AMOUNT_BYTES);
+  out.set(xor(bigintToLE(value, 8), maskV(sharedSecret, outputIndex)), 0);
+  out.set(xor(bigintToLE(blinding, 32), maskB(sharedSecret, outputIndex)), 8);
+  return out;
+}
+
+/** Recipient: decrypt (value, blinding) for output `i`. */
+export function decryptOutputAmount(
+  R: CurvePoint,
+  outputIndex: number,
+  viewPriv: bigint,
+  enc: Uint8Array
+): { value: bigint; blinding: bigint } {
+  if (enc.length !== ENC_AMOUNT_BYTES) {
+    throw new Error("decryptOutputAmount: wrong length");
+  }
+  const sharedSecret = R.multiply(viewPriv);
+  const vBytes = xor(enc.slice(0, 8), maskV(sharedSecret, outputIndex));
+  const bBytes = xor(enc.slice(8), maskB(sharedSecret, outputIndex));
+  return { value: leToBigint(vBytes), blinding: leToBigint(bBytes) };
+}
+
+void Reader;
+
 /* ================================================================== *
  *  PRIMITIVE 4 · LSAG RING SIGNATURE                                  *
  * ================================================================== *

@@ -230,6 +230,8 @@ export const DOMAIN = {
   CLSAG_RING:      "MFBN-1/clsag-ring",
   RANGE_BIT:       "MFBN-1/range-bit",
   RANGE_FINAL:     "MFBN-1/range-final",
+  AMT_MASK_V:      "MFBN-1/amount-mask-v",
+  AMT_MASK_B:      "MFBN-1/amount-mask-b",
 } as const;
 
 export type Domain = (typeof DOMAIN)[keyof typeof DOMAIN];

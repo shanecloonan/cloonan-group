@@ -36,6 +36,9 @@ import {
   L,
   Point,
   randomScalar,
+  indexedStealthAddress,
+  encryptOutputAmount,
+  ENC_AMOUNT_BYTES,
   type CurvePoint,
 } from "./primitives";
 import {
@@ -85,6 +88,12 @@ export interface TxOutputWire {
   /** Bulletproof range proof for the amount commitment.
    *  proof.V === amount (must be enforced at verify time). */
   rangeProof: BulletproofRange;
+  /** RingCT-style encrypted (value, blinding) blob.                       *
+   *  Length is exactly ENC_AMOUNT_BYTES (40). For outputs whose target    *
+   *  was a pre-built oneTimeAddr (decoys, tests), the sender does not     *
+   *  have a recipient viewPub to encrypt under, so these bytes are        *
+   *  zero — recipients of legacy outputs cannot open the commitment.     */
+  encAmount: Uint8Array;
   /** Optional permanence binding — non-null if this output stores data. */
   storage: StorageCommitment | null;
 }
@@ -135,6 +144,7 @@ export function txPreimage(tx: TransactionWire): Uint8Array {
     w.point(out.oneTimeAddr);
     w.point(out.amount);
     w.blob(encodeBulletproof(out.rangeProof));
+    w.push(out.encAmount);
     if (out.storage) {
       w.u8(1);
       w.push(storageCommitmentHash(out.storage));
@@ -178,14 +188,32 @@ export interface InputSpec {
   blinding: bigint;
 }
 
-export interface OutputSpec {
-  /** Stealth one-time address. Caller computes this from recipient + R. */
-  oneTimeAddr: CurvePoint;
-  /** Hidden amount this output carries. */
-  value: bigint;
-  /** Optional storage payload to bind permanently to this output. */
-  storage?: StorageCommitment;
-}
+/** Output specification. Provide EXACTLY ONE of `recipient` or         *
+ *  `oneTimeAddr`:                                                       *
+ *                                                                       *
+ *   - `recipient`  (preferred):  pass the recipient's stealth pubkeys.  *
+ *                  signTransaction derives the on-chain stealth address *
+ *                  (P_i) from the tx-level pubkey R, so the recipient   *
+ *                  can scan the chain and detect the output. This is    *
+ *                  what an actual wallet should always use.             *
+ *                                                                       *
+ *   - `oneTimeAddr` (legacy):    pass a pre-computed stealth address.   *
+ *                  Useful for tests / decoy outputs / synthetic ring    *
+ *                  members. The recipient (if any) will NOT be able to  *
+ *                  detect the output by scanning, because the tx-level  *
+ *                  R is independent of how `oneTimeAddr` was derived.   *
+ */
+export type OutputSpec =
+  | {
+      recipient: { viewPub: CurvePoint; spendPub: CurvePoint };
+      value: bigint;
+      storage?: StorageCommitment;
+    }
+  | {
+      oneTimeAddr: CurvePoint;
+      value: bigint;
+      storage?: StorageCommitment;
+    };
 
 export interface SignedTransaction {
   tx: TransactionWire;
@@ -221,6 +249,19 @@ export function signTransaction(
   /* ---- Pick a tx-level keypair so recipients can scan ---- */
   const txPriv = randomScalar();
   const R = G.multiply(txPriv);
+
+  /* ---- Resolve each output's stealth address. If the caller passed a
+   *      `recipient`, derive P_i from txPriv + recipient + i (Monero
+   *      style); otherwise use the literal `oneTimeAddr` they provided. */
+  const oneTimeAddrs: CurvePoint[] = new Array(outputs.length);
+  for (let i = 0; i < outputs.length; i++) {
+    const o = outputs[i];
+    if ("recipient" in o) {
+      oneTimeAddrs[i] = indexedStealthAddress(txPriv, o.recipient, i);
+    } else {
+      oneTimeAddrs[i] = o.oneTimeAddr;
+    }
+  }
 
   /* ---- Pick output blinding factors freely; range-prove each ---- */
   const outputBlindings: bigint[] = new Array(outputs.length);
@@ -265,11 +306,31 @@ export function signTransaction(
     );
   }
 
+  /* ---- Encrypt (value, blinding) for each output where we know the
+   *      recipient's viewPub. Pre-built oneTimeAddrs get zeros (no
+   *      recipient to encrypt under). */
+  const encAmounts: Uint8Array[] = new Array(outputs.length);
+  for (let i = 0; i < outputs.length; i++) {
+    const o = outputs[i];
+    if ("recipient" in o) {
+      encAmounts[i] = encryptOutputAmount(
+        txPriv,
+        o.recipient.viewPub,
+        i,
+        outputs[i].value,
+        outputBlindings[i]
+      );
+    } else {
+      encAmounts[i] = new Uint8Array(ENC_AMOUNT_BYTES);
+    }
+  }
+
   /* ---- Assemble preliminary tx (to compute the signing message) ---- */
   const outputsWire: TxOutputWire[] = outputs.map((o, i) => ({
-    oneTimeAddr: o.oneTimeAddr,
+    oneTimeAddr: oneTimeAddrs[i],
     amount: outputCommits[i],
     rangeProof: rangeProofs[i],
+    encAmount: encAmounts[i],
     storage: o.storage ?? null,
   }));
 

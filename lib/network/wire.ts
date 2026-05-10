@@ -10,7 +10,7 @@
  * ================================================================== */
 
 import { Writer, Reader } from "./codec";
-import { type CurvePoint } from "./primitives";
+import { type CurvePoint, ENC_AMOUNT_BYTES } from "./primitives";
 import {
   encodeClsag,
   decodeClsag,
@@ -120,6 +120,7 @@ function writeTxOutput(w: Writer, out: TxOutputWire): void {
   w.point(out.oneTimeAddr);
   w.point(out.amount);
   w.blob(encodeBulletproof(out.rangeProof));
+  w.push(out.encAmount);
   if (out.storage) {
     w.u8(1);
     writeStorageCommitment(w, out.storage);
@@ -133,9 +134,10 @@ function readTxOutput(r: Reader): TxOutputWire {
   const amount = r.point();
   const rpBytes = r.blob();
   const rangeProof = decodeBulletproof(amount, rpBytes);
+  const encAmount = r.bytes(ENC_AMOUNT_BYTES);
   const hasStorage = r.u8();
   const storage = hasStorage === 1 ? readStorageCommitment(r) : null;
-  return { oneTimeAddr, amount, rangeProof, storage };
+  return { oneTimeAddr, amount, rangeProof, encAmount, storage };
 }
 
 /* ------------------------------------------------------------------ */
