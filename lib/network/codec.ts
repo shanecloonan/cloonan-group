@@ -119,7 +119,19 @@ export class Writer {
 
 export class Reader {
   private offset = 0;
-  constructor(private readonly buffer: Uint8Array) {}
+  private readonly buffer: Uint8Array;
+
+  constructor(buffer: Uint8Array) {
+    // Node `Buffer` extends `Uint8Array` but its `.slice()` shares memory
+    // (vs. the standard's copy). Downstream code calls `.buffer` on slices
+    // to build DataViews — sharing memory there silently produces wrong
+    // reads. Normalize to a plain Uint8Array (still zero-copy view) so
+    // `.slice()` has the standard copy semantics.
+    this.buffer =
+      buffer.constructor === Uint8Array
+        ? buffer
+        : new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  }
 
   end(): boolean {
     return this.offset >= this.buffer.length;
@@ -140,10 +152,12 @@ export class Reader {
     return this.bytes(1)[0];
   }
   u32(): number {
-    return new DataView(this.bytes(4).buffer).getUint32(0, false);
+    const b = this.bytes(4);
+    return new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(0, false);
   }
   u64(): bigint {
-    return new DataView(this.bytes(8).buffer).getBigUint64(0, false);
+    const b = this.bytes(8);
+    return new DataView(b.buffer, b.byteOffset, b.byteLength).getBigUint64(0, false);
   }
 
   varint(): bigint {

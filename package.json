@@ -16,6 +16,7 @@
     "@noble/hashes": "^2.2.0",
     "@supabase/supabase-js": "^2.99.1",
     "arweave": "^1.15.7",
+    "better-sqlite3": "^12.9.0",
     "chart.js": "^4.5.1",
     "ethers": "^5.8.0",
     "html-to-image": "^1.11.13",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -47,7 +47,7 @@ import {
   bytesToScalar,
   type CurvePoint,
 } from "./primitives";
-import { DOMAIN, Writer, dhash64 } from "./codec";
+import { DOMAIN, Writer, Reader, dhash64 } from "./codec";
 
 /* ------------------------------------------------------------------ */
 /*  TYPES                                                              */
@@ -264,6 +264,15 @@ export function encodeClsag(sig: ClsagSignature): Uint8Array {
   w.point(sig.I);
   w.point(sig.D);
   return w.bytes();
+}
+
+export function decodeClsag(bytes: Uint8Array): ClsagSignature {
+  const r = new Reader(bytes);
+  const c0 = r.scalar();
+  const s = r.scalars();
+  const I = r.point();
+  const D = r.point();
+  return { c0, s, I, D };
 }
 
 /* unused-import suppression for linter (Point/L/scalar helpers are
