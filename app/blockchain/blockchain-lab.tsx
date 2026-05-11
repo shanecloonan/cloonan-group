@@ -3311,6 +3311,8 @@ const IMPLEMENTED_LAYERS: DocLayer[] = [
       "Fee split: 90 % → permanence treasury, 10 % → producer tip (basis-point param)",
       "Storage rewards drain treasury first; emission mints the shortfall as backstop",
       "treasury balance is on-chain state, exposed via RPC info()",
+      "Endowment-proportional storage rewards via sub-base-unit PPB accumulator",
+      "Anti-hoarding proof-reward window (default ≈ 1 day)",
     ],
   },
   {
@@ -3404,8 +3406,8 @@ const PLANNED_TIERS: { tier: string; title: string; accent: Accent; items: { nam
         why: "Provers stake MFN to register; failing audits or serving wrong data → slashed. Aligns the permanence layer with the chain's security budget instead of relying on altruism.",
       },
       {
-        name: "Endowment-proportional proof rewards",
-        why: "Per-proof payout scales with the commitment's endowment (yield-per-slot from the whitepaper formula). Big-data uploads earn provers proportionally more — kills the current uniform-reward perverse incentive.",
+        name: "Per-commit PPB-precision storage reward accumulator (LIVE)",
+        why: "Already shipped: per-proof payout scales with the commitment's required endowment using a sub-base-unit accumulator. Big-data uploads earn proportionally more; the anti-hoarding window forces proofs at least once per ~day. The uniform-reward perverse incentive is closed.",
       },
       {
         name: "Verkle tree UTXO accumulator (KZG-vector form)",

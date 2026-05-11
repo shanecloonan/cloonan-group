@@ -92,6 +92,26 @@ export interface EndowmentParams {
    *  otherwise pin tiny data with absurd replication and inflate the  *
    *  treasury indefinitely). Sensible default: 32.                     */
   maxReplication: number;
+  /** Number of slots in a year — used to convert annual real yield     *
+   *  into a per-slot payout for storage providers. The protocol-level *
+   *  truth that `slotsPerYear` × `payoutPerSlot(e)` ≈ `e · realYield` *
+   *  is what makes per-proof rewards endowment-proportional.          *
+   *                                                                    *
+   *  Default: 2_629_800 slots ≈ 365.25 d × 86 400 s / 12-second slots. *
+   *  Adjust if you change the consensus slot duration.                 */
+  slotsPerYear: bigint;
+  /** Anti-hoarding cap on the per-proof reward window. When a proof   *
+   *  is accepted, the chain credits the commitment's accumulator with *
+   *  MIN(elapsed_slots, proofRewardWindowSlots) × per-slot yield.     *
+   *                                                                    *
+   *  Why a cap is necessary: without it, a malicious prover could lie *
+   *  dormant for a year and then submit one proof to collect a year's *
+   *  worth of accrued yield — clearly broken. The window also acts    *
+   *  as an implicit liveness deadline: provers must show proof at     *
+   *  least once per window or forgo unearned yield.                    *
+   *                                                                    *
+   *  Default: 7 200 slots ≈ 1 day at 12-second slots.                  */
+  proofRewardWindowSlots: bigint;
 }
 
 export const DEFAULT_ENDOWMENT_PARAMS: EndowmentParams = {
@@ -102,6 +122,8 @@ export const DEFAULT_ENDOWMENT_PARAMS: EndowmentParams = {
   realYieldPpb: 40_000_000n, //   4.0% treasury real yield
   minReplication: 3,
   maxReplication: 32,
+  slotsPerYear: 2_629_800n, //   ≈ 12-second slot duration
+  proofRewardWindowSlots: 7_200n, // ≈ 1 day at 12-second slots
 };
 
 /* ------------------------------------------------------------------ */
@@ -124,6 +146,14 @@ export function validateEndowmentParams(p: EndowmentParams): void {
   if (p.minReplication < 1) throw new Error("endowment: minReplication < 1");
   if (p.minReplication > p.maxReplication) {
     throw new Error("endowment: minReplication > maxReplication");
+  }
+  if (typeof p.slotsPerYear !== "bigint" || p.slotsPerYear <= 0n) {
+    throw new Error(`endowment: slotsPerYear must be a positive bigint (got ${String(p.slotsPerYear)})`);
+  }
+  if (typeof p.proofRewardWindowSlots !== "bigint" || p.proofRewardWindowSlots <= 0n) {
+    throw new Error(
+      `endowment: proofRewardWindowSlots must be a positive bigint (got ${String(p.proofRewardWindowSlots)})`
+    );
   }
 }
 
@@ -202,7 +232,12 @@ export function payoutPerSlot(
 
 /** Cumulative payout from the treasury over `slots` slots. Useful when *
  *  pre-computing future storage-reward liability and when verifying    *
- *  that a long-running storage subscription will be honoured.          */
+ *  that a long-running storage subscription will be honoured.          *
+ *                                                                       *
+ *  Higher-precision than `slots × payoutPerSlot`: combines the         *
+ *  multiplication inside the division so we don't lose the per-slot   *
+ *  fraction. Matches `accrueProofReward.payout` exactly when run on   *
+ *  an empty accumulator with elapsed ≤ proofRewardWindowSlots.        */
 export function cumulativePayout(
   endowment: bigint,
   slots: bigint,
@@ -210,10 +245,96 @@ export function cumulativePayout(
   params: EndowmentParams = DEFAULT_ENDOWMENT_PARAMS
 ): bigint {
   if (slots <= 0n) return 0n;
-  // For simplicity we use linear scaling. Real yield is compounded in
-  // the limit; for short to medium horizons (≤ tens of years) linear
-  // is a safe under-approximation that prevents over-payout.
-  return payoutPerSlot(endowment, slotsPerYear, params) * slots;
+  // Compute (slots · endowment · realYieldPpb) / (PPB · slotsPerYear)
+  // — flooring is applied just ONCE, at the end. For small endowments
+  // this is a non-trivial precision win over (slots · payoutPerSlot).
+  return (slots * endowment * params.realYieldPpb) / (PPB * slotsPerYear);
+}
+
+/**
+ *  CONSENSUS-LEVEL: per-proof reward accrual using a sub-base-unit PPB
+ *  accumulator. Closes the uniform-reward perverse incentive cleanly.
+ *
+ *  THE INCENTIVE THIS FIXES
+ *  ─────────────────────────
+ *  A flat per-proof reward means uploading 1 GB pays the prover the same
+ *  as uploading 1 KB. That makes provers indifferent to the actual data
+ *  burden they accept — they farm tiny commitments to maximise reward
+ *  per unit of work, neglecting the heavy ones the network actually
+ *  needs held. Endowment-proportional yield realigns the incentive:
+ *  provers earn EXACTLY what the chain promised each upload would pay
+ *  out per slot, scaled by the time they kept the data available.
+ *
+ *  THE INTEGER-PRECISION PROBLEM
+ *  ──────────────────────────────
+ *  At default params (200_000 ppb / byte-year, 4 % yield, 2.63 M slots /
+ *  year), even a 100 GB commitment yields << 1 base unit per slot — the
+ *  raw `payoutPerSlot` flooring would clamp every reward to zero. We
+ *  solve this with a per-commitment **PPB-precision accumulator** that
+ *  carries unpaid fractions across proofs. Over a 64 KB commitment's
+ *  multi-day lifetime the accumulator eventually crosses 1 base unit
+ *  and pays out; over a 100 GB commitment's per-slot operation it pays
+ *  many base units per proof. Total payout over a year still matches
+ *  `endowment · realYield` to the base-unit, by construction.
+ *
+ *  THE ANTI-HOARDING CAP
+ *  ─────────────────────
+ *  Without a cap on `elapsed_slots`, a prover could lie dormant for a
+ *  year and submit one proof to collect a year's yield. We cap elapsed
+ *  at `proofRewardWindowSlots` (default ≈ 1 day). Provers must show
+ *  proof at least once per window or forgo unearned yield. This also
+ *  acts as a soft liveness deadline.
+ *
+ *  DETERMINISM
+ *  ───────────
+ *  All math is integer-bigint; same inputs ⇒ same outputs across
+ *  implementations. The accumulator state is part of consensus
+ *  `ChainState.storage` and is rebuilt deterministically on chain
+ *  restore from blocks alone.
+ *
+ *  RETURNS
+ *  ───────
+ *    `payout`           — base units paid out for this proof
+ *    `newPendingPpb`    — leftover PPB accumulator value to persist
+ *    `creditedSlots`    — capped elapsed slots actually credited
+ */
+export function accrueProofReward(args: {
+  sizeBytes: bigint;
+  replication: number;
+  pendingPpb: bigint;
+  lastProvenSlot: bigint;
+  currentSlot: bigint;
+  params?: EndowmentParams;
+}): { payout: bigint; newPendingPpb: bigint; creditedSlots: bigint } {
+  const params = args.params ?? DEFAULT_ENDOWMENT_PARAMS;
+  validateEndowmentParams(params);
+  if (args.pendingPpb < 0n) {
+    throw new Error("accrueProofReward: pendingPpb must be non-negative");
+  }
+  if (args.currentSlot < args.lastProvenSlot) {
+    // Defensive: should never happen with monotonic slot progression.
+    // If it does (e.g., rewind during fork-choice), credit zero this proof.
+    return {
+      payout: 0n,
+      newPendingPpb: args.pendingPpb,
+      creditedSlots: 0n,
+    };
+  }
+  const requiredE = requiredEndowment(args.sizeBytes, args.replication, params);
+  const elapsedRaw = args.currentSlot - args.lastProvenSlot;
+  const credited = elapsedRaw < params.proofRewardWindowSlots
+    ? elapsedRaw
+    : params.proofRewardWindowSlots;
+
+  // perSlot in PPB units = endowment · realYieldPpb / slotsPerYear
+  // Cumulative PPB over `credited` slots = credited · endowment · realYieldPpb / slotsPerYear
+  const incomingPpb = credited === 0n
+    ? 0n
+    : (credited * requiredE * params.realYieldPpb) / params.slotsPerYear;
+  const totalPpb = args.pendingPpb + incomingPpb;
+  const payout = totalPpb / PPB;
+  const newPendingPpb = totalPpb - payout * PPB;
+  return { payout, newPendingPpb, creditedSlots: credited };
 }
 
 /* ------------------------------------------------------------------ */

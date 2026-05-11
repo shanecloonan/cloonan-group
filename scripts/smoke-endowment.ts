@@ -125,10 +125,24 @@ ok(
   `slot=${perSlot} yearAccum=${annualEnd} closed=${annualYieldExpected}`
 );
 
-/* 8. Cumulative payout scales linearly in slots. */
+/* 8. Cumulative payout scales linearly in slots (within rounding noise).
+ *    The function now floors at the END of one big multiplication rather
+ *    than per-slot, so c(N·k) ≥ N·c(k) up to a small fractional residue
+ *    (bounded by ~N base units when the per-slot rate is fractional).
+ *    Monotonicity and approximate linearity is what matters here. */
 const c10 = cumulativePayout(E, 10n, slotsPerYear);
 const c1000 = cumulativePayout(E, 1000n, slotsPerYear);
-ok("cumulativePayout(1000) = 100 · cumulativePayout(10)", c1000 === c10 * 100n);
+ok(
+  "cumulativePayout monotone in slots (1000 ≥ 10)",
+  c1000 >= c10 * 100n,
+  `c10=${c10} c1000=${c1000}`
+);
+const linDiff = c1000 - c10 * 100n;
+ok(
+  "cumulativePayout(1000) - 100·cumulativePayout(10) is small (≤ 100 base units)",
+  linDiff <= 100n,
+  `diff=${linDiff}`
+);
 
 /* 9. Inverse function: maxBytesForEndowment is the inverse of           *
  *   requiredEndowment up to ceiling/floor rounding noise. Test with a   *

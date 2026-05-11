@@ -56,6 +56,20 @@ export interface StorageEntry {
    *  Initialized to the height at which the commitment was anchored on   *
    *  chain. Updated every time a successful StorageProof is included.    */
   lastProvenAt: number;
+  /** SLOT (not height) at which this commitment was last proven. Used   *
+   *  by the endowment-proportional reward accumulator below — slots,    *
+   *  not heights, are the natural time-unit for per-slot yield. On a    *
+   *  perfectly-active chain slot ≈ height; under leader-misses they    *
+   *  diverge and slot is the correct one (height undercounts). At       *
+   *  anchor time, initialized to the slot of the block that included   *
+   *  the upload tx.                                                     */
+  lastProvenSlot: bigint;
+  /** Sub-base-unit yield accumulator, in PPB. Carries the fractional    *
+   *  per-slot yield across proofs so even commitments with payouts <<   *
+   *  1 base unit per slot eventually earn integer base units. Initial   *
+   *  value 0 at anchor; reset to (totalPpb mod PPB) after each proof    *
+   *  payout. See `accrueProofReward` in endowment.ts.                   */
+  pendingYieldPpb: bigint;
 }
 import {
   DOMAIN,
@@ -84,6 +98,7 @@ import {
   DEFAULT_ENDOWMENT_PARAMS,
   requiredEndowment,
   validateEndowmentParams,
+  accrueProofReward,
   type EndowmentParams,
 } from "./endowment";
 import {
@@ -354,7 +369,12 @@ export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
     );
   }
   for (const s of cfg.initialStorage) {
-    state.storage.set(bytesToHex(storageCommitmentHash(s)), { commit: s, lastProvenAt: 0 });
+    state.storage.set(bytesToHex(storageCommitmentHash(s)), {
+      commit: s,
+      lastProvenAt: 0,
+      lastProvenSlot: 0n,
+      pendingYieldPpb: 0n,
+    });
   }
   state.height = 0;
   state.blockIds = [blockId(genesis.header)];
@@ -632,10 +652,14 @@ export function applyBlock(
       if (out.storage) {
         const h = bytesToHex(storageCommitmentHash(out.storage));
         if (!next.storage.has(h)) {
-          // First time we see this commitment — anchor it.
+          // First time we see this commitment — anchor it. lastProvenSlot
+          // starts at this block's slot (so the first proof one slot later
+          // earns one slot's worth of yield, not a huge backlog).
           next.storage.set(h, {
             commit: out.storage,
             lastProvenAt: block.header.height,
+            lastProvenSlot: BigInt(block.header.slot),
+            pendingYieldPpb: 0n,
           });
           newStorages.push(out.storage);
         }
@@ -686,14 +710,24 @@ export function applyBlock(
     next.validators = nextValidators;
   }
 
-  /* ---- Validate storage proofs (per-block SPoRA audit) ---- *
-   *  We also count valid proofs so the coinbase verifier (below) knows  *
-   *  exactly how much permanence subsidy the producer is owed. A proof  *
-   *  that fails validation contributes ZERO to the producer's reward —  *
-   *  no way for a producer to inflate their coinbase by submitting       *
-   *  garbage proofs.                                                      */
+  /* ---- Validate storage proofs (per-block SPoRA audit) AND accrue    *
+   *       per-proof endowment-proportional bonus via the PPB           *
+   *       accumulator. Each accepted proof earns:                      *
+   *                                                                     *
+   *         baseReward = emissionParams.storageProofReward             *
+   *                      (flat, fixed by chain config — keeps tiny    *
+   *                       commits incentivized to be proven)          *
+   *                                                                     *
+   *         + bonus = accrueProofReward(commit, pending, last, now)   *
+   *           (endowment-proportional yield, accumulated in PPB so    *
+   *            even sub-base-unit per-slot yields eventually pay out) *
+   *                                                                     *
+   *       Garbage proofs contribute zero (they hit `continue`).       */
   const seenProofs = new Set<string>();
   let acceptedStorageProofs = 0;
+  let storageBonusTotal = 0n;
+  const epForReward = state.endowmentParams ?? DEFAULT_ENDOWMENT_PARAMS;
+  const currentSlotBig = BigInt(block.header.slot);
   for (let pi = 0; pi < block.storageProofs.length; pi++) {
     const proof = block.storageProofs[pi];
     const cHashHex = bytesToHex(proof.commitHash);
@@ -717,11 +751,22 @@ export function applyBlock(
       errors.push(`storageProof[${pi}]: ${verdict.reason}`);
       continue;
     }
+    const accrual = accrueProofReward({
+      sizeBytes: entry.commit.sizeBytes,
+      replication: entry.commit.replication,
+      pendingPpb: entry.pendingYieldPpb,
+      lastProvenSlot: entry.lastProvenSlot,
+      currentSlot: currentSlotBig,
+      params: epForReward,
+    });
     next.storage.set(cHashHex, {
       commit: entry.commit,
       lastProvenAt: block.header.height,
+      lastProvenSlot: currentSlotBig,
+      pendingYieldPpb: accrual.newPendingPpb,
     });
     acceptedStorageProofs++;
+    storageBonusTotal += accrual.payout;
   }
 
   /* ---- Two-sided economic settlement ----                              *
@@ -741,8 +786,12 @@ export function applyBlock(
    *       storage reward came from — they always receive the full       *
    *       per-proof amount.                                              */
   const emissionParams = state.emissionParams ?? DEFAULT_EMISSION_PARAMS;
+  // Total storage reward = flat base (per accepted proof) + endowment-
+  // proportional bonus (accumulated above in storageBonusTotal). Both are
+  // sourced from the treasury first; emission backstops any shortfall.
   const storageRewardTotal =
-    emissionParams.storageProofReward * BigInt(acceptedStorageProofs);
+    emissionParams.storageProofReward * BigInt(acceptedStorageProofs)
+    + storageBonusTotal;
 
   const treasuryFee =
     (feeSum * BigInt(emissionParams.feeToTreasuryBps)) / 10000n;
@@ -922,25 +971,49 @@ export function buildBlock(args: BuildBlockArgs): Block {
 
   // Prepend the coinbase if a producer payout address is provided. The
   // coinbase amount must match applyBlock's two-sided settlement exactly:
-  //   coinbase = emission(height)            (security subsidy)
-  //            + producerFee                  (10% tip from fee market)
-  //            + storageProofReward × N      (permanence subsidy, sourced
-  //                                            from treasury first, mint
-  //                                            as fallback — producer
-  //                                            doesn't care which)
-  // The other 90% of fees flows into the on-chain storage treasury.
+  //   coinbase = emission(height)                (security subsidy)
+  //            + producerFee                      (10% tip from fee market)
+  //            + storageProofReward × N_accepted  (flat permanence subsidy)
+  //            + Σ accrueProofReward(commit)      (endowment-proportional
+  //                                                bonus via PPB accumulator)
+  //   90% of fees → on-chain treasury; storage rewards drain treasury
+  //   first, with emission minting the shortfall as a backstop.
   let txs = args.txs;
   if (args.producerPayout) {
     const emissionParams = args.state.emissionParams ?? DEFAULT_EMISSION_PARAMS;
+    const endowmentParams = args.state.endowmentParams ?? DEFAULT_ENDOWMENT_PARAMS;
     const subsidy = emissionAtHeight(height, emissionParams);
     let feeSum = 0n;
     for (const tx of args.txs) feeSum += tx.fee;
     const treasuryFee =
       (feeSum * BigInt(emissionParams.feeToTreasuryBps)) / 10000n;
     const producerFee = feeSum - treasuryFee;
-    const storageRewardTotal =
-      emissionParams.storageProofReward * BigInt((args.storageProofs ?? []).length);
-    const total = subsidy + producerFee + storageRewardTotal;
+    // Mirror applyBlock's accrual exactly. Must walk proofs in the same
+    // order, dedup on commitHash, skip unregistered commits, and use the
+    // SAME (pendingYieldPpb, lastProvenSlot, currentSlot) inputs.
+    const seenForReward = new Set<string>();
+    let storageBonusTotal = 0n;
+    let acceptedCount = 0;
+    const currentSlotBig = BigInt(slot);
+    for (const sp of args.storageProofs ?? []) {
+      const cHashHex = bytesToHex(sp.commitHash);
+      if (seenForReward.has(cHashHex)) continue;
+      seenForReward.add(cHashHex);
+      const entry = args.state.storage.get(cHashHex);
+      if (!entry) continue;
+      const accrual = accrueProofReward({
+        sizeBytes: entry.commit.sizeBytes,
+        replication: entry.commit.replication,
+        pendingPpb: entry.pendingYieldPpb,
+        lastProvenSlot: entry.lastProvenSlot,
+        currentSlot: currentSlotBig,
+        params: endowmentParams,
+      });
+      storageBonusTotal += accrual.payout;
+      acceptedCount++;
+    }
+    const flatTotal = emissionParams.storageProofReward * BigInt(acceptedCount);
+    const total = subsidy + producerFee + flatTotal + storageBonusTotal;
     const cb = buildCoinbase(height, total, args.producerPayout);
     txs = [cb, ...args.txs];
   }
