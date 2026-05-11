@@ -22,6 +22,7 @@
 //! - [`encrypted_amount`] — RingCT-style encrypted (value, blinding) blobs.
 //! - [`lsag`] — Linkable Spontaneous Anonymous Group ring signatures.
 //! - [`clsag`] — Concise LSAG (the production ring sig, Monero's RingCTv3).
+//! - [`vrf`] — Verifiable Random Function (RFC 9381 ECVRF over ed25519).
 //!
 //! ## Safety contract
 //!
@@ -46,6 +47,7 @@ pub mod point;
 pub mod scalar;
 pub mod schnorr;
 pub mod stealth;
+pub mod vrf;
 
 pub use clsag::{
     clsag_linked, clsag_sign, clsag_verify, decode_clsag, encode_clsag, ClsagRing, ClsagSignature,
@@ -64,6 +66,11 @@ pub use schnorr::{schnorr_keygen, schnorr_sign, schnorr_verify, SchnorrKeypair, 
 pub use stealth::{
     indexed_stealth_address, indexed_stealth_detect, indexed_stealth_spend_key, stealth_detect,
     stealth_gen, stealth_send_to, stealth_spend_key, StealthOutput, StealthWallet,
+};
+pub use vrf::{
+    decode_vrf_proof, encode_vrf_proof, vrf_keygen, vrf_keygen_from_seed, vrf_output,
+    vrf_output_as_index, vrf_output_as_u64, vrf_prove, vrf_verify, VrfKeypair, VrfProof,
+    VrfProveResult, VrfVerifyResult, VRF_PROOF_BYTES,
 };
 
 /// Errors returned by the cryptographic primitives in this crate.

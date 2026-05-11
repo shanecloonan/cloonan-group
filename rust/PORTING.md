@@ -24,7 +24,7 @@ test vectors).
 | `range.ts`                 | `range.rs`                      | [ ] pending |
 | `bulletproofs.ts`          | `bulletproofs.rs`               | [ ] pending |
 | `oom.ts`                   | `oom.rs`                        | [ ] pending |
-| `vrf.ts`                   | `vrf.rs`                        | [ ] pending |
+| `vrf.ts`                   | `vrf.rs`                        | [x] live    |
 | `decoy.ts`                 | `decoy.rs`                      | [ ] pending |
 
 ### `mfn-bls` — BLS12-381 signatures (planned crate)
