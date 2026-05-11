@@ -41,7 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# rust (production node core)
-/rust/target/
+# Rust core lives in github.com/shanecloonan/permawrite
 **/*.rs.bk
 Cargo.lock.bak

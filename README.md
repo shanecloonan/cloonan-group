@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+It contains the public-facing product / marketing site and the in-browser executable specification of the **Permawrite** protocol (under [`lib/network/`](./lib/network)). The consensus-critical Rust reference implementation lives in a separate repository:
+
+→ **[github.com/shanecloonan/permawrite](https://github.com/shanecloonan/permawrite)** — Rust core (privacy primitives, ring signatures, ZK proofs, BLS aggregation, UTXO accumulator, eventually node daemon + wallet).
+
 ## Getting Started
 
 First, run the development server:
