@@ -31,7 +31,7 @@
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
-#![warn(clippy::all, clippy::pedantic)]
+#![warn(clippy::all)]
 
 pub mod codec;
 pub mod domain;

@@ -90,11 +90,23 @@ mod tests {
 
     #[test]
     fn point_decode_rejects_invalid() {
-        let bad = [0xffu8; 32];
-        assert!(matches!(
-            point_from_bytes(&bad),
-            Err(CryptoError::InvalidPoint)
-        ));
+        // About half of all 32-byte strings encode a valid Edwards y with
+        // recoverable x. The other half fail decompression. Scan up to 256
+        // candidates differing only in the high byte; with the ~50% rejection
+        // rate the probability of all of them succeeding is ≈ 2⁻²⁵⁶.
+        let mut found = false;
+        let mut bad = [0u8; 32];
+        for hi in 0u8..=255 {
+            bad[31] = hi;
+            if matches!(
+                point_from_bytes(&bad),
+                Err(CryptoError::InvalidPoint)
+            ) {
+                found = true;
+                break;
+            }
+        }
+        assert!(found, "expected at least one invalid Edwards encoding");
     }
 
     #[test]

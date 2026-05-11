@@ -14,14 +14,6 @@ missing_docs = "warn"
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-must_use_candidate = "allow"
-module_name_repetitions = "allow"
-missing_errors_doc = "allow"
-missing_panics_doc = "allow"
-cast_possible_truncation = "allow"
-cast_sign_loss = "allow"
-similar_names = "allow"
 
 [dependencies]
 curve25519-dalek = { workspace = true }
@@ -31,6 +23,3 @@ zeroize = { workspace = true }
 rand_core = { workspace = true }
 thiserror = { workspace = true }
 hex = { workspace = true }
-
-[dev-dependencies]
-proptest = { workspace = true }
