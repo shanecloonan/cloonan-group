@@ -62,6 +62,21 @@ import {
   selectGammaDecoys,
   type DecoyCandidate,
 } from "../network/decoy";
+import {
+  buildStorageCommitment,
+  type MerkleTree,
+  type StorageCommitment,
+} from "../network/storage";
+import {
+  DEFAULT_ENDOWMENT_PARAMS,
+  requiredEndowment,
+  ceilDiv,
+  type EndowmentParams,
+} from "../network/endowment";
+import {
+  DEFAULT_EMISSION_PARAMS,
+  type EmissionParams,
+} from "../network/emission";
 
 /* ------------------------------------------------------------------ */
 /*  TYPES                                                              */
@@ -512,6 +527,144 @@ export class Wallet {
     for (const p of picks) p.spent = true;
 
     return signed.tx;
+  }
+
+  /* ---------------------------------------------------------------- *
+   *  buildUpload — construct a permanence-anchoring transaction.     *
+   *                                                                   *
+   *  Computes the protocol-required endowment for the given data     *
+   *  size + replication, derives the matching fee (sized so 90% of   *
+   *  it reaches the treasury after the producer tip), selects        *
+   *  inputs, and emits a tx that:                                    *
+   *                                                                   *
+   *    • sends a single self-send output (the data uploader is also  *
+   *      the funder; recipient is wallet.address())                  *
+   *    • attaches the StorageCommitment to that output, anchoring    *
+   *      `dataRoot, sizeBytes, chunkSize, numChunks, replication`    *
+   *      into the chain's storage registry on inclusion              *
+   *    • pays fee >= ceil(endowment * 10000 / feeToTreasuryBps),     *
+   *      which is the consensus-enforced floor for upload txs        *
+   *                                                                   *
+   *  Returns the signed transaction PLUS the Merkle tree for the     *
+   *  data — the caller (uploader) needs this tree later to answer    *
+   *  SPoRA challenges. Persist it alongside the original data.       *
+   * ---------------------------------------------------------------- */
+  buildUpload(args: {
+    data: Uint8Array;
+    /** Replication factor for the upload. Defaults to params.minReplication. */
+    replication?: number;
+    /** Chunk size (power of two). Defaults to the storage module's default. */
+    chunkSize?: number;
+    /** Ring of decoys for the input(s) — same shape as buildSpend.    *
+     *  Required to actually achieve unlinkability on the funding input. */
+    decoyPool: { P: CurvePoint; C: CurvePoint; height?: number }[];
+    currentHeight?: number;
+    ringSize?: number;
+    endowmentParams?: EndowmentParams;
+    emissionParams?: EmissionParams;
+  }): {
+    tx: TransactionWire;
+    commitment: StorageCommitment;
+    tree: MerkleTree;
+    endowment: bigint;
+    fee: bigint;
+  } {
+    const epp = args.endowmentParams ?? DEFAULT_ENDOWMENT_PARAMS;
+    const emp = args.emissionParams ?? DEFAULT_EMISSION_PARAMS;
+    const replication = args.replication ?? epp.minReplication;
+    const ringSize = args.ringSize ?? 4;
+
+    // 1. Compute the consensus-required endowment + minimum fee.
+    const sizeBytes = BigInt(args.data.length);
+    const endowment = requiredEndowment(sizeBytes, replication, epp);
+    // fee · feeToTreasuryBps / 10000 >= endowment  →  fee >= endowment · 10000 / bps
+    const fee = ceilDiv(endowment * 10_000n, BigInt(emp.feeToTreasuryBps));
+
+    // 2. Build the storage commitment + Merkle tree.
+    const built = buildStorageCommitment(args.data, endowment, {
+      chunkSize: args.chunkSize,
+      replication,
+    });
+
+    // 3. Select inputs covering the fee. Output is a single self-send
+    //    of (inSum - fee) so the wallet retains the principal — only the
+    //    fee leaves to the treasury (and the producer tip).
+    if (fee <= 0n) {
+      throw new Error("Wallet.buildUpload: fee is zero — empty upload?");
+    }
+    const picks = this.selectInputs(fee);
+    const inSum = picks.reduce((acc, p) => acc + p.value, 0n);
+    const selfSend = inSum - fee;
+    if (selfSend < 0n) {
+      throw new Error(
+        `Wallet.buildUpload: insufficient balance for upload fee ${fee}`
+      );
+    }
+
+    // 4. Build rings, mirroring buildSpend's gamma-aware decoy logic.
+    const allHaveHeight =
+      args.currentHeight !== undefined &&
+      args.decoyPool.every((d) => typeof d.height === "number");
+    const inputs: InputSpec[] = picks.map((p) => {
+      const ringP: CurvePoint[] = [];
+      const ringC: CurvePoint[] = [];
+
+      let decoys: { P: CurvePoint; C: CurvePoint }[];
+      if (allHaveHeight) {
+        const candidates: DecoyCandidate<{ P: CurvePoint; C: CurvePoint }>[] =
+          args.decoyPool
+            .filter((d) => !d.P.equals(p.oneTimeAddr))
+            .map((d) => ({ height: d.height as number, data: { P: d.P, C: d.C } }))
+            .sort((a, b) => a.height - b.height);
+        const picked = selectGammaDecoys(
+          candidates, Math.max(0, ringSize - 1), args.currentHeight as number
+        );
+        decoys = picked.map((c) => c.data);
+      } else {
+        decoys = [...args.decoyPool]
+          .filter((d) => !d.P.equals(p.oneTimeAddr))
+          .sort(() => Math.random() - 0.5)
+          .slice(0, Math.max(0, ringSize - 1))
+          .map((d) => ({ P: d.P, C: d.C }));
+      }
+      for (const d of decoys) {
+        ringP.push(d.P);
+        ringC.push(d.C);
+      }
+      const signerIdx = Math.floor(Math.random() * (ringP.length + 1));
+      ringP.splice(signerIdx, 0, p.oneTimeAddr);
+      ringC.splice(signerIdx, 0, p.amountCommit);
+
+      return {
+        ring: { P: ringP, C: ringC },
+        signerIdx,
+        spendPriv: p.spendKey,
+        value: p.value,
+        blinding: p.blinding,
+      };
+    });
+
+    // 5. One output: self-send the principal back to ourselves, with the
+    //    storage commitment attached.
+    const outputs: Parameters<typeof signTransaction>[1] = [
+      {
+        recipient: this.address(),
+        value: selfSend,
+        storage: built.commit,
+      },
+    ];
+
+    const signed = signTransaction(inputs, outputs, fee);
+
+    for (const p of picks) p.spent = true;
+
+    return {
+      tx: signed.tx,
+      commitment: built.commit,
+      tree: built.tree,
+      endowment,
+      fee,
+    };
   }
 
   /* ---------------------------------------------------------------- */

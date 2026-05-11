@@ -80,6 +80,12 @@ import {
   DEFAULT_EMISSION_PARAMS,
   type EmissionParams,
 } from "./emission";
+import {
+  DEFAULT_ENDOWMENT_PARAMS,
+  requiredEndowment,
+  validateEndowmentParams,
+  type EndowmentParams,
+} from "./endowment";
 
 /* ------------------------------------------------------------------ */
 /*  HEADER + BLOCK                                                     */
@@ -235,6 +241,12 @@ export interface ChainState {
    *  for testnet and for any chain that wants to inherit the canonical    *
    *  50 → 25 → 12.5 … → 0.195 MFN/block schedule.                         */
   emissionParams?: EmissionParams;
+  /** Optional override for the storage endowment formula. Defaulted to    *
+   *  DEFAULT_ENDOWMENT_PARAMS (2 × 10⁻⁴ base units per byte-year per      *
+   *  replica, i = 2% storage cost inflation, r = 4% real treasury yield). *
+   *  Applied per-upload tx to enforce the protocol-required treasury     *
+   *  contribution.                                                        */
+  endowmentParams?: EndowmentParams;
   /** On-chain permanence treasury balance, in MFN base units. Filled by   *
    *  the storage-funding share of every tx fee (and, in a future tx-       *
    *  type upgrade, by required upload endowments). Drained per accepted   *
@@ -405,6 +417,7 @@ export function applyBlock(
     validators: state.validators,
     params: state.params,
     emissionParams: state.emissionParams,
+    endowmentParams: state.endowmentParams,
     treasury: state.treasury,
   };
 
@@ -476,6 +489,70 @@ export function applyBlock(
     if (!v.ok) {
       errors.push(`tx[${ti}] invalid: ${v.errors.join("; ")}`);
       continue;
+    }
+
+    /* ---- Storage upload endowment enforcement ----                       *
+     *                                                                       *
+     *  This is the spam-resistance and economic-soundness check on uploads. *
+     *  For every storage commitment this tx introduces as a NEW anchor      *
+     *  (not already in the registry), the tx must contribute at least the  *
+     *  protocol-required endowment to the treasury.                         *
+     *                                                                       *
+     *  Burden is computed as:                                               *
+     *    burden = Σ requiredEndowment(commit.sizeBytes, commit.replication) *
+     *                                                                       *
+     *  Constraint: tx.fee × feeToTreasuryBps / 10000  ≥  burden             *
+     *                                                                       *
+     *  Rationale: the producer keeps the (1 − feeToTreasuryBps) tip, so we *
+     *  only count the treasury-bound share toward the endowment. Producers *
+     *  earn their share separately as a normal fee tip. Subsequent re-      *
+     *  references to an already-anchored commitment are free (the first    *
+     *  anchor already paid). The replication factor is also bounded here   *
+     *  to enforce min/max-replica policy from EndowmentParams.              */
+    const epp = state.endowmentParams ?? DEFAULT_ENDOWMENT_PARAMS;
+    validateEndowmentParams(epp);
+    let txBurden = 0n;
+    let txStorageOk = true;
+    for (let oi = 0; oi < tx.outputs.length && txStorageOk; oi++) {
+      const out = tx.outputs[oi];
+      if (!out.storage) continue;
+      const h = bytesToHex(storageCommitmentHash(out.storage));
+      // Only NEW anchors incur burden — duplicates are inert.
+      if (next.storage.has(h)) continue;
+      const repl = out.storage.replication;
+      if (repl < epp.minReplication) {
+        errors.push(
+          `tx[${ti}].outputs[${oi}]: storage replication ${repl} < minReplication ${epp.minReplication}`
+        );
+        txStorageOk = false;
+        break;
+      }
+      if (repl > epp.maxReplication) {
+        errors.push(
+          `tx[${ti}].outputs[${oi}]: storage replication ${repl} > maxReplication ${epp.maxReplication}`
+        );
+        txStorageOk = false;
+        break;
+      }
+      if (out.storage.sizeBytes < 0n) {
+        errors.push(`tx[${ti}].outputs[${oi}]: storage sizeBytes < 0`);
+        txStorageOk = false;
+        break;
+      }
+      txBurden += requiredEndowment(out.storage.sizeBytes, repl, epp);
+    }
+    if (!txStorageOk) continue;
+    if (txBurden > 0n) {
+      const epm = state.emissionParams ?? DEFAULT_EMISSION_PARAMS;
+      const txTreasuryShare =
+        (tx.fee * BigInt(epm.feeToTreasuryBps)) / 10000n;
+      if (txTreasuryShare < txBurden) {
+        errors.push(
+          `tx[${ti}]: storage endowment burden ${txBurden} exceeds tx treasury-fee share ${txTreasuryShare} ` +
+            `(fee=${tx.fee}, feeToTreasuryBps=${epm.feeToTreasuryBps}); upload underfunded`
+        );
+        continue;
+      }
     }
 
     // Fees from every regular tx flow to the producer via the coinbase.
