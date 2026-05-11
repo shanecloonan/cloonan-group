@@ -26,6 +26,7 @@
 //! - [`range`] — O(N) bit-decomposition range proofs (Maxwell / pre-Bulletproofs).
 //! - [`oom`] — Groth–Kohlweiss one-out-of-many ZK (log-size ring proof, Triptych-grade).
 //! - [`decoy`] — Gamma-distributed decoy selection (Monero v0.13 heuristic resistance).
+//! - [`bulletproofs`] — log-size range proofs (Bünz et al. 2017, no trusted setup).
 //!
 //! ## Safety contract
 //!
@@ -39,6 +40,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
+pub mod bulletproofs;
 pub mod clsag;
 pub mod codec;
 pub mod decoy;
@@ -55,6 +57,10 @@ pub mod schnorr;
 pub mod stealth;
 pub mod vrf;
 
+pub use bulletproofs::{
+    bp_proof_size, bp_prove, bp_verify, decode_bulletproof, encode_bulletproof, BpProveOutput,
+    BulletproofRange, IpaProof,
+};
 pub use clsag::{
     clsag_linked, clsag_sign, clsag_verify, decode_clsag, encode_clsag, ClsagRing, ClsagSignature,
 };

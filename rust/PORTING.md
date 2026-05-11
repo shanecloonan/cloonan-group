@@ -22,7 +22,7 @@ test vectors).
 | `codec.ts` (DOMAIN tags)   | `domain.rs`                     | [x] live    |
 | `clsag.ts`                 | `clsag.rs`                      | [x] live    |
 | `range.ts`                 | `range.rs`                      | [x] live    |
-| `bulletproofs.ts`          | `bulletproofs.rs`               | [ ] pending |
+| `bulletproofs.ts`          | `bulletproofs.rs`               | [x] live    |
 | `oom.ts`                   | `oom.rs`                        | [x] live    |
 | `vrf.ts`                   | `vrf.rs`                        | [x] live    |
 | `decoy.ts`                 | `decoy.rs`                      | [x] live    |
