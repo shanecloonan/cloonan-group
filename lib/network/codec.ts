@@ -237,6 +237,7 @@ export const DOMAIN = {
   UTXO_LEAF:       "MFBN-1/utxo-leaf",
   UTXO_NODE:       "MFBN-1/utxo-node",
   UTXO_EMPTY:      "MFBN-1/utxo-empty",
+  OOM_CHALLENGE:   "MFBN-1/oom-challenge",
 } as const;
 
 export type Domain = (typeof DOMAIN)[keyof typeof DOMAIN];
