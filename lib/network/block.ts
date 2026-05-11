@@ -61,6 +61,16 @@ import {
   type Validator,
   type SlotContext,
 } from "./consensus";
+import {
+  isCoinbaseShaped,
+  verifyCoinbase,
+  buildCoinbase,
+} from "./coinbase";
+import {
+  emissionAtHeight,
+  DEFAULT_EMISSION_PARAMS,
+  type EmissionParams,
+} from "./emission";
 
 /* ------------------------------------------------------------------ */
 /*  HEADER + BLOCK                                                     */
@@ -207,6 +217,11 @@ export interface ChainState {
   validators: Validator[];
   /** Consensus parameters. */
   params: ConsensusParams;
+  /** Optional override for the block-emission schedule. Omitting means    *
+   *  the chain uses DEFAULT_EMISSION_PARAMS, which is the right answer    *
+   *  for testnet and for any chain that wants to inherit the canonical    *
+   *  50 → 25 → 12.5 … → 0.195 MFN/block schedule.                         */
+  emissionParams?: EmissionParams;
 }
 
 export function emptyState(params: ConsensusParams = DEFAULT_CONSENSUS_PARAMS): ChainState {
@@ -321,7 +336,14 @@ export function applyBlock(
    *  When the chain has a validator set baked into genesis, every block   *
    *  at height ≥ 1 MUST carry a valid FinalityProof. When validators is   *
    *  empty (test / legacy mode) the proof is skipped — the chain is then  *
-   *  effectively centralized and only useful for development.             */
+   *  effectively centralized and only useful for development.             *
+   *                                                                        *
+   *  We capture the verified producer index here for two downstream uses: *
+   *    1. Coinbase routing — the producer's payoutAddress determines     *
+   *       whether the block must include a coinbase tx (and where its    *
+   *       output's stealth address must derive to).                       *
+   *    2. Future MEV/fee-burn accounting hooks.                           */
+  let producerIdx: number | null = null;
   if (state.validators.length > 0) {
     if (block.header.producerProof.length === 0) {
       errors.push("missing producer proof");
@@ -343,6 +365,7 @@ export function applyBlock(
           headerHash
         );
         if (!v.ok) errors.push(`producer proof: ${v.reason}`);
+        else producerIdx = fin.producer.validatorIndex;
       } catch (e) {
         errors.push(`producer proof decode failed: ${(e as Error).message}`);
       }
@@ -358,6 +381,7 @@ export function applyBlock(
     blockIds: [...state.blockIds],
     validators: state.validators,
     params: state.params,
+    emissionParams: state.emissionParams,
   };
 
   // Storage anchors mentioned in the header must be supplied so we can
@@ -366,14 +390,69 @@ export function applyBlock(
   // objects are passed alongside via storagesInBlock.
   const newStorages: StorageCommitment[] = [];
 
-  /* ---- Validate each tx ---- */
+  /* ---- Identify producer + decide on coinbase policy ---- *
+   *  The producer pays themselves a coinbase iff:                       *
+   *    (a) the chain has a producer (verified above), AND               *
+   *    (b) that producer's Validator record has a payoutAddress.        *
+   *  For backward compat: validator records without payoutAddress       *
+   *  (genesis-era / legacy chains) silently skip coinbase. Their fees   *
+   *  are not paid out either — they're effectively burned, which is the *
+   *  pre-tokenomics behavior. New validators MUST set payoutAddress     *
+   *  to claim their share.                                              */
+  const producer = producerIdx !== null ? state.validators[producerIdx] : null;
+  const requireCoinbase = producer?.payoutAddress !== undefined;
+
+  /* ---- Validate each tx + accumulate fees ---- *
+   *  txs[0] may be a coinbase (inputs.length === 0). It's verified by a *
+   *  separate code path that does not run CLSAG or balance checks; the  *
+   *  rest of the txs go through verifyTransaction as before.            */
+  let coinbaseTx: TransactionWire | null = null;
+  let feeSum = 0n;
+
+  // Sanity: a coinbase-shaped tx anywhere past position 0 is a protocol
+  // violation. Catch it before doing anything else.
+  for (let ti = 1; ti < block.txs.length; ti++) {
+    if (isCoinbaseShaped(block.txs[ti])) {
+      errors.push(`tx[${ti}]: coinbase-shaped tx not allowed past position 0`);
+    }
+  }
+
+  // Walk every tx. Position 0 routes to coinbase verification when the
+  // block declares a coinbase; everything else flows through the regular
+  // RingCT verifier.
   for (let ti = 0; ti < block.txs.length; ti++) {
     const tx = block.txs[ti];
+    const isCoinbasePos = ti === 0 && isCoinbaseShaped(tx);
+
+    if (isCoinbasePos) {
+      coinbaseTx = tx;
+      // We DEFER the coinbase amount check until the fee total is known.
+      // For now, just add its output to the UTXO set if the rest of the
+      // block validates — pessimistic state-change is fine because we
+      // throw away `next` on any error.
+      for (const out of tx.outputs) {
+        next.utxo.set(out.oneTimeAddr.toHex(), out.amount);
+        // Coinbase outputs cannot anchor storage; verifyCoinbase enforces
+        // that, so we skip storage handling here.
+      }
+      continue;
+    }
+
+    if (ti === 0 && requireCoinbase) {
+      // The chain expects a coinbase but the first tx isn't one.
+      errors.push(
+        `tx[0]: expected coinbase (inputs.length=0) but got inputs.length=${tx.inputs.length}`
+      );
+    }
+
     const v = verifyTransaction(tx);
     if (!v.ok) {
       errors.push(`tx[${ti}] invalid: ${v.errors.join("; ")}`);
       continue;
     }
+
+    // Fees from every regular tx flow to the producer via the coinbase.
+    feeSum += tx.fee;
 
     // Double-spend across the chain.
     for (const ki of v.keyImages) {
@@ -400,6 +479,34 @@ export function applyBlock(
         }
       }
     }
+  }
+
+  /* ---- Coinbase verification (deferred until feeSum is known) ---- */
+  if (requireCoinbase) {
+    if (coinbaseTx === null) {
+      errors.push("coinbase required (producer has payoutAddress) but absent");
+    } else {
+      const subsidy = emissionAtHeight(
+        block.header.height,
+        state.emissionParams ?? DEFAULT_EMISSION_PARAMS
+      );
+      const expectedReward = subsidy + feeSum;
+      const cv = verifyCoinbase(
+        coinbaseTx,
+        block.header.height,
+        expectedReward,
+        producer!.payoutAddress!
+      );
+      if (!cv.ok) {
+        errors.push(`coinbase invalid: ${cv.errors.join("; ")}`);
+      }
+    }
+  } else if (coinbaseTx !== null) {
+    // The chain didn't expect a coinbase but the producer included one.
+    // Reject to keep the protocol's economic invariants explicit.
+    errors.push(
+      "unexpected coinbase: producer has no payoutAddress; cannot accept block subsidy"
+    );
   }
 
   /* ---- Validate slashing evidence ---- *
@@ -513,6 +620,11 @@ export interface BuildBlockArgs {
   storageProofs?: StorageProof[];
   /** Slashing evidence to include. */
   slashings?: SlashEvidence[];
+  /** Producer payout address. When provided AND the state's validator    *
+   *  set has consensus-mode active, buildBlock automatically prepends a  *
+   *  coinbase tx paying emission + Σ fees to this address. When omitted, *
+   *  no coinbase is emitted (legacy / centralized mode).                  */
+  producerPayout?: { viewPub: CurvePoint; spendPub: CurvePoint };
 }
 
 /** Build a block header WITHOUT a producer proof. Use this to compute the  *
@@ -560,15 +672,32 @@ export function sealBlock(
 
 export function buildBlock(args: BuildBlockArgs): Block {
   const slot = args.slot ?? args.state.height + 1;
+  const height = args.state.height + 1;
+
+  // Prepend the coinbase if a producer payout address is provided.
+  // The coinbase pays emission(height) + Σ tx fees and matches the
+  // applyBlock-side expectation byte-for-byte (verifyCoinbase rechecks).
+  let txs = args.txs;
+  if (args.producerPayout) {
+    const subsidy = emissionAtHeight(
+      height,
+      args.state.emissionParams ?? DEFAULT_EMISSION_PARAMS
+    );
+    let feeSum = 0n;
+    for (const tx of args.txs) feeSum += tx.fee;
+    const cb = buildCoinbase(height, subsidy + feeSum, args.producerPayout);
+    txs = [cb, ...args.txs];
+  }
+
   const header = buildUnsealedHeader({
     state: args.state,
-    txs: args.txs,
+    txs,
     slot,
     timestamp: args.timestamp,
   });
   return sealBlock(
     header,
-    args.txs,
+    txs,
     args.producerProof ?? new Uint8Array(0),
     args.storageProofs ?? [],
     args.slashings ?? []
