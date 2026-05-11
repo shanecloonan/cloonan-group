@@ -58,6 +58,10 @@ import { type ChainStore } from "../network/store";
 import { bytesToHex, hexToBytes } from "../network/codec";
 import { type Block } from "../network/block";
 import { type RpcClient } from "./rpc-client";
+import {
+  selectGammaDecoys,
+  type DecoyCandidate,
+} from "../network/decoy";
 
 /* ------------------------------------------------------------------ */
 /*  TYPES                                                              */
@@ -417,16 +421,26 @@ export class Wallet {
 
   /** Build a signed transaction sending `amount` to `to`, paying `fee`. *
    *  Selects inputs greedily, generates change to a fresh stealth       *
-   *  address of THIS wallet, and decoys the ring from `decoyPool`.      *
-   *  `decoyPool` should be the chain UTXO set (caller-provided).        */
+   *  address of THIS wallet, and constructs the CLSAG ring with decoys *
+   *  chosen via Monero-style gamma age weighting when heights are       *
+   *  available, falling back to uniform-random otherwise.                *
+   *                                                                       *
+   *  The `decoyPool` may be supplied with optional `height` per entry.   *
+   *  When EVERY entry has a height, gamma selection is used (preferred); *
+   *  when ANY entry lacks one, the wallet uses uniform sampling for      *
+   *  backward compatibility with legacy decoy sources.                   */
   buildSpend(args: {
     to: Address;
     amount: bigint;
     fee: bigint;
     ringSize: number;
-    decoyPool: { P: CurvePoint; C: CurvePoint }[];
+    decoyPool: { P: CurvePoint; C: CurvePoint; height?: number }[];
+    /** Current chain tip; required when using gamma decoy selection so   *
+     *  the age of each decoy is well-defined. If omitted, the wallet     *
+     *  falls back to uniform sampling.                                    */
+    currentHeight?: number;
   }): TransactionWire {
-    const { to, amount, fee, ringSize } = args;
+    const { to, amount, fee, ringSize, currentHeight } = args;
     if (amount <= 0n) throw new Error("Wallet: amount must be positive");
     if (fee < 0n) throw new Error("Wallet: fee cannot be negative");
     if (ringSize < 1) throw new Error("Wallet: ringSize >= 1");
@@ -436,14 +450,39 @@ export class Wallet {
     const inSum = picks.reduce((acc, p) => acc + p.value, 0n);
     const change = inSum - target; // >= 0
 
+    // Decide which decoy strategy to use. Gamma requires ages on every
+    // candidate AND a tip height to compute age = tip - decoyHeight.
+    const allHaveHeight =
+      currentHeight !== undefined &&
+      args.decoyPool.every((d) => typeof d.height === "number");
+
     const inputs: InputSpec[] = picks.map((p) => {
-      // Build a ring around p.oneTimeAddr using random decoys.
       const ringP: CurvePoint[] = [];
       const ringC: CurvePoint[] = [];
-      const decoys = [...args.decoyPool]
-        .filter((d) => !d.P.equals(p.oneTimeAddr))
-        .sort(() => Math.random() - 0.5)
-        .slice(0, Math.max(0, ringSize - 1));
+
+      let decoys: { P: CurvePoint; C: CurvePoint }[];
+      if (allHaveHeight) {
+        // Build a sorted candidate set, skipping the real spender, and
+        // hand it to the gamma selector. Sorted-by-height is what
+        // selectGammaDecoys requires for its binary-search nearest-age
+        // lookup.
+        const candidates: DecoyCandidate<{ P: CurvePoint; C: CurvePoint }>[] =
+          args.decoyPool
+            .filter((d) => !d.P.equals(p.oneTimeAddr))
+            .map((d) => ({ height: d.height as number, data: { P: d.P, C: d.C } }))
+            .sort((a, b) => a.height - b.height);
+        const picked = selectGammaDecoys(
+          candidates, Math.max(0, ringSize - 1), currentHeight as number
+        );
+        decoys = picked.map((c) => c.data);
+      } else {
+        // Legacy fallback: uniform random selection.
+        decoys = [...args.decoyPool]
+          .filter((d) => !d.P.equals(p.oneTimeAddr))
+          .sort(() => Math.random() - 0.5)
+          .slice(0, Math.max(0, ringSize - 1))
+          .map((d) => ({ P: d.P, C: d.C }));
+      }
       for (const d of decoys) {
         ringP.push(d.P);
         ringC.push(d.C);

@@ -41,6 +41,15 @@ import {
   type SlashEvidence,
 } from "./slashing";
 
+export interface UtxoEntry {
+  /** Pedersen commitment to the output's amount. CLSAG signers include  *
+   *  this in their ring's `C` column.                                   */
+  commit: CurvePoint;
+  /** Block height at which this output was first anchored. Used by the *
+   *  gamma decoy selector to weight by age.                             */
+  height: number;
+}
+
 export interface StorageEntry {
   commit: StorageCommitment;
   /** Block height at which this commitment's audit was last satisfied.   *
@@ -199,10 +208,14 @@ export const DEFAULT_CONSENSUS_PARAMS: ConsensusParams = {
 export interface ChainState {
   /** Block-height counter. Genesis state has height = -1, first block 0. */
   height: number;
-  /** Known unspent outputs, keyed by stealth-address hex. The value is
-   *  the output's amount commitment so the next spender can include it
-   *  in their CLSAG ring. */
-  utxo: Map<string, CurvePoint>;
+  /** Known unspent outputs, keyed by stealth-address hex. Stores the    *
+   *  output's amount commitment AND the block height at which it was   *
+   *  first anchored. The commitment is needed so the next spender can  *
+   *  include it in a CLSAG ring. The height is needed for gamma-       *
+   *  distributed decoy selection — without per-output ages, decoy      *
+   *  selection collapses to uniform random, which is statistically     *
+   *  distinguishable from real spends.                                  */
+  utxo: Map<string, UtxoEntry>;
   /** Spent key images. Used for double-spend detection. */
   spentKeyImages: Set<string>;
   /** Storage commitments anchored on-chain, keyed by their commitment
@@ -275,7 +288,7 @@ export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
   if (genesis.header.height !== 0) throw new Error("genesis height must be 0");
   const state = emptyState(cfg.params ?? DEFAULT_CONSENSUS_PARAMS);
   for (const o of cfg.initialOutputs) {
-    state.utxo.set(o.oneTimeAddr.toHex(), o.amount);
+    state.utxo.set(o.oneTimeAddr.toHex(), { commit: o.amount, height: 0 });
   }
   for (const s of cfg.initialStorage) {
     state.storage.set(bytesToHex(storageCommitmentHash(s)), { commit: s, lastProvenAt: 0 });
@@ -431,7 +444,10 @@ export function applyBlock(
       // block validates — pessimistic state-change is fine because we
       // throw away `next` on any error.
       for (const out of tx.outputs) {
-        next.utxo.set(out.oneTimeAddr.toHex(), out.amount);
+        next.utxo.set(out.oneTimeAddr.toHex(), {
+          commit: out.amount,
+          height: block.header.height,
+        });
         // Coinbase outputs cannot anchor storage; verifyCoinbase enforces
         // that, so we skip storage handling here.
       }
@@ -466,7 +482,10 @@ export function applyBlock(
 
     // Add new outputs to UTXO set.
     for (const out of tx.outputs) {
-      next.utxo.set(out.oneTimeAddr.toHex(), out.amount);
+      next.utxo.set(out.oneTimeAddr.toHex(), {
+        commit: out.amount,
+        height: block.header.height,
+      });
       if (out.storage) {
         const h = bytesToHex(storageCommitmentHash(out.storage));
         if (!next.storage.has(h)) {

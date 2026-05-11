@@ -161,9 +161,10 @@ const METHODS: Record<string, MethodFn> = {
     // Pseudo-random sample (deterministic on order; production would shuffle).
     const sample = entries.slice(0, Math.min(max, entries.length));
     return {
-      pool: sample.map(([pHex, c]) => ({
+      pool: sample.map(([pHex, entry]) => ({
         oneTimeAddrHex: pHex,
-        amountCommitHex: c.toHex(),
+        amountCommitHex: entry.commit.toHex(),
+        height: entry.height,
       })),
     };
   },

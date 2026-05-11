@@ -50,6 +50,15 @@ export interface NodeInfo {
   consensusParams: unknown;
 }
 
+/** One candidate decoy returned by getDecoyPool. Includes the block      *
+ *  height at which the output was anchored so wallets can do gamma       *
+ *  selection on age (vs. the older uniform-random scheme).               */
+export interface DecoyPoolEntry {
+  P: CurvePoint;
+  C: CurvePoint;
+  height: number;
+}
+
 export interface SubmitTxResponse {
   ok: boolean;
   reason?: string;
@@ -101,13 +110,14 @@ export class RpcClient {
     return r.blocks.map((b) => decodeBlock(hexToBytes(b.blockHex)));
   }
 
-  async getDecoyPool(max: number = 32): Promise<{ P: CurvePoint; C: CurvePoint }[]> {
+  async getDecoyPool(max: number = 32): Promise<DecoyPoolEntry[]> {
     const r = await this.call<{
-      pool: { oneTimeAddrHex: string; amountCommitHex: string }[];
+      pool: { oneTimeAddrHex: string; amountCommitHex: string; height: number }[];
     }>("getDecoyPool", { max });
     return r.pool.map((e) => ({
       P: Point.fromHex(e.oneTimeAddrHex),
       C: Point.fromHex(e.amountCommitHex),
+      height: e.height,
     }));
   }
 

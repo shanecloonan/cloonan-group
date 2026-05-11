@@ -183,9 +183,9 @@ ok(`Bob balance = 0`, bob.balance() === 0n);
 console.log("• Alice → Bob spend (uses ring decoys from chain UTXO)");
 // Pull a small set of decoys from the chain (UTXO is keyed by oneTimeAddr hex).
 const allUtxo = stores[0].currentState().utxo;
-const decoyPool: { P: CurvePoint; C: CurvePoint }[] = [];
-for (const [pHex, c] of allUtxo) {
-  decoyPool.push({ P: Point.fromHex(pHex), C: c });
+const decoyPool: { P: CurvePoint; C: CurvePoint; height: number }[] = [];
+for (const [pHex, entry] of allUtxo) {
+  decoyPool.push({ P: Point.fromHex(pHex), C: entry.commit, height: entry.height });
   if (decoyPool.length >= 8) break;
 }
 
