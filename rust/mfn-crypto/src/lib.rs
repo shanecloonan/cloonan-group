@@ -27,6 +27,7 @@
 //! - [`oom`] — Groth–Kohlweiss one-out-of-many ZK (log-size ring proof, Triptych-grade).
 //! - [`decoy`] — Gamma-distributed decoy selection (Monero v0.13 heuristic resistance).
 //! - [`bulletproofs`] — log-size range proofs (Bünz et al. 2017, no trusted setup).
+//! - [`utxo_tree`] — append-only UTXO accumulator (sparse Merkle, depth 32).
 //!
 //! ## Safety contract
 //!
@@ -55,6 +56,7 @@ pub mod range;
 pub mod scalar;
 pub mod schnorr;
 pub mod stealth;
+pub mod utxo_tree;
 pub mod vrf;
 
 pub use bulletproofs::{
@@ -89,6 +91,11 @@ pub use schnorr::{schnorr_keygen, schnorr_sign, schnorr_verify, SchnorrKeypair, 
 pub use stealth::{
     indexed_stealth_address, indexed_stealth_detect, indexed_stealth_spend_key, stealth_detect,
     stealth_gen, stealth_send_to, stealth_spend_key, StealthOutput, StealthWallet,
+};
+pub use utxo_tree::{
+    append_utxo, empty_leaf, empty_utxo_tree, short_root, utxo_leaf_hash, utxo_membership_proof,
+    utxo_tree_root, verify_utxo_membership, UtxoMembershipProof, UtxoProofError, UtxoTreeError,
+    UtxoTreeState, UTXO_TREE_DEPTH,
 };
 pub use vrf::{
     decode_vrf_proof, encode_vrf_proof, vrf_keygen, vrf_keygen_from_seed, vrf_output,

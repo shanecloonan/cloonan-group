@@ -26,6 +26,7 @@ test vectors).
 | `oom.ts`                   | `oom.rs`                        | [x] live    |
 | `vrf.ts`                   | `vrf.rs`                        | [x] live    |
 | `decoy.ts`                 | `decoy.rs`                      | [x] live    |
+| `utxo-tree.ts`             | `utxo_tree.rs`                  | [x] live    |
 
 ### `mfn-bls` — BLS12-381 signatures (planned crate)
 
@@ -46,7 +47,6 @@ test vectors).
 | -------------- | ----------------- | ----------- |
 | `storage.ts`   | `spora.rs`        | [ ] pending |
 | `endowment.ts` | `endowment.rs`    | [ ] pending |
-| `utxo-tree.ts` | `utxo_tree.rs`    | [ ] pending |
 
 ### `mfn-consensus` — state transition function (planned crate)
 
