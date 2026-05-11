@@ -23,6 +23,7 @@
 //! - [`lsag`] — Linkable Spontaneous Anonymous Group ring signatures.
 //! - [`clsag`] — Concise LSAG (the production ring sig, Monero's RingCTv3).
 //! - [`vrf`] — Verifiable Random Function (RFC 9381 ECVRF over ed25519).
+//! - [`range`] — O(N) bit-decomposition range proofs (Maxwell / pre-Bulletproofs).
 //!
 //! ## Safety contract
 //!
@@ -44,6 +45,7 @@ pub mod hash;
 pub mod lsag;
 pub mod pedersen;
 pub mod point;
+pub mod range;
 pub mod scalar;
 pub mod schnorr;
 pub mod stealth;
@@ -59,6 +61,10 @@ pub use hash::{dhash, dhash64, hash_to_point, hash_to_scalar};
 pub use lsag::{lsag_linked, lsag_sign, lsag_verify, LsagSignature};
 pub use pedersen::{
     pedersen_balance, pedersen_commit, pedersen_sum, pedersen_verify, PedersenCommitment,
+};
+pub use range::{
+    decode_range_proof, encode_range_proof, range_prove, range_verify, RangeProof,
+    RangeProveOutput, RANGE_N_BITS_DEFAULT,
 };
 pub use point::{generator_g, generator_h, point_from_bytes, point_to_bytes};
 pub use scalar::{bytes_to_scalar, random_scalar, scalar_to_bytes};

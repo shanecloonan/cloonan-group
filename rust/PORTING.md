@@ -21,7 +21,7 @@ test vectors).
 | `codec.ts` (Writer/Reader) | `codec.rs`                      | [x] live    |
 | `codec.ts` (DOMAIN tags)   | `domain.rs`                     | [x] live    |
 | `clsag.ts`                 | `clsag.rs`                      | [x] live    |
-| `range.ts`                 | `range.rs`                      | [ ] pending |
+| `range.ts`                 | `range.rs`                      | [x] live    |
 | `bulletproofs.ts`          | `bulletproofs.rs`               | [ ] pending |
 | `oom.ts`                   | `oom.rs`                        | [ ] pending |
 | `vrf.ts`                   | `vrf.rs`                        | [x] live    |
