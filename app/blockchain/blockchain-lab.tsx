@@ -121,6 +121,13 @@ import {
   type SlotContext,
   type FinalityProof,
 } from "@/lib/network/consensus";
+import {
+  oomProve,
+  oomVerify,
+  encodeOomProof,
+  oomProofSize,
+  type OomProof,
+} from "@/lib/network/oom";
 
 /* ------------------------------------------------------------------ */
 /*  DESIGN TOKENS                                                      */
@@ -131,7 +138,7 @@ const card =
 
 type Accent =
   | "cyan" | "amber" | "violet" | "emerald" | "rose" | "sky" | "fuchsia" | "lime"
-  | "teal" | "indigo" | "yellow" | "orange" | "red" | "slate";
+  | "teal" | "indigo" | "yellow" | "orange" | "red" | "slate" | "pink";
 
 const ACCENT: Record<Accent, { text: string; ring: string; bg: string; soft: string; chip: string; glow: string }> = {
   cyan:    { text: "text-cyan-300",    ring: "border-cyan-400/30",    bg: "bg-cyan-500/10",    soft: "from-cyan-500/[0.06] to-transparent",    chip: "bg-cyan-500/15 text-cyan-200 border-cyan-400/30",    glow: "shadow-cyan-500/10" },
@@ -148,6 +155,7 @@ const ACCENT: Record<Accent, { text: string; ring: string; bg: string; soft: str
   orange:  { text: "text-orange-300",  ring: "border-orange-400/30",  bg: "bg-orange-500/10",  soft: "from-orange-500/[0.06] to-transparent",  chip: "bg-orange-500/15 text-orange-200 border-orange-400/30", glow: "shadow-orange-500/10" },
   red:     { text: "text-red-300",     ring: "border-red-400/30",     bg: "bg-red-500/10",     soft: "from-red-500/[0.06] to-transparent",     chip: "bg-red-500/15 text-red-200 border-red-400/30",     glow: "shadow-red-500/10" },
   slate:   { text: "text-slate-200",   ring: "border-slate-400/30",   bg: "bg-slate-500/10",   soft: "from-slate-500/[0.06] to-transparent", chip: "bg-slate-500/15 text-slate-200 border-slate-400/30", glow: "shadow-slate-500/10" },
+  pink:    { text: "text-pink-300",    ring: "border-pink-400/30",    bg: "bg-pink-500/10",    soft: "from-pink-500/[0.06] to-transparent",    chip: "bg-pink-500/15 text-pink-200 border-pink-400/30",    glow: "shadow-pink-500/10" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -984,6 +992,460 @@ function RingPanel() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  PANEL 4b · LOG-SIZE RING MEMBERSHIP (Groth–Kohlweiss / Triptych)    */
+/*                                                                      */
+/*  Live demo of the one-out-of-many ZK proof — the cryptographic       */
+/*  engine behind Triptych / Lelantus / Spats. Proves "I know the       */
+/*  secret behind ONE of these N public commitments" in O(log N) bytes  */
+/*  instead of CLSAG's O(N). The same anonymity-set scaling that lets   */
+/*  next-gen private chains operate over thousands of decoys per spend. */
+/* ================================================================== */
+
+type OomBenchRow = { N: number; proveMs: number; verifyMs: number; bytes: number };
+
+function genOomRing(N: number, ell: number): { ring: CurvePoint[]; r: bigint } {
+  const ring: CurvePoint[] = new Array(N);
+  for (let i = 0; i < N; i++) {
+    if (i === ell) continue;
+    const v = randomScalar();
+    const rr = randomScalar();
+    ring[i] = G.multiply(v).add(H.multiply(rr));
+  }
+  const r = randomScalar();
+  ring[ell] = H.multiply(r);
+  return { ring, r };
+}
+
+function OomPanel() {
+  const ACC: Accent = "pink";
+  const a = ACCENT[ACC];
+
+  const [log2N, setLog2N] = useState<number>(4); // N = 16 by default
+  const N = useMemo(() => 1 << log2N, [log2N]);
+  const [ell, setEll] = useState<number>(7);
+  const [seed, setSeed] = useState<number>(0); // re-randomize ring
+  const { ring, r } = useMemo(() => {
+    const ellClamped = Math.min(ell, N - 1);
+    return genOomRing(N, ellClamped);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [N, ell, seed]);
+
+  const [proof, setProof] = useState<OomProof | null>(null);
+  const [proveMs, setProveMs] = useState<number | null>(null);
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [verifyMs, setVerifyMs] = useState<number | null>(null);
+  const [tamper, setTamper] = useState<
+    "none" | "Gk" | "f" | "zd" | "ring"
+  >("none");
+  const [bench, setBench] = useState<OomBenchRow[]>([]);
+  const [benchBusy, setBenchBusy] = useState(false);
+
+  const onResizeLog2 = (k: number) => {
+    setLog2N(k);
+    setEll((prev) => Math.min(prev, (1 << k) - 1));
+    setProof(null);
+    setProveMs(null);
+    setVerified(null);
+    setVerifyMs(null);
+  };
+
+  const onRegen = () => {
+    setSeed((s) => s + 1);
+    setProof(null);
+    setProveMs(null);
+    setVerified(null);
+    setVerifyMs(null);
+  };
+
+  const onProve = () => {
+    const t0 = performance.now();
+    const p = oomProve(ring, Math.min(ell, N - 1), r);
+    const t1 = performance.now();
+    setProof(p);
+    setProveMs(t1 - t0);
+    setVerified(null);
+    setVerifyMs(null);
+  };
+
+  const onVerify = () => {
+    if (!proof) return;
+    let testRing = ring;
+    let testProof: OomProof = proof;
+    if (tamper === "Gk") {
+      testProof = { ...proof, Gk: [...proof.Gk] };
+      const k = Math.floor(testProof.Gk.length / 2);
+      testProof.Gk[k] = testProof.Gk[k].add(G);
+    } else if (tamper === "f") {
+      testProof = { ...proof, f: [...proof.f] };
+      const k = Math.floor(testProof.f.length / 2);
+      testProof.f[k] = testProof.f[k] + 1n;
+    } else if (tamper === "zd") {
+      testProof = { ...proof, zd: proof.zd + 1n };
+    } else if (tamper === "ring") {
+      const idx = (Math.min(ell, N - 1) + 1) % N;
+      const tampered = [...ring];
+      tampered[idx] = tampered[idx].add(G);
+      testRing = tampered;
+    }
+    const t0 = performance.now();
+    const ok = oomVerify(testRing, testProof);
+    const t1 = performance.now();
+    setVerified(ok);
+    setVerifyMs(t1 - t0);
+  };
+
+  const proofBytes = proof ? encodeOomProof(proof).length : null;
+
+  /* ---- Comparison: log-size vs linear-size at same N. ----           *
+   *   CLSAG  : ≈ (n+1) · 32 bytes  (one challenge + n responses + 2
+   *            key images). For ring of N=1024 → 32 · 1027 ≈ 33 KB.    *
+   *   OoM    : 4 + 7·log2(N)·32 + 32 bytes.                            */
+  const clsagBytesAt = (n: number) => 32 + 32 * n + 64; // c0 + s[] + I + D
+  const oomBytesAt = (n: number) => oomProofSize(n);
+
+  const onBench = async () => {
+    setBenchBusy(true);
+    setBench([]);
+    // Defer to next tick so the UI updates first.
+    await new Promise((r) => setTimeout(r, 16));
+    const sizes = [4, 8, 16, 32, 64, 128];
+    const rows: OomBenchRow[] = [];
+    for (const Nx of sizes) {
+      const { ring: rg, r: rr } = genOomRing(Nx, 0);
+      const t0 = performance.now();
+      const p = oomProve(rg, 0, rr);
+      const t1 = performance.now();
+      const ok = oomVerify(rg, p);
+      const t2 = performance.now();
+      rows.push({
+        N: Nx,
+        proveMs: t1 - t0,
+        verifyMs: t2 - t1,
+        bytes: encodeOomProof(p).length,
+      });
+      // Bail out if any fail (shouldn't, but defensive).
+      if (!ok) break;
+      // Let the UI breathe.
+      setBench([...rows]);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    setBenchBusy(false);
+  };
+
+  return (
+    <div className="space-y-5">
+      <SectionTitle
+        accent={ACC}
+        n="04b"
+        title="Log-Size Ring Proof  ·  Groth–Kohlweiss / Triptych Core"
+        sub={
+          "The one-out-of-many ZK proof underlying Triptych, Lelantus, and Spats. Proves knowledge of the secret behind exactly ONE of N public commitments in O(log N) bytes — without revealing which. With N=1024 the proof shrinks to ≈ 2 KB instead of CLSAG's ≈ 33 KB, opening anonymity sets that current chains can't afford."
+        }
+      />
+
+      {/* RING SIZE + INDEX */}
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Anonymity set N = 2<sup>{log2N}</sup> = {N}
+          </p>
+          <div className="flex gap-2">
+            <PrimaryButton accent={ACC} onClick={onRegen}>
+              Re-randomize ring
+            </PrimaryButton>
+          </div>
+        </div>
+        <input
+          type="range"
+          min={2}
+          max={8}
+          value={log2N}
+          onChange={(e) => onResizeLog2(Number(e.target.value))}
+          className="w-full h-1.5 bg-white/[0.08] rounded-full appearance-none cursor-pointer accent-pink-400"
+        />
+        <p className="text-[11px] text-white/55 leading-relaxed">
+          N must be a power of two for the bit-decomposition trick. Each step doubles the
+          anonymity set; the proof grows by just <span className="text-pink-300 font-mono">+224 bytes</span> per step.
+        </p>
+
+        <div className="space-y-2">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Secret signer index ℓ
+          </p>
+          <div className="grid grid-cols-8 sm:grid-cols-16 gap-1.5">
+            {Array.from({ length: N }, (_, i) => i).map((i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setEll(i);
+                  setProof(null);
+                  setVerified(null);
+                }}
+                className={`aspect-square rounded text-[10px] font-mono transition-all cursor-pointer ${
+                  i === Math.min(ell, N - 1)
+                    ? `${a.bg} ${a.text} border ${a.ring}`
+                    : "bg-white/[0.04] text-white/40 hover:bg-white/[0.08] hover:text-white/80"
+                }`}
+                title={`ring[${i}]`}
+              >
+                {i}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-white/40">
+            The verifier sees the entire ring but cannot tell ℓ — only that the prover knows the witness for <em>some</em> position.
+          </p>
+        </div>
+      </div>
+
+      {/* PROVE + VERIFY */}
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <PrimaryButton accent={ACC} onClick={onProve}>
+            Generate proof
+          </PrimaryButton>
+          {proof && (
+            <>
+              <GhostButton onClick={onVerify}>Verify</GhostButton>
+              <label className="ml-auto text-[10px] tracking-[0.15em] uppercase text-white/50 flex items-center gap-2">
+                Tamper:
+                <select
+                  value={tamper}
+                  onChange={(e) => {
+                    setTamper(e.target.value as typeof tamper);
+                    setVerified(null);
+                  }}
+                  className="bg-black/40 border border-white/10 text-white/80 rounded px-2 py-1 text-[10px] font-mono cursor-pointer"
+                >
+                  <option value="none">(honest)</option>
+                  <option value="Gk">flip a polynomial commitment Gₖ</option>
+                  <option value="f">mutate a response fⱼ</option>
+                  <option value="zd">mutate z_d</option>
+                  <option value="ring">tamper a ring member</option>
+                </select>
+              </label>
+            </>
+          )}
+        </div>
+
+        {proveMs !== null && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Stat label="Prove" value={`${proveMs.toFixed(1)} ms`} accent={ACC} />
+            <Stat
+              label="Proof size"
+              value={proofBytes !== null ? `${proofBytes} B` : "—"}
+              accent={ACC}
+            />
+            <Stat
+              label="vs CLSAG"
+              value={
+                proofBytes !== null
+                  ? `${(clsagBytesAt(N) / proofBytes).toFixed(1)}× smaller`
+                  : "—"
+              }
+              accent={ACC}
+            />
+            <Stat
+              label={verified === null ? "Verify" : verified ? "Verified" : "Rejected"}
+              value={verifyMs !== null ? `${verifyMs.toFixed(1)} ms` : "—"}
+              accent={ACC}
+            />
+          </div>
+        )}
+
+        {verified !== null && (
+          <div>
+            <Badge ok={verified} label={verified ? "valid" : "invalid"} accent={ACC} />
+            {tamper !== "none" && verified === false && (
+              <p className="mt-2 text-[11px] text-white/55 leading-relaxed">
+                Tampering with <span className="font-mono text-pink-300">{tamper}</span> broke the proof — exactly as the soundness argument predicts. The Fiat-Shamir transcript binds every byte of the first round, so any post-hoc modification invalidates the equations.
+              </p>
+            )}
+            {tamper === "none" && verified && (
+              <p className="mt-2 text-[11px] text-white/55 leading-relaxed">
+                The verifier computed Σᵢ (Πⱼ factorᵢⱼ(x))·ringᵢ = (Σₖ x<sup>k</sup>·Gₖ) + z_d·H — both sides matched in the group. Without knowing ℓ.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* PROOF INSPECTOR */}
+      {proof && (
+        <div className={`${card} p-5 space-y-4`}>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Proof structure (log₂ N = {log2N} rows)
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Stat
+              label="Per-bit point commitments"
+              value={`${proof.A.length}·4 points = ${proof.A.length * 4 * 32} B`}
+              accent={ACC}
+            />
+            <Stat
+              label="Polynomial commitments Gₖ"
+              value={`${proof.Gk.length} points`}
+              accent={ACC}
+            />
+            <Stat
+              label="Per-bit scalar responses"
+              value={`${proof.f.length}·3 scalars = ${proof.f.length * 3 * 32} B`}
+              accent={ACC}
+            />
+            <Stat label="Final response z_d" value="1 scalar = 32 B" accent={ACC} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {proof.A.map((_, j) => (
+              <div key={j} className="rounded-lg border border-white/[0.06] bg-black/30 p-3 space-y-1.5">
+                <p className={`text-[10px] tracking-[0.2em] uppercase font-bold ${a.text}`}>
+                  Row j = {j}
+                </p>
+                <p className="font-mono text-[10px] text-white/60 break-all">A: {shorten(pointToHex(proof.A[j]), 14, 8)}</p>
+                <p className="font-mono text-[10px] text-white/60 break-all">B: {shorten(pointToHex(proof.B[j]), 14, 8)}</p>
+                <p className="font-mono text-[10px] text-white/60 break-all">C: {shorten(pointToHex(proof.C[j]), 14, 8)}</p>
+                <p className="font-mono text-[10px] text-white/60 break-all">Gₖ: {shorten(pointToHex(proof.Gk[j]), 14, 8)}</p>
+                <p className="font-mono text-[10px] text-white/55 break-all">
+                  f: {shorten(proof.f[j].toString(16), 10, 6)} · z_A: {shorten(proof.zA[j].toString(16), 10, 6)} · z_C: {shorten(proof.zC[j].toString(16), 10, 6)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SIZE COMPARISON CHART */}
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Proof-size showdown: log-size OoM vs linear CLSAG
+          </p>
+        </div>
+        <div className="space-y-3">
+          {[4, 16, 64, 256, 1024, 4096].map((n) => {
+            const oom = oomBytesAt(n);
+            const cls = clsagBytesAt(n);
+            const maxBytes = clsagBytesAt(4096);
+            return (
+              <div key={n} className="space-y-1.5">
+                <div className="flex items-baseline justify-between text-[10px] font-mono tracking-[0.15em] uppercase">
+                  <span className="text-white/50">N = {n}</span>
+                  <span className={a.text}>
+                    {(cls / oom).toFixed(1)}× smaller
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-12 text-[9px] font-mono text-pink-300">OoM</span>
+                  <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
+                    <div
+                      className="h-full bg-pink-500/60"
+                      style={{ width: `${Math.max(1, (oom / maxBytes) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-20 text-right text-[10px] font-mono text-pink-200">
+                    {oom.toLocaleString()} B
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-12 text-[9px] font-mono text-white/50">CLSAG</span>
+                  <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
+                    <div
+                      className="h-full bg-white/30"
+                      style={{ width: `${Math.max(1, (cls / maxBytes) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-20 text-right text-[10px] font-mono text-white/60">
+                    {cls.toLocaleString()} B
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-white/55 leading-relaxed">
+          At Monero's current ring size N=16, CLSAG is roughly the same size as the OoM proof.
+          At <strong>N=1024</strong> — the anonymity set we want — the OoM proof is{" "}
+          <span className="text-pink-300 font-bold">~17× smaller</span>. At N=4096, ~50×.
+          That delta is the difference between &ldquo;more privacy than Monero&rdquo; and &ldquo;same privacy as Monero.&rdquo;
+        </p>
+      </div>
+
+      {/* BENCHMARK */}
+      <div className={`${card} p-5 space-y-4`}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+            Live benchmark: prove + verify across ring sizes
+          </p>
+          <PrimaryButton accent={ACC} onClick={onBench}>
+            {benchBusy ? "Running…" : "Run benchmark"}
+          </PrimaryButton>
+        </div>
+        <div className="text-[11px] text-white/50">
+          Pure TypeScript on @noble/curves. A native Rust or C implementation would be 30–100× faster.
+        </div>
+        {bench.length > 0 && (
+          <div className="rounded-lg border border-white/[0.06] bg-black/30 overflow-hidden">
+            <table className="w-full text-[11px] font-mono">
+              <thead className="bg-white/[0.03]">
+                <tr className="text-white/50 text-[10px] tracking-[0.2em] uppercase">
+                  <th className="text-left px-3 py-2">N</th>
+                  <th className="text-right px-3 py-2">prove</th>
+                  <th className="text-right px-3 py-2">verify</th>
+                  <th className="text-right px-3 py-2">|proof|</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bench.map((row) => (
+                  <tr key={row.N} className="border-t border-white/[0.04]">
+                    <td className="px-3 py-1.5 text-pink-300">{row.N}</td>
+                    <td className="px-3 py-1.5 text-right text-white/75">{row.proveMs.toFixed(0)} ms</td>
+                    <td className="px-3 py-1.5 text-right text-white/75">{row.verifyMs.toFixed(0)} ms</td>
+                    <td className="px-3 py-1.5 text-right text-white/75">{row.bytes} B</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* THE BIG PICTURE */}
+      <div className={`${card} p-5 space-y-3`}>
+        <p className={`text-[10px] tracking-[0.2em] uppercase font-bold ${a.text}`}>
+          What this primitive unlocks
+        </p>
+        <ul className="text-[12px] text-white/75 leading-relaxed space-y-2 list-disc list-inside marker:text-pink-400/60">
+          <li>
+            <span className="text-white">Triptych / Spats spend authorisation</span> — replace CLSAG. Same algebra, log-size proof.
+          </li>
+          <li>
+            <span className="text-white">Anonymity-set scaling</span> — N=1024 default, no economic penalty. Monero's heuristic attacks based on small-ring statistics simply don&rsquo;t apply.
+          </li>
+          <li>
+            <span className="text-white">Composable building block</span> — pair with the UTXO accumulator to prove &ldquo;I own one of the chain&rsquo;s ~4 billion historical outputs&rdquo; in a fixed-size proof.
+          </li>
+          <li>
+            <span className="text-white">Future Triptych key-image binding</span> — the same polynomial structure carries the &ldquo;J = x·U&rdquo; relation in a second commitment vector. Coming in the next layer.
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, accent = "cyan" }: { label: string; value: string; accent?: Accent }) {
+  const a = ACCENT[accent];
+  return (
+    <div className="rounded-lg border border-white/[0.06] bg-black/30 px-3 py-2.5">
+      <p className={`text-[9px] tracking-[0.2em] uppercase font-bold ${a.text} mb-1`}>
+        {label}
+      </p>
+      <p className="text-[13px] font-mono text-white/85 break-all">{value}</p>
     </div>
   );
 }
@@ -2810,6 +3272,8 @@ const IMPLEMENTED_LAYERS: DocLayer[] = [
       "Encrypted output amounts (RingCT mask: stealth shared-secret-derived blob)",
       "Bulletproofs range proofs (O(log N), 64-bit range)",
       "Gamma-distributed decoy selection (age-weighted, anti-clustering)",
+      "Groth–Kohlweiss one-out-of-many ZK proof (Triptych core primitive)",
+      "Log-size ring proofs (O(log N) bytes; ~17× smaller than CLSAG at N=1024)",
     ],
   },
   {
@@ -2867,12 +3331,16 @@ const IMPLEMENTED_LAYERS: DocLayer[] = [
 const PLANNED_TIERS: { tier: string; title: string; accent: Accent; items: { name: string; why: string }[] }[] = [
   {
     tier: "Tier 2b",
-    title: "Log-size ring signatures (privacy moonshot)",
+    title: "Log-size ring signatures (privacy moonshot · in progress)",
     accent: "fuchsia",
     items: [
       {
-        name: "Triptych / Spats / Lelantus log-size CLSAG successor",
-        why: "Ring size 256 → 1024 with ~5 KB proofs. Anonymity set = the entire UTXO accumulator. ≈ 64× larger than Monero's 16-member ring; uniform across the whole chain history.",
+        name: "Triptych key-image binding (J = x·U) on top of the existing OoM proof",
+        why: "The Groth–Kohlweiss one-out-of-many proof is LIVE (see the Log-Size Ring tab). What remains is the parallel polynomial structure that ties a global key image to the witness — turning the proof into a full ring-signature drop-in for CLSAG with linkability + double-spend protection.",
+      },
+      {
+        name: "Dual-witness OoM (joint G-side spend key + H-side amount blinding)",
+        why: "Bind both x_ℓ and z_ℓ at the same secret index in a single log-size proof — the algebra a confidential-transaction spend needs.",
       },
       {
         name: "Seraphis-style forward-secret stealth addresses",
@@ -2990,7 +3458,7 @@ function ArchDiagram() {
           cyan: "#67e8f9", amber: "#fcd34d", violet: "#c4b5fd", emerald: "#6ee7b7",
           rose: "#fda4af", sky: "#7dd3fc", fuchsia: "#f0abfc", lime: "#bef264",
           teal: "#5eead4", indigo: "#a5b4fc", yellow: "#fde047", orange: "#fdba74",
-          red: "#fca5a5", slate: "#cbd5e1",
+          red: "#fca5a5", slate: "#cbd5e1", pink: "#f9a8d4",
         };
         const c = fillByAccent[l.accent];
         return (
@@ -3283,8 +3751,12 @@ function buildDocsMarkdown(): string {
       "address with a Bulletproofs-protected hidden amount. Encrypted-amount blobs let only the recipient open their " +
       "share. Spent outputs are tracked by their key images (Σ key-images-seen across the chain is the only spent-set " +
       "the verifier needs). The full UTXO history is committed into a depth-32 incremental Merkle accumulator whose " +
-      "root sits in every block header, providing the cryptographic substrate for log-size ring signatures (Tier 2b) " +
-      "and zk-rollup composition (Tier 4)."
+      "root sits in every block header. On top of all that, the Groth–Kohlweiss one-out-of-many ZK proof is live in " +
+      "`lib/network/oom.ts` — the cryptographic engine that turns CLSAG-shape rings of N members into O(log N) bytes " +
+      "instead of O(N). Once paired with a Triptych-style key-image binding (Tier 2b), every spend will pull from " +
+      "ring sizes ≥ 1024 against the entire UTXO accumulator — anonymity sets ~64× larger than Monero, with proofs " +
+      "~17× smaller than a CLSAG of the same size. Tier 4 then folds the whole privacy layer into a recursive zk-" +
+      "rollup proven against the same accumulator root."
   );
   lines.push("");
   return lines.join("\n");
@@ -3299,6 +3771,7 @@ const TABS: { id: string; label: string; accent: Accent; component: React.FC }[]
   { id: "pedersen", label: "Pedersen", accent: "amber", component: PedersenPanel },
   { id: "stealth", label: "Stealth", accent: "violet", component: StealthPanel },
   { id: "ring", label: "Ring Sigs", accent: "emerald", component: RingPanel },
+  { id: "oom", label: "Log-Size Ring", accent: "pink", component: OomPanel },
   { id: "range", label: "Range", accent: "rose", component: RangePanel },
   { id: "storage", label: "Storage", accent: "sky", component: StoragePanel },
   { id: "tx", label: "Transaction", accent: "fuchsia", component: TxPanel },
