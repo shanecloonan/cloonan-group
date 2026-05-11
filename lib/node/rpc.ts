@@ -91,6 +91,7 @@ const METHODS: Record<string, MethodFn> = {
       spentKeyImages: state.spentKeyImages.size,
       storageCount: state.storage.size,
       consensusParams: state.params,
+      treasury: state.treasury.toString(),
     };
   },
 

@@ -235,6 +235,15 @@ export interface ChainState {
    *  for testnet and for any chain that wants to inherit the canonical    *
    *  50 → 25 → 12.5 … → 0.195 MFN/block schedule.                         */
   emissionParams?: EmissionParams;
+  /** On-chain permanence treasury balance, in MFN base units. Filled by   *
+   *  the storage-funding share of every tx fee (and, in a future tx-       *
+   *  type upgrade, by required upload endowments). Drained per accepted   *
+   *  storage proof to pay the producer's permanence subsidy. When the     *
+   *  treasury can't cover a block's storage rewards, the remainder is     *
+   *  MINTED via emission as a backstop — see fee-accounting in applyBlock.*
+   *                                                                        *
+   *  Invariant: treasury >= 0 at all times.                                */
+  treasury: bigint;
 }
 
 export function emptyState(params: ConsensusParams = DEFAULT_CONSENSUS_PARAMS): ChainState {
@@ -246,6 +255,7 @@ export function emptyState(params: ConsensusParams = DEFAULT_CONSENSUS_PARAMS): 
     blockIds: [],
     validators: [],
     params,
+    treasury: 0n,
   };
 }
 
@@ -395,6 +405,7 @@ export function applyBlock(
     validators: state.validators,
     params: state.params,
     emissionParams: state.emissionParams,
+    treasury: state.treasury,
   };
 
   // Storage anchors mentioned in the header must be supplied so we can
@@ -581,18 +592,50 @@ export function applyBlock(
     acceptedStorageProofs++;
   }
 
-  /* ---- Coinbase verification (now that fees AND storage proofs are    *
-   *  fully accounted for). expectedReward = subsidy + Σ fees + Σ proofs. */
+  /* ---- Two-sided economic settlement ----                              *
+   *                                                                       *
+   *  Now that we know Σ fees AND the number of accepted storage proofs,  *
+   *  we can run the full economic update:                                *
+   *                                                                       *
+   *    1. Split fees: treasuryFee = feeSum · feeToTreasuryBps / 10000    *
+   *                    producerFee = feeSum − treasuryFee                *
+   *    2. Treasury gains treasuryFee.                                    *
+   *    3. Storage rewards drain from the treasury first; any shortfall  *
+   *       is minted via emission as a backstop. (Backstop is what keeps *
+   *       the chain functional in pre-fee-traffic eras; once usage      *
+   *       grows, the chain becomes self-sustaining.)                    *
+   *    4. The coinbase pays producer = subsidy + producerFee +          *
+   *       storageRewardTotal. The producer doesn't care WHERE the       *
+   *       storage reward came from — they always receive the full       *
+   *       per-proof amount.                                              */
   const emissionParams = state.emissionParams ?? DEFAULT_EMISSION_PARAMS;
   const storageRewardTotal =
     emissionParams.storageProofReward * BigInt(acceptedStorageProofs);
+
+  const treasuryFee =
+    (feeSum * BigInt(emissionParams.feeToTreasuryBps)) / 10000n;
+  const producerFee = feeSum - treasuryFee;
+
+  // First add this block's treasury inflow, then drain the storage reward.
+  let pendingTreasury = next.treasury + treasuryFee;
+  let storageFromTreasury: bigint;
+  if (pendingTreasury >= storageRewardTotal) {
+    storageFromTreasury = storageRewardTotal;
+  } else {
+    storageFromTreasury = pendingTreasury;
+  }
+  pendingTreasury -= storageFromTreasury;
+  // The remaining storage reward (if any) is minted as a transitional
+  // backstop. The producer always receives the full storageRewardTotal.
+  // Treasury balance never goes negative.
+  next.treasury = pendingTreasury;
 
   if (requireCoinbase) {
     if (coinbaseTx === null) {
       errors.push("coinbase required (producer has payoutAddress) but absent");
     } else {
       const subsidy = emissionAtHeight(block.header.height, emissionParams);
-      const expectedReward = subsidy + feeSum + storageRewardTotal;
+      const expectedReward = subsidy + producerFee + storageRewardTotal;
       const cv = verifyCoinbase(
         coinbaseTx,
         block.header.height,
@@ -713,20 +756,26 @@ export function buildBlock(args: BuildBlockArgs): Block {
   const height = args.state.height + 1;
 
   // Prepend the coinbase if a producer payout address is provided. The
-  // coinbase pays emission(height) + Σ fees + Σ permanence subsidy and
-  // matches the applyBlock-side expectation byte-for-byte (verifyCoinbase
-  // rechecks). The "permanence subsidy" rewards the producer for each
-  // storage proof they're including in this block — the carrot side of
-  // the data-permanence incentive structure.
+  // coinbase amount must match applyBlock's two-sided settlement exactly:
+  //   coinbase = emission(height)            (security subsidy)
+  //            + producerFee                  (10% tip from fee market)
+  //            + storageProofReward × N      (permanence subsidy, sourced
+  //                                            from treasury first, mint
+  //                                            as fallback — producer
+  //                                            doesn't care which)
+  // The other 90% of fees flows into the on-chain storage treasury.
   let txs = args.txs;
   if (args.producerPayout) {
     const emissionParams = args.state.emissionParams ?? DEFAULT_EMISSION_PARAMS;
     const subsidy = emissionAtHeight(height, emissionParams);
     let feeSum = 0n;
     for (const tx of args.txs) feeSum += tx.fee;
+    const treasuryFee =
+      (feeSum * BigInt(emissionParams.feeToTreasuryBps)) / 10000n;
+    const producerFee = feeSum - treasuryFee;
     const storageRewardTotal =
       emissionParams.storageProofReward * BigInt((args.storageProofs ?? []).length);
-    const total = subsidy + feeSum + storageRewardTotal;
+    const total = subsidy + producerFee + storageRewardTotal;
     const cb = buildCoinbase(height, total, args.producerPayout);
     txs = [cb, ...args.txs];
   }

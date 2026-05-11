@@ -77,18 +77,34 @@ export interface EmissionParams {
   /** Permanent per-block emission after halvings end. Must be > 0 to  *
    *  guarantee perpetual security funding.                             */
   tailEmission: bigint;
-  /** Per-storage-proof minted reward, paid INTO the block coinbase on  *
-   *  top of the regular subsidy + fees. This is the "permanence        *
+  /** Per-storage-proof reward, paid INTO the block coinbase on top of   *
+   *  the regular subsidy + producer-tip fees. This is the "permanence  *
    *  subsidy" — what motivates validators to actually do the slot-     *
    *  audit work that proves stored data is still being held. Without   *
    *  this, storage providers earn nothing for their work and the       *
    *  permanence guarantee is a paper promise.                          *
    *                                                                     *
-   *  Default: 0.1 MFN per proof = 10_000_000 base units. With a busy   *
-   *  network (say 10 storage proofs per block) this adds 1 MFN/block   *
-   *  ≈ 2% additional inflation over the era-0 subsidy — a meaningful  *
-   *  incentive without dominating block production rewards.            */
+   *  Default: 0.1 MFN per proof = 10_000_000 base units.                *
+   *                                                                     *
+   *  FUNDING: storage rewards are sourced FIRST from the on-chain      *
+   *  treasury (which is filled by privacy-tx fees + upload endowments) *
+   *  and only when treasury can't cover the bill does the chain MINT   *
+   *  fresh tokens via emission as a backstop. This way, in steady      *
+   *  state the privacy side of the network directly funds the          *
+   *  permanence side, while emission only inflates supply when the     *
+   *  treasury is empty.                                                 */
   storageProofReward: bigint;
+  /** Fraction of every tx fee that flows to the storage treasury,      *
+   *  in basis points (10000 = 100%). The remainder flows to the block *
+   *  producer as a priority tip. This is EIP-1559-style separation:   *
+   *  base fee (mostly) funds the permanence pool, tip incentivizes    *
+   *  producers to include the tx promptly.                              *
+   *                                                                     *
+   *  Default: 9000 (= 90%). The 10% producer tip keeps producers       *
+   *  elastic to network usage — they earn more when there's more      *
+   *  privacy traffic, which keeps block production competitive even    *
+   *  long after the emission halvings.                                  */
+  feeToTreasuryBps: number;
 }
 
 /** One MFN = 10^8 base units, matching Bitcoin's satoshi denomination. *
@@ -110,6 +126,7 @@ export const DEFAULT_EMISSION_PARAMS: EmissionParams = {
   halvingCount: 8,
   tailEmission: (50n * MFN_BASE) >> 8n, //  ≈ 0.195 MFN/block
   storageProofReward: MFN_BASE / 10n, //  0.1 MFN per accepted storage proof
+  feeToTreasuryBps: 9000, //  90% of fees fund permanence, 10% tip producer
 };
 
 /* ------------------------------------------------------------------ */
@@ -127,6 +144,16 @@ export function validateEmissionParams(p: EmissionParams): void {
   }
   if (p.storageProofReward < 0n) {
     throw new Error("emission: storageProofReward must be >= 0");
+  }
+  if (
+    typeof p.feeToTreasuryBps !== "number" ||
+    p.feeToTreasuryBps < 0 ||
+    p.feeToTreasuryBps > 10000 ||
+    !Number.isInteger(p.feeToTreasuryBps)
+  ) {
+    throw new Error(
+      `emission: feeToTreasuryBps must be an integer in [0, 10000] (got ${p.feeToTreasuryBps})`
+    );
   }
   if (p.halvingPeriod <= 0) throw new Error("emission: halvingPeriod must be > 0");
   if (p.halvingCount < 0) throw new Error("emission: halvingCount must be >= 0");

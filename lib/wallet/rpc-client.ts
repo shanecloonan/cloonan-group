@@ -48,6 +48,10 @@ export interface NodeInfo {
   spentKeyImages: number;
   storageCount: number;
   consensusParams: unknown;
+  /** On-chain storage treasury balance, in MFN base units (decimal       *
+   *  string because BigInt doesn't survive JSON). Drives the permanence  *
+   *  funding model — see EmissionParams.feeToTreasuryBps.                */
+  treasury: string;
 }
 
 /** One candidate decoy returned by getDecoyPool. Includes the block      *
