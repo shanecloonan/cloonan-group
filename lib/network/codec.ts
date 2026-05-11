@@ -234,6 +234,9 @@ export const DOMAIN = {
   AMT_MASK_B:      "MFBN-1/amount-mask-b",
   COINBASE_TX_KEY: "MFBN-1/coinbase-tx-key",
   COINBASE_BLIND:  "MFBN-1/coinbase-blind",
+  UTXO_LEAF:       "MFBN-1/utxo-leaf",
+  UTXO_NODE:       "MFBN-1/utxo-node",
+  UTXO_EMPTY:      "MFBN-1/utxo-empty",
 } as const;
 
 export type Domain = (typeof DOMAIN)[keyof typeof DOMAIN];

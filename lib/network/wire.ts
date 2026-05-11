@@ -196,6 +196,14 @@ export function encodeBlockHeader(h: BlockHeader): Uint8Array {
   w.push(h.txRoot);
   w.push(h.storageRoot);
   w.blob(h.producerProof);
+  // Optional trailing field: utxoRoot (32 bytes). u8 flag indicates
+  // presence so legacy readers can tolerate absence.
+  if (h.utxoRoot) {
+    w.u8(1);
+    w.push(h.utxoRoot);
+  } else {
+    w.u8(0);
+  }
   return w.bytes();
 }
 
@@ -209,7 +217,17 @@ export function decodeBlockHeader(bytes: Uint8Array): BlockHeader {
   const txRoot = r.bytes(32);
   const storageRoot = r.bytes(32);
   const producerProof = r.blob();
-  return { version, prevHash, height, slot, timestamp, txRoot, storageRoot, producerProof };
+  let utxoRoot: Uint8Array | undefined;
+  // Defensive decode: legacy headers (pre-accumulator) omit the trailing
+  // utxoRoot. If any bytes remain, read the presence flag + 32-byte root.
+  if (r.remaining() > 0) {
+    const flag = r.u8();
+    if (flag === 1) utxoRoot = r.bytes(32);
+  }
+  return {
+    version, prevHash, height, slot, timestamp,
+    txRoot, storageRoot, producerProof, utxoRoot,
+  };
 }
 
 /* ------------------------------------------------------------------ */

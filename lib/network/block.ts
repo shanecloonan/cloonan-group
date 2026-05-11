@@ -86,6 +86,13 @@ import {
   validateEndowmentParams,
   type EndowmentParams,
 } from "./endowment";
+import {
+  emptyUtxoTree,
+  appendUtxo,
+  utxoTreeRoot,
+  utxoLeafHash,
+  type UtxoTreeState,
+} from "./utxo-tree";
 
 /* ------------------------------------------------------------------ */
 /*  HEADER + BLOCK                                                     */
@@ -113,6 +120,14 @@ export interface BlockHeader {
   /** MFBN-encoded FinalityProof: VRF eligibility + BLS aggregate finality.
    *  Genesis is the only block where this is allowed to be empty. */
   producerProof: Uint8Array;
+  /** Cryptographic UTXO accumulator root at the END of this block — the   *
+   *  32-byte hash committing to every output the chain has ever anchored. *
+   *  Light clients use this to verify membership without downloading the  *
+   *  full UTXO set, and log-size ring signatures (Triptych and beyond)   *
+   *  prove their inputs are members of this accumulator. Optional in the  *
+   *  header wire format for backward compat with pre-accumulator chains;  *
+   *  new blocks SHOULD always include it.                                 */
+  utxoRoot?: Uint8Array;
 }
 
 export interface Block {
@@ -256,6 +271,16 @@ export interface ChainState {
    *                                                                        *
    *  Invariant: treasury >= 0 at all times.                                */
   treasury: bigint;
+  /** Cryptographic UTXO accumulator state. Every output the chain has     *
+   *  ever anchored is appended (in deterministic order) to this fixed-     *
+   *  depth Merkle tree. The 32-byte root is committed into each block     *
+   *  header (header.utxoRoot) so light clients and log-size ring          *
+   *  signatures can prove membership against a single 32-byte digest.    *
+   *                                                                        *
+   *  Append order is canonical: for each accepted block, outputs are     *
+   *  appended in (tx-index, output-index) order. The coinbase (tx 0     *
+   *  when present) comes first.                                            */
+  utxoTree: UtxoTreeState;
 }
 
 export function emptyState(params: ConsensusParams = DEFAULT_CONSENSUS_PARAMS): ChainState {
@@ -268,6 +293,7 @@ export function emptyState(params: ConsensusParams = DEFAULT_CONSENSUS_PARAMS): 
     validators: [],
     params,
     treasury: 0n,
+    utxoTree: emptyUtxoTree(),
   };
 }
 
@@ -293,6 +319,13 @@ export interface GenesisConfig {
 }
 
 export function buildGenesis(cfg: GenesisConfig): Block {
+  // Pre-compute the UTXO accumulator root for the initial outputs so the
+  // genesis header commits to the chain's start-of-time UTXO set. Every
+  // subsequent block extends the same tree.
+  let tree = emptyUtxoTree();
+  for (const o of cfg.initialOutputs) {
+    tree = appendUtxo(tree, utxoLeafHash(o.oneTimeAddr, o.amount, 0));
+  }
   const header: BlockHeader = {
     version: 1,
     prevHash: new Uint8Array(32),
@@ -302,6 +335,7 @@ export function buildGenesis(cfg: GenesisConfig): Block {
     txRoot: new Uint8Array(32),
     storageRoot: storageMerkleRoot(cfg.initialStorage),
     producerProof: cfg.producerProof ?? new Uint8Array(0),
+    utxoRoot: utxoTreeRoot(tree),
   };
   return { header, txs: [], storageProofs: [], slashings: [] };
 }
@@ -311,6 +345,13 @@ export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
   const state = emptyState(cfg.params ?? DEFAULT_CONSENSUS_PARAMS);
   for (const o of cfg.initialOutputs) {
     state.utxo.set(o.oneTimeAddr.toHex(), { commit: o.amount, height: 0 });
+    // Genesis outputs are appended to the accumulator in the order listed,
+    // so every chain participant arrives at the same tree root from the
+    // genesis config alone.
+    state.utxoTree = appendUtxo(
+      state.utxoTree,
+      utxoLeafHash(o.oneTimeAddr, o.amount, 0)
+    );
   }
   for (const s of cfg.initialStorage) {
     state.storage.set(bytesToHex(storageCommitmentHash(s)), { commit: s, lastProvenAt: 0 });
@@ -419,6 +460,7 @@ export function applyBlock(
     emissionParams: state.emissionParams,
     endowmentParams: state.endowmentParams,
     treasury: state.treasury,
+    utxoTree: state.utxoTree,
   };
 
   // Storage anchors mentioned in the header must be supplied so we can
@@ -472,6 +514,13 @@ export function applyBlock(
           commit: out.amount,
           height: block.header.height,
         });
+        // Append into the cryptographic UTXO accumulator. Coinbase outputs
+        // are included so that providers paid via coinbase can later spend
+        // them through log-size ring signatures, same as any other output.
+        next.utxoTree = appendUtxo(
+          next.utxoTree,
+          utxoLeafHash(out.oneTimeAddr, out.amount, block.header.height)
+        );
         // Coinbase outputs cannot anchor storage; verifyCoinbase enforces
         // that, so we skip storage handling here.
       }
@@ -568,12 +617,18 @@ export function applyBlock(
       }
     }
 
-    // Add new outputs to UTXO set.
+    // Add new outputs to UTXO set + accumulator. Order matters for the
+    // accumulator: outputs are appended in (tx-index, output-index) order
+    // across the whole block, with the coinbase always at position 0.
     for (const out of tx.outputs) {
       next.utxo.set(out.oneTimeAddr.toHex(), {
         commit: out.amount,
         height: block.header.height,
       });
+      next.utxoTree = appendUtxo(
+        next.utxoTree,
+        utxoLeafHash(out.oneTimeAddr, out.amount, block.header.height)
+      );
       if (out.storage) {
         const h = bytesToHex(storageCommitmentHash(out.storage));
         if (!next.storage.has(h)) {
@@ -744,6 +799,23 @@ export function applyBlock(
   // the canonical source.
   void storagesInBlock;
 
+  /* ---- UTXO accumulator root must match what we computed ----          *
+   *  This is the new consensus rule that makes light clients + log-      *
+   *  size ring signatures possible. The header MAY omit utxoRoot for     *
+   *  backward compat (the field is optional in the wire), but if it is   *
+   *  present, it MUST equal the locally-computed post-block tree root.  *
+   *  Any divergence indicates either a non-determinism bug or a bad-     *
+   *  faith producer fabricating the accumulator commitment.              */
+  if (block.header.utxoRoot) {
+    const computedRoot = utxoTreeRoot(next.utxoTree);
+    if (!eqBytes(block.header.utxoRoot, computedRoot)) {
+      errors.push(
+        `utxoRoot mismatch: header says ${bytesToHex(block.header.utxoRoot).slice(0, 16)}…, ` +
+          `chain computed ${bytesToHex(computedRoot).slice(0, 16)}…`
+      );
+    }
+  }
+
   if (errors.length > 0) {
     return { ok: false, errors, state, blockId: blockId(block.header) };
   }
@@ -800,15 +872,31 @@ export function buildUnsealedHeader(args: {
   }
   const prevHash =
     args.state.blockIds[args.state.blockIds.length - 1] ?? new Uint8Array(32);
+  const height = args.state.height + 1;
+
+  // Compute the post-block UTXO accumulator root by mirroring applyBlock's
+  // append order: every output (coinbase output first if present, then
+  // tx-by-tx, output-by-output) is appended in declaration order. This
+  // must match applyBlock byte-for-byte or the header verification fails.
+  let projectedTree = args.state.utxoTree;
+  for (const tx of args.txs) {
+    for (const out of tx.outputs) {
+      projectedTree = appendUtxo(
+        projectedTree,
+        utxoLeafHash(out.oneTimeAddr, out.amount, height)
+      );
+    }
+  }
   return {
     version: 1,
     prevHash,
-    height: args.state.height + 1,
+    height,
     slot: args.slot,
     timestamp: args.timestamp,
     txRoot: txMerkleRoot(args.txs),
     storageRoot: storageMerkleRoot(newStorages),
     producerProof: new Uint8Array(0),
+    utxoRoot: utxoTreeRoot(projectedTree),
   };
 }
 

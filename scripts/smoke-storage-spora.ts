@@ -77,7 +77,10 @@ console.log(`    numChunks: ${built.commit.numChunks}, dataRoot: ${bytesToHex(bu
 
 console.log("• fund a Treasury → Alice transfer that carries the commitment");
 const treasury = stealthGen();
-const treasuryValue = 10_000n;
+// 256 KB upload at default 3× replication needs requiredEndowment ≈ 8024
+// base units; with the 90% fee-to-treasury split, fee ≥ 8916. Set the
+// treasury input + fee well above that floor.
+const treasuryValue = 100_000n;
 const treasuryBlinding = randomScalar();
 const treasuryCommit = G.multiply(treasuryBlinding).add(H.multiply(treasuryValue));
 const alice = Wallet.generate();
@@ -118,7 +121,7 @@ for (let i = 0; i < N; i++) {
 }
 
 console.log("• submit storage tx (treasury → garbage + commit)");
-const aliceFee = 100n;
+const aliceFee = 10_000n;
 const aliceValue = treasuryValue - aliceFee;
 const storageTx = signTransaction(
   [{

@@ -142,15 +142,23 @@ console.log("• transaction round-trip with stealth + ring");
     chunkSize: 1024,
   });
 
+  // The chain now enforces an endowment-floor fee for uploads: 90% of the
+  // tx fee must cover requiredEndowment(sizeBytes, replication). For a
+  // 1 KB upload at 3× replication that's ~32 base units, so we set the
+  // fee + input above the floor with headroom.
   const fundOwner2 = stealthGen();
   const fundOutput2 = stealthSendTo(fundOwner2);
   const x_input2 = stealthSpendKey(fundOutput2, fundOwner2);
-  const v2 = 50n;
+  const v2 = 2_000n;
   const r2 = randomScalar();
   const c2 = pedersenCommit(v2, r2).C;
   const ring2 = { P: [fundOutput2.oneTimeAddr], C: [c2] };
   const stoOut = stealthSendTo(stealthGen());
 
+  // requiredEndowment(8192 B, repl=3) ≈ 251 base units; with the 90% fee→
+  // treasury split, fee must be ≥ ceil(251 · 10000 / 9000) = 280. Pick
+  // 500 for headroom.
+  const uploadFee = 500n;
   const signed2 = signTransaction(
     [
       {
@@ -164,11 +172,11 @@ console.log("• transaction round-trip with stealth + ring");
     [
       {
         oneTimeAddr: stoOut.oneTimeAddr,
-        value: 49n,
+        value: v2 - uploadFee,
         storage: storageCommit,
       },
     ],
-    1n
+    uploadFee
   );
   ok("tx with storage commitment verifies", verifyTransaction(signed2.tx).ok);
 
