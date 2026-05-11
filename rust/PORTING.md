@@ -23,7 +23,7 @@ test vectors).
 | `clsag.ts`                 | `clsag.rs`                      | [x] live    |
 | `range.ts`                 | `range.rs`                      | [x] live    |
 | `bulletproofs.ts`          | `bulletproofs.rs`               | [ ] pending |
-| `oom.ts`                   | `oom.rs`                        | [ ] pending |
+| `oom.ts`                   | `oom.rs`                        | [x] live    |
 | `vrf.ts`                   | `vrf.rs`                        | [x] live    |
 | `decoy.ts`                 | `decoy.rs`                      | [ ] pending |
 

@@ -24,6 +24,7 @@
 //! - [`clsag`] — Concise LSAG (the production ring sig, Monero's RingCTv3).
 //! - [`vrf`] — Verifiable Random Function (RFC 9381 ECVRF over ed25519).
 //! - [`range`] — O(N) bit-decomposition range proofs (Maxwell / pre-Bulletproofs).
+//! - [`oom`] — Groth–Kohlweiss one-out-of-many ZK (log-size ring proof, Triptych-grade).
 //!
 //! ## Safety contract
 //!
@@ -43,6 +44,7 @@ pub mod domain;
 pub mod encrypted_amount;
 pub mod hash;
 pub mod lsag;
+pub mod oom;
 pub mod pedersen;
 pub mod point;
 pub mod range;
@@ -59,6 +61,9 @@ pub use domain::Domain;
 pub use encrypted_amount::{decrypt_output_amount, encrypt_output_amount, ENC_AMOUNT_BYTES};
 pub use hash::{dhash, dhash64, hash_to_point, hash_to_scalar};
 pub use lsag::{lsag_linked, lsag_sign, lsag_verify, LsagSignature};
+pub use oom::{
+    decode_oom_proof, encode_oom_proof, oom_proof_size, oom_prove, oom_verify, OomProof,
+};
 pub use pedersen::{
     pedersen_balance, pedersen_commit, pedersen_sum, pedersen_verify, PedersenCommitment,
 };
