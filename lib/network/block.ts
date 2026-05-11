@@ -481,33 +481,16 @@ export function applyBlock(
     }
   }
 
-  /* ---- Coinbase verification (deferred until feeSum is known) ---- */
-  if (requireCoinbase) {
-    if (coinbaseTx === null) {
-      errors.push("coinbase required (producer has payoutAddress) but absent");
-    } else {
-      const subsidy = emissionAtHeight(
-        block.header.height,
-        state.emissionParams ?? DEFAULT_EMISSION_PARAMS
-      );
-      const expectedReward = subsidy + feeSum;
-      const cv = verifyCoinbase(
-        coinbaseTx,
-        block.header.height,
-        expectedReward,
-        producer!.payoutAddress!
-      );
-      if (!cv.ok) {
-        errors.push(`coinbase invalid: ${cv.errors.join("; ")}`);
-      }
-    }
-  } else if (coinbaseTx !== null) {
-    // The chain didn't expect a coinbase but the producer included one.
-    // Reject to keep the protocol's economic invariants explicit.
-    errors.push(
-      "unexpected coinbase: producer has no payoutAddress; cannot accept block subsidy"
-    );
-  }
+  /* ---- Coinbase deferred until after storage proofs are counted ---- *
+   *  The total expected coinbase amount is:                              *
+   *      subsidy            ← height-dependent emission                  *
+   *    + Σ fees             ← collected from all non-coinbase txs        *
+   *    + Σ storageRewards   ← one per accepted storage proof             *
+   *                                                                       *
+   *  We can't compute it yet because the storage proof loop comes        *
+   *  next. The actual verifyCoinbase call happens below, after the       *
+   *  proof loop counts how many proofs were accepted. The intervening    *
+   *  variable holds onto the coinbase-related state we need.             */
 
   /* ---- Validate slashing evidence ---- *
    *  Each piece of evidence proves a single validator double-signed at  *
@@ -541,8 +524,14 @@ export function applyBlock(
     next.validators = nextValidators;
   }
 
-  /* ---- Validate storage proofs (per-block SPoRA audit) ---- */
+  /* ---- Validate storage proofs (per-block SPoRA audit) ---- *
+   *  We also count valid proofs so the coinbase verifier (below) knows  *
+   *  exactly how much permanence subsidy the producer is owed. A proof  *
+   *  that fails validation contributes ZERO to the producer's reward —  *
+   *  no way for a producer to inflate their coinbase by submitting       *
+   *  garbage proofs.                                                      */
   const seenProofs = new Set<string>();
+  let acceptedStorageProofs = 0;
   for (let pi = 0; pi < block.storageProofs.length; pi++) {
     const proof = block.storageProofs[pi];
     const cHashHex = bytesToHex(proof.commitHash);
@@ -570,6 +559,36 @@ export function applyBlock(
       commit: entry.commit,
       lastProvenAt: block.header.height,
     });
+    acceptedStorageProofs++;
+  }
+
+  /* ---- Coinbase verification (now that fees AND storage proofs are    *
+   *  fully accounted for). expectedReward = subsidy + Σ fees + Σ proofs. */
+  const emissionParams = state.emissionParams ?? DEFAULT_EMISSION_PARAMS;
+  const storageRewardTotal =
+    emissionParams.storageProofReward * BigInt(acceptedStorageProofs);
+
+  if (requireCoinbase) {
+    if (coinbaseTx === null) {
+      errors.push("coinbase required (producer has payoutAddress) but absent");
+    } else {
+      const subsidy = emissionAtHeight(block.header.height, emissionParams);
+      const expectedReward = subsidy + feeSum + storageRewardTotal;
+      const cv = verifyCoinbase(
+        coinbaseTx,
+        block.header.height,
+        expectedReward,
+        producer!.payoutAddress!
+      );
+      if (!cv.ok) {
+        errors.push(`coinbase invalid: ${cv.errors.join("; ")}`);
+      }
+    }
+  } else if (coinbaseTx !== null) {
+    // The chain didn't expect a coinbase but the producer included one.
+    errors.push(
+      "unexpected coinbase: producer has no payoutAddress; cannot accept block subsidy"
+    );
   }
 
   /* ---- Storage root must match what the txs anchored ---- */
@@ -674,18 +693,22 @@ export function buildBlock(args: BuildBlockArgs): Block {
   const slot = args.slot ?? args.state.height + 1;
   const height = args.state.height + 1;
 
-  // Prepend the coinbase if a producer payout address is provided.
-  // The coinbase pays emission(height) + Σ tx fees and matches the
-  // applyBlock-side expectation byte-for-byte (verifyCoinbase rechecks).
+  // Prepend the coinbase if a producer payout address is provided. The
+  // coinbase pays emission(height) + Σ fees + Σ permanence subsidy and
+  // matches the applyBlock-side expectation byte-for-byte (verifyCoinbase
+  // rechecks). The "permanence subsidy" rewards the producer for each
+  // storage proof they're including in this block — the carrot side of
+  // the data-permanence incentive structure.
   let txs = args.txs;
   if (args.producerPayout) {
-    const subsidy = emissionAtHeight(
-      height,
-      args.state.emissionParams ?? DEFAULT_EMISSION_PARAMS
-    );
+    const emissionParams = args.state.emissionParams ?? DEFAULT_EMISSION_PARAMS;
+    const subsidy = emissionAtHeight(height, emissionParams);
     let feeSum = 0n;
     for (const tx of args.txs) feeSum += tx.fee;
-    const cb = buildCoinbase(height, subsidy + feeSum, args.producerPayout);
+    const storageRewardTotal =
+      emissionParams.storageProofReward * BigInt((args.storageProofs ?? []).length);
+    const total = subsidy + feeSum + storageRewardTotal;
+    const cb = buildCoinbase(height, total, args.producerPayout);
     txs = [cb, ...args.txs];
   }
 

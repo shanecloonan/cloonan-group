@@ -158,6 +158,7 @@ function shouldThrow(p: EmissionParams, why: string): void {
 }
 shouldThrow({ ...P, tailEmission: 0n }, "tail = 0 (no perpetual security funding)");
 shouldThrow({ ...P, initialReward: -1n }, "negative initialReward");
+shouldThrow({ ...P, storageProofReward: -1n }, "negative storageProofReward");
 shouldThrow({ ...P, halvingPeriod: 0 }, "halvingPeriod = 0");
 shouldThrow({ ...P, halvingCount: -1 }, "negative halvingCount");
 shouldThrow({ ...P, halvingCount: 100 }, "halvingCount > 64");

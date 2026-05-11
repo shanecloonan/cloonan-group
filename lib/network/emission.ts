@@ -77,6 +77,18 @@ export interface EmissionParams {
   /** Permanent per-block emission after halvings end. Must be > 0 to  *
    *  guarantee perpetual security funding.                             */
   tailEmission: bigint;
+  /** Per-storage-proof minted reward, paid INTO the block coinbase on  *
+   *  top of the regular subsidy + fees. This is the "permanence        *
+   *  subsidy" — what motivates validators to actually do the slot-     *
+   *  audit work that proves stored data is still being held. Without   *
+   *  this, storage providers earn nothing for their work and the       *
+   *  permanence guarantee is a paper promise.                          *
+   *                                                                     *
+   *  Default: 0.1 MFN per proof = 10_000_000 base units. With a busy   *
+   *  network (say 10 storage proofs per block) this adds 1 MFN/block   *
+   *  ≈ 2% additional inflation over the era-0 subsidy — a meaningful  *
+   *  incentive without dominating block production rewards.            */
+  storageProofReward: bigint;
 }
 
 /** One MFN = 10^8 base units, matching Bitcoin's satoshi denomination. *
@@ -97,6 +109,7 @@ export const DEFAULT_EMISSION_PARAMS: EmissionParams = {
   halvingPeriod: 8_000_000,
   halvingCount: 8,
   tailEmission: (50n * MFN_BASE) >> 8n, //  ≈ 0.195 MFN/block
+  storageProofReward: MFN_BASE / 10n, //  0.1 MFN per accepted storage proof
 };
 
 /* ------------------------------------------------------------------ */
@@ -111,6 +124,9 @@ export function validateEmissionParams(p: EmissionParams): void {
   if (p.initialReward < 0n) throw new Error("emission: initialReward must be >= 0");
   if (p.tailEmission <= 0n) {
     throw new Error("emission: tailEmission must be > 0 (permanent funding required)");
+  }
+  if (p.storageProofReward < 0n) {
+    throw new Error("emission: storageProofReward must be >= 0");
   }
   if (p.halvingPeriod <= 0) throw new Error("emission: halvingPeriod must be > 0");
   if (p.halvingCount < 0) throw new Error("emission: halvingCount must be >= 0");
