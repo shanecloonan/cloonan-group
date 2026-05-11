@@ -17,10 +17,10 @@ test vectors).
 | `primitives.ts` (Pedersen) | `pedersen.rs`                   | [x] live    |
 | `primitives.ts` (stealth)  | `stealth.rs`                    | [x] live    |
 | `primitives.ts` (enc amt)  | `encrypted_amount.rs`           | [x] live    |
-| `primitives.ts` (LSAG)     | `lsag.rs`                       | [ ] pending |
+| `primitives.ts` (LSAG)     | `lsag.rs`                       | [x] live    |
 | `codec.ts` (Writer/Reader) | `codec.rs`                      | [x] live    |
 | `codec.ts` (DOMAIN tags)   | `domain.rs`                     | [x] live    |
-| `clsag.ts`                 | `clsag.rs`                      | [ ] pending |
+| `clsag.ts`                 | `clsag.rs`                      | [x] live    |
 | `range.ts`                 | `range.rs`                      | [ ] pending |
 | `bulletproofs.ts`          | `bulletproofs.rs`               | [ ] pending |
 | `oom.ts`                   | `oom.rs`                        | [ ] pending |

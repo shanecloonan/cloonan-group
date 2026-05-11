@@ -20,6 +20,8 @@
 //! - [`pedersen`] — Pedersen commitments (RingCT-style hiding+binding).
 //! - [`stealth`] — CryptoNote dual-key stealth addresses (basic + indexed).
 //! - [`encrypted_amount`] — RingCT-style encrypted (value, blinding) blobs.
+//! - [`lsag`] — Linkable Spontaneous Anonymous Group ring signatures.
+//! - [`clsag`] — Concise LSAG (the production ring sig, Monero's RingCTv3).
 //!
 //! ## Safety contract
 //!
@@ -33,20 +35,26 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
+pub mod clsag;
 pub mod codec;
 pub mod domain;
 pub mod encrypted_amount;
 pub mod hash;
+pub mod lsag;
 pub mod pedersen;
 pub mod point;
 pub mod scalar;
 pub mod schnorr;
 pub mod stealth;
 
+pub use clsag::{
+    clsag_linked, clsag_sign, clsag_verify, decode_clsag, encode_clsag, ClsagRing, ClsagSignature,
+};
 pub use codec::{Reader, Writer};
 pub use domain::Domain;
 pub use encrypted_amount::{decrypt_output_amount, encrypt_output_amount, ENC_AMOUNT_BYTES};
 pub use hash::{dhash, dhash64, hash_to_point, hash_to_scalar};
+pub use lsag::{lsag_linked, lsag_sign, lsag_verify, LsagSignature};
 pub use pedersen::{
     pedersen_balance, pedersen_commit, pedersen_sum, pedersen_verify, PedersenCommitment,
 };
