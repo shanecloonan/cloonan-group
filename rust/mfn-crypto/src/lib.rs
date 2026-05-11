@@ -25,6 +25,7 @@
 //! - [`vrf`] — Verifiable Random Function (RFC 9381 ECVRF over ed25519).
 //! - [`range`] — O(N) bit-decomposition range proofs (Maxwell / pre-Bulletproofs).
 //! - [`oom`] — Groth–Kohlweiss one-out-of-many ZK (log-size ring proof, Triptych-grade).
+//! - [`decoy`] — Gamma-distributed decoy selection (Monero v0.13 heuristic resistance).
 //!
 //! ## Safety contract
 //!
@@ -40,6 +41,7 @@
 
 pub mod clsag;
 pub mod codec;
+pub mod decoy;
 pub mod domain;
 pub mod encrypted_amount;
 pub mod hash;
@@ -57,6 +59,10 @@ pub use clsag::{
     clsag_linked, clsag_sign, clsag_verify, decode_clsag, encode_clsag, ClsagRing, ClsagSignature,
 };
 pub use codec::{Reader, Writer};
+pub use decoy::{
+    crypto_random, gamma_age_stats, sample_gamma, sample_normal, seeded_rng, select_gamma_decoys,
+    DecoyCandidate, GammaAgeStats, GammaDecoyParams, DEFAULT_GAMMA_PARAMS,
+};
 pub use domain::Domain;
 pub use encrypted_amount::{decrypt_output_amount, encrypt_output_amount, ENC_AMOUNT_BYTES};
 pub use hash::{dhash, dhash64, hash_to_point, hash_to_scalar};
