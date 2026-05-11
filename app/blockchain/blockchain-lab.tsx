@@ -131,7 +131,7 @@ const card =
 
 type Accent =
   | "cyan" | "amber" | "violet" | "emerald" | "rose" | "sky" | "fuchsia" | "lime"
-  | "teal" | "indigo" | "yellow" | "orange" | "red";
+  | "teal" | "indigo" | "yellow" | "orange" | "red" | "slate";
 
 const ACCENT: Record<Accent, { text: string; ring: string; bg: string; soft: string; chip: string; glow: string }> = {
   cyan:    { text: "text-cyan-300",    ring: "border-cyan-400/30",    bg: "bg-cyan-500/10",    soft: "from-cyan-500/[0.06] to-transparent",    chip: "bg-cyan-500/15 text-cyan-200 border-cyan-400/30",    glow: "shadow-cyan-500/10" },
@@ -147,6 +147,7 @@ const ACCENT: Record<Accent, { text: string; ring: string; bg: string; soft: str
   yellow:  { text: "text-yellow-300",  ring: "border-yellow-400/30",  bg: "bg-yellow-500/10",  soft: "from-yellow-500/[0.06] to-transparent",  chip: "bg-yellow-500/15 text-yellow-200 border-yellow-400/30", glow: "shadow-yellow-500/10" },
   orange:  { text: "text-orange-300",  ring: "border-orange-400/30",  bg: "bg-orange-500/10",  soft: "from-orange-500/[0.06] to-transparent",  chip: "bg-orange-500/15 text-orange-200 border-orange-400/30", glow: "shadow-orange-500/10" },
   red:     { text: "text-red-300",     ring: "border-red-400/30",     bg: "bg-red-500/10",     soft: "from-red-500/[0.06] to-transparent",     chip: "bg-red-500/15 text-red-200 border-red-400/30",     glow: "shadow-red-500/10" },
+  slate:   { text: "text-slate-200",   ring: "border-slate-400/30",   bg: "bg-slate-500/10",   soft: "from-slate-500/[0.06] to-transparent", chip: "bg-slate-500/15 text-slate-200 border-slate-400/30", glow: "shadow-slate-500/10" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -2748,6 +2749,548 @@ function ConsensusPanel() {
 }
 
 /* ================================================================== */
+/*  PANEL · DOCS                                                        */
+/*                                                                       */
+/*  High-level overview of the MoneyFund architecture, what's already   */
+/*  built, and what's planned. Includes a one-click download of the     */
+/*  full design doc as a Markdown file (rendered by any GitHub-style    */
+/*  viewer, easy to fork into a real whitepaper).                       */
+/* ================================================================== */
+
+type DocLayer = {
+  name: string;
+  desc: string;
+  items: string[];
+  accent: Accent;
+};
+
+const IMPLEMENTED_LAYERS: DocLayer[] = [
+  {
+    name: "Application",
+    desc: "Wallets, CLI, RPC clients — the user-facing surface.",
+    accent: "cyan",
+    items: [
+      "Wallet (stealth keys, chain scanner, balance, persistence)",
+      "Wallet.buildSpend — real CLSAG+BP txs with gamma-distributed decoys",
+      "Wallet.buildUpload — anchor data with the consensus-enforced endowment fee",
+      "JSON-RPC server + typed client (info, getBlock, getTx, submitTx, getDecoyPool)",
+      "CLI binaries: mfbn-node (daemon), mfbn-wallet (client)",
+    ],
+  },
+  {
+    name: "Node + Mempool",
+    desc: "Slot driver, in-process gossip, bounded mempool, SQLite-backed chain store.",
+    accent: "violet",
+    items: [
+      "ConsensusNode (slot-begin → propose → vote → seal)",
+      "InProcessGossipBus (synchronous in-memory message bus for multi-node sim)",
+      "Mempool (bounded validated tx pool with replay rejection)",
+      "ChainStore (SQLite-persisted block log; state rebuilds deterministically on restore)",
+    ],
+  },
+  {
+    name: "Consensus",
+    desc: "Slot-based proof-of-stake with VRF leader election + BLS aggregate finality.",
+    accent: "red",
+    items: [
+      "ECVRF leader election (stake-weighted lottery per slot)",
+      "BLS12-381 aggregate signatures (one 96-byte sig commits ≥ ⅔ stake)",
+      "Slashable equivocation evidence (validators caught double-signing have stake → 0)",
+      "Deterministic FinalityProof bundle in every block header",
+    ],
+  },
+  {
+    name: "Privacy",
+    desc: "Monero-parity confidentiality, with a forward upgrade path to log-size proofs.",
+    accent: "emerald",
+    items: [
+      "RingCT-style transactions (Σ pseudo_in − Σ C_out − fee·H = 0)",
+      "CLSAG ring signatures with linkable key images (double-spend protection)",
+      "Stealth addresses (Monero CryptoNote, indexed for multi-output txs)",
+      "Encrypted output amounts (RingCT mask: stealth shared-secret-derived blob)",
+      "Bulletproofs range proofs (O(log N), 64-bit range)",
+      "Gamma-distributed decoy selection (age-weighted, anti-clustering)",
+    ],
+  },
+  {
+    name: "UTXO Accumulator",
+    desc: "Zcash-style incremental Merkle tree — the substrate for log-size ring sigs.",
+    accent: "indigo",
+    items: [
+      "Fixed depth = 32 (≈ 4.29 × 10⁹ output capacity)",
+      "Append-only with O(D) inserts and O(D) membership proofs",
+      "Domain-separated leaf hash binds (oneTimeAddr, amountCommit, anchorHeight)",
+      "Header field utxoRoot is consensus-checked on every block",
+      "Light clients verify membership with a 32-byte root + 32 × 32-byte siblings",
+    ],
+  },
+  {
+    name: "Permanence (SPoRA)",
+    desc: "Content-addressed Merkle storage with random-access chunk audits.",
+    accent: "sky",
+    items: [
+      "Storage commitments (dataRoot, sizeBytes, chunkSize, numChunks, replication, endowment)",
+      "Per-slot StorageChallenge derived from (prevHash, slot, commitHash)",
+      "StorageProof = (chunkBytes, Merkle path) — verified against the on-chain dataRoot",
+      "On-chain registry tracks lastProvenAt for every anchored commitment",
+      "Upload-tx enforcement: tx.fee × 90% ≥ requiredEndowment(size, replication)",
+    ],
+  },
+  {
+    name: "Tokenomics",
+    desc: "Two-sided fee market: privacy pays for permanence; emission backstops both.",
+    accent: "amber",
+    items: [
+      "Emission schedule: 50 → 25 → 12.5 … → tail ≈ 0.195 MFN/block (8 halvings)",
+      "Endowment math: E₀ = C₀ · (1+i) / (r−i), with 30 ppb fixed-point precision",
+      "Coinbase tx (synthetic, deterministic ephemeral key, single output)",
+      "Fee split: 90 % → permanence treasury, 10 % → producer tip (basis-point param)",
+      "Storage rewards drain treasury first; emission mints the shortfall as backstop",
+      "treasury balance is on-chain state, exposed via RPC info()",
+    ],
+  },
+  {
+    name: "Crypto Primitives",
+    desc: "Everything above sits on a few audited building blocks.",
+    accent: "teal",
+    items: [
+      "ed25519 (via @noble/curves) — Pedersen base + Schnorr + CLSAG + stealth",
+      "BLS12-381 (via @noble/curves) — aggregate sigs + KZG polynomial commitments",
+      "SHA-512 (via @noble/hashes) — backbone of dhash(domain, ...)",
+      "KZG polynomial commitments (trusted-setup-free Verkle path)",
+      "Domain-separated hashing (MFBN-1 codec, ≈ 30 DOMAIN constants)",
+      "Bulletproofs inner-product argument (the range-proof engine)",
+    ],
+  },
+];
+
+const PLANNED_TIERS: { tier: string; title: string; accent: Accent; items: { name: string; why: string }[] }[] = [
+  {
+    tier: "Tier 2b",
+    title: "Log-size ring signatures (privacy moonshot)",
+    accent: "fuchsia",
+    items: [
+      {
+        name: "Triptych / Spats / Lelantus log-size CLSAG successor",
+        why: "Ring size 256 → 1024 with ~5 KB proofs. Anonymity set = the entire UTXO accumulator. ≈ 64× larger than Monero's 16-member ring; uniform across the whole chain history.",
+      },
+      {
+        name: "Seraphis-style forward-secret stealth addresses",
+        why: "View-tags for fast wallet scan; rotation under HD-wallet derivation; defense against key-exposure backwards-deanonymization.",
+      },
+      {
+        name: "Dandelion++ gossip + Tor relay support",
+        why: "Closes the network-level anonymity gap that ring sigs alone don't cover — a spender's tx broadcast no longer leaks their IP / first-relay identity.",
+      },
+    ],
+  },
+  {
+    tier: "Tier 3a",
+    title: "Recursive proof aggregation",
+    accent: "rose",
+    items: [
+      {
+        name: "Nova-style folding scheme over BLS12-381",
+        why: "Fold every spend in a block into a single recursive instance. Verifier complexity is O(1) regardless of how many txs the block carries.",
+      },
+      {
+        name: "Halo2 / IPA universal SNARK (no trusted setup)",
+        why: "Compile the spend circuit (CLSAG / Triptych) into a transparent SNARK. ~200-byte proofs verifiable in milliseconds; pure hash-based assumptions.",
+      },
+    ],
+  },
+  {
+    tier: "Tier 3b",
+    title: "zk-STARK storage proofs (permanence moonshot)",
+    accent: "lime",
+    items: [
+      {
+        name: "FRI-based STARK proof of full-data possession",
+        why: "Replace per-chunk Merkle audits with a single STARK proving \"I hold every chunk of root R.\" Hash-based, post-quantum, no trusted setup; verifier cost O(polylog N).",
+      },
+      {
+        name: "Proof-of-Replication seals",
+        why: "Bind each replica to a specific prover identity + time-lock seal so the chain can prove N independent copies physically exist, not one party serving N audits.",
+      },
+      {
+        name: "Erasure-coded sharding (Reed-Solomon / RaptorQ)",
+        why: "Store N data shards + K parity shards. Network tolerates ≥ N − 1 prover failures before any data is lost — fundamentally stronger than naive replication.",
+      },
+      {
+        name: "PIR-style anonymous retrieval",
+        why: "Reading a stored object reveals nothing about WHICH object was read. Closes the read-side metadata leak that even Arweave doesn't address.",
+      },
+    ],
+  },
+  {
+    tier: "Tier 4",
+    title: "Full zk-rollup of the privacy layer",
+    accent: "yellow",
+    items: [
+      {
+        name: "Recursive block-validity proof",
+        why: "L1 stores only the accumulator root + a constant-size SNARK proving every tx in the block was valid. Light clients verify a block with a single pairing.",
+      },
+      {
+        name: "Storage-provider staking + slashing registry",
+        why: "Provers stake MFN to register; failing audits or serving wrong data → slashed. Aligns the permanence layer with the chain's security budget instead of relying on altruism.",
+      },
+      {
+        name: "Endowment-proportional proof rewards",
+        why: "Per-proof payout scales with the commitment's endowment (yield-per-slot from the whitepaper formula). Big-data uploads earn provers proportionally more — kills the current uniform-reward perverse incentive.",
+      },
+      {
+        name: "Verkle tree UTXO accumulator (KZG-vector form)",
+        why: "Replace the 32-deep binary Merkle with a KZG-vector-commit Verkle tree at depth ≈ log_256 N. Stateless block validation; ~95 % smaller membership proofs.",
+      },
+    ],
+  },
+];
+
+function ArchDiagram() {
+  const layers = IMPLEMENTED_LAYERS.map((l) => ({ name: l.name, accent: l.accent }));
+  return (
+    <svg
+      viewBox="0 0 760 480"
+      className="w-full h-auto"
+      role="img"
+      aria-label="MoneyFund architecture stack"
+    >
+      <defs>
+        <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#94a3b8" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#94a3b8" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <rect width="760" height="480" fill="#0b0c12" rx="14" />
+      {/* Subtle grid */}
+      {Array.from({ length: 11 }).map((_, i) => (
+        <line
+          key={`v${i}`}
+          x1={70 + i * 62}
+          y1={20}
+          x2={70 + i * 62}
+          y2={460}
+          stroke="#ffffff"
+          strokeOpacity="0.03"
+        />
+      ))}
+      {/* Title row */}
+      <text x={50} y={36} fill="#94a3b8" fontFamily="ui-sans-serif" fontSize="11" fontWeight="700" letterSpacing="3">
+        MONEYFUND NETWORK · LAYERED ARCHITECTURE
+      </text>
+      <text x={50} y={56} fill="#475569" fontFamily="ui-sans-serif" fontSize="10" letterSpacing="2">
+        privacy ▸ permanence ▸ consensus — every layer built on top of audited @noble curves
+      </text>
+      {/* Layer stack */}
+      {layers.map((l, i) => {
+        const y = 80 + i * 48;
+        const tier = ACCENT[l.accent];
+        const fillByAccent: Record<Accent, string> = {
+          cyan: "#67e8f9", amber: "#fcd34d", violet: "#c4b5fd", emerald: "#6ee7b7",
+          rose: "#fda4af", sky: "#7dd3fc", fuchsia: "#f0abfc", lime: "#bef264",
+          teal: "#5eead4", indigo: "#a5b4fc", yellow: "#fde047", orange: "#fdba74",
+          red: "#fca5a5", slate: "#cbd5e1",
+        };
+        const c = fillByAccent[l.accent];
+        return (
+          <g key={l.name}>
+            <rect
+              x={50}
+              y={y}
+              width={660}
+              height={36}
+              rx={8}
+              fill={c}
+              fillOpacity={0.08}
+              stroke={c}
+              strokeOpacity={0.32}
+            />
+            <circle cx={70} cy={y + 18} r={4} fill={c} fillOpacity={0.85} />
+            <text x={86} y={y + 22} fill="#e2e8f0" fontFamily="ui-sans-serif" fontSize="13" fontWeight="700" letterSpacing="0.5">
+              {l.name}
+            </text>
+            <text x={86 + l.name.length * 8 + 10} y={y + 22} fill="#64748b" fontFamily="ui-sans-serif" fontSize="11">
+              {`L${layers.length - i}`}
+            </text>
+            <text x={690} y={y + 22} fill={c} fillOpacity={0.7} fontFamily="ui-monospace" fontSize="10" textAnchor="end" letterSpacing="2">
+              IMPL
+            </text>
+          </g>
+        );
+      })}
+      {/* Side bracket */}
+      <path d="M 30 80 L 38 80 L 38 460 L 30 460" fill="none" stroke="#475569" strokeOpacity="0.35" strokeWidth="1.5" />
+      <text x={20} y={272} fill="#64748b" fontFamily="ui-sans-serif" fontSize="10" letterSpacing="3" transform="rotate(-90 20 272)">
+        DETERMINISTIC STATE MACHINE
+      </text>
+    </svg>
+  );
+}
+
+function DocsPanel() {
+  const ACC: Accent = "slate";
+  const a = ACCENT[ACC];
+
+  const doc = useMemo(() => buildDocsMarkdown(), []);
+  const onDownload = useCallback(() => {
+    try {
+      const blob = new Blob([doc], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "moneyfund-architecture.md";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch {
+      // ignore — most browsers will accept the above
+    }
+  }, [doc]);
+
+  return (
+    <div className="space-y-6">
+      <SectionTitle
+        accent={ACC}
+        n="14"
+        title="Docs · Architecture & Roadmap"
+        sub="A high-level overview of MoneyFund's design, what's already built into the live primitives above, and what's coming next. Downloadable as a single Markdown document."
+      />
+
+      {/* Vision card */}
+      <div className={`${card} p-6 space-y-3`}>
+        <p className={`text-[10px] tracking-[0.2em] uppercase font-bold ${a.text}`}>
+          The Vision
+        </p>
+        <p className="text-[15px] leading-relaxed text-white/85">
+          MoneyFund is a single L1 that fuses{" "}
+          <span className="text-emerald-300 font-semibold">greater financial privacy than Monero</span> with{" "}
+          <span className="text-sky-300 font-semibold">greater data permanence than Arweave</span>.
+          The two properties aren't independent — they fund each other: privacy-tx fees flow into a permanence
+          treasury that pays storage provers, and storage uploaders pay into the same pool. The result is a
+          self-sustaining two-sided market where each side strengthens the other.
+        </p>
+        <p className="text-[13px] leading-relaxed text-white/55">
+          Below is the live state of the codebase plus the cutting-edge upgrades on the roadmap.
+          Everything in <span className={a.text}>Implemented</span> is real code you can exercise in the tabs
+          above; everything in <span className="text-fuchsia-300">Planned</span> is targeted for upcoming
+          commits.
+        </p>
+      </div>
+
+      {/* Architecture diagram */}
+      <div className={`${card} p-5 space-y-3`}>
+        <p className={`text-[10px] tracking-[0.2em] uppercase font-bold ${a.text}`}>
+          Layered architecture
+        </p>
+        <div className="rounded-xl border border-white/[0.06] bg-black/30 p-3 overflow-hidden">
+          <ArchDiagram />
+        </div>
+        <p className="text-[11px] text-white/40 leading-relaxed">
+          Each layer is a deterministic pure-function module that only reads the layer below.
+          State transitions (applyBlock) recompute every layer's invariants from scratch on every block, so
+          any node — even one starting from the genesis config alone — converges on the same chain state.
+        </p>
+      </div>
+
+      {/* Implemented */}
+      <div className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <p className="text-[12px] font-bold tracking-[0.2em] uppercase text-white/80">
+            Implemented · live in the codebase
+          </p>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-emerald-300/70 font-mono">
+            8 layers · ~50 modules
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {IMPLEMENTED_LAYERS.map((l) => {
+            const al = ACCENT[l.accent];
+            return (
+              <div
+                key={l.name}
+                className={`rounded-xl border ${al.ring} bg-gradient-to-b ${al.soft} p-4 space-y-2`}
+              >
+                <p className={`text-[11px] font-bold tracking-[0.2em] uppercase ${al.text}`}>
+                  {l.name}
+                </p>
+                <p className="text-[12px] text-white/55 leading-relaxed">{l.desc}</p>
+                <ul className="space-y-1 pt-1">
+                  {l.items.map((it) => (
+                    <li
+                      key={it}
+                      className="text-[12px] text-white/75 leading-relaxed flex gap-2"
+                    >
+                      <span className={`${al.text} shrink-0`}>›</span>
+                      <span>{it}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Planned */}
+      <div className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <p className="text-[12px] font-bold tracking-[0.2em] uppercase text-white/80">
+            Planned · roadmap
+          </p>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-fuchsia-300/70 font-mono">
+            4 tiers · cutting-edge crypto
+          </p>
+        </div>
+        <div className="space-y-4">
+          {PLANNED_TIERS.map((t) => {
+            const at = ACCENT[t.accent];
+            return (
+              <div
+                key={t.tier}
+                className={`rounded-xl border ${at.ring} bg-gradient-to-r ${at.soft} p-4 space-y-3`}
+              >
+                <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                  <div className="flex items-baseline gap-3">
+                    <span className={`text-[10px] font-mono tabular-nums tracking-[0.2em] ${at.text}`}>
+                      {t.tier}
+                    </span>
+                    <h3 className="text-base font-bold text-white tracking-tight">{t.title}</h3>
+                  </div>
+                  <span
+                    className={`text-[9px] tracking-[0.2em] uppercase font-bold px-2 py-0.5 rounded ${at.chip} border`}
+                  >
+                    planned
+                  </span>
+                </div>
+                <ul className="space-y-2">
+                  {t.items.map((it) => (
+                    <li
+                      key={it.name}
+                      className="rounded-lg border border-white/[0.05] bg-black/20 p-3 space-y-1"
+                    >
+                      <p className={`text-[12px] font-bold ${at.text}`}>{it.name}</p>
+                      <p className="text-[11.5px] text-white/65 leading-relaxed">{it.why}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Download */}
+      <div className={`${card} p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4`}>
+        <div className="space-y-1">
+          <p className={`text-[10px] tracking-[0.2em] uppercase font-bold ${a.text}`}>
+            Take the doc with you
+          </p>
+          <p className="text-[13px] text-white/70 leading-relaxed">
+            One Markdown file with the full overview, every implemented layer, and every planned upgrade.
+            Render it in any Markdown viewer — or use it as the seed of a real whitepaper.
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <PrimaryButton onClick={onDownload} accent={ACC}>
+            ⤓ Download .md
+          </PrimaryButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function buildDocsMarkdown(): string {
+  const lines: string[] = [];
+  lines.push("# MoneyFund Network — Architecture & Roadmap");
+  lines.push("");
+  lines.push(`_generated ${new Date().toISOString().slice(0, 10)} from the live codebase_`);
+  lines.push("");
+  lines.push("## Vision");
+  lines.push("");
+  lines.push(
+    "MoneyFund is a single L1 that fuses **greater financial privacy than Monero** with **greater data permanence than Arweave**. " +
+      "The two properties aren't independent — they fund each other: privacy-transaction fees flow into a permanence treasury " +
+      "that pays storage provers, and storage uploaders pay into the same pool via the protocol-enforced endowment formula. " +
+      "The result is a self-sustaining two-sided market where each side strengthens the other."
+  );
+  lines.push("");
+  lines.push("## High-level architecture");
+  lines.push("");
+  lines.push("```");
+  lines.push("┌───────────────────────────────────────────────────────┐");
+  lines.push("│  L8  Application      Wallets · CLI · RPC clients     │");
+  lines.push("│  L7  Node + Mempool   ConsensusNode · gossip · store  │");
+  lines.push("│  L6  Consensus        VRF leader + BLS finality       │");
+  lines.push("│  L5  Privacy          CLSAG · stealth · Bulletproofs  │");
+  lines.push("│  L4  UTXO Accumulator depth-32 Merkle, light-client   │");
+  lines.push("│  L3  Permanence       SPoRA Merkle audits + registry  │");
+  lines.push("│  L2  Tokenomics       emission · treasury · endowment │");
+  lines.push("│  L1  Crypto Primitives ed25519 · BLS12-381 · KZG · SHA│");
+  lines.push("└───────────────────────────────────────────────────────┘");
+  lines.push("```");
+  lines.push("");
+  lines.push("Each layer is a deterministic pure-function module that only reads the layer below. ");
+  lines.push("State transitions (`applyBlock`) recompute every layer's invariants from scratch on every block, ");
+  lines.push("so any node — even one starting from the genesis config alone — converges on the same chain state.");
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("## Implemented · live in the codebase");
+  lines.push("");
+  for (const l of IMPLEMENTED_LAYERS) {
+    lines.push(`### ${l.name}`);
+    lines.push("");
+    lines.push(`_${l.desc}_`);
+    lines.push("");
+    for (const it of l.items) lines.push(`- ${it}`);
+    lines.push("");
+  }
+  lines.push("---");
+  lines.push("");
+  lines.push("## Planned · roadmap");
+  lines.push("");
+  for (const t of PLANNED_TIERS) {
+    lines.push(`### ${t.tier} — ${t.title}`);
+    lines.push("");
+    for (const it of t.items) {
+      lines.push(`- **${it.name}**`);
+      lines.push(`  - ${it.why}`);
+    }
+    lines.push("");
+  }
+  lines.push("---");
+  lines.push("");
+  lines.push("## Economic model in one paragraph");
+  lines.push("");
+  lines.push(
+    "Block emission follows a Monero-style schedule (50 → 25 → 12.5 → … → tail ≈ 0.195 MFN/block over 8 halvings) " +
+      "and funds block-producer security. Every regular transaction's fee splits 90/10: 90% flows into the on-chain " +
+      "permanence treasury, 10% to the producer as a priority tip. Uploads must pay a consensus-enforced minimum fee " +
+      "such that their treasury share covers `requiredEndowment(sizeBytes, replication) = C₀·(1+i)/(r−i)`. Storage " +
+      "providers earn rewards per accepted SPoRA proof; rewards drain the treasury first, with emission minting any " +
+      "shortfall as a transitional backstop. As privacy demand grows, the treasury becomes self-sustaining and the " +
+      "backstop fades to zero — without ever leaving providers unpaid."
+  );
+  lines.push("");
+  lines.push("## Privacy model in one paragraph");
+  lines.push("");
+  lines.push(
+    "Every spend is a RingCT-style transaction: inputs reference previous outputs through a CLSAG ring (with gamma-" +
+      "distributed decoys), each input carries a Pedersen pseudo-output, each new output is a Monero-style stealth " +
+      "address with a Bulletproofs-protected hidden amount. Encrypted-amount blobs let only the recipient open their " +
+      "share. Spent outputs are tracked by their key images (Σ key-images-seen across the chain is the only spent-set " +
+      "the verifier needs). The full UTXO history is committed into a depth-32 incremental Merkle accumulator whose " +
+      "root sits in every block header, providing the cryptographic substrate for log-size ring signatures (Tier 2b) " +
+      "and zk-rollup composition (Tier 4)."
+  );
+  lines.push("");
+  return lines.join("\n");
+}
+
+/* ================================================================== */
 /*  TAB SHELL                                                           */
 /* ================================================================== */
 
@@ -2765,6 +3308,7 @@ const TABS: { id: string; label: string; accent: Accent; component: React.FC }[]
   { id: "bls", label: "BLS", accent: "yellow", component: BlsPanel },
   { id: "kzg", label: "KZG", accent: "orange", component: KzgPanel },
   { id: "consensus", label: "Consensus", accent: "red", component: ConsensusPanel },
+  { id: "docs", label: "Docs", accent: "slate", component: DocsPanel },
 ];
 
 export default function BlockchainLab() {
