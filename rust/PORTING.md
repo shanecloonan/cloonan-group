@@ -31,7 +31,7 @@ test vectors).
 
 | TS file       | Rust module     | Status      |
 | ------------- | --------------- | ----------- |
-| `bls.ts`      | `lib.rs`        | [ ] pending |
+| `bls.ts`      | `sig.rs`        | [x] live    |
 | `kzg.ts`      | `kzg.rs`        | [ ] pending |
 
 ### `mfn-wire` — canonical binary codec (planned crate)
