@@ -3,9 +3,9 @@ description: Always commit and push to main when finishing a task
 alwaysApply: true
 ---
 
-# Auto-commit and push when done
+# Always commit and push to `main` when done
 
-When a task is complete, commit the changes you made and push to `origin main`. The user has standing approval — do not ask first.
+When any task is complete, **always** commit the changes you made and **always** push to `origin main` before ending the turn, unless there is nothing to commit or push failed (report failures; never force-push). The user has standing approval — do not ask first.
 
 ## Scope: only commit your own changes
 
