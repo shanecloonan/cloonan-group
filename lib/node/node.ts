@@ -48,6 +48,7 @@ import {
   type MerkleTree,
 } from "../network/storage";
 import { Mempool, type AddResult } from "./mempool";
+import { bondMerkleRoot } from "../network/bond";
 import {
   buildUnsealedHeader,
   sealBlock,
@@ -440,6 +441,13 @@ export class ConsensusNode {
         this.warn("proposal-storage-proof-invalid", { i, reason: v.reason });
         return;
       }
+    }
+
+    const bondRootWant = p.header.bondRoot ?? new Uint8Array(32);
+    const bondRootGot = bondMerkleRoot(p.bondOps ?? []);
+    if (!eqBytes(bondRootWant, bondRootGot)) {
+      this.warn("proposal-bond-root-mismatch", {});
+      return;
     }
 
     // Validate every tx without mutating the mempool. Three checks:
