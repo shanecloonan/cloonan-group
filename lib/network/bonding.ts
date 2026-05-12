@@ -3,12 +3,21 @@
  *  `permawrite/mfn-consensus/src/bonding.rs`.                          *
  * ================================================================== */
 
+import { Reader, Writer } from "./codec";
+
 export interface BondingParams {
   minValidatorStake: bigint;
   unbondDelayHeights: number;
   maxEntryChurnPerEpoch: number;
   maxExitChurnPerEpoch: number;
   slotsPerEpoch: number;
+}
+
+export class BondingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BondingError";
+  }
 }
 
 export const DEFAULT_BONDING_PARAMS: BondingParams = {
@@ -19,11 +28,37 @@ export const DEFAULT_BONDING_PARAMS: BondingParams = {
   slotsPerEpoch: 7200,
 };
 
-export class BondingError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "BondingError";
+/** Fixed layout: `u64` min stake + four `u32` fields (big-endian). */
+export function encodeBondingParams(p: BondingParams): Uint8Array {
+  const w = new Writer();
+  w.u64(p.minValidatorStake);
+  w.u32(p.unbondDelayHeights);
+  w.u32(p.maxEntryChurnPerEpoch);
+  w.u32(p.maxExitChurnPerEpoch);
+  w.u32(p.slotsPerEpoch);
+  return w.bytes();
+}
+
+export function decodeBondingParams(bytes: Uint8Array): BondingParams {
+  const r = new Reader(bytes);
+  const minValidatorStake = r.u64();
+  const unbondDelayHeights = r.u32();
+  const maxEntryChurnPerEpoch = r.u32();
+  const maxExitChurnPerEpoch = r.u32();
+  const slotsPerEpoch = r.u32();
+  if (!r.end()) {
+    throw new BondingError("decodeBondingParams: trailing bytes");
   }
+  if (slotsPerEpoch <= 0) {
+    throw new BondingError("slots_per_epoch must be > 0");
+  }
+  return {
+    minValidatorStake,
+    unbondDelayHeights,
+    maxEntryChurnPerEpoch,
+    maxExitChurnPerEpoch,
+    slotsPerEpoch,
+  };
 }
 
 /** `epoch_id` for a block height (genesis height `0` ⇒ epoch `0`). */

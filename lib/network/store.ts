@@ -63,6 +63,10 @@ import {
 import { txId, type TransactionWire } from "./transaction";
 import { bytesToHex, hexToBytes } from "./codec";
 import { storageCommitmentHash } from "./storage";
+import {
+  decodeBondingParams,
+  encodeBondingParams,
+} from "./bonding";
 
 /* ------------------------------------------------------------------ */
 /*  STORE                                                              */
@@ -289,6 +293,9 @@ export class ChainStore {
     if (cfg.producerProof) {
       this.setMeta("genesis_producer_proof", cfg.producerProof);
     }
+    if (cfg.bondingParams !== undefined) {
+      this.setMeta("bonding_params", encodeBondingParams(cfg.bondingParams));
+    }
 
     // Mark a sentinel so hasGenesis() works.
     this.setMeta("genesis_block_id", new Uint8Array([1]));
@@ -301,6 +308,10 @@ export class ChainStore {
     const initialStorage = decodeStorageList(this.requireMeta("initial_storage"));
     const timestamp = decodeNumber(this.requireMeta("genesis_timestamp"));
     const producerProof = this.tryGetMeta("genesis_producer_proof") ?? undefined;
+    const bondingParamsBlob = this.tryGetMeta("bonding_params");
+    const bondingParams = bondingParamsBlob
+      ? decodeBondingParams(bondingParamsBlob)
+      : undefined;
 
     return {
       timestamp,
@@ -308,6 +319,7 @@ export class ChainStore {
       initialStorage,
       validators,
       params,
+      bondingParams,
       producerProof,
     };
   }

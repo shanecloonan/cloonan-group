@@ -23,7 +23,11 @@ import {
   bondMerkleRoot,
   type BondOp,
 } from "../lib/network/bond";
-import { DEFAULT_BONDING_PARAMS } from "../lib/network/bonding";
+import {
+  DEFAULT_BONDING_PARAMS,
+  decodeBondingParams,
+  encodeBondingParams,
+} from "../lib/network/bonding";
 import { encodeBlock, decodeBlock } from "../lib/network/wire";
 import { ChainStore } from "../lib/network/store";
 
@@ -40,6 +44,15 @@ function ok(label: string, cond: boolean, extra?: unknown): void {
     process.exit(1);
   }
 }
+
+console.log("• bonding params encode/decode round-trip");
+const encBp = encodeBondingParams(DEFAULT_BONDING_PARAMS);
+const decBp = decodeBondingParams(encBp);
+ok(
+  "bonding params round-trip",
+  decBp.minValidatorStake === DEFAULT_BONDING_PARAMS.minValidatorStake &&
+    decBp.maxEntryChurnPerEpoch === DEFAULT_BONDING_PARAMS.maxEntryChurnPerEpoch
+);
 
 console.log("• bond op encode/decode round-trip");
 const bls = blsKeygen();
@@ -108,6 +121,50 @@ ok("stake matches", r.state.validators[0].stake === op.stake);
 ok("bond epoch entry count", r.state.bondEpochEntryCount === 1);
 ok("next validator index", r.state.nextValidatorIndex === 1);
 
+console.log("• applyBlock rejects second bond when entry churn cap is 1");
+const tightCfg = {
+  ...cfg,
+  bondingParams: {
+    ...DEFAULT_BONDING_PARAMS,
+    maxEntryChurnPerEpoch: 1,
+  },
+};
+const genesisT = buildGenesis(tightCfg);
+const stateT = applyGenesis(genesisT, tightCfg);
+const blsB = blsKeygen();
+const opB: BondOp = {
+  kind: "register",
+  stake: DEFAULT_BONDING_PARAMS.minValidatorStake,
+  vrfPk: G.multiply(3n),
+  blsPk: blsB.pk,
+};
+const bondOpsTwo = [op, opB];
+const unsealedT = buildUnsealedHeader({
+  state: stateT,
+  txs: [],
+  bondOps: bondOpsTwo,
+  slot: 1,
+  timestamp: 100,
+});
+const blockChurn = sealBlock(
+  unsealedT,
+  [],
+  new Uint8Array(0),
+  [],
+  [],
+  bondOpsTwo
+);
+const churnR = applyBlock(stateT, blockChurn);
+ok("churn block rejected", !churnR.ok);
+ok(
+  "bond_ops[1] entry churn error",
+  churnR.errors.some(
+    (e) =>
+      e.includes("bond_ops[1]") &&
+      e.includes("max_entry_churn_per_epoch")
+  )
+);
+
 console.log("• ChainStore replay preserves bond-applied validator");
 const tmpD = mkdtempSync(join(tmpdir(), "mfbn-bond-store-"));
 const dbPath = join(tmpD, "chain.db");
@@ -127,6 +184,38 @@ try {
   st2.close();
 } finally {
   rmSync(tmpD, { recursive: true, force: true });
+}
+
+console.log("• ChainStore restores custom bondingParams from meta");
+const tmpB = mkdtempSync(join(tmpdir(), "mfbn-bond-params-"));
+const dbB = join(tmpB, "chain.db");
+try {
+  const customBp = {
+    ...DEFAULT_BONDING_PARAMS,
+    maxEntryChurnPerEpoch: 2,
+    minValidatorStake: 2_000_000n,
+  };
+  const cfgBp = { ...cfg, bondingParams: customBp };
+  const stB = ChainStore.open(dbB);
+  stB.initialize(cfgBp);
+  ok(
+    "live state has custom min stake",
+    stB.currentState().bondingParams.minValidatorStake === 2_000_000n
+  );
+  stB.close();
+  const stB2 = ChainStore.open(dbB);
+  const restoredBp = stB2.initializeOrRestore(cfg);
+  ok(
+    "restore bondingParams.minValidatorStake",
+    restoredBp.bondingParams.minValidatorStake === 2_000_000n
+  );
+  ok(
+    "restore maxEntryChurnPerEpoch",
+    restoredBp.bondingParams.maxEntryChurnPerEpoch === 2
+  );
+  stB2.close();
+} finally {
+  rmSync(tmpB, { recursive: true, force: true });
 }
 
 console.log("\nALL CHECKS PASSED.\n");

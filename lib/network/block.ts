@@ -17,6 +17,10 @@
  *  implementation — that's the consensus layer above. What's here is   *
  *  sufficient for a deterministic state machine that any honest node   *
  *  can re-execute and arrive at the same answer.                       *
+ *                                                                      *
+ *  Bond ops: header `bondRoot` and Merkle rules match `mfn-consensus`; *
+ *  this layer applies bond state after storage proofs (no liveness     *
+ *  bitmap yet), whereas Rust `apply_block` applies them after liveness.*
  * ================================================================== */
 
 import {
@@ -392,6 +396,8 @@ export interface GenesisConfig {
   validators?: Validator[];
   /** Consensus parameters; default if omitted. */
   params?: ConsensusParams;
+  /** Override bonding / churn limits; default if omitted. */
+  bondingParams?: BondingParams;
   producerProof?: Uint8Array;
 }
 
@@ -445,7 +451,7 @@ export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
   const vs = state.validators;
   state.nextValidatorIndex =
     vs.length === 0 ? 0 : Math.max(...vs.map((v) => v.index)) + 1;
-  state.bondingParams = DEFAULT_BONDING_PARAMS;
+  state.bondingParams = cfg.bondingParams ?? DEFAULT_BONDING_PARAMS;
   state.bondEpochId = 0n;
   state.bondEpochEntryCount = 0;
   return state;
