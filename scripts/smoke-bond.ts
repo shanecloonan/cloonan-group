@@ -26,6 +26,9 @@ import {
 import {
   encodeProposal,
   decodeProposal,
+  encodeGossip,
+  decodeGossip,
+  MsgKind,
   type ProposalMsg,
 } from "../lib/node/messages";
 import {
@@ -267,6 +270,7 @@ console.log("• ProposalMsg encode/decode round-trip with bond ops");
 const producerStake = 5_000_000n;
 const zeroRoot = new Uint8Array(32);
 let proposalRoundTripOk = false;
+let proposalForGossip: ProposalMsg | undefined;
 for (let att = 0; att < 30_000 && !proposalRoundTripOk; att++) {
   const vrfSeed = new Uint8Array(32);
   new DataView(vrfSeed.buffer).setUint32(0, att >>> 0, false);
@@ -338,8 +342,35 @@ for (let att = 0; att < 30_000 && !proposalRoundTripOk; att++) {
     "proposal wire idempotent",
     pbytes.length === pbytes2.length && pbytes.every((b, i) => b === pbytes2[i])
   );
+  proposalForGossip = proposal;
   proposalRoundTripOk = true;
 }
 ok("proposal bond wire round-trip (VRF lottery)", proposalRoundTripOk);
+if (!proposalForGossip) {
+  throw new Error("invariant: proposal missing after successful VRF search");
+}
+
+console.log("• gossip Proposal envelope round-trip");
+const gossipMsg = { kind: MsgKind.Proposal, data: proposalForGossip } as const;
+const gbytes = encodeGossip(gossipMsg);
+const decG = decodeGossip(gbytes);
+ok("gossip decodes to Proposal", decG.kind === MsgKind.Proposal);
+ok(
+  "gossip round-trip preserves bond op count",
+  decG.kind === MsgKind.Proposal && (decG.data.bondOps ?? []).length === 1
+);
+const gbytes2 = encodeGossip(decG);
+ok(
+  "gossip wire idempotent",
+  gbytes.length === gbytes2.length && gbytes.every((b, i) => b === gbytes2[i])
+);
+
+console.log("• proposal bond root mismatch is detectable (node ingest rule)");
+const wantRoot = proposalForGossip.header.bondRoot ?? zeroRoot;
+const stripped: ProposalMsg = { ...proposalForGossip, bondOps: [] };
+ok(
+  "header bondRoot does not match empty bond ops list",
+  !eqBytes(wantRoot, bondMerkleRoot(stripped.bondOps ?? []))
+);
 
 console.log("\nALL CHECKS PASSED.\n");
