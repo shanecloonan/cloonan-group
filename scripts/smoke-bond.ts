@@ -21,6 +21,7 @@ import {
   encodeBondOp,
   decodeBondOp,
   bondMerkleRoot,
+  bondOpLeafHash,
   type BondOp,
 } from "../lib/network/bond";
 import {
@@ -35,6 +36,14 @@ function eqBytes(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
   return true;
+}
+
+function hexBytes(u: Uint8Array): string {
+  return Buffer.from(u).toString("hex");
+}
+
+function hexEq(u: Uint8Array, hex: string): boolean {
+  return hexBytes(u) === hex;
 }
 
 function ok(label: string, cond: boolean, extra?: unknown): void {
@@ -52,6 +61,31 @@ ok(
   "bonding params round-trip",
   decBp.minValidatorStake === DEFAULT_BONDING_PARAMS.minValidatorStake &&
     decBp.maxEntryChurnPerEpoch === DEFAULT_BONDING_PARAMS.maxEntryChurnPerEpoch
+);
+
+/** Pinned wire + leaf hash for a fixed `BondOp` (BLS key from 48-byte seed 1..48, vrf 7·G). */
+const GOLDEN_BOND_OP_ENC_HEX =
+  "0000000000000f4240b862409fb5c4c4123df2abf7462b88f041ad36dd6864ce872fd5472be363c5b1aab6e7afc31b3d67eef05ff38bfb40d5e608f352b3c0341ec019653505d7c1f13dd1e60640bb00d0735daa5cbd3b902600";
+const GOLDEN_BOND_OP_LEAF_HEX =
+  "51164109143ca1e9db57a1738443c078389c6492e5ea14ed8ecf0aea83d1962b";
+
+console.log("• deterministic bond op wire + leaf (parity anchor)");
+const goldenSeed = new Uint8Array(48);
+for (let i = 0; i < 48; i++) goldenSeed[i] = i + 1;
+const goldenBls = blsKeygen(goldenSeed);
+const goldenOp: BondOp = {
+  kind: "register",
+  stake: DEFAULT_BONDING_PARAMS.minValidatorStake,
+  vrfPk: G.multiply(7n),
+  blsPk: goldenBls.pk,
+};
+ok(
+  "encode matches golden hex (regress if wire/domain changes)",
+  hexEq(encodeBondOp(goldenOp), GOLDEN_BOND_OP_ENC_HEX)
+);
+ok(
+  "bondOpLeafHash matches golden hex",
+  hexEq(bondOpLeafHash(goldenOp), GOLDEN_BOND_OP_LEAF_HEX)
 );
 
 console.log("• bond op encode/decode round-trip");

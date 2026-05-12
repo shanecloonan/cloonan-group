@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "smoke:bond": "npx tsx scripts/smoke-bond.ts",
+    "smoke:store": "npx tsx scripts/smoke-store.ts",
+    "smoke:block-consensus": "npx tsx scripts/smoke-block-consensus.ts",
     "db:migrate": "node scripts/apply-supabase-migration.mjs",
     "db:migrate:all": "node scripts/apply-all-migrations.mjs",
     "codebase-stats": "node scripts/codebase-stats.mjs"

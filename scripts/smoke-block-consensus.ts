@@ -26,6 +26,8 @@ import {
   applyBlock,
   blockHeaderBytes,
   headerSigningHash,
+  type ChainState,
+  type BlockHeader,
 } from "../lib/network/block";
 
 function ok(label: string, cond: boolean, extra?: unknown): void {
@@ -36,56 +38,74 @@ function ok(label: string, cond: boolean, extra?: unknown): void {
   }
 }
 
-console.log("• build a 6-validator chain");
+console.log("• build a 6-validator chain (retry keys until VRF lottery yields a producer)");
 const N = 6;
 const stakes = [200n, 150n, 150n, 100n, 100n, 100n];
 const totalStake = stakes.reduce((a, b) => a + b, 0n);
 
-const secrets: ValidatorSecrets[] = [];
-const validators: Validator[] = [];
-for (let i = 0; i < N; i++) {
-  const vrf = vrfKeygen();
-  const bls = blsKeygen();
-  secrets.push({ index: i, vrf, bls });
-  validators.push({ index: i, vrfPk: vrf.pk, blsPk: bls.pk, stake: stakes[i] });
-}
-
-console.log("• genesis with validator set");
-const genesisCfg = {
-  timestamp: 1700000000,
-  initialOutputs: [],
-  initialStorage: [],
-  validators,
-};
-const genesis = buildGenesis(genesisCfg);
-const state0 = applyGenesis(genesis, genesisCfg);
-ok("genesis applied with validators", state0.validators.length === N);
-
-console.log("• produce + finalize block 1");
 const slot = 0;
 const timestamp = 1700001000;
 
-// Build the unsealed header so we know what every committee member is signing.
-const unsealed = buildUnsealedHeader({ state: state0, txs: [], slot, timestamp });
-const headerHash = headerSigningHash(unsealed);
+let secrets: ValidatorSecrets[] = [];
+let validators: Validator[] = [];
+let state0!: ChainState;
+let unsealed!: BlockHeader;
+let headerHash!: Uint8Array;
+let ctx!: { height: number; slot: number; prevHash: Uint8Array };
+let candidates: NonNullable<ReturnType<typeof tryProduceSlot>>[] = [];
 
-// Find a producer.
-const ctx = { height: unsealed.height, slot, prevHash: unsealed.prevHash };
-const candidates = [];
-for (let i = 0; i < N; i++) {
-  const c = tryProduceSlot(
-    ctx,
-    secrets[i],
-    validators[i],
-    totalStake,
-    state0.params.expectedProposersPerSlot,
-    headerHash
-  );
-  if (c) candidates.push(c);
+const MAX_VRF_TRIES = 50_000;
+let attempt = 0;
+for (; attempt < MAX_VRF_TRIES; attempt++) {
+  secrets = [];
+  validators = [];
+  for (let i = 0; i < N; i++) {
+    const vrfSeed = new Uint8Array(32);
+    new DataView(vrfSeed.buffer).setUint32(0, attempt >>> 0, false);
+    vrfSeed[4] = i & 0xff;
+    const blsSeed = new Uint8Array(48);
+    new DataView(blsSeed.buffer).setUint32(0, attempt >>> 0, false);
+    blsSeed[4] = i & 0xff;
+    const vrf = vrfKeygen(vrfSeed);
+    const bls = blsKeygen(blsSeed);
+    secrets.push({ index: i, vrf, bls });
+    validators.push({ index: i, vrfPk: vrf.pk, blsPk: bls.pk, stake: stakes[i] });
+  }
+
+  const genesisCfg = {
+    timestamp: 1700000000,
+    initialOutputs: [],
+    initialStorage: [],
+    validators,
+  };
+  const genesis = buildGenesis(genesisCfg);
+  state0 = applyGenesis(genesis, genesisCfg);
+  unsealed = buildUnsealedHeader({ state: state0, txs: [], slot, timestamp });
+  headerHash = headerSigningHash(unsealed);
+  ctx = { height: unsealed.height, slot, prevHash: unsealed.prevHash };
+
+  candidates = [];
+  for (let i = 0; i < N; i++) {
+    const c = tryProduceSlot(
+      ctx,
+      secrets[i],
+      validators[i],
+      totalStake,
+      state0.params.expectedProposersPerSlot,
+      headerHash
+    );
+    if (c) candidates.push(c);
+  }
+  if (candidates.length >= 1) break;
 }
-ok(`at least one producer candidate (${candidates.length})`, candidates.length >= 1);
+ok(
+  `at least one producer candidate after ${attempt} key tries (${candidates.length})`,
+  candidates.length >= 1
+);
+ok("genesis applied with validators", state0.validators.length === N);
 
 const winner = pickWinner(candidates)!;
+console.log("• produce + finalize block 1");
 console.log(`    winner: validator ${winner.validatorIndex}`);
 
 // Committee votes.
