@@ -6,11 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint lib/network lib/node scripts/smoke-bond.ts scripts/smoke-block-consensus.ts scripts/smoke-store.ts --max-warnings 0",
+    "lint": "eslint lib/network lib/node scripts/smoke-bond.ts scripts/smoke-block-consensus.ts scripts/smoke-store.ts scripts/smoke-validator-wire.ts --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "smoke:bond": "npx tsx scripts/smoke-bond.ts",
     "smoke:store": "npx tsx scripts/smoke-store.ts",
     "smoke:block-consensus": "npx tsx scripts/smoke-block-consensus.ts",
+    "smoke:validator-wire": "npx tsx scripts/smoke-validator-wire.ts",
     "db:migrate": "node scripts/apply-supabase-migration.mjs",
     "db:migrate:all": "node scripts/apply-all-migrations.mjs",
     "codebase-stats": "node scripts/codebase-stats.mjs"

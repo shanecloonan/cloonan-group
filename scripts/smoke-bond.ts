@@ -9,6 +9,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 
 import { G } from "../lib/network/primitives";
 import { blsKeygen } from "../lib/network/bls";
+import { vrfKeygen } from "../lib/network/vrf";
+import {
+  tryProduceSlot,
+  type ValidatorSecrets,
+} from "../lib/network/consensus";
 import {
   buildGenesis,
   applyGenesis,
@@ -16,7 +21,13 @@ import {
   sealBlock,
   applyBlock,
   blockId,
+  headerSigningHash,
 } from "../lib/network/block";
+import {
+  encodeProposal,
+  decodeProposal,
+  type ProposalMsg,
+} from "../lib/node/messages";
 import {
   encodeBondOp,
   decodeBondOp,
@@ -251,5 +262,84 @@ try {
 } finally {
   rmSync(tmpB, { recursive: true, force: true });
 }
+
+console.log("• ProposalMsg encode/decode round-trip with bond ops");
+const producerStake = 5_000_000n;
+const zeroRoot = new Uint8Array(32);
+let proposalRoundTripOk = false;
+for (let att = 0; att < 30_000 && !proposalRoundTripOk; att++) {
+  const vrfSeed = new Uint8Array(32);
+  new DataView(vrfSeed.buffer).setUint32(0, att >>> 0, false);
+  vrfSeed[4] = 0xab;
+  const blsSeed = new Uint8Array(48);
+  new DataView(blsSeed.buffer).setUint32(0, att >>> 0, false);
+  blsSeed[4] = 0xcd;
+  const vrf = vrfKeygen(vrfSeed);
+  const bls = blsKeygen(blsSeed);
+  const validators = [
+    { index: 0, vrfPk: vrf.pk, blsPk: bls.pk, stake: producerStake },
+  ];
+  const gcfg = {
+    timestamp: 3,
+    initialOutputs: [] as { oneTimeAddr: typeof G; amount: typeof G }[],
+    initialStorage: [],
+    validators,
+  };
+  const s0p = applyGenesis(buildGenesis(gcfg), gcfg);
+  const blsReg = blsKeygen();
+  const bondOpReg: BondOp = {
+    kind: "register",
+    stake: DEFAULT_BONDING_PARAMS.minValidatorStake,
+    vrfPk: G.multiply(11n),
+    blsPk: blsReg.pk,
+  };
+  const bondOpsP: BondOp[] = [bondOpReg];
+  const unsP = buildUnsealedHeader({
+    state: s0p,
+    txs: [],
+    bondOps: bondOpsP,
+    slot: 1,
+    timestamp: 4,
+  });
+  const hh = headerSigningHash(unsP);
+  const ctx = { height: unsP.height, slot: unsP.slot, prevHash: unsP.prevHash };
+  const sec: ValidatorSecrets = { index: 0, vrf, bls };
+  const prod = tryProduceSlot(
+    ctx,
+    sec,
+    validators[0],
+    producerStake,
+    s0p.params.expectedProposersPerSlot,
+    hh
+  );
+  if (!prod) continue;
+
+  const proposal: ProposalMsg = {
+    header: unsP,
+    txs: [],
+    producer: prod,
+    storageProofs: [],
+    slashings: [],
+    bondOps: bondOpsP,
+  };
+  const pbytes = encodeProposal(proposal);
+  const decP = decodeProposal(pbytes);
+  ok("proposal decode bond ops length", (decP.bondOps ?? []).length === 1);
+  const br = decP.header.bondRoot ?? zeroRoot;
+  ok(
+    "proposal header bondRoot matches Merkle",
+    eqBytes(br, bondMerkleRoot(decP.bondOps ?? []))
+  );
+  const pbytes2 = encodeProposal({
+    ...decP,
+    bondOps: decP.bondOps ?? [],
+  });
+  ok(
+    "proposal wire idempotent",
+    pbytes.length === pbytes2.length && pbytes.every((b, i) => b === pbytes2[i])
+  );
+  proposalRoundTripOk = true;
+}
+ok("proposal bond wire round-trip (VRF lottery)", proposalRoundTripOk);
 
 console.log("\nALL CHECKS PASSED.\n");
