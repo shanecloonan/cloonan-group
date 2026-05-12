@@ -2,7 +2,7 @@
 
 Auto-generated snapshot of this repository (source and config-like text files under the repo root; `node_modules`, `.next`, build output, and common binary assets are excluded).
 
-**Generated (UTC):** 2026-05-12T04:01:22.823Z
+**Generated (UTC):** 2026-05-12T04:09:01.640Z
 
 **Regenerate:** `npm run codebase-stats`
 
@@ -10,11 +10,11 @@ Auto-generated snapshot of this repository (source and config-like text files un
 
 | Metric | Value |
 | --- | ---: |
-| Source-like files scanned | 162 |
-| Total lines (all scanned source-like files) | 51,536 |
-| Non-empty lines | 46,899 |
-| UTF-8 bytes (source-like) | 2,197,494 |
-| Paths visited (before binary/huge skip) | 177 |
+| Source-like files scanned | 163 |
+| Total lines (all scanned source-like files) | 51,574 |
+| Non-empty lines | 46,918 |
+| UTF-8 bytes (source-like) | 2,201,648 |
+| Paths visited (before binary/huge skip) | 178 |
 | Skipped (binary / non-UTF8 / over 4 MiB) | 1 |
 
 ## Lines of code by top-level directory
@@ -29,7 +29,8 @@ Directories are the first path segment (e.g. `app`, `lib`). Only source-like ext
 | `infra` | 9 | 913 | 733 |
 | `bin` | 2 | 582 | 516 |
 | `components` | 2 | 328 | 300 |
-| `(root)` | 7 | 159 | 131 |
+| `(root)` | 7 | 165 | 134 |
+| `docs` | 1 | 32 | 16 |
 | `.cursor` | 1 | 8 | 7 |
 
 ## Lines of code by file extension
@@ -39,7 +40,7 @@ Directories are the first path segment (e.g. `app`, `lib`). Only source-like ext
 | `.tsx` | 56 | 26,209 | 24,137 | 1,222,142 |
 | `.ts` | 87 | 23,666 | 21,380 | 922,042 |
 | `.mjs` | 5 | 582 | 509 | 17,816 |
-| `.md` | 3 | 395 | 282 | 13,253 |
+| `.md` | 4 | 433 | 301 | 17,407 |
 | `.sql` | 3 | 285 | 246 | 10,744 |
 | `.yml` | 1 | 141 | 127 | 4,762 |
 | `.sh` | 2 | 101 | 78 | 2,954 |

@@ -4,6 +4,12 @@ It contains the public-facing product / marketing site and the in-browser execut
 
 → **[github.com/shanecloonan/permawrite](https://github.com/shanecloonan/permawrite)** — Rust core (privacy primitives, ring signatures, ZK proofs, BLS aggregation, UTXO accumulator, eventually node daemon + wallet).
 
+## Why privacy and permanence belong in one network
+
+Durable publication and private economic activity are both prerequisites for open societies online; splitting them across disconnected stacks leaks value and security at the boundaries. This project’s view of that thesis—how permanence and financial privacy reinforce each other, and how unified economics can fund storage from usage—is written up here:
+
+**[docs/PRIVACY_AND_PERMANENCE.md](./docs/PRIVACY_AND_PERMANENCE.md)**
+
 ## Getting Started
 
 First, run the development server:
