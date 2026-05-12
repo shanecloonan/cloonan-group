@@ -1,11 +1,18 @@
 ---
-description: Always commit and push to main when finishing a task
+description: Push protocol work to permawrite; app-only work may push cloonan-group main
 alwaysApply: true
 ---
 
-# Always commit and push to `main` when done
+# Commit and push when done — **permawrite for protocol, cloonan-group only for this app**
 
-When any task is complete, **always** commit the changes you made and **always** push to `origin main` before ending the turn, unless there is nothing to commit or push failed (report failures; never force-push). The user has standing approval — do not ask first.
+When a task is complete, commit the changes you made. **Push target depends on what changed:**
+
+- **Permawrite (`mfn-*`, Rust consensus, bonding, blocks, anything that mirrors or belongs in `shanecloonan/permawrite`):** run `git` in the **permawrite** repo (e.g. `c:\Users\shane.cloonan\permawrite`), commit there, and **`git push origin main`** to **permawrite** only. **Do not** push that work to **cloonan-group** `origin main`.
+- **This Next.js app only** (UI, `app/`, site config, Supabase helpers, etc. that are not protocol crates): commit in **this** repo and **`git push origin main`** here as usual.
+
+If a turn touches **both**, split commits: protocol changes end on permawrite; app-only changes stay here. When unsure, ask once or default protocol to **permawrite**.
+
+Unless there is nothing to commit or push failed (report failures; never force-push). The user has standing approval to push to the **correct** remote — do not ask first for routine completion.
 
 ## Scope: only commit your own changes
 
@@ -35,7 +42,16 @@ If you ever need a multi-line commit message, use a PowerShell here-string and p
 
 ## Push
 
-```bash
+**Permawrite** (from that repo’s root):
+
+```powershell
+cd c:\Users\shane.cloonan\permawrite   # or your local clone path
+git push origin main
+```
+
+**This repo (cloonan-group)** — only for app/site changes, not protocol parity:
+
+```powershell
 git push origin main
 ```
 
