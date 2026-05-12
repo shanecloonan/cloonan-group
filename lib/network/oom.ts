@@ -97,9 +97,6 @@ function mod(a: bigint): bigint {
   return r < 0n ? r + L : r;
 }
 
-const ZERO = 0n;
-const ONE = 1n;
-
 /* ------------------------------------------------------------------ */
 /*  POLYNOMIAL ARITHMETIC (over Z/L)                                   */
 /* ------------------------------------------------------------------ */

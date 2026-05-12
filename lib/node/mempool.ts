@@ -25,7 +25,7 @@
  *    • Mempool reorgs (when chain re-orgs would mean restoring txs)   *
  * ================================================================== */
 
-import { txId, verifyTransaction, type TransactionWire } from "../network/transaction";
+import { verifyTransaction, type TransactionWire } from "../network/transaction";
 import { bytesToHex } from "../network/codec";
 import { encodeTransaction } from "../network/wire";
 import { type ChainState } from "../network/block";

@@ -17,6 +17,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm run smoke:bond
       - run: npm run smoke:store
       - run: npm run smoke:block-consensus

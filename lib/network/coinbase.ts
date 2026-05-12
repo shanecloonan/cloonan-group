@@ -50,14 +50,13 @@ import {
   G,
   H,
   L,
-  Point,
   hashToScalar,
   indexedStealthAddress,
   encryptOutputAmount,
   type CurvePoint,
 } from "./primitives";
 import { DOMAIN, Writer, bytesToHex } from "./codec";
-import { bpProve, bpVerify, type BulletproofRange } from "./bulletproofs";
+import { bpProve, bpVerify } from "./bulletproofs";
 import {
   TX_RANGE_BITS,
   type TransactionWire,

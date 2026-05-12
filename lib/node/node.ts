@@ -61,7 +61,6 @@ import {
   verifyProducerProof,
   finalize,
   encodeFinalityProof,
-  type Validator,
   type ValidatorSecrets,
   type SlotContext,
   type FinalityProof,
@@ -345,7 +344,8 @@ export class ConsensusNode {
   /*  GOSSIP HANDLING                                                  */
   /* ---------------------------------------------------------------- */
 
-  private onGossip(m: GossipMsg, _from?: string): void {
+  private onGossip(m: GossipMsg, fromNodeId?: string): void {
+    void fromNodeId;
     switch (m.kind) {
       case MsgKind.Proposal: this.ingestProposal(m.data); break;
       case MsgKind.Vote:     this.ingestVote(m.data);     break;

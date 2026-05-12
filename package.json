@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint lib/network lib/node scripts/smoke-bond.ts scripts/smoke-block-consensus.ts scripts/smoke-store.ts --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "smoke:bond": "npx tsx scripts/smoke-bond.ts",
     "smoke:store": "npx tsx scripts/smoke-store.ts",

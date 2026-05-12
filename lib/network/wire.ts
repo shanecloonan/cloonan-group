@@ -29,7 +29,6 @@ import {
 import {
   encodeBulletproof,
   decodeBulletproof,
-  type BulletproofRange,
 } from "./bulletproofs";
 import {
   type StorageCommitment,

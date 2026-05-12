@@ -92,7 +92,6 @@ import {
 import {
   decodeFinalityProof,
   verifyFinalityProof,
-  type FinalityProof,
   type Validator,
   type SlotContext,
 } from "./consensus";
