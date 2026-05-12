@@ -20,7 +20,6 @@
  * ================================================================== */
 
 import {
-  Point,
   type CurvePoint,
 } from "./primitives";
 import {
@@ -74,9 +73,18 @@ export interface StorageEntry {
 import {
   DOMAIN,
   Writer,
+  Reader,
   dhash,
   bytesToHex,
 } from "./codec";
+import { bondMerkleRoot, type BondOp } from "./bond";
+import {
+  epochIdForHeight,
+  validateStake,
+  tryRegisterEntryChurn,
+  DEFAULT_BONDING_PARAMS,
+  type BondingParams,
+} from "./bonding";
 import {
   decodeFinalityProof,
   verifyFinalityProof,
@@ -132,6 +140,8 @@ export interface BlockHeader {
   txRoot: Uint8Array;
   /** Merkle root of all storage commitments newly anchored in this block. */
   storageRoot: Uint8Array;
+  /** Merkle root of [`Block.bondOps`] (omit or zero when empty). */
+  bondRoot?: Uint8Array;
   /** MFBN-encoded FinalityProof: VRF eligibility + BLS aggregate finality.
    *  Genesis is the only block where this is allowed to be empty. */
   producerProof: Uint8Array;
@@ -157,12 +167,18 @@ export interface Block {
    *  validator referenced here has their stake reduced to 0 in the     *
    *  next state. Verified by applyBlock.                               */
   slashings: SlashEvidence[];
+  /** Validator bonding / rotation operations (M1). Verified against      *
+   *  `header.bondRoot` before mutating the validator set.                */
+  bondOps?: BondOp[];
 }
 
 /* ------------------------------------------------------------------ */
 /*  HASHING                                                            */
 /* ------------------------------------------------------------------ */
 
+/** Full header bytes for [`blockId`] — matches `mfn-consensus` `block_header_bytes`
+ *  (including `bondRoot` after `storageRoot`, length-prefixed `producerProof`,
+ *  then 32-byte `utxoRoot`). */
 export function blockHeaderBytes(h: BlockHeader): Uint8Array {
   const w = new Writer();
   w.varint(h.version);
@@ -172,8 +188,41 @@ export function blockHeaderBytes(h: BlockHeader): Uint8Array {
   w.u64(BigInt(h.timestamp));
   w.push(h.txRoot);
   w.push(h.storageRoot);
+  w.push(headerBondRootBytes(h));
   w.blob(h.producerProof);
+  w.push(h.utxoRoot ?? new Uint8Array(32));
   return w.bytes();
+}
+
+function headerBondRootBytes(h: BlockHeader): Uint8Array {
+  return h.bondRoot ?? new Uint8Array(32);
+}
+
+/** Decode a canonical block header (MFBN-1 layout with bond root + utxo root). */
+export function decodeBlockHeader(bytes: Uint8Array): BlockHeader {
+  const r = new Reader(bytes);
+  const version = Number(r.varint());
+  const prevHash = r.bytes(32);
+  const height = r.u32();
+  const slot = r.u32();
+  const timestamp = Number(r.u64());
+  const txRoot = r.bytes(32);
+  const storageRoot = r.bytes(32);
+  const bondRoot = r.bytes(32);
+  const producerProof = r.blob();
+  const utxoRoot = r.bytes(32);
+  return {
+    version,
+    prevHash,
+    height,
+    slot,
+    timestamp,
+    txRoot,
+    storageRoot,
+    bondRoot,
+    producerProof,
+    utxoRoot,
+  };
 }
 
 /** Hash of the header WITHOUT the producerProof. This is the message       *
@@ -188,6 +237,7 @@ export function headerSigningHash(h: BlockHeader): Uint8Array {
   w.u64(BigInt(h.timestamp));
   w.push(h.txRoot);
   w.push(h.storageRoot);
+  w.push(headerBondRootBytes(h));
   return dhash(DOMAIN.BLOCK_HEADER, w.bytes());
 }
 
@@ -296,6 +346,14 @@ export interface ChainState {
    *  appended in (tx-index, output-index) order. The coinbase (tx 0     *
    *  when present) comes first.                                            */
   utxoTree: UtxoTreeState;
+  /** Bonding / rotation parameters (M1). */
+  bondingParams: BondingParams;
+  /** Epoch id (`floor(height / slots_per_epoch)`) for `bondEpochEntryCount`. */
+  bondEpochId: bigint;
+  /** Validators registered via bond ops in the current epoch. */
+  bondEpochEntryCount: number;
+  /** Next validator `index` for a newly bonded validator. */
+  nextValidatorIndex: number;
 }
 
 export function emptyState(params: ConsensusParams = DEFAULT_CONSENSUS_PARAMS): ChainState {
@@ -309,6 +367,10 @@ export function emptyState(params: ConsensusParams = DEFAULT_CONSENSUS_PARAMS): 
     params,
     treasury: 0n,
     utxoTree: emptyUtxoTree(),
+    bondingParams: DEFAULT_BONDING_PARAMS,
+    bondEpochId: 0n,
+    bondEpochEntryCount: 0,
+    nextValidatorIndex: 0,
   };
 }
 
@@ -349,10 +411,11 @@ export function buildGenesis(cfg: GenesisConfig): Block {
     timestamp: cfg.timestamp,
     txRoot: new Uint8Array(32),
     storageRoot: storageMerkleRoot(cfg.initialStorage),
+    bondRoot: new Uint8Array(32),
     producerProof: cfg.producerProof ?? new Uint8Array(0),
     utxoRoot: utxoTreeRoot(tree),
   };
-  return { header, txs: [], storageProofs: [], slashings: [] };
+  return { header, txs: [], storageProofs: [], slashings: [], bondOps: [] };
 }
 
 export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
@@ -379,6 +442,12 @@ export function applyGenesis(genesis: Block, cfg: GenesisConfig): ChainState {
   state.height = 0;
   state.blockIds = [blockId(genesis.header)];
   state.validators = cfg.validators ?? [];
+  const vs = state.validators;
+  state.nextValidatorIndex =
+    vs.length === 0 ? 0 : Math.max(...vs.map((v) => v.index)) + 1;
+  state.bondingParams = DEFAULT_BONDING_PARAMS;
+  state.bondEpochId = 0n;
+  state.bondEpochEntryCount = 0;
   return state;
 }
 
@@ -393,6 +462,87 @@ export interface ApplyResult {
   state: ChainState;
   /** Hash of the block applied. */
   blockId: Uint8Array;
+}
+
+interface BondApplyDelta {
+  bondEpochId: bigint;
+  bondEpochEntryCount: number;
+  nextValidatorIndex: number;
+  newValidators: Validator[];
+}
+
+function simulateBondOps(
+  height: number,
+  bondEpochId: bigint,
+  bondEpochEntryCount: number,
+  nextValidatorIndex: number,
+  validators: readonly Validator[],
+  bondingParams: BondingParams,
+  ops: readonly BondOp[]
+):
+  | { ok: true; delta: BondApplyDelta }
+  | { ok: false; index: number; message: string } {
+  let bEpoch = bondEpochId;
+  let bec = bondEpochEntryCount;
+  let nvi = nextValidatorIndex;
+  let eid: bigint;
+  try {
+    eid = epochIdForHeight(height, bondingParams.slotsPerEpoch);
+  } catch (e) {
+    return { ok: false, index: 0, message: (e as Error).message };
+  }
+  if (eid !== bEpoch) {
+    bEpoch = eid;
+    bec = 0;
+  }
+  const seenVrf = new Set(validators.map((v) => v.vrfPk.toHex()));
+  const newValidators: Validator[] = [];
+  for (let i = 0; i < ops.length; i++) {
+    const op = ops[i]!;
+    if (op.kind !== "register") {
+      return { ok: false, index: i, message: "unknown bond op kind" };
+    }
+    try {
+      validateStake(op.stake, bondingParams);
+    } catch (e) {
+      return { ok: false, index: i, message: (e as Error).message };
+    }
+    const vrfH = op.vrfPk.toHex();
+    if (seenVrf.has(vrfH)) {
+      return { ok: false, index: i, message: "duplicate vrf_pk" };
+    }
+    seenVrf.add(vrfH);
+    try {
+      bec = tryRegisterEntryChurn(bec, bondingParams);
+    } catch (e) {
+      return { ok: false, index: i, message: (e as Error).message };
+    }
+    const idx = nvi;
+    nvi += 1;
+    newValidators.push({
+      index: idx,
+      vrfPk: op.vrfPk,
+      blsPk: op.blsPk,
+      stake: op.stake,
+      ...(op.payout
+        ? {
+            payoutAddress: {
+              viewPub: op.payout.viewPub,
+              spendPub: op.payout.spendPub,
+            },
+          }
+        : {}),
+    });
+  }
+  return {
+    ok: true,
+    delta: {
+      bondEpochId: bEpoch,
+      bondEpochEntryCount: bec,
+      nextValidatorIndex: nvi,
+      newValidators,
+    },
+  };
 }
 
 export function applyBlock(
@@ -426,6 +576,11 @@ export function applyBlock(
   const expectedTxRoot = txMerkleRoot(block.txs);
   if (!eqBytes(expectedTxRoot, block.header.txRoot)) {
     errors.push("txRoot mismatch");
+  }
+
+  const expectedBondRoot = bondMerkleRoot(block.bondOps ?? []);
+  if (!eqBytes(expectedBondRoot, headerBondRootBytes(block.header))) {
+    errors.push("bondRoot mismatch");
   }
 
   /* ---- Producer proof (VRF eligibility + BLS finality) ---- *
@@ -481,6 +636,10 @@ export function applyBlock(
     endowmentParams: state.endowmentParams,
     treasury: state.treasury,
     utxoTree: state.utxoTree,
+    bondingParams: state.bondingParams,
+    bondEpochId: state.bondEpochId,
+    bondEpochEntryCount: state.bondEpochEntryCount,
+    nextValidatorIndex: state.nextValidatorIndex,
   };
 
   // Storage anchors mentioned in the header must be supplied so we can
@@ -769,6 +928,30 @@ export function applyBlock(
     storageBonusTotal += accrual.payout;
   }
 
+  /* ---- Bond ops (M1): append validators; runs after storage proofs,   *
+   *      before fee / coinbase settlement (mirrors permawrite ordering   *
+   *      relative to economic checks).                                    */
+  const bondOps = block.bondOps ?? [];
+  const bondSim = simulateBondOps(
+    block.header.height,
+    next.bondEpochId,
+    next.bondEpochEntryCount,
+    next.nextValidatorIndex,
+    next.validators,
+    next.bondingParams,
+    bondOps
+  );
+  if (!bondSim.ok) {
+    errors.push(`bond_ops[${bondSim.index}]: ${bondSim.message}`);
+  } else {
+    next.bondEpochId = bondSim.delta.bondEpochId;
+    next.bondEpochEntryCount = bondSim.delta.bondEpochEntryCount;
+    next.nextValidatorIndex = bondSim.delta.nextValidatorIndex;
+    if (bondSim.delta.newValidators.length > 0) {
+      next.validators = [...next.validators, ...bondSim.delta.newValidators];
+    }
+  }
+
   /* ---- Two-sided economic settlement ----                              *
    *                                                                       *
    *  Now that we know Σ fees AND the number of accepted storage proofs,  *
@@ -899,6 +1082,8 @@ export interface BuildBlockArgs {
   storageProofs?: StorageProof[];
   /** Slashing evidence to include. */
   slashings?: SlashEvidence[];
+  /** Validator bond operations (M1). */
+  bondOps?: BondOp[];
   /** Producer payout address. When provided AND the state's validator    *
    *  set has consensus-mode active, buildBlock automatically prepends a  *
    *  coinbase tx paying emission + Σ fees to this address. When omitted, *
@@ -912,9 +1097,11 @@ export interface BuildBlockArgs {
 export function buildUnsealedHeader(args: {
   state: ChainState;
   txs: TransactionWire[];
+  bondOps?: BondOp[];
   slot: number;
   timestamp: number;
 }): BlockHeader {
+  const bondOps = args.bondOps ?? [];
   const newStorages: StorageCommitment[] = [];
   for (const tx of args.txs) {
     for (const out of tx.outputs) if (out.storage) newStorages.push(out.storage);
@@ -944,6 +1131,7 @@ export function buildUnsealedHeader(args: {
     timestamp: args.timestamp,
     txRoot: txMerkleRoot(args.txs),
     storageRoot: storageMerkleRoot(newStorages),
+    bondRoot: bondMerkleRoot(bondOps),
     producerProof: new Uint8Array(0),
     utxoRoot: utxoTreeRoot(projectedTree),
   };
@@ -955,13 +1143,15 @@ export function sealBlock(
   txs: TransactionWire[],
   producerProof: Uint8Array,
   storageProofs: StorageProof[] = [],
-  slashings: SlashEvidence[] = []
+  slashings: SlashEvidence[] = [],
+  bondOps: BondOp[] = []
 ): Block {
   return {
     header: { ...header, producerProof },
     txs,
     storageProofs,
     slashings,
+    bondOps,
   };
 }
 
@@ -1021,6 +1211,7 @@ export function buildBlock(args: BuildBlockArgs): Block {
   const header = buildUnsealedHeader({
     state: args.state,
     txs,
+    bondOps: args.bondOps,
     slot,
     timestamp: args.timestamp,
   });
@@ -1029,7 +1220,8 @@ export function buildBlock(args: BuildBlockArgs): Block {
     txs,
     args.producerProof ?? new Uint8Array(0),
     args.storageProofs ?? [],
-    args.slashings ?? []
+    args.slashings ?? [],
+    args.bondOps ?? []
   );
 }
 
@@ -1043,5 +1235,3 @@ function eqBytes(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
-void Point;
-void DOMAIN;

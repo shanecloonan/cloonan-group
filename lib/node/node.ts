@@ -317,7 +317,14 @@ export class ConsensusNode {
     // evidence the producer is about to bake into the block.
     const slashings = this.drainPendingEvidence();
 
-    const proposalMsg: ProposalMsg = { header: unsealed, txs, producer, storageProofs, slashings };
+    const proposalMsg: ProposalMsg = {
+      header: unsealed,
+      txs,
+      producer,
+      storageProofs,
+      slashings,
+      bondOps: [],
+    };
     this.info("propose", {
       slot,
       height: nextHeight,
@@ -325,6 +332,7 @@ export class ConsensusNode {
       txCount: txs.length,
       storageProofs: storageProofs.length,
       slashings: slashings.length,
+      bondOps: 0,
     });
 
     // Locally ingest the proposal first, then broadcast.
@@ -626,7 +634,8 @@ export class ConsensusNode {
       rec.msg.txs,
       encodeFinalityProof(finalityProof),
       rec.msg.storageProofs,
-      rec.msg.slashings
+      rec.msg.slashings,
+      rec.msg.bondOps ?? []
     );
     sl.sealed = true;
 

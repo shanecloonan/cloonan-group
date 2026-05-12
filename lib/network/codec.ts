@@ -238,6 +238,8 @@ export const DOMAIN = {
   UTXO_NODE:       "MFBN-1/utxo-node",
   UTXO_EMPTY:      "MFBN-1/utxo-empty",
   OOM_CHALLENGE:   "MFBN-1/oom-challenge",
+  /** Merkle leaf for a validator bond operation (M1 rotation). */
+  BOND_OP_LEAF:    "MFBN-1/bond-op-leaf",
 } as const;
 
 export type Domain = (typeof DOMAIN)[keyof typeof DOMAIN];

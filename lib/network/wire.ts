@@ -39,10 +39,13 @@ import {
   type TxInputWire,
   type TxOutputWire,
 } from "./transaction";
+import { encodeBondOp, decodeBondOp, type BondOp } from "./bond";
 import {
   type BlockHeader,
   type Block,
   type ConsensusParams,
+  blockHeaderBytes,
+  decodeBlockHeader,
 } from "./block";
 import {
   encodePublicKey,
@@ -186,49 +189,12 @@ export function decodeTransaction(bytes: Uint8Array): TransactionWire {
 /*  BLOCK HEADER                                                       */
 /* ------------------------------------------------------------------ */
 
+/** Canonical header bytes (includes bond root + utxo root). */
 export function encodeBlockHeader(h: BlockHeader): Uint8Array {
-  const w = new Writer();
-  w.varint(h.version);
-  w.push(h.prevHash);
-  w.u32(h.height);
-  w.u32(h.slot);
-  w.u64(BigInt(h.timestamp));
-  w.push(h.txRoot);
-  w.push(h.storageRoot);
-  w.blob(h.producerProof);
-  // Optional trailing field: utxoRoot (32 bytes). u8 flag indicates
-  // presence so legacy readers can tolerate absence.
-  if (h.utxoRoot) {
-    w.u8(1);
-    w.push(h.utxoRoot);
-  } else {
-    w.u8(0);
-  }
-  return w.bytes();
+  return blockHeaderBytes(h);
 }
 
-export function decodeBlockHeader(bytes: Uint8Array): BlockHeader {
-  const r = new Reader(bytes);
-  const version = Number(r.varint());
-  const prevHash = r.bytes(32);
-  const height = r.u32();
-  const slot = r.u32();
-  const timestamp = Number(r.u64());
-  const txRoot = r.bytes(32);
-  const storageRoot = r.bytes(32);
-  const producerProof = r.blob();
-  let utxoRoot: Uint8Array | undefined;
-  // Defensive decode: legacy headers (pre-accumulator) omit the trailing
-  // utxoRoot. If any bytes remain, read the presence flag + 32-byte root.
-  if (r.remaining() > 0) {
-    const flag = r.u8();
-    if (flag === 1) utxoRoot = r.bytes(32);
-  }
-  return {
-    version, prevHash, height, slot, timestamp,
-    txRoot, storageRoot, producerProof, utxoRoot,
-  };
-}
+export { decodeBlockHeader };
 
 /* ------------------------------------------------------------------ */
 /*  BLOCK                                                              */
@@ -243,6 +209,9 @@ export function encodeBlock(b: Block): Uint8Array {
   for (const p of b.storageProofs) w.blob(encodeStorageProof(p));
   w.varint(b.slashings.length);
   for (const s of b.slashings) w.blob(encodeEvidence(s));
+  const bondOps = b.bondOps ?? [];
+  w.varint(bondOps.length);
+  for (const op of bondOps) w.blob(encodeBondOp(op));
   return w.bytes();
 }
 
@@ -266,7 +235,13 @@ export function decodeBlock(bytes: Uint8Array): Block {
     slashings = new Array(nS);
     for (let i = 0; i < nS; i++) slashings[i] = decodeEvidence(r.blob());
   }
-  return { header, txs, storageProofs, slashings };
+  let bondOps: BondOp[] = [];
+  if (!r.end()) {
+    const nB = Number(r.varint());
+    bondOps = new Array(nB);
+    for (let i = 0; i < nB; i++) bondOps[i] = decodeBondOp(r.blob());
+  }
+  return { header, txs, storageProofs, slashings, bondOps };
 }
 
 /* ------------------------------------------------------------------ */

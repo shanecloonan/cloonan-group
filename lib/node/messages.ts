@@ -50,6 +50,7 @@ import {
 } from "../network/bls";
 import { type BlockHeader, type Block } from "../network/block";
 import { type TransactionWire } from "../network/transaction";
+import { type BondOp, encodeBondOp, decodeBondOp } from "../network/bond";
 
 /* ------------------------------------------------------------------ */
 /*  KIND TAGS                                                          */
@@ -79,6 +80,8 @@ export interface ProposalMsg {
   storageProofs: StorageProof[];
   /** Slashing evidence the producer is bundling into this block. */
   slashings: SlashEvidence[];
+  /** Bond operations (M1). Optional for legacy encodings. */
+  bondOps?: BondOp[];
 }
 
 export function encodeProposal(p: ProposalMsg): Uint8Array {
@@ -91,6 +94,9 @@ export function encodeProposal(p: ProposalMsg): Uint8Array {
   for (const sp of p.storageProofs) w.blob(encodeStorageProof(sp));
   w.varint(p.slashings.length);
   for (const s of p.slashings) w.blob(encodeEvidence(s));
+  const bondOps = p.bondOps ?? [];
+  w.varint(bondOps.length);
+  for (const op of bondOps) w.blob(encodeBondOp(op));
   return w.bytes();
 }
 
@@ -113,7 +119,13 @@ export function decodeProposal(bytes: Uint8Array): ProposalMsg {
     slashings = new Array(n);
     for (let i = 0; i < n; i++) slashings[i] = decodeEvidence(r.blob());
   }
-  return { header, txs, producer, storageProofs, slashings };
+  let bondOps: BondOp[] = [];
+  if (!r.end()) {
+    const nB = Number(r.varint());
+    bondOps = new Array(nB);
+    for (let i = 0; i < nB; i++) bondOps[i] = decodeBondOp(r.blob());
+  }
+  return { header, txs, producer, storageProofs, slashings, bondOps };
 }
 
 /* ------------------------------------------------------------------ */
