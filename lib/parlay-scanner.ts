@@ -68,6 +68,43 @@ export const SHARP_BOOKS = new Set<string>([
   "matchbook",
 ]);
 
+/**
+ * Sports we expose in the UI selector. Keys must match The Odds API v4
+ * `sport_key` field. Group is used to bucket the options visually.
+ *
+ * The full list of supported sports can be fetched from
+ *   GET https://api.the-odds-api.com/v4/sports?apiKey=...
+ * but for the scanner we curate the high-liquidity ones where book-to-book
+ * dispersion is large enough for the +EV strategy to actually fire.
+ */
+export interface SportOption {
+  key: string;
+  title: string;
+  group: string;
+  default?: boolean;
+}
+
+export const SPORT_OPTIONS: SportOption[] = [
+  { key: "americanfootball_nfl", title: "NFL", group: "Football", default: true },
+  { key: "americanfootball_ncaaf", title: "NCAAF", group: "Football" },
+  { key: "americanfootball_cfl", title: "CFL", group: "Football" },
+  { key: "basketball_nba", title: "NBA", group: "Basketball", default: true },
+  { key: "basketball_ncaab", title: "NCAAB", group: "Basketball" },
+  { key: "basketball_wnba", title: "WNBA", group: "Basketball" },
+  { key: "baseball_mlb", title: "MLB", group: "Baseball", default: true },
+  { key: "icehockey_nhl", title: "NHL", group: "Hockey", default: true },
+  { key: "soccer_epl", title: "EPL", group: "Soccer" },
+  { key: "soccer_uefa_champs_league", title: "UCL", group: "Soccer" },
+  { key: "soccer_usa_mls", title: "MLS", group: "Soccer" },
+  { key: "soccer_spain_la_liga", title: "La Liga", group: "Soccer" },
+  { key: "mma_mixed_martial_arts", title: "MMA / UFC", group: "Combat" },
+  { key: "boxing_boxing", title: "Boxing", group: "Combat" },
+  { key: "tennis_atp_french_open", title: "Tennis ATP", group: "Tennis" },
+  { key: "golf_pga_championship_winner", title: "PGA", group: "Golf" },
+];
+
+export const DEFAULT_SPORT_KEYS = SPORT_OPTIONS.filter((s) => s.default).map((s) => s.key);
+
 export interface LaggingLine {
   eventId: string;
   sport: string;
@@ -765,17 +802,22 @@ export async function scanDailyParlays(options: ScanOptions = {}): Promise<ScanR
   const useMock = options.useMockData || !apiKey;
   const region = options.oddsApiRegion ?? "us";
   const markets = options.markets ?? ["h2h", "spreads", "totals"];
-  const sports = options.sports ?? [
-    "americanfootball_nfl",
-    "basketball_nba",
-    "baseball_mlb",
-    "icehockey_nhl",
-  ];
+  const sports =
+    options.sports && options.sports.length > 0 ? options.sports : DEFAULT_SPORT_KEYS;
+  const sportFilter = new Set(sports);
 
   let events: OddsApiEvent[] = [];
   let source: "odds-api" | "mock" = "mock";
   if (useMock) {
-    events = getMockEvents();
+    events = getMockEvents().filter((e) => sportFilter.has(e.sport_key));
+    if (events.length === 0) {
+      // No mock data for the selected sports — fall back to *all* mocks so
+      // the UI is never empty, but note it.
+      events = getMockEvents();
+      warnings.push(
+        `Mock dataset doesn't cover any of {${sports.join(", ")}} — showing all mock sports instead.`,
+      );
+    }
     warnings.push("Using mock odds data (mock mode explicitly enabled).");
   } else {
     source = "odds-api";

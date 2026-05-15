@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   scanDailyParlays,
   persistScanReport,
+  SPORT_OPTIONS,
+  DEFAULT_SPORT_KEYS,
   type LaggingLine,
   type ParlayCandidate,
   type ScanReport,
@@ -78,6 +80,7 @@ export default function ParlaysContent() {
   const [trials, setTrials] = useState(10_000);
   const [devigMethod, setDevigMethod] = useState<DevigMethod>("auto");
   const [oddsApiKey, setOddsApiKey] = useState("");
+  const [selectedSports, setSelectedSports] = useState<string[]>(DEFAULT_SPORT_KEYS);
 
   const [report, setReport] = useState<ScanReport | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -99,6 +102,7 @@ export default function ParlaysContent() {
         monteCarloTrials: trials,
         devigMethod,
         oddsApiKey: oddsApiKey || undefined,
+        sports: selectedSports.length > 0 ? selectedSports : undefined,
         maxResults: 24,
       });
       setReport(r);
@@ -111,7 +115,7 @@ export default function ParlaysContent() {
     } finally {
       setScanning(false);
     }
-  }, [bankroll, minLegs, maxLegs, minLegEv, minParlayEv, trials, devigMethod, oddsApiKey, autoPersist]);
+  }, [bankroll, minLegs, maxLegs, minLegEv, minParlayEv, trials, devigMethod, oddsApiKey, selectedSports, autoPersist]);
 
   // Auto-scan once on mount so the page is never empty.
   useEffect(() => {
@@ -143,6 +147,8 @@ export default function ParlaysContent() {
               setDevigMethod,
               oddsApiKey,
               setOddsApiKey,
+              selectedSports,
+              setSelectedSports,
               autoPersist,
               setAutoPersist,
               report,
@@ -231,6 +237,7 @@ interface ScannerPanelProps {
   trials: number; setTrials: (n: number) => void;
   devigMethod: DevigMethod; setDevigMethod: (m: DevigMethod) => void;
   oddsApiKey: string; setOddsApiKey: (s: string) => void;
+  selectedSports: string[]; setSelectedSports: (s: string[]) => void;
   autoPersist: boolean; setAutoPersist: (b: boolean) => void;
   report: ScanReport | null;
   scanning: boolean;
@@ -268,7 +275,12 @@ function ScannerPanel(p: ScannerPanelProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <SportPicker
+          selected={p.selectedSports}
+          onChange={p.setSelectedSports}
+        />
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mt-4">
           <div>
             <label className={labelCls}>Bankroll</label>
             <input
@@ -412,6 +424,92 @@ function ScannerPanel(p: ScannerPanelProps) {
             <span className="text-white">min parlay EV %</span> or widening the leg range.
           </p>
         </section>
+      )}
+    </div>
+  );
+}
+
+function SportPicker({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  // Group sport options by their `group` field for visual clustering.
+  const grouped = useMemo(() => {
+    const m = new Map<string, typeof SPORT_OPTIONS>();
+    for (const s of SPORT_OPTIONS) {
+      const arr = m.get(s.group) ?? [];
+      arr.push(s);
+      m.set(s.group, arr);
+    }
+    return Array.from(m.entries());
+  }, []);
+
+  const selectedSet = new Set(selected);
+  const toggle = (key: string) => {
+    if (selectedSet.has(key)) {
+      onChange(selected.filter((k) => k !== key));
+    } else {
+      onChange([...selected, key]);
+    }
+  };
+  const allKeys = SPORT_OPTIONS.map((s) => s.key);
+  const allSelected = selected.length === allKeys.length;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className={labelCls + " mb-0"}>Sports to scan</label>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            className="text-[10px] uppercase tracking-[0.12em] text-white/40 hover:text-white px-2 py-1 rounded-md hover:bg-white/[0.05] cursor-pointer transition-colors"
+            onClick={() => onChange(allSelected ? [] : allKeys)}
+          >
+            {allSelected ? "Clear all" : "Select all"}
+          </button>
+          <button
+            type="button"
+            className="text-[10px] uppercase tracking-[0.12em] text-white/40 hover:text-white px-2 py-1 rounded-md hover:bg-white/[0.05] cursor-pointer transition-colors"
+            onClick={() => onChange(DEFAULT_SPORT_KEYS)}
+          >
+            Defaults
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {grouped.map(([group, opts]) => (
+          <div key={group} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-white/30 pr-1">
+              {group}
+            </span>
+            {opts.map((opt) => {
+              const isOn = selectedSet.has(opt.key);
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => toggle(opt.key)}
+                  className={
+                    "h-7 px-2.5 rounded-full text-[11px] font-medium transition-all cursor-pointer border " +
+                    (isOn
+                      ? "bg-emerald-500/15 border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/25"
+                      : "bg-white/[0.03] border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.07]")
+                  }
+                >
+                  {opt.title}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      {selected.length === 0 && (
+        <p className="mt-2 text-[11px] text-amber-300/80">
+          No sports selected — the scan will fall back to the default set.
+        </p>
       )}
     </div>
   );
