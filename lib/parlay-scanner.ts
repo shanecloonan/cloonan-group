@@ -129,6 +129,15 @@ export interface ScanReport {
 
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
+/**
+ * Default Odds API key — hardcoded so the scanner works out of the box.
+ * Override priority is: explicit `options.oddsApiKey` → `ODDS_API_KEY` env →
+ * `NEXT_PUBLIC_ODDS_API_KEY` env → this fallback.
+ *
+ * Rotate via the-odds-api.com dashboard if it ever leaks.
+ */
+const DEFAULT_ODDS_API_KEY = "cc92cb1fc046621b2b9ed8db04037e01";
+
 async function fetchOddsApiEvents(
   sport: string,
   apiKey: string,
@@ -750,7 +759,8 @@ export async function scanDailyParlays(options: ScanOptions = {}): Promise<ScanR
   const apiKey =
     options.oddsApiKey ??
     (typeof process !== "undefined" ? process.env.ODDS_API_KEY : undefined) ??
-    (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_ODDS_API_KEY : undefined);
+    (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_ODDS_API_KEY : undefined) ??
+    DEFAULT_ODDS_API_KEY;
 
   const useMock = options.useMockData || !apiKey;
   const region = options.oddsApiRegion ?? "us";
@@ -766,7 +776,7 @@ export async function scanDailyParlays(options: ScanOptions = {}): Promise<ScanR
   let source: "odds-api" | "mock" = "mock";
   if (useMock) {
     events = getMockEvents();
-    warnings.push("Using mock odds data — set NEXT_PUBLIC_ODDS_API_KEY (or ODDS_API_KEY) to scan live books.");
+    warnings.push("Using mock odds data (mock mode explicitly enabled).");
   } else {
     source = "odds-api";
     for (const sport of sports) {

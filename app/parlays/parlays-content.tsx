@@ -352,10 +352,12 @@ function ScannerPanel(p: ScannerPanelProps) {
         </div>
 
         <div className="mt-3">
-          <label className={labelCls}>Odds API key (optional — leave blank to use mock data)</label>
+          <label className={labelCls}>
+            Odds API key override (optional — engine ships with a live key built in)
+          </label>
           <input
             type="password"
-            placeholder="paste your-the-odds-api.com key"
+            placeholder="leave blank to use the built-in key"
             className={inputCls}
             value={p.oddsApiKey}
             onChange={(e) => p.setOddsApiKey(e.target.value)}
