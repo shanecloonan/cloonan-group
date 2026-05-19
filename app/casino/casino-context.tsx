@@ -90,6 +90,29 @@ export interface CasinoContextValue {
 
 const Ctx = createContext<CasinoContextValue | null>(null);
 
+const HISTORY_STORAGE_KEY = "mf_casino_history_v1";
+
+/** Serialize a history entry to a JSON-safe shape (bigints → strings). */
+function serializeEntry(e: CasinoHistoryEntry): unknown {
+  return {
+    ...e,
+    stakeUnits: e.stakeUnits.toString(),
+    pnlUnits: e.pnlUnits.toString(),
+    session: JSON.parse(
+      JSON.stringify(e.session, (_k, v) => (typeof v === "bigint" ? v.toString() : v)),
+    ),
+  };
+}
+
+/** Deserialize a stored history row back into runtime form. */
+function deserializeEntry(raw: CasinoHistoryEntry & { stakeUnits: string; pnlUnits: string }): CasinoHistoryEntry {
+  return {
+    ...raw,
+    stakeUnits: BigInt(raw.stakeUnits),
+    pnlUnits: BigInt(raw.pnlUnits),
+  };
+}
+
 /** Imperative hook for game-table components. Throws if used outside provider. */
 export function useCasino(): CasinoContextValue {
   const v = useContext(Ctx);
@@ -140,11 +163,35 @@ export function CasinoProvider({
     refreshBalance();
   }, [refreshBalance]);
 
+  // History persisted to localStorage so it survives navigations to
+  // /casino/history, /casino/verify, etc. Capped at 250 most-recent rows.
   const [history, setHistory] = useState<CasinoHistoryEntry[]>([]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Array<CasinoHistoryEntry & { stakeUnits: string; pnlUnits: string }>;
+      setHistory(parsed.map(deserializeEntry));
+    } catch {
+      // corrupted store — start fresh
+    }
+  }, []);
   const pushHistory = useCallback((e: Omit<CasinoHistoryEntry, "at">) => {
     setHistory((prev) => {
       const next: CasinoHistoryEntry = { ...e, at: new Date().toISOString() };
-      return [next, ...prev].slice(0, 100);
+      const merged = [next, ...prev].slice(0, 250);
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(
+            HISTORY_STORAGE_KEY,
+            JSON.stringify(merged.map(serializeEntry)),
+          );
+        } catch {
+          // quota exceeded / disabled — non-fatal
+        }
+      }
+      return merged;
     });
   }, []);
 

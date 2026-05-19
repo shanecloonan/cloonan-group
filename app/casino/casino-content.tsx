@@ -447,11 +447,16 @@ function Lobby({
       {/* Cross-game recent activity */}
       {history.length > 0 && (
         <section className={card + " p-5"}>
-          <div className="flex items-baseline justify-between mb-3">
+          <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
             <h2 className="text-lg font-semibold">Recent activity</h2>
-            <Link href="/casino/verify" className="text-[11px] uppercase tracking-[0.12em] text-emerald-300 hover:text-emerald-200 cursor-pointer">
-              Verify any hand →
-            </Link>
+            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.12em]">
+              <Link href="/casino/history" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
+                Full history →
+              </Link>
+              <Link href="/casino/verify" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
+                Verify any hand →
+              </Link>
+            </div>
           </div>
           <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
             {history.slice(0, 12).map((h, i) => (
@@ -471,9 +476,14 @@ function Lobby({
                 settled hand gets a shareable verification link.
               </p>
             </div>
-            <Link href="/casino/verify" className="text-[11px] uppercase tracking-[0.12em] text-emerald-300 hover:text-emerald-200 cursor-pointer">
-              Verify any hand →
-            </Link>
+            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.12em]">
+              <Link href="/casino/history" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
+                Full history →
+              </Link>
+              <Link href="/casino/verify" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
+                Verify any hand →
+              </Link>
+            </div>
           </div>
         </section>
       )}
