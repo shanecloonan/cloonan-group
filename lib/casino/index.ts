@@ -17,6 +17,7 @@ export * from "./blackjack";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";
+export * from "./slots";
 export * from "./balance";
 export * from "./chain-adapter";
 export * from "./session";

@@ -28,6 +28,8 @@ import {
   describePlacement,
   diceGame,
   rouletteGame,
+  slotsGame,
+  SYMBOL_GLYPH,
   verifySession,
   type BlackjackAction,
   type BlackjackState,
@@ -40,6 +42,8 @@ import {
   type RoulettePlacement,
   type RouletteState,
   type Session,
+  type SlotsAction,
+  type SlotsState,
 } from "@/lib/casino";
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
@@ -51,10 +55,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string }[] = [
   { id: "coinflip", label: "Coinflip" },
   { id: "dice", label: "Dice / Limbo" },
   { id: "roulette", label: "Roulette" },
+  { id: "slots", label: "Slots" },
 ];
 
-type AnyAction = BlackjackAction | CoinflipAction | DiceAction | RouletteAction;
-type AnyState = BlackjackState | CoinflipState | DiceState | RouletteState;
+type AnyAction = BlackjackAction | CoinflipAction | DiceAction | RouletteAction | SlotsAction;
+type AnyState = BlackjackState | CoinflipState | DiceState | RouletteState | SlotsState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -126,6 +131,17 @@ function reviveSession(raw: unknown): Session<AnyAction, AnyState> {
       for (const p of r.state.perPlacement) {
         p.amount = tryBig(p.amount);
         p.payout = tryBig(p.payout);
+      }
+    }
+    // slots
+    if (r.state.perLineStake !== undefined) r.state.perLineStake = tryBig(r.state.perLineStake);
+    if (Array.isArray(r.state.spins)) {
+      for (const sp of r.state.spins) {
+        if (sp.totalPayout !== undefined) sp.totalPayout = tryBig(sp.totalPayout);
+        if (sp.scatterPayout !== undefined) sp.scatterPayout = tryBig(sp.scatterPayout);
+        if (Array.isArray(sp.lineWins)) {
+          for (const lw of sp.lineWins) lw.payout = tryBig(lw.payout);
+        }
       }
     }
   }
@@ -378,7 +394,12 @@ export default function VerifyContent() {
 
 function pickGame(id: string):
   | {
-      module: typeof blackjackGame | typeof coinflipGame | typeof diceGame | typeof rouletteGame;
+      module:
+        | typeof blackjackGame
+        | typeof coinflipGame
+        | typeof diceGame
+        | typeof rouletteGame
+        | typeof slotsGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -446,6 +467,34 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "slots") {
+    return {
+      module: slotsGame,
+      renderState: (raw: unknown) => {
+        const s = raw as SlotsState;
+        const rows: { label: string; value: string }[] = [
+          { label: "Total stake", value: String(s.totalStake) },
+          { label: "Total payout", value: String(s.totalPayout) },
+          { label: "Spins played", value: String(s.spins.length) },
+          {
+            label: "Free spins",
+            value: s.freeSpinsTriggered ? `Yes (${s.freeSpinsPlayed})` : "No",
+          },
+        ];
+        for (let i = 0; i < s.spins.length; i++) {
+          const sp = s.spins[i];
+          const gridLine = sp.grid
+            .map((row) => row.map((sym) => SYMBOL_GLYPH[sym]).join(""))
+            .join(" / ");
+          rows.push({
+            label: `Spin ${i + 1}${sp.isFree ? " (free)" : ""}`,
+            value: `stops [${sp.stops.join(",")}] · ${sp.lineWins.length} line wins · ${sp.scatterCount} scatters · payout ${sp.totalPayout} · grid: ${gridLine}`,
+          });
+        }
+        return rows;
+      },
+    };
+  }
   return null;
 }
 
@@ -465,6 +514,12 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "roulette") {
     const rs = s as RouletteState;
     return { ...rs.config, placements: rs.placements } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "slots") {
+    // Slots config goes through `bet.config.config` per the slots engine's
+    // buildConfig contract — wrap it so the verifier rebuilds the same setup.
+    const ss = s as SlotsState;
+    return { config: ss.config } as unknown as Record<string, unknown>;
   }
   return {};
 }

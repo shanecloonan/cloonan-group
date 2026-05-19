@@ -523,7 +523,111 @@ async function main() {
     assert(rtp > 0.95 && rtp < 0.99, `roulette RTP ${rtp} out of [0.95, 0.99]`);
   }
 
-  console.log("── 14. House-edge sanity (200 BJ hands at flat $10) ───────");
+  console.log("── 14. Slots: math + 100k-spin RTP convergence + scatter trigger rate ──");
+  {
+    const {
+      slotsGame,
+      DEFAULT_SLOTS_CONFIG,
+      DEFAULT_REEL_STRIPS,
+      DEFAULT_PAYLINES,
+      verifySession,
+    } = await import("../lib/casino");
+
+    // 14a. Config sanity.
+    assert(DEFAULT_SLOTS_CONFIG.numLines === 20, "20 paylines");
+    assert(DEFAULT_PAYLINES.length === 20, "paylines array has 20 entries");
+    assert(DEFAULT_REEL_STRIPS.length === 5, "5 reel strips");
+    for (let r = 0; r < 5; r++) {
+      assert(DEFAULT_REEL_STRIPS[r].length === 30, `reel ${r + 1} strip length 30`);
+    }
+    console.log("  config sanity: 5 reels × 30 symbols × 20 lines ✓");
+
+    // 14b. Single spin + verifier round-trip.
+    const { driver: drvSl, getSeedPair: slSeed } = buildDevSessionDriver({
+      defaultUserId: "us",
+      defaultChainId: "dev-mock",
+      defaultToken: DEV_TOKEN,
+      seedInitialBalance: 10_000_000_000_000_000n,
+    });
+    const slStake = 20_000_000n; // 20 DEV = 1 DEV per line
+    let slS = await drvSl.openSession(slotsGame, {
+      sessionId: newSessionId(),
+      userId: "us",
+      gameId: slotsGame.id,
+      chainId: "dev-mock",
+      token: DEV_TOKEN,
+      stake: slStake,
+    });
+    slS = await drvSl.settleSession(slotsGame, slS);
+    const baseSpin = slS.state.spins[0];
+    const v = verifySession({
+      game: slotsGame,
+      serverSeed: slSeed().serverSeed!,
+      serverSeedHash: slS.serverSeedHash,
+      clientSeed: slS.clientSeed,
+      startNonce: slS.startNonce,
+      bet: {
+        sessionId: slS.id,
+        userId: "us",
+        gameId: slotsGame.id,
+        chainId: "dev-mock",
+        token: DEV_TOKEN,
+        stake: slStake,
+      },
+      actions: slS.actions.map((a) => ({ ordinal: a.ordinal, action: a.action, actor: a.actor })),
+      expectedStateHashes: slS.actions.map((a) => a.stateHash ?? ""),
+    });
+    assert(v.hashOk && v.finalStateMatches, "slots: verifier should pass");
+    console.log(
+      `  single spin · stops=[${baseSpin.stops.join(",")}] · ${baseSpin.lineWins.length} line wins · pnl=${slS.result!.pnlUnits} · replay ✓`,
+    );
+
+    // 14c. 100k-spin RTP convergence + diagnostics.
+    // (Slots is high-variance — 100k gives ±3 pp accuracy on RTP, plenty for
+    //  the smoke test. Tuning was done at this same sample size.)
+    const spins = 100_000;
+    const flat = 20_000_000n;
+    let wagered = 0n;
+    let payout = 0n;
+    let anyWinSpins = 0;
+    let scatterTriggers = 0;
+    let freeSpinSessions = 0;
+    let totalFreeSpinsPlayed = 0;
+    for (let i = 0; i < spins; i++) {
+      let s = await drvSl.openSession(slotsGame, {
+        sessionId: newSessionId(),
+        userId: "us",
+        gameId: slotsGame.id,
+        chainId: "dev-mock",
+        token: DEV_TOKEN,
+        stake: flat,
+      });
+      s = await drvSl.settleSession(slotsGame, s);
+      wagered += flat;
+      payout += s.result!.totalPayoutUnits;
+      if (s.result!.totalPayoutUnits > 0n) anyWinSpins++;
+      if (s.state.freeSpinsTriggered) {
+        scatterTriggers++;
+        freeSpinSessions++;
+        totalFreeSpinsPlayed += s.state.freeSpinsPlayed;
+      }
+    }
+    const rtp = Number(payout * 1_000_000n / wagered) / 1_000_000;
+    const hitFreq = anyWinSpins / spins;
+    const fsRate = scatterTriggers / spins;
+    console.log(
+      `  ${spins} spins · hit freq ${(hitFreq*100).toFixed(2)}% · empirical RTP ${(rtp*100).toFixed(2)}%`,
+    );
+    console.log(
+      `  free spins triggered ${scatterTriggers} times (${(fsRate*100).toFixed(3)}%) · avg ${freeSpinSessions ? (totalFreeSpinsPlayed/freeSpinSessions).toFixed(1) : "—"} spins per trigger`,
+    );
+    // Slots is high-variance: a 200k sample can drift several pp from theoretical.
+    // We assert a wide window (88% – 105%) and an emergency upper guard.
+    assert(rtp > 0.88 && rtp < 1.05, `slots RTP ${rtp} out of [0.88, 1.05] window`);
+    assert(hitFreq > 0.15 && hitFreq < 0.55, `slots hit freq ${hitFreq} out of [0.15, 0.55] window`);
+  }
+
+  console.log("── 15. House-edge sanity (200 BJ hands at flat $10) ───────");
   const { driver: drv2, ledger: led2 } = buildDevSessionDriver({
     defaultUserId: "u2",
     defaultChainId: "dev-mock",
