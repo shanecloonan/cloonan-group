@@ -18,6 +18,7 @@ import {
 } from "@/lib/casino";
 
 const BlackjackTable = dynamic(() => import("./blackjack-table"), { ssr: false });
+const CoinflipTable = dynamic(() => import("./coinflip-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -53,6 +54,15 @@ const GAME_CATALOG: GameTile[] = [
     emoji: "♠",
   },
   {
+    id: "coinflip",
+    title: "Coinflip",
+    subtitle: "Heads/tails · 1.98× payout · auto-bet + martingale",
+    rtp: "99.00%",
+    status: "live",
+    phase: "Phase 4.2",
+    emoji: "◐",
+  },
+  {
     id: "dice",
     title: "Dice / Limbo",
     subtitle: "Set your own target · instant rolls",
@@ -60,15 +70,6 @@ const GAME_CATALOG: GameTile[] = [
     status: "queued",
     phase: "Phase 4.1",
     emoji: "⚀",
-  },
-  {
-    id: "coinflip",
-    title: "Coinflip",
-    subtitle: "50/50 — for tutorials & micro-bets",
-    rtp: "98.00%",
-    status: "queued",
-    phase: "Phase 4.2",
-    emoji: "◐",
   },
   {
     id: "crash",
@@ -188,7 +189,7 @@ const CHAIN_TILES: ChainTile[] = [
  *  Page
  * ========================================================================= */
 
-type Tab = "lobby" | "blackjack" | "roadmap" | "fairness";
+type Tab = "lobby" | "blackjack" | "coinflip" | "roadmap" | "fairness";
 
 export default function CasinoContent() {
   const [tab, setTab] = useState<Tab>("lobby");
@@ -220,11 +221,14 @@ export default function CasinoContent() {
             adapter={adapter}
             onSelectChain={selectChain}
             onSelectToken={setToken}
-            onPlayBlackjack={() => setTab("blackjack")}
+            onOpenGame={(g) => setTab(g)}
           />
         )}
         {tab === "blackjack" && (
           <BlackjackTable chainId={chainId} token={token} adapter={adapter} />
+        )}
+        {tab === "coinflip" && (
+          <CoinflipTable chainId={chainId} token={token} adapter={adapter} />
         )}
         {tab === "roadmap" && <RoadmapPanel />}
         {tab === "fairness" && <FairnessPanel />}
@@ -241,6 +245,7 @@ function PageHeader({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   const tabs: { id: Tab; label: string; sub: string }[] = [
     { id: "lobby", label: "Lobby", sub: "Pick a chain + a game" },
     { id: "blackjack", label: "Blackjack", sub: "Play now" },
+    { id: "coinflip", label: "Coinflip", sub: "Play now" },
     { id: "fairness", label: "Provable fairness", sub: "Verify any hand" },
     { id: "roadmap", label: "Roadmap", sub: "What's next" },
   ];
@@ -305,7 +310,7 @@ interface LobbyProps {
   adapter: ChainAdapter;
   onSelectChain: (c: ChainId) => void;
   onSelectToken: (t: TokenSpec) => void;
-  onPlayBlackjack: () => void;
+  onOpenGame: (g: Tab) => void;
 }
 
 function Lobby({
@@ -314,7 +319,7 @@ function Lobby({
   adapter,
   onSelectChain,
   onSelectToken,
-  onPlayBlackjack,
+  onOpenGame,
 }: LobbyProps) {
   const currentTile = CHAIN_TILES.find((c) => c.id === chainId);
   return (
@@ -407,16 +412,18 @@ function Lobby({
       <section>
         <h2 className="text-lg font-semibold mb-3">Games</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {GAME_CATALOG.map((g) => (
+          {GAME_CATALOG.map((g) => {
+            const route = g.id === "blackjack" || g.id === "coinflip" ? (g.id as Tab) : null;
+            return (
             <div
               key={g.id}
               className={
                 card + " p-5 flex flex-col gap-3 transition-all " +
-                (g.status === "live"
+                (g.status === "live" && route
                   ? "hover:border-emerald-400/30 cursor-pointer"
                   : "opacity-70")
               }
-              onClick={g.status === "live" ? onPlayBlackjack : undefined}
+              onClick={g.status === "live" && route ? () => onOpenGame(route) : undefined}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -448,17 +455,21 @@ function Lobby({
                 </div>
                 <div className="text-sm font-mono text-white/80">{g.rtp}</div>
               </div>
-              {g.status === "live" && (
+              {g.status === "live" && route && (
                 <button
                   type="button"
-                  onClick={onPlayBlackjack}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenGame(route);
+                  }}
                   className="mt-2 h-9 rounded-lg font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer"
                 >
                   Open table →
                 </button>
               )}
             </div>
-          ))}
+          );
+          })}
         </div>
       </section>
     </div>

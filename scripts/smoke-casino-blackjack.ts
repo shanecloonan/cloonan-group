@@ -256,7 +256,92 @@ async function main() {
   }
   console.log(`  ${probes.length} basic-strategy probes pass ✓`);
 
-  console.log("── 11. House-edge sanity (200 hands at flat $10) ──────────");
+  console.log("── 11. Coinflip end-to-end + 100k-flip RTP convergence ─────");
+  const { driver: drvCF, ledger: ledCF, getSeedPair: cfSeed } = buildDevSessionDriver({
+    defaultUserId: "ucf",
+    defaultChainId: "dev-mock",
+    defaultToken: DEV_TOKEN,
+    seedInitialBalance: 10_000_000_000_000_000n, // 10B DEV — plenty of head-room
+  });
+
+  // 1. Single flip + replay round-trip via verifySession (coinflip's `state` is
+  //    terminal-on-deal; the verifier only needs the deal hash to match).
+  {
+    const { coinflipGame, verifySession } = await import("../lib/casino");
+    let s = await drvCF.openSession(coinflipGame, {
+      sessionId: newSessionId(),
+      userId: "ucf",
+      gameId: coinflipGame.id,
+      chainId: "dev-mock",
+      token: DEV_TOKEN,
+      stake: 10_000_000n,
+      config: { prediction: "heads" },
+    });
+    s = await drvCF.settleSession(coinflipGame, s);
+    const v = verifySession({
+      game: coinflipGame,
+      serverSeed: cfSeed().serverSeed!,
+      serverSeedHash: s.serverSeedHash,
+      clientSeed: s.clientSeed,
+      startNonce: s.startNonce,
+      bet: {
+        sessionId: s.id,
+        userId: "ucf",
+        gameId: coinflipGame.id,
+        chainId: "dev-mock",
+        token: DEV_TOKEN,
+        stake: s.stake,
+        config: { ...s.state.config, prediction: s.state.prediction } as unknown as Record<string, unknown>,
+      },
+      actions: s.actions.map((a) => ({ ordinal: a.ordinal, action: a.action, actor: a.actor })),
+      expectedStateHashes: s.actions.map((a) => a.stateHash ?? ""),
+    });
+    assert(v.hashOk, "coinflip: seed hash should match");
+    assert(v.finalStateMatches, "coinflip: final state should match");
+    console.log(`  single flip · result=${s.state.result} pnl=${s.result!.pnlUnits} · replay ✓`);
+  }
+
+  // 2. RTP convergence: 100k flips at fixed 10 DEV, always picking heads.
+  {
+    const { coinflipGame } = await import("../lib/casino");
+    const flips = 100_000;
+    const stake = 10_000_000n;
+    let wins = 0;
+    for (let i = 0; i < flips; i++) {
+      let s = await drvCF.openSession(coinflipGame, {
+        sessionId: newSessionId(),
+        userId: "ucf",
+        gameId: coinflipGame.id,
+        chainId: "dev-mock",
+        token: DEV_TOKEN,
+        stake,
+        config: { prediction: "heads" },
+      });
+      s = await drvCF.settleSession(coinflipGame, s);
+      if (s.state.result === "heads") wins++;
+    }
+    const wagered = BigInt(flips) * stake;
+    const balAfter = (await ledCF.getBalance("ucf", "dev-mock", DEV_TOKEN)).available;
+    const startBal = 10_000_000_000_000_000n;
+    const netPnl = balAfter - startBal;
+    // Returned amount = wagered + netPnl (because every wagered stake was first
+    // debited then paid back as part of the settle credit math).
+    const returned = wagered + netPnl;
+    const rtp = Number(returned * 1_000_000n / wagered) / 1_000_000;
+    const winRate = wins / flips;
+    console.log(`  ${flips} flips · win rate ${(winRate * 100).toFixed(2)}% · empirical RTP ${(rtp * 100).toFixed(2)}% (target 99%)`);
+    assert(
+      rtp > 0.95 && rtp < 1.04,
+      `RTP ${rtp} out of [0.95, 1.04] sanity band — engine math is wrong`,
+    );
+    // Win rate must be very close to 50%.
+    assert(
+      winRate > 0.48 && winRate < 0.52,
+      `Win rate ${winRate} outside [0.48, 0.52] — RNG bias`,
+    );
+  }
+
+  console.log("── 12. House-edge sanity (200 BJ hands at flat $10) ───────");
   const { driver: drv2, ledger: led2 } = buildDevSessionDriver({
     defaultUserId: "u2",
     defaultChainId: "dev-mock",
