@@ -20,6 +20,8 @@ export * from "./roulette";
 export * from "./slots";
 export * from "./balance";
 export * from "./chain-adapter";
+export * from "./ethereum-adapter";
+export * from "./operator";
 export * from "./session";
 export * from "./verify";
 export * from "./strategy";

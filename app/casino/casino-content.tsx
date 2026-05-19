@@ -326,6 +326,12 @@ function PageHeader({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     { id: "fairness", label: "Provable fairness", sub: "Verify any hand" },
     { id: "roadmap", label: "Roadmap", sub: "What's next" },
   ];
+  // Sibling pages — not full tabs, just quick deep links from the header.
+  const siblings: { href: string; label: string }[] = [
+    { href: "/casino/wallet", label: "Wallet" },
+    { href: "/casino/history", label: "History" },
+    { href: "/casino/verify", label: "Verify" },
+  ];
   return (
     <header className="border-b border-white/[0.06] bg-gradient-to-b from-emerald-900/30 via-[#08090e] to-[#08090e]">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-12 pb-8">
@@ -370,6 +376,19 @@ function PageHeader({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
               <span className="text-sm font-semibold">{t.label}</span>
               <span className="text-[11px] text-white/40 group-hover:text-white/60">{t.sub}</span>
             </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 text-[11px] text-white/40">
+          <span>Quick links:</span>
+          {siblings.map((s) => (
+            <Link
+              key={s.href}
+              href={s.href}
+              className="px-2 py-0.5 rounded-full border border-white/[0.08] hover:border-emerald-400/40 hover:text-emerald-300 transition-colors"
+            >
+              {s.label} →
+            </Link>
           ))}
         </div>
       </div>
@@ -441,7 +460,10 @@ function Lobby({
         {chainId === "dev-mock" && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/[0.06]">
             <span className="text-[11px] text-white/40">
-              Play money for development. Add more anytime.
+              Play money for development. Want to deposit real funds?{" "}
+              <Link href="/casino/wallet" className="text-emerald-300 hover:text-emerald-200 underline-offset-2 hover:underline">
+                Open wallet →
+              </Link>
             </span>
             <button
               type="button"
