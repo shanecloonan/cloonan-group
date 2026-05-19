@@ -429,7 +429,101 @@ async function main() {
     assert(rtp > 0.97 && rtp < 1.01, `dice RTP ${rtp} out of [0.97, 1.01]`);
   }
 
-  console.log("── 13. House-edge sanity (200 BJ hands at flat $10) ───────");
+  console.log("── 13. European Roulette: math + 100k-spin RTP ─────────────");
+  {
+    const {
+      rouletteGame,
+      placementFor,
+      pocketColor,
+      ROULETTE_RTP_PERCENT,
+      PAYOUT_TO_ONE,
+      verifySession,
+    } = await import("../lib/casino");
+
+    // 13a. Color/payout sanity.
+    assert(pocketColor(0) === "green", "0 is green");
+    assert(pocketColor(1) === "red", "1 is red");
+    assert(pocketColor(2) === "black", "2 is black");
+    assert(PAYOUT_TO_ONE.straight === 35, "straight pays 35:1");
+    assert(PAYOUT_TO_ONE.red === 1, "red pays 1:1");
+    assert(PAYOUT_TO_ONE.dozen_1 === 2, "dozens pay 2:1");
+    assert(Math.abs(ROULETTE_RTP_PERCENT - (36 / 37) * 100) < 1e-9, "RTP = 36/37");
+    console.log(`  payout & color tables ✓ · theoretical RTP ${ROULETTE_RTP_PERCENT.toFixed(3)}%`);
+
+    // 13b. Single spin + verifier round-trip with a multi-placement bet.
+    const { driver: drvR, getSeedPair: rSeed } = buildDevSessionDriver({
+      defaultUserId: "ur",
+      defaultChainId: "dev-mock",
+      defaultToken: DEV_TOKEN,
+      seedInitialBalance: 10_000_000_000_000_000n,
+    });
+    const stakeRed = 5_000_000n;
+    const stakeStraight = 5_000_000n;
+    const totalStake = stakeRed + stakeStraight;
+    const placements = [
+      placementFor("red", stakeRed),
+      placementFor("straight", stakeStraight, [17]),
+    ];
+    let rs = await drvR.openSession(rouletteGame, {
+      sessionId: newSessionId(),
+      userId: "ur",
+      gameId: rouletteGame.id,
+      chainId: "dev-mock",
+      token: DEV_TOKEN,
+      stake: totalStake,
+      config: { placements } as unknown as Record<string, unknown>,
+    });
+    rs = await drvR.settleSession(rouletteGame, rs);
+    const v = verifySession({
+      game: rouletteGame,
+      serverSeed: rSeed().serverSeed!,
+      serverSeedHash: rs.serverSeedHash,
+      clientSeed: rs.clientSeed,
+      startNonce: rs.startNonce,
+      bet: {
+        sessionId: rs.id,
+        userId: "ur",
+        gameId: rouletteGame.id,
+        chainId: "dev-mock",
+        token: DEV_TOKEN,
+        stake: totalStake,
+        config: { placements: rs.state.placements } as unknown as Record<string, unknown>,
+      },
+      actions: rs.actions.map((a) => ({ ordinal: a.ordinal, action: a.action, actor: a.actor })),
+      expectedStateHashes: rs.actions.map((a) => a.stateHash ?? ""),
+    });
+    assert(v.hashOk && v.finalStateMatches, "roulette: verifier should pass");
+    console.log(`  single spin · pocket=${rs.state.pocket} (${rs.state.pocketColor}) · pnl=${rs.result!.pnlUnits} · replay ✓`);
+
+    // 13c. 100k-spin RTP on a flat 1-DEV red bet. Expected ≈ 36/37 = 97.297%.
+    const spins = 100_000;
+    const flat = 1_000_000n;
+    let wagered = 0n;
+    let payout = 0n;
+    let redWins = 0;
+    for (let i = 0; i < spins; i++) {
+      let s = await drvR.openSession(rouletteGame, {
+        sessionId: newSessionId(),
+        userId: "ur",
+        gameId: rouletteGame.id,
+        chainId: "dev-mock",
+        token: DEV_TOKEN,
+        stake: flat,
+        config: { placements: [placementFor("red", flat)] } as unknown as Record<string, unknown>,
+      });
+      s = await drvR.settleSession(rouletteGame, s);
+      wagered += flat;
+      payout += s.result!.totalPayoutUnits;
+      if (s.state.perPlacement[0].won) redWins++;
+    }
+    const rtp = Number(payout * 1_000_000n / wagered) / 1_000_000;
+    const winRate = redWins / spins;
+    console.log(`  ${spins} red-spins · win rate ${(winRate*100).toFixed(2)}% (expect ${(18/37*100).toFixed(2)}%) · empirical RTP ${(rtp*100).toFixed(2)}% (target ${(36/37*100).toFixed(2)}%)`);
+    assert(winRate > 0.47 && winRate < 0.50, `roulette red win rate ${winRate} out of [0.47, 0.50]`);
+    assert(rtp > 0.95 && rtp < 0.99, `roulette RTP ${rtp} out of [0.95, 0.99]`);
+  }
+
+  console.log("── 14. House-edge sanity (200 BJ hands at flat $10) ───────");
   const { driver: drv2, ledger: led2 } = buildDevSessionDriver({
     defaultUserId: "u2",
     defaultChainId: "dev-mock",

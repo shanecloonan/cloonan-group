@@ -25,7 +25,9 @@ import {
   blackjackGame,
   cardLabel,
   coinflipGame,
+  describePlacement,
   diceGame,
+  rouletteGame,
   verifySession,
   type BlackjackAction,
   type BlackjackState,
@@ -34,6 +36,9 @@ import {
   type DiceAction,
   type DiceState,
   type GameId,
+  type RouletteAction,
+  type RoulettePlacement,
+  type RouletteState,
   type Session,
 } from "@/lib/casino";
 
@@ -45,10 +50,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string }[] = [
   { id: "blackjack", label: "Blackjack" },
   { id: "coinflip", label: "Coinflip" },
   { id: "dice", label: "Dice / Limbo" },
+  { id: "roulette", label: "Roulette" },
 ];
 
-type AnyAction = BlackjackAction | CoinflipAction | DiceAction;
-type AnyState = BlackjackState | CoinflipState | DiceState;
+type AnyAction = BlackjackAction | CoinflipAction | DiceAction | RouletteAction;
+type AnyState = BlackjackState | CoinflipState | DiceState | RouletteState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -110,6 +116,18 @@ function reviveSession(raw: unknown): Session<AnyAction, AnyState> {
     if (r.state.multiplierDen !== undefined) r.state.multiplierDen = tryBig(r.state.multiplierDen);
     if (r.state.payoutNum !== undefined) r.state.payoutNum = tryBig(r.state.payoutNum);
     if (r.state.payoutDen !== undefined) r.state.payoutDen = tryBig(r.state.payoutDen);
+    // roulette
+    if (r.state.totalStake !== undefined) r.state.totalStake = tryBig(r.state.totalStake);
+    if (r.state.totalPayout !== undefined) r.state.totalPayout = tryBig(r.state.totalPayout);
+    if (Array.isArray(r.state.placements)) {
+      for (const p of r.state.placements) p.amount = tryBig(p.amount);
+    }
+    if (Array.isArray(r.state.perPlacement)) {
+      for (const p of r.state.perPlacement) {
+        p.amount = tryBig(p.amount);
+        p.payout = tryBig(p.payout);
+      }
+    }
   }
   // result.* bigints
   if (r.result) {
@@ -360,7 +378,7 @@ export default function VerifyContent() {
 
 function pickGame(id: string):
   | {
-      module: typeof blackjackGame | typeof coinflipGame | typeof diceGame;
+      module: typeof blackjackGame | typeof coinflipGame | typeof diceGame | typeof rouletteGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -406,6 +424,28 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "roulette") {
+    return {
+      module: rouletteGame,
+      renderState: (raw: unknown) => {
+        const s = raw as RouletteState;
+        const rows: { label: string; value: string }[] = [
+          { label: "Winning pocket", value: String(s.pocket) },
+          { label: "Winning color", value: s.pocketColor },
+          { label: "Total stake", value: String(s.totalStake) },
+          { label: "Total payout", value: String(s.totalPayout) },
+        ];
+        for (let i = 0; i < (s.perPlacement?.length ?? 0); i++) {
+          const p = s.perPlacement[i];
+          rows.push({
+            label: `Placement ${i + 1}`,
+            value: `${describePlacement(p as unknown as RoulettePlacement)} — stake ${p.amount}, payout ${p.payout} (${p.won ? "win" : "loss"})`,
+          });
+        }
+        return rows;
+      },
+    };
+  }
   return null;
 }
 
@@ -421,6 +461,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "dice") {
     const ds = s as DiceState;
     return { ...ds.config, targetBps: ds.targetBps, direction: ds.direction } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "roulette") {
+    const rs = s as RouletteState;
+    return { ...rs.config, placements: rs.placements } as unknown as Record<string, unknown>;
   }
   return {};
 }
