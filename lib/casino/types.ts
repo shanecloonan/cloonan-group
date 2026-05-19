@@ -141,7 +141,8 @@ export type GameId =
   | "roulette"
   | "plinko"
   | "slots"
-  | "mines";
+  | "mines"
+  | "hilo";
 
 export interface Bet {
   sessionId: string;

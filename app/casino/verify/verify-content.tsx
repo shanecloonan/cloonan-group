@@ -25,9 +25,11 @@ import {
   blackjackGame,
   cardLabel,
   coinflipGame,
+  cardFromIndex,
   crashGame,
   describePlacement,
   diceGame,
+  hiloGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -43,6 +45,8 @@ import {
   type DiceAction,
   type DiceState,
   type GameId,
+  type HiloAction,
+  type HiloState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -68,6 +72,7 @@ const SUPPORTED_GAMES: { id: GameId; label: string }[] = [
   { id: "crash", label: "Crash" },
   { id: "plinko", label: "Plinko" },
   { id: "mines", label: "Mines" },
+  { id: "hilo", label: "HiLo" },
 ];
 
 type AnyAction =
@@ -78,7 +83,8 @@ type AnyAction =
   | SlotsAction
   | CrashAction
   | PlinkoAction
-  | MinesAction;
+  | MinesAction
+  | HiloAction;
 type AnyState =
   | BlackjackState
   | CoinflipState
@@ -87,7 +93,8 @@ type AnyState =
   | SlotsState
   | CrashState
   | PlinkoState
-  | MinesState;
+  | MinesState
+  | HiloState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -434,7 +441,8 @@ function pickGame(id: string):
         | typeof slotsGame
         | typeof crashGame
         | typeof plinkoGame
-        | typeof minesGame;
+        | typeof minesGame
+        | typeof hiloGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -562,6 +570,33 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "hilo") {
+    return {
+      module: hiloGame,
+      renderState: (raw: unknown) => {
+        const s = raw as HiloState;
+        const cardSeq = s.revealedHistory
+          .map((idx) => {
+            const c = cardFromIndex(idx);
+            return `${c.rank}${c.suit}`;
+          })
+          .join(" → ");
+        const pickSeq = s.picks
+          .map(
+            (p) =>
+              `${p.direction === "higher" ? "↑" : "↓"}${p.won ? "W" : "L"}@${(p.probability * 100).toFixed(1)}%`,
+          )
+          .join("  ");
+        return [
+          { label: "Outcome", value: s.phase },
+          { label: "Picks", value: String(s.picks.length) },
+          { label: "Multiplier", value: `${s.multiplier.toFixed(2)}×` },
+          { label: "Card sequence", value: cardSeq },
+          { label: "Pick sequence", value: pickSeq || "—" },
+        ];
+      },
+    };
+  }
   if (id === "crash") {
     return {
       module: crashGame,
@@ -634,6 +669,12 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
     return {
       mines: ms.config.mines,
       houseEdgeBps: ms.config.houseEdgeBps,
+    } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "hilo") {
+    const hs = s as HiloState;
+    return {
+      houseEdgeBps: hs.config.houseEdgeBps,
     } as unknown as Record<string, unknown>;
   }
   return {};
