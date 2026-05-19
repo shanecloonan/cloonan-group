@@ -19,6 +19,7 @@ export * from "./dice";
 export * from "./roulette";
 export * from "./slots";
 export * from "./crash";
+export * from "./plinko";
 export * from "./balance";
 export * from "./chain-adapter";
 export * from "./ethereum-adapter";

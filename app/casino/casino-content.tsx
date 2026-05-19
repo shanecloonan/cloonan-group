@@ -104,6 +104,7 @@ const DiceTable = dynamic(() => import("./dice-table"), { ssr: false });
 const RouletteTable = dynamic(() => import("./roulette-table"), { ssr: false });
 const SlotsTable = dynamic(() => import("./slots-table"), { ssr: false });
 const CrashTable = dynamic(() => import("./crash-table"), { ssr: false });
+const PlinkoTable = dynamic(() => import("./plinko-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -177,9 +178,9 @@ const GAME_CATALOG: GameTile[] = [
   {
     id: "plinko",
     title: "Plinko",
-    subtitle: "Visual-first · configurable risk tiers",
+    subtitle: "16-row peg triangle · 3 risk tiers · up to 1000×",
     rtp: "99.00%",
-    status: "soon",
+    status: "live",
     phase: "Phase 4.5",
     emoji: "▼",
   },
@@ -274,7 +275,7 @@ const CHAIN_TILES: ChainTile[] = [
  *  Page
  * ========================================================================= */
 
-type Tab = "lobby" | "blackjack" | "coinflip" | "dice" | "roulette" | "slots" | "crash" | "roadmap" | "fairness";
+type Tab = "lobby" | "blackjack" | "coinflip" | "dice" | "roulette" | "slots" | "crash" | "plinko" | "roadmap" | "fairness";
 
 export default function CasinoContent() {
   const [tab, setTab] = useState<Tab>("lobby");
@@ -328,6 +329,9 @@ export default function CasinoContent() {
           {tab === "crash" && (
             <CrashTable chainId={chainId} token={token} adapter={adapter} />
           )}
+          {tab === "plinko" && (
+            <PlinkoTable chainId={chainId} token={token} adapter={adapter} />
+          )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
         </div>
@@ -349,6 +353,7 @@ function PageHeader({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     { id: "roulette", label: "Roulette", sub: "Play now" },
     { id: "slots", label: "Slots", sub: "Play now" },
     { id: "crash", label: "Crash", sub: "Play now" },
+    { id: "plinko", label: "Plinko", sub: "Play now" },
     { id: "fairness", label: "Provable fairness", sub: "Verify any hand" },
     { id: "roadmap", label: "Roadmap", sub: "What's next" },
   ];
@@ -642,7 +647,8 @@ function Lobby({
               g.id === "dice" ||
               g.id === "roulette" ||
               g.id === "slots" ||
-              g.id === "crash"
+              g.id === "crash" ||
+              g.id === "plinko"
                 ? (g.id as Tab)
                 : null;
             return (

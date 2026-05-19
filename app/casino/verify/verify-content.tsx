@@ -28,6 +28,7 @@ import {
   crashGame,
   describePlacement,
   diceGame,
+  plinkoGame,
   rouletteGame,
   slotsGame,
   SYMBOL_GLYPH,
@@ -41,6 +42,8 @@ import {
   type DiceAction,
   type DiceState,
   type GameId,
+  type PlinkoAction,
+  type PlinkoState,
   type RouletteAction,
   type RoulettePlacement,
   type RouletteState,
@@ -60,6 +63,7 @@ const SUPPORTED_GAMES: { id: GameId; label: string }[] = [
   { id: "roulette", label: "Roulette" },
   { id: "slots", label: "Slots" },
   { id: "crash", label: "Crash" },
+  { id: "plinko", label: "Plinko" },
 ];
 
 type AnyAction =
@@ -68,14 +72,16 @@ type AnyAction =
   | DiceAction
   | RouletteAction
   | SlotsAction
-  | CrashAction;
+  | CrashAction
+  | PlinkoAction;
 type AnyState =
   | BlackjackState
   | CoinflipState
   | DiceState
   | RouletteState
   | SlotsState
-  | CrashState;
+  | CrashState
+  | PlinkoState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -418,7 +424,8 @@ function pickGame(id: string):
         | typeof diceGame
         | typeof rouletteGame
         | typeof slotsGame
-        | typeof crashGame;
+        | typeof crashGame
+        | typeof plinkoGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -514,6 +521,21 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "plinko") {
+    return {
+      module: plinkoGame,
+      renderState: (raw: unknown) => {
+        const s = raw as PlinkoState;
+        return [
+          { label: "Rows", value: String(s.config.rows) },
+          { label: "Risk", value: s.config.risk },
+          { label: "Bin", value: `${s.bin} / ${s.config.rows}` },
+          { label: "Multiplier", value: `${s.multiplier.toFixed(2)}×` },
+          { label: "Path", value: s.path.map((b) => (b ? "R" : "L")).join("") },
+        ];
+      },
+    };
+  }
   if (id === "crash") {
     return {
       module: crashGame,
@@ -572,6 +594,13 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
     return {
       ...cs.config,
       autoCashoutMultiplier: cs.autoCashoutMultiplier,
+    } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "plinko") {
+    const ps = s as PlinkoState;
+    return {
+      rows: ps.config.rows,
+      risk: ps.config.risk,
     } as unknown as Record<string, unknown>;
   }
   return {};
