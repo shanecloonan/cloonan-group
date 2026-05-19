@@ -208,7 +208,7 @@ export class HmacRngStream implements RngStream {
 export function newSeedPair(args: { userId: string; clientSeed?: string }): SeedPair {
   const serverSeed = generateServerSeed();
   return {
-    id: cryptoRandomId(),
+    id: cryptoRandomUuid(),
     userId: args.userId,
     serverSeed,
     serverSeedHash: hashServerSeed(serverSeed),
@@ -285,9 +285,8 @@ export function verifyServerSeed(serverSeedHex: string, publishedHash: string): 
  * ------------------------------------------------------------------------- */
 
 /**
- * Crypto-secure random ID. Used for session IDs, seed-pair IDs, etc.
- * Format: 16 hex chars (64 bits of entropy) — collision-safe for any
- * reasonable per-user volume.
+ * Crypto-secure random ID. Used for ledger mutation references, debug
+ * tags, etc. Format: 16 hex chars (64 bits of entropy).
  */
 export function cryptoRandomId(): string {
   const buf = new Uint8Array(8);
@@ -297,4 +296,23 @@ export function cryptoRandomId(): string {
     for (let i = 0; i < buf.length; i++) buf[i] = Math.floor(Math.random() * 256);
   }
   return bytesToHex(buf);
+}
+
+/**
+ * Crypto-secure UUID v4. Required for IDs that need to fit Postgres `uuid`
+ * columns (session id, seed pair id). We don't rely on `crypto.randomUUID`
+ * directly because not all bundled environments expose it.
+ */
+export function cryptoRandomUuid(): string {
+  const buf = new Uint8Array(16);
+  if (typeof globalThis !== "undefined" && (globalThis as { crypto?: Crypto }).crypto?.getRandomValues) {
+    (globalThis as { crypto: Crypto }).crypto.getRandomValues(buf);
+  } else {
+    for (let i = 0; i < buf.length; i++) buf[i] = Math.floor(Math.random() * 256);
+  }
+  // RFC 4122 v4 markers.
+  buf[6] = (buf[6] & 0x0f) | 0x40;
+  buf[8] = (buf[8] & 0x3f) | 0x80;
+  const hex = bytesToHex(buf);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }

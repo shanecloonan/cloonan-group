@@ -46,6 +46,7 @@ export type BlackjackActionType =
   | "stand"
   | "double"
   | "split"
+  | "surrender"
   | "insurance"
   | "decline_insurance";
 
@@ -61,6 +62,8 @@ export interface BlackjackConfig {
   allowDoubleAfterSplit: boolean;
   /** Whether the player can split into up to N total hands. */
   maxHands: number;
+  /** Late surrender — only on the original two cards before any action. */
+  allowSurrender: boolean;
 }
 
 export const DEFAULT_BLACKJACK_CONFIG: BlackjackConfig = {
@@ -69,6 +72,7 @@ export const DEFAULT_BLACKJACK_CONFIG: BlackjackConfig = {
   blackjackPays: { num: 3, den: 2 },
   allowDoubleAfterSplit: true,
   maxHands: 4,
+  allowSurrender: true,
 };
 
 export type BlackjackPhase =
@@ -260,6 +264,17 @@ function legalActions(state: BlackjackState): BlackjackAction[] {
     actions.push({ type: "split" });
   }
 
+  // Late surrender — only the very first action on an un-touched 2-card
+  // hand of the original (non-split) round.
+  if (
+    state.config.allowSurrender &&
+    hand.cards.length === 2 &&
+    !hand.fromSplit &&
+    state.hands.length === 1
+  ) {
+    actions.push({ type: "surrender" });
+  }
+
   return actions;
 }
 
@@ -290,7 +305,19 @@ function step(
 
     case "split":
       return applySplit(state, rng);
+
+    case "surrender":
+      return applySurrender(state, rng);
   }
+}
+
+function applySurrender(state: BlackjackState, rng: RngStream): BlackjackState {
+  const hands = state.hands.map((h) => ({ ...h, cards: [...h.cards] }));
+  hands[state.activeHand].surrendered = true;
+  // We do NOT bump totalStaked — surrender refunds half of the existing stake
+  // (handled in settle()). No extra cards dealt.
+  const next: BlackjackState = { ...state, hands };
+  return advanceIfHandDone(next, rng);
 }
 
 function resolveInsurance(state: BlackjackState, taken: boolean): BlackjackState {

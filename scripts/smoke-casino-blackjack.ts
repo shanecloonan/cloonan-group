@@ -17,6 +17,7 @@
  * ========================================================================= */
 
 import {
+  advise,
   blackjackGame,
   buildDevSessionDriver,
   cardFromIndex,
@@ -30,7 +31,11 @@ import {
   newSeedPair,
   newSessionId,
   replayInt,
+  verifyBlackjackSession,
   verifyServerSeed,
+  type BlackjackActionType,
+  type BlackjackState,
+  type Card,
 } from "../lib/casino";
 
 function assert(cond: unknown, msg: string): asserts cond {
@@ -150,7 +155,108 @@ async function main() {
   assert(v.value === live, `replayInt should match live HmacRngStream (${v.value} vs ${live})`);
   console.log(`  replayInt(seed, "demo", 1, 52) = ${v.value} matches stream output ✓`);
 
-  console.log("── 9. House-edge sanity (200 hands at flat $10) ───────────");
+  console.log("── 9. Surrender + advisor + replay end-to-end ──────────────");
+  // Play a fresh hand using the advisor; if surrender is suggested at the
+  // first decision point, accept it. Then verify the replay matches.
+  const { driver: drvS, ledger: ledS, getSeedPair } = buildDevSessionDriver({
+    defaultUserId: "u3",
+    defaultChainId: "dev-mock",
+    defaultToken: DEV_TOKEN,
+    seedInitialBalance: 1_000_000_000n,
+  });
+  let surrenderTested = false;
+  let advisorChose = "—";
+  for (let attempt = 0; attempt < 60 && !surrenderTested; attempt++) {
+    let s = await drvS.openSession(blackjackGame, {
+      sessionId: newSessionId(),
+      userId: "u3",
+      gameId: blackjackGame.id,
+      chainId: "dev-mock",
+      token: DEV_TOKEN,
+      stake: 10_000_000n,
+      config: DEFAULT_BLACKJACK_CONFIG as unknown as Record<string, unknown>,
+    });
+    if (blackjackGame.isTerminal(s.state)) continue; // natural BJ — skip
+    const legal0 = blackjackGame.legalActions(s.state);
+    const adv = advise(s.state, legal0);
+    if (adv && adv.action === "surrender") {
+      advisorChose = "surrender";
+      s = await drvS.applyAction(blackjackGame, s, { type: "surrender" });
+      assert(blackjackGame.isTerminal(s.state), "surrender should terminate hand");
+      s = await drvS.settleSession(blackjackGame, s);
+      assert(s.result!.pnlUnits === -5_000_000n, `surrender should refund half: got ${s.result!.pnlUnits}`);
+      // Re-derive from revealed seed.
+      const v = verifyBlackjackSession(s, getSeedPair().serverSeed!);
+      assert(v.hashOk, "verifier: seed hash should match");
+      assert(v.finalStateMatches, "verifier: final state should match");
+      assert(v.stepMatches.every(Boolean), "verifier: every step should match");
+      surrenderTested = true;
+      console.log(`  surrender path: pnl=-5 (half stake) · replay verified ✓`);
+    }
+  }
+  if (!surrenderTested) {
+    console.log("  surrender path not triggered in 60 attempts (advisor seldom recommends it) — skipped");
+  }
+  void ledS;
+  void advisorChose;
+
+  console.log("── 10. Advisor sanity probes ───────────────────────────────");
+  function buildState(playerCards: string, dealerUpRank: string): BlackjackState {
+    // Inject a minimal blackjack state directly for advisor lookups.
+    const parseCard = (label: string) => {
+      const rank = label.slice(0, label.length - 1) as Card["rank"];
+      const suit = label.slice(-1) as Card["suit"];
+      return { rank, suit, index: 0 } as Card;
+    };
+    const playerHand = playerCards.split(" ").map(parseCard);
+    const dealer = [parseCard("2♣"), parseCard(dealerUpRank + "♠")];
+    return {
+      config: DEFAULT_BLACKJACK_CONFIG,
+      shoe: { numDecks: 6, cards: [] },
+      hands: [
+        {
+          cards: playerHand,
+          stake: 10n,
+          doubled: false,
+          fromSplit: false,
+          splitAces: false,
+          stood: false,
+          busted: false,
+          surrendered: false,
+        },
+      ],
+      activeHand: 0,
+      dealer,
+      dealerRevealed: false,
+      baseStake: 10n,
+      totalStaked: 10n,
+      insuranceStake: 0n,
+      insuranceOffered: false,
+      insuranceResolved: false,
+      phase: "player_turn",
+    };
+  }
+  const probes: { hand: string; up: string; expect: BlackjackActionType }[] = [
+    { hand: "10♠ 6♥", up: "10", expect: "surrender" }, // hard 16 vs 10 → R
+    { hand: "10♠ 6♥", up: "5", expect: "stand" },      // hard 16 vs 5
+    { hand: "A♠ 7♥", up: "6", expect: "double" },      // soft 18 vs 6
+    { hand: "8♠ 8♥", up: "5", expect: "split" },       // pair of 8s
+    { hand: "5♠ 6♥", up: "6", expect: "double" },      // hard 11 vs 6
+    { hand: "10♠ 10♥", up: "6", expect: "stand" },     // never split 10s
+    { hand: "A♠ A♥", up: "8", expect: "split" },       // always split aces
+  ];
+  for (const p of probes) {
+    const st = buildState(p.hand, p.up);
+    const legal = blackjackGame.legalActions(st);
+    const a = advise(st, legal);
+    assert(
+      a !== null && a.action === p.expect,
+      `advisor: ${p.hand} vs ${p.up} expected ${p.expect}, got ${a?.action}`,
+    );
+  }
+  console.log(`  ${probes.length} basic-strategy probes pass ✓`);
+
+  console.log("── 11. House-edge sanity (200 hands at flat $10) ──────────");
   const { driver: drv2, ledger: led2 } = buildDevSessionDriver({
     defaultUserId: "u2",
     defaultChainId: "dev-mock",

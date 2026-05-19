@@ -27,7 +27,7 @@ import type {
   SessionAction,
   TokenSpec,
 } from "./types";
-import { HmacRngStream, cryptoRandomId } from "./rng";
+import { HmacRngStream, cryptoRandomId, cryptoRandomUuid } from "./rng";
 import type { Ledger } from "./balance";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "./rng";
@@ -381,8 +381,12 @@ export function buildDevSessionDriver(cfg: SessionFactoryConfig): {
 
 /** Make a fresh session id. Exported so the UI can pre-allocate one. */
 export function newSessionId(): string {
-  return cryptoRandomId();
+  return cryptoRandomUuid();
 }
+
+// Re-export cryptoRandomId so callers that just need a tag (e.g. balance
+// mutation reasons) can grab one without importing two modules.
+export { cryptoRandomId };
 
 /* ---------------------------------------------------------------------------
  *  Action comparison helper

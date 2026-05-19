@@ -17,3 +17,6 @@ export * from "./blackjack";
 export * from "./balance";
 export * from "./chain-adapter";
 export * from "./session";
+export * from "./verify";
+export * from "./strategy";
+export * from "./persistence";
