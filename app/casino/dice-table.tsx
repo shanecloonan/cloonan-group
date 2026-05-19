@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  buildDevSessionDriver,
-  cryptoRandomId,
   DEFAULT_DICE_CONFIG,
   diceGame,
   diceMultiplier,
@@ -20,6 +18,8 @@ import {
   type Session,
   type TokenSpec,
 } from "@/lib/casino";
+import { useCasino } from "./casino-context";
+import { ShareLinkRow } from "./share-link";
 
 /* ---------------------------------------------------------------------------
  *  Style vocab (shared with other tables)
@@ -98,18 +98,19 @@ const DEFAULT_AUTO: AutoConfig = {
 };
 
 export default function DiceTable({ chainId, token }: Props) {
-  const userId = useMemo(() => `dev-${cryptoRandomId()}`, []);
-  const { driver, ledger, getSeedPair, rotateSeed } = useMemo(
-    () =>
-      buildDevSessionDriver({
-        defaultUserId: userId,
-        defaultChainId: chainId,
-        defaultToken: token,
-        seedInitialBalance: humanToUnits(10_000, token),
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  const {
+    driver,
+    ledger,
+    getSeedPair,
+    rotateSeed,
+    balance,
+    refreshBalance,
+    pushHistory,
+    depositPlayMoney,
+    lastRevealedSeed,
+    dismissRevealedSeed,
+  } = useCasino();
+  const userId = getSeedPair().userId;
 
   /* ----- Persisted controls ----- */
 
@@ -152,18 +153,6 @@ export default function DiceTable({ chainId, token }: Props) {
   const [limboTarget, setLimboTarget] = useState(2.0);
 
   /* ----- Engine state ----- */
-
-  const [balance, setBalance] = useState<{ available: bigint; locked: bigint }>({
-    available: 0n,
-    locked: 0n,
-  });
-  const refreshBalance = useCallback(async () => {
-    const b = await ledger.getBalance(userId, chainId, token);
-    setBalance({ available: b.available, locked: b.locked });
-  }, [ledger, userId, chainId, token]);
-  useEffect(() => {
-    refreshBalance();
-  }, [refreshBalance]);
 
   const [lastSession, setLastSession] = useState<Session<DiceAction, DiceState> | null>(null);
   const [history, setHistory] = useState<Session<DiceAction, DiceState>[]>([]);
@@ -243,6 +232,13 @@ export default function DiceTable({ chainId, token }: Props) {
 
         setHistory((h) => [s, ...h].slice(0, 30));
         setLastSession(s);
+        pushHistory({
+          game: "dice",
+          stakeUnits: s.result!.totalStakedUnits,
+          pnlUnits: s.result!.pnlUnits,
+          multiplier: Number(s.result!.totalPayoutUnits) / Math.max(1, Number(s.result!.totalStakedUnits)),
+          session: s as unknown as Session<unknown, unknown>,
+        });
         void persistSettledSession(s as unknown as Parameters<typeof persistSettledSession>[0], getSeedPair());
         await refreshBalance();
         return s;
@@ -252,7 +248,7 @@ export default function DiceTable({ chainId, token }: Props) {
         return null;
       }
     },
-    [balance.available, betAmount, chainId, direction, driver, getSeedPair, limboTarget, live.reachable, mode, refreshBalance, targetBps, token, userId],
+    [balance.available, betAmount, chainId, direction, driver, getSeedPair, limboTarget, live.reachable, mode, pushHistory, refreshBalance, targetBps, token, userId],
   );
 
   /* ----- Auto-bet ----- */
@@ -342,19 +338,13 @@ export default function DiceTable({ chainId, token }: Props) {
   /* ----- Deposit play money ----- */
 
   const onDepositPlay = useCallback(async () => {
-    await ledger.credit({
-      userId, chainId, token,
-      delta: humanToUnits(10_000, token),
-      reason: "deposit",
-    });
-    await refreshBalance();
-  }, [ledger, userId, chainId, token, refreshBalance]);
+    await depositPlayMoney(humanToUnits(10_000, token));
+  }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();
-  const [revealSeed, setRevealSeed] = useState<{ serverSeed: string; hash: string } | null>(null);
+  const revealSeed = lastRevealedSeed;
   const onRotateSeed = useCallback(() => {
-    const { retired } = rotateSeed();
-    setRevealSeed({ serverSeed: retired.serverSeed ?? "", hash: retired.serverSeedHash });
+    rotateSeed();
   }, [rotateSeed]);
 
   /* ----- Visual roll position ----- */
@@ -645,7 +635,7 @@ export default function DiceTable({ chainId, token }: Props) {
           <SidePanel title="Revealed server seed" subtitle="verify it">
             <div className="text-[11px] text-white/50">Server seed:</div>
             <div className="font-mono text-[11px] text-white/80 break-all">{revealSeed.serverSeed}</div>
-            <button type="button" onClick={() => setRevealSeed(null)} className="mt-3 text-[11px] text-white/40 hover:text-white cursor-pointer">
+            <button type="button" onClick={dismissRevealedSeed} className="mt-3 text-[11px] text-white/40 hover:text-white cursor-pointer">
               Dismiss →
             </button>
           </SidePanel>
@@ -936,6 +926,8 @@ function DiceVerifyModal({ session, revealedServerSeed, token, onClose }: {
         <div className="text-[11px] text-white/40">
           Settled at {new Date(session.updatedAt).toLocaleString()} · Result {fmtMoney(session.result?.pnlUnits ?? 0n, token)}.
         </div>
+
+        <ShareLinkRow session={session} serverSeed={revealedServerSeed} />
       </div>
     </div>
   );

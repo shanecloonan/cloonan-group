@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   CHAIN_ADAPTERS,
   DEV_TOKEN,
@@ -16,6 +17,65 @@ import {
   type ChainId,
   type TokenSpec,
 } from "@/lib/casino";
+import { CasinoProvider, useCasino, type CasinoHistoryEntry } from "./casino-context";
+
+function StatBlock({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: "emerald" | "rose";
+}) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">{label}</div>
+      <div
+        className={
+          "mt-1 text-lg font-bold font-mono " +
+          (accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white")
+        }
+      >
+        {value}
+      </div>
+      {sub && <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function RecentRow({ entry, token }: { entry: CasinoHistoryEntry; token: TokenSpec }) {
+  const won = entry.pnlUnits > 0n;
+  const push = entry.pnlUnits === 0n;
+  const fmt = (units: bigint): string => {
+    const denom = 10n ** BigInt(token.decimals);
+    const sign = units < 0n ? "-" : "";
+    const abs = units < 0n ? -units : units;
+    const w = abs / denom;
+    const f = (abs % denom).toString().padStart(token.decimals, "0");
+    return `${sign}${Number(`${w}.${f}`).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${token.symbol}`;
+  };
+  return (
+    <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="w-12 h-6 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] uppercase tracking-[0.12em] text-white/60 flex items-center justify-center">
+          {entry.game}
+        </span>
+        <span className="text-[10px] text-white/40 hidden sm:inline">
+          {new Date(entry.at).toLocaleTimeString()}
+        </span>
+      </div>
+      <div className="flex items-center gap-3 text-right">
+        <div className="text-[11px] text-white/40 font-mono">{entry.multiplier.toFixed(2)}×</div>
+        <div className={"text-[12px] font-mono " + (won ? "text-emerald-300" : push ? "text-white/60" : "text-rose-300")}>
+          {won ? "+" : ""}{fmt(entry.pnlUnits)}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const BlackjackTable = dynamic(() => import("./blackjack-table"), { ssr: false });
 const CoinflipTable = dynamic(() => import("./coinflip-table"), { ssr: false });
@@ -211,33 +271,35 @@ export default function CasinoContent() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-56px)] w-full bg-[#08090e] text-white">
-      <PageHeader tab={tab} setTab={setTab} />
+    <CasinoProvider chainId={chainId} token={token}>
+      <div className="min-h-[calc(100vh-56px)] w-full bg-[#08090e] text-white">
+        <PageHeader tab={tab} setTab={setTab} />
 
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-24">
-        {tab === "lobby" && (
-          <Lobby
-            chainId={chainId}
-            token={token}
-            adapter={adapter}
-            onSelectChain={selectChain}
-            onSelectToken={setToken}
-            onOpenGame={(g) => setTab(g)}
-          />
-        )}
-        {tab === "blackjack" && (
-          <BlackjackTable chainId={chainId} token={token} adapter={adapter} />
-        )}
-        {tab === "coinflip" && (
-          <CoinflipTable chainId={chainId} token={token} adapter={adapter} />
-        )}
-        {tab === "dice" && (
-          <DiceTable chainId={chainId} token={token} adapter={adapter} />
-        )}
-        {tab === "roadmap" && <RoadmapPanel />}
-        {tab === "fairness" && <FairnessPanel />}
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-24">
+          {tab === "lobby" && (
+            <Lobby
+              chainId={chainId}
+              token={token}
+              adapter={adapter}
+              onSelectChain={selectChain}
+              onSelectToken={setToken}
+              onOpenGame={(g) => setTab(g)}
+            />
+          )}
+          {tab === "blackjack" && (
+            <BlackjackTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "coinflip" && (
+            <CoinflipTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "dice" && (
+            <DiceTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "roadmap" && <RoadmapPanel />}
+          {tab === "fairness" && <FairnessPanel />}
+        </div>
       </div>
-    </div>
+    </CasinoProvider>
   );
 }
 
@@ -327,8 +389,95 @@ function Lobby({
   onOpenGame,
 }: LobbyProps) {
   const currentTile = CHAIN_TILES.find((c) => c.id === chainId);
+  const { balance, stats, history, depositPlayMoney } = useCasino();
+
+  const fmtMoney = (units: bigint, digits = 2): string => {
+    const denom = 10n ** BigInt(token.decimals);
+    const whole = units / denom;
+    const frac = units % denom;
+    const sign = units < 0n ? "-" : "";
+    const abs = units < 0n ? -units : units;
+    const w = abs / denom;
+    const f = (abs % denom).toString().padStart(token.decimals, "0");
+    void whole; void frac;
+    const num = Number(`${w}.${f}`);
+    return `${sign}${num.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${token.symbol}`;
+  };
+
   return (
     <div className="mt-8 space-y-8">
+      {/* Live status strip */}
+      <section className={card + " p-5"}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StatBlock label="Balance" value={fmtMoney(balance.available)} accent="emerald" />
+          <StatBlock
+            label="Lifetime PnL"
+            value={fmtMoney(stats.totalPnlUnits)}
+            accent={stats.totalPnlUnits >= 0n ? "emerald" : "rose"}
+            sub={`${stats.sessionsPlayed} sessions`}
+          />
+          <StatBlock
+            label="Total wagered"
+            value={fmtMoney(stats.totalWageredUnits)}
+            sub={stats.sessionsPlayed > 0 ? `RTP ${((Number(stats.totalWageredUnits + stats.totalPnlUnits) / Math.max(1, Number(stats.totalWageredUnits))) * 100).toFixed(2)}%` : "—"}
+          />
+          <StatBlock
+            label="Biggest win"
+            value={stats.biggestWinUnits > 0n ? "+" + fmtMoney(stats.biggestWinUnits) : "—"}
+            accent="emerald"
+            sub={stats.biggestLossUnits < 0n ? `worst: ${fmtMoney(stats.biggestLossUnits)}` : undefined}
+          />
+        </div>
+        {chainId === "dev-mock" && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/[0.06]">
+            <span className="text-[11px] text-white/40">
+              Play money for development. Add more anytime.
+            </span>
+            <button
+              type="button"
+              onClick={() => depositPlayMoney(10_000n * 10n ** BigInt(token.decimals))}
+              className="h-8 px-3 rounded-lg text-xs font-semibold bg-white/[0.06] border border-white/[0.08] text-emerald-200 hover:text-emerald-100 hover:bg-white/[0.1] cursor-pointer transition-all"
+            >
+              + 10,000 {token.symbol}
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Cross-game recent activity */}
+      {history.length > 0 && (
+        <section className={card + " p-5"}>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-lg font-semibold">Recent activity</h2>
+            <Link href="/casino/verify" className="text-[11px] uppercase tracking-[0.12em] text-emerald-300 hover:text-emerald-200 cursor-pointer">
+              Verify any hand →
+            </Link>
+          </div>
+          <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
+            {history.slice(0, 12).map((h, i) => (
+              <RecentRow key={i} entry={h} token={token} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {history.length === 0 && (
+        <section className={card + " p-5"}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Start playing</h2>
+              <p className="text-[12px] text-white/60 mt-1">
+                Pick a game below. Your hands stream into this strip in real time, and every
+                settled hand gets a shareable verification link.
+              </p>
+            </div>
+            <Link href="/casino/verify" className="text-[11px] uppercase tracking-[0.12em] text-emerald-300 hover:text-emerald-200 cursor-pointer">
+              Verify any hand →
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* Chain selector */}
       <section>
         <h2 className="text-lg font-semibold mb-3">Choose a chain</h2>

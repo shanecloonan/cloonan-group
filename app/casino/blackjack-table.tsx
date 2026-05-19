@@ -4,9 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   advise,
   blackjackGame,
-  buildDevSessionDriver,
   cardLabel,
-  cryptoRandomId,
   DEFAULT_BLACKJACK_CONFIG,
   evaluateHand,
   newSessionId,
@@ -22,6 +20,8 @@ import {
   type Session,
   type TokenSpec,
 } from "@/lib/casino";
+import { useCasino } from "./casino-context";
+import { ShareLinkRow } from "./share-link";
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -77,34 +77,22 @@ interface Props {
 }
 
 export default function BlackjackTable({ chainId, token }: Props) {
-  /* ----- Stable driver (in-memory ledger for dev mode) ----- */
-  const userId = useMemo(() => `dev-${cryptoRandomId()}`, []);
+  const {
+    driver,
+    getSeedPair,
+    rotateSeed,
+    balance,
+    refreshBalance,
+    pushHistory,
+    depositPlayMoney,
+    lastRevealedSeed,
+    dismissRevealedSeed,
+  } = useCasino();
 
-  const { driver, ledger, getSeedPair, rotateSeed } = useMemo(
-    () =>
-      buildDevSessionDriver({
-        defaultUserId: userId,
-        defaultChainId: chainId,
-        defaultToken: token,
-        seedInitialBalance: humanToUnits(10_000, token),
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
-  /* ----- State ----- */
-  const [balance, setBalance] = useState<{ available: bigint; locked: bigint }>({
-    available: 0n,
-    locked: 0n,
-  });
-  const refreshBalance = useCallback(async () => {
-    const b = await ledger.getBalance(userId, chainId, token);
-    setBalance({ available: b.available, locked: b.locked });
-  }, [ledger, userId, chainId, token]);
-
-  useEffect(() => {
-    refreshBalance();
-  }, [refreshBalance]);
+  // Synthetic userId for the dev driver — must come from the driver's
+  // configured default. We derive it from the active seed pair's userId
+  // (the dev driver stamps every seed pair with the default user).
+  const userId = getSeedPair().userId;
 
   const [betAmount, setBetAmount] = useState(() => {
     if (typeof window === "undefined") return 25;
@@ -123,9 +111,9 @@ export default function BlackjackTable({ chainId, token }: Props) {
   const [history, setHistory] = useState<Session<BlackjackAction, BlackjackState>[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [revealSeed, setRevealSeed] = useState<{ serverSeed: string; hash: string } | null>(null);
   const [verifyTarget, setVerifyTarget] = useState<Session<BlackjackAction, BlackjackState> | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const revealSeed = lastRevealedSeed;
 
   /* ----- Actions ----- */
 
@@ -147,7 +135,13 @@ export default function BlackjackTable({ chainId, token }: Props) {
       if (blackjackGame.isTerminal(next.state)) {
         next = await driver.settleSession(blackjackGame, next);
         setHistory((h) => [next, ...h].slice(0, 30));
-        // Fire-and-forget persistence; never blocks gameplay.
+        pushHistory({
+          game: "blackjack",
+          stakeUnits: next.result!.totalStakedUnits,
+          pnlUnits: next.result!.pnlUnits,
+          multiplier: Number(next.result!.totalPayoutUnits) / Math.max(1, Number(next.result!.totalStakedUnits)),
+          session: next as unknown as Session<unknown, unknown>,
+        });
         void persistSettledSession(next, getSeedPair());
       }
       setSession(next);
@@ -157,7 +151,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
     } finally {
       setBusy(false);
     }
-  }, [driver, userId, chainId, token, betAmount, refreshBalance, config, getSeedPair]);
+  }, [driver, userId, chainId, token, betAmount, refreshBalance, config, getSeedPair, pushHistory]);
 
   const applyAction = useCallback(
     async (type: BlackjackActionType) => {
@@ -173,6 +167,13 @@ export default function BlackjackTable({ chainId, token }: Props) {
         if (blackjackGame.isTerminal(next.state)) {
           next = await driver.settleSession(blackjackGame, next);
           setHistory((h) => [next, ...h].slice(0, 30));
+          pushHistory({
+            game: "blackjack",
+            stakeUnits: next.result!.totalStakedUnits,
+            pnlUnits: next.result!.pnlUnits,
+            multiplier: Number(next.result!.totalPayoutUnits) / Math.max(1, Number(next.result!.totalStakedUnits)),
+            session: next as unknown as Session<unknown, unknown>,
+          });
           void persistSettledSession(next, getSeedPair());
         }
         setSession(next);
@@ -183,26 +184,18 @@ export default function BlackjackTable({ chainId, token }: Props) {
         setBusy(false);
       }
     },
-    [driver, session, refreshBalance, getSeedPair],
+    [driver, session, refreshBalance, getSeedPair, pushHistory],
   );
 
   const clearTable = () => setSession(null);
 
   const onRotateSeed = useCallback(() => {
-    const { retired } = rotateSeed();
-    setRevealSeed({ serverSeed: retired.serverSeed ?? "", hash: retired.serverSeedHash });
+    rotateSeed();
   }, [rotateSeed]);
 
   const onDepositPlay = useCallback(async () => {
-    await ledger.credit({
-      userId,
-      chainId,
-      token,
-      delta: humanToUnits(10_000, token),
-      reason: "deposit",
-    });
-    await refreshBalance();
-  }, [ledger, userId, chainId, token, refreshBalance]);
+    await depositPlayMoney(humanToUnits(10_000, token));
+  }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();
   const legal = session ? blackjackGame.legalActions(session.state) : [];
@@ -426,7 +419,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
             </div>
             <button
               type="button"
-              onClick={() => setRevealSeed(null)}
+              onClick={dismissRevealedSeed}
               className="mt-3 text-[11px] text-white/40 hover:text-white cursor-pointer"
             >
               Dismiss →
@@ -1102,6 +1095,8 @@ function VerifyModal({
           Settled at {new Date(session.updatedAt).toLocaleString()} · {session.actions.length} actions logged ·
           Result {fmtMoney(session.result?.pnlUnits ?? 0n, token)}.
         </div>
+
+        <ShareLinkRow session={session} serverSeed={revealedServerSeed} />
       </div>
     </div>
   );

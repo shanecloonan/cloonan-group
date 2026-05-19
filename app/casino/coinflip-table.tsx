@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  buildDevSessionDriver,
   coinflipGame,
-  cryptoRandomId,
   DEFAULT_COINFLIP_CONFIG,
   multiplierFor,
   newSessionId,
@@ -20,6 +18,8 @@ import {
   type Session,
   type TokenSpec,
 } from "@/lib/casino";
+import { useCasino } from "./casino-context";
+import { ShareLinkRow } from "./share-link";
 
 /* ---------------------------------------------------------------------------
  *  Style vocab (same as blackjack table)
@@ -105,30 +105,19 @@ const DEFAULT_AUTO: AutoBetConfig = {
 };
 
 export default function CoinflipTable({ chainId, token }: Props) {
-  const userId = useMemo(() => `dev-${cryptoRandomId()}`, []);
-  const { driver, ledger, getSeedPair, rotateSeed } = useMemo(
-    () =>
-      buildDevSessionDriver({
-        defaultUserId: userId,
-        defaultChainId: chainId,
-        defaultToken: token,
-        seedInitialBalance: humanToUnits(10_000, token),
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
-  const [balance, setBalance] = useState<{ available: bigint; locked: bigint }>({
-    available: 0n,
-    locked: 0n,
-  });
-  const refreshBalance = useCallback(async () => {
-    const b = await ledger.getBalance(userId, chainId, token);
-    setBalance({ available: b.available, locked: b.locked });
-  }, [ledger, userId, chainId, token]);
-  useEffect(() => {
-    refreshBalance();
-  }, [refreshBalance]);
+  const {
+    driver,
+    ledger,
+    getSeedPair,
+    rotateSeed,
+    balance,
+    refreshBalance,
+    pushHistory,
+    depositPlayMoney,
+    lastRevealedSeed,
+    dismissRevealedSeed,
+  } = useCasino();
+  const userId = getSeedPair().userId;
 
   const [betAmount, setBetAmount] = useState(() => {
     if (typeof window === "undefined") return 10;
@@ -199,6 +188,13 @@ export default function CoinflipTable({ chainId, token }: Props) {
 
         setHistory((h) => [s, ...h].slice(0, 30));
         setLastSession(s);
+        pushHistory({
+          game: "coinflip",
+          stakeUnits: s.result!.totalStakedUnits,
+          pnlUnits: s.result!.pnlUnits,
+          multiplier: Number(s.result!.totalPayoutUnits) / Math.max(1, Number(s.result!.totalStakedUnits)),
+          session: s as unknown as Session<unknown, unknown>,
+        });
         // Streak tracking — same outcome side in a row.
         setStreak((prev) => {
           const won = s.state.result === s.state.prediction;
@@ -222,7 +218,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
         return null;
       }
     },
-    [driver, userId, chainId, token, betAmount, pick, balance.available, config, getSeedPair, refreshBalance],
+    [driver, userId, chainId, token, betAmount, pick, balance.available, config, getSeedPair, refreshBalance, pushHistory],
   );
 
   /* ----- Auto-bet loop ----- */
@@ -318,21 +314,13 @@ export default function CoinflipTable({ chainId, token }: Props) {
   }, [animating, autoRunning, singleFlip, verifyTarget]);
 
   const onDepositPlay = useCallback(async () => {
-    await ledger.credit({
-      userId,
-      chainId,
-      token,
-      delta: humanToUnits(10_000, token),
-      reason: "deposit",
-    });
-    await refreshBalance();
-  }, [ledger, userId, chainId, token, refreshBalance]);
+    await depositPlayMoney(humanToUnits(10_000, token));
+  }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();
-  const [revealSeed, setRevealSeed] = useState<{ serverSeed: string; hash: string } | null>(null);
+  const revealSeed = lastRevealedSeed;
   const onRotateSeed = useCallback(() => {
-    const { retired } = rotateSeed();
-    setRevealSeed({ serverSeed: retired.serverSeed ?? "", hash: retired.serverSeedHash });
+    rotateSeed();
   }, [rotateSeed]);
 
   const multiplier = multiplierFor(config);
@@ -638,7 +626,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
             <div className="font-mono text-[11px] text-white/80 break-all">{revealSeed.serverSeed}</div>
             <button
               type="button"
-              onClick={() => setRevealSeed(null)}
+              onClick={dismissRevealedSeed}
               className="mt-3 text-[11px] text-white/40 hover:text-white cursor-pointer"
             >
               Dismiss →
@@ -1012,6 +1000,8 @@ function CoinflipVerifyModal({
         <div className="text-[11px] text-white/40">
           Settled at {new Date(session.updatedAt).toLocaleString()} · Result {fmtMoney(session.result?.pnlUnits ?? 0n, token)}.
         </div>
+
+        <ShareLinkRow session={session} serverSeed={revealedServerSeed} />
       </div>
     </div>
   );
