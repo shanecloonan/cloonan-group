@@ -77,6 +77,27 @@ function RecentRow({ entry, token }: { entry: CasinoHistoryEntry; token: TokenSp
   );
 }
 
+/**
+ * Shows where the user's balance + seed pair currently live. Switches
+ * automatically when Supabase auth state changes (driven by
+ * `useCasino().persistent`).
+ */
+function SyncStatusPill() {
+  const { persistent } = useCasino();
+  if (persistent) {
+    return (
+      <span className={pill + " border-emerald-400/30 text-emerald-300 bg-emerald-500/10"}>
+        ☁ Cloud-synced
+      </span>
+    );
+  }
+  return (
+    <span className={pill + " border-amber-400/30 text-amber-200 bg-amber-500/10"}>
+      ⚡ Local play (sign in to sync)
+    </span>
+  );
+}
+
 const BlackjackTable = dynamic(() => import("./blackjack-table"), { ssr: false });
 const CoinflipTable = dynamic(() => import("./coinflip-table"), { ssr: false });
 const DiceTable = dynamic(() => import("./dice-table"), { ssr: false });
@@ -342,6 +363,7 @@ function PageHeader({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
           <span className={pill}>Provably fair</span>
           <span className={pill}>Multi-chain</span>
           <span className={pill}>House edge 0.42% (BJ)</span>
+          <SyncStatusPill />
         </div>
         <h1 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight">
           Casino<span className="text-emerald-400">.</span>

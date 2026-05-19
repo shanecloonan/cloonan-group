@@ -25,13 +25,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
-  buildDevSessionDriver,
+  buildAuthSessionDriver,
+  buildAnonymousSessionDriver,
   cryptoRandomId,
+  type BuiltSessionDriver,
   type ChainId,
+  type Ledger,
   type SeedPair,
   type Session,
   type TokenSpec,
 } from "@/lib/casino";
+import { useWallet } from "@/lib/wallet-context";
 
 /* ---------------------------------------------------------------------------
  *  Types
@@ -58,9 +62,17 @@ export interface CasinoContextValue {
   /** Token currently being played with. */
   token: TokenSpec;
   /** Session driver shared by every game. */
-  driver: ReturnType<typeof buildDevSessionDriver>["driver"];
+  driver: BuiltSessionDriver["driver"];
   /** Ledger interface — read balance or credit play money. */
-  ledger: ReturnType<typeof buildDevSessionDriver>["ledger"];
+  ledger: Ledger;
+  /** Userid being used to key ledger rows (Supabase UUID or dev placeholder). */
+  userId: string;
+  /**
+   * When true the ledger and seed pair are persisted to Supabase under
+   * the authenticated user. When false everything is in-memory only —
+   * useful for "try before you sign up" mode.
+   */
+  persistent: boolean;
   /** Active seed pair (the *current* one, not retired). */
   getSeedPair: () => SeedPair;
   /** Rotate the active seed; return the retired one (now revealable). */
@@ -133,50 +145,87 @@ export function CasinoProvider({
   token: TokenSpec;
   children: React.ReactNode;
 }) {
-  // Stable per-tab synthetic userId for the in-memory dev ledger. In prod
-  // this would be the authed Supabase user id.
-  const userId = useMemo(() => `dev-${cryptoRandomId()}`, []);
+  const { user } = useWallet();
+  // Stable per-tab synthetic userId for the in-memory ledger when no
+  // Supabase user is signed in. Otherwise the real auth UUID is used.
+  const anonUserId = useMemo(() => `dev-${cryptoRandomId()}`, []);
+  const userId = user?.id ?? anonUserId;
 
-  // Build the dev driver ONCE per (chain, token) pair. Switching chain or
-  // token swaps the working environment but preserves the seed pair below.
-  const { driver, ledger, getSeedPair, rotateSeed: rawRotate } = useMemo(
-    () =>
-      buildDevSessionDriver({
-        defaultUserId: userId,
+  // Rebuild the driver whenever (auth user, chain, token) changes. Switching
+  // chain/token swaps environment, signing in switches to Supabase-backed
+  // persistence, signing out drops back to in-memory play money.
+  const built = useMemo<BuiltSessionDriver>(
+    () => {
+      if (user?.id) {
+        return buildAuthSessionDriver({
+          userId: user.id,
+          chainId,
+          token,
+        });
+      }
+      return buildAnonymousSessionDriver({
+        defaultUserId: anonUserId,
         defaultChainId: chainId,
         defaultToken: token,
         seedInitialBalance: 10_000n * 10n ** BigInt(token.decimals),
-      }),
+      });
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [chainId, token.symbol, token.address],
+    [user?.id, chainId, token.symbol, token.address],
   );
+  const { driver, ledger, getSeedPair, rotateSeed: rawRotate, persistent, reloadSeedPair } = built;
 
   const [balance, setBalance] = useState<{ available: bigint; locked: bigint }>({
     available: 0n,
     locked: 0n,
   });
   const refreshBalance = useCallback(async () => {
-    const b = await ledger.getBalance(userId, chainId, token);
-    setBalance({ available: b.available, locked: b.locked });
+    try {
+      const b = await ledger.getBalance(userId, chainId, token);
+      setBalance({ available: b.available, locked: b.locked });
+    } catch (e) {
+      // Most likely RLS rejection because the user logged out mid-call —
+      // surface as zero balance rather than crashing the game UI.
+      console.warn("CasinoContext.refreshBalance:", (e as Error).message);
+      setBalance({ available: 0n, locked: 0n });
+    }
   }, [ledger, userId, chainId, token]);
   useEffect(() => {
     refreshBalance();
   }, [refreshBalance]);
 
+  // When auth-mode driver mounts, pull the active seed pair from Supabase
+  // so the UI shows the persisted commit hash (and the nonce continues
+  // from where the previous session left off).
+  useEffect(() => {
+    if (!persistent) return;
+    void reloadSeedPair();
+  }, [persistent, reloadSeedPair]);
+
   // History persisted to localStorage so it survives navigations to
   // /casino/history, /casino/verify, etc. Capped at 250 most-recent rows.
+  // Key by userId so signing in/out cleanly switches histories rather
+  // than mixing anonymous play with authed play.
+  const historyStorageKey = `${HISTORY_STORAGE_KEY}:${userId}`;
   const [history, setHistory] = useState<CasinoHistoryEntry[]>([]);
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      setHistory([]);
+      return;
+    }
     try {
-      const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (!raw) return;
+      const raw = window.localStorage.getItem(historyStorageKey);
+      if (!raw) {
+        setHistory([]);
+        return;
+      }
       const parsed = JSON.parse(raw) as Array<CasinoHistoryEntry & { stakeUnits: string; pnlUnits: string }>;
       setHistory(parsed.map(deserializeEntry));
     } catch {
       // corrupted store — start fresh
+      setHistory([]);
     }
-  }, []);
+  }, [historyStorageKey]);
   const pushHistory = useCallback((e: Omit<CasinoHistoryEntry, "at">) => {
     setHistory((prev) => {
       const next: CasinoHistoryEntry = { ...e, at: new Date().toISOString() };
@@ -184,7 +233,7 @@ export function CasinoProvider({
       if (typeof window !== "undefined") {
         try {
           window.localStorage.setItem(
-            HISTORY_STORAGE_KEY,
+            historyStorageKey,
             JSON.stringify(merged.map(serializeEntry)),
           );
         } catch {
@@ -193,7 +242,7 @@ export function CasinoProvider({
       }
       return merged;
     });
-  }, []);
+  }, [historyStorageKey]);
 
   const [lastRevealedSeed, setLastRevealedSeed] = useState<{ serverSeed: string; hash: string } | null>(null);
   const rotateSeed = useCallback(() => {
@@ -205,10 +254,18 @@ export function CasinoProvider({
 
   const depositPlayMoney = useCallback(
     async (amount: bigint) => {
+      if (persistent) {
+        // For authed users the only legitimate credit path is on-chain
+        // deposits → /casino/wallet → operator credit. Refuse to mint
+        // "free" play money against the real ledger.
+        throw new Error(
+          "Play money is disabled for signed-in accounts. Use /casino/wallet to deposit on-chain.",
+        );
+      }
       await ledger.credit({ userId, chainId, token, delta: amount, reason: "deposit" });
       await refreshBalance();
     },
-    [ledger, userId, chainId, token, refreshBalance],
+    [persistent, ledger, userId, chainId, token, refreshBalance],
   );
 
   // Lifetime aggregates derived from in-memory history.
@@ -238,6 +295,8 @@ export function CasinoProvider({
       token,
       driver,
       ledger,
+      userId,
+      persistent,
       getSeedPair,
       rotateSeed,
       balance,
@@ -249,7 +308,7 @@ export function CasinoProvider({
       lastRevealedSeed,
       dismissRevealedSeed,
     }),
-    [chainId, token, driver, ledger, getSeedPair, rotateSeed, balance, refreshBalance, history, pushHistory, depositPlayMoney, stats, lastRevealedSeed, dismissRevealedSeed],
+    [chainId, token, driver, ledger, userId, persistent, getSeedPair, rotateSeed, balance, refreshBalance, history, pushHistory, depositPlayMoney, stats, lastRevealedSeed, dismissRevealedSeed],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

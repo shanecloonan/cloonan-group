@@ -31,8 +31,10 @@ import { useWallet } from "@/lib/wallet-context";
 import {
   CHAIN_ADAPTERS,
   ETH_NATIVE,
+  SupabaseLedger,
   USDC_BASE,
   USDC_ETHEREUM_MAINNET,
+  ensureCasinoUserRow,
   isAdapterReady,
   makeRealEthereumAdapter,
   type ChainId,
@@ -241,6 +243,9 @@ export default function WalletContent() {
       </header>
 
       <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 space-y-6">
+        {/* ───── Cloud sync banner ───── */}
+        <CloudSyncBanner signedIn={!!wallet.user} />
+
         {/* ───── Top status row ───── */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <StatusCard
@@ -420,6 +425,45 @@ function StatusCard({
   );
 }
 
+/**
+ * Tells the user whether their post-deposit casino balance will land in
+ * Supabase or stay in their browser. The contract:
+ *   • Signed in → on-chain deposit → SupabaseLedger.credit() → balance
+ *     follows them across devices, persisted in `casino_balances`.
+ *   • Not signed in → on-chain deposit lands in the vault, but the casino
+ *     can't credit it to a player ledger until they sign in (since the
+ *     ledger is keyed by auth.users.id).
+ */
+function CloudSyncBanner({ signedIn }: { signedIn: boolean }) {
+  if (signedIn) {
+    return (
+      <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/25 flex items-start gap-3">
+        <span className="mt-0.5 text-emerald-300">☁</span>
+        <div className="text-[12px] text-emerald-100/90 leading-relaxed">
+          <strong className="text-emerald-200">Cloud-synced.</strong>{" "}
+          Deposits and withdrawals reconcile against your Supabase casino
+          balance. Game seeds, sessions, and bankroll roam with your
+          account across devices.
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-400/25 flex items-start gap-3">
+      <span className="mt-0.5 text-amber-300">⚡</span>
+      <div className="text-[12px] text-amber-100/90 leading-relaxed">
+        <strong className="text-amber-200">Local-only mode.</strong>{" "}
+        You're not signed in. On-chain deposits will reach the vault but
+        we can't credit a casino balance to you until you{" "}
+        <Link href="/auth" className="underline-offset-2 hover:underline text-amber-200">
+          sign in
+        </Link>
+        . Use the Dev (play money) chain to try the UX risk-free.
+      </div>
+    </div>
+  );
+}
+
 function NotConfiguredBanner({ chainId }: { chainId: ChainId }) {
   const envName = `NEXT_PUBLIC_CASINO_VAULT_${chainId.toUpperCase().replaceAll("-", "_")}`;
   return (
@@ -580,6 +624,44 @@ function DepositPanel({
         },
       });
 
+      // Credit the casino ledger if the user is signed in. The Supabase
+      // RPC is `security definer` so it bypasses RLS on `casino_balances`
+      // / `casino_balance_mutations` while still attributing the credit
+      // to the auth user. Idempotency: we tag the mutation with the
+      // deposit tx hash so re-runs of the same finalization don't
+      // double-credit (the journal has a unique index on tx_hash for
+      // deposit mutations — see migration 2026-05-19-casino-tx-hash-uniq).
+      try {
+        const supabaseUser = wallet.user;
+        if (supabaseUser?.id) {
+          await ensureCasinoUserRow(supabaseUser.id);
+          const ledger = new SupabaseLedger();
+          await ledger.credit({
+            userId: supabaseUser.id,
+            chainId,
+            token,
+            delta: amountUnits,
+            reason: "deposit",
+            txHash: depositTxHash,
+          });
+          setStatus(
+            `Deposit credited to casino balance — ${fmtMoney(amountUnits, token)}`,
+          );
+        } else {
+          setStatus(
+            "Deposit finalized on-chain. Sign in to credit your casino balance.",
+          );
+        }
+      } catch (e) {
+        // The on-chain tx is the source of truth; if the ledger credit
+        // failed (RLS rejection, race, etc.) the operator can retry
+        // server-side from the deposit row. Surface to the user so they
+        // know to contact support, but don't unmark the tx as finalized.
+        setStatus(
+          `On-chain finalized, but casino ledger credit failed: ${(e as Error).message}. Contact support with tx ${shortAddr(depositTxHash)}.`,
+        );
+      }
+
       // Refresh on-chain balance.
       try {
         const b = await adapter.fetchTokenBalance(token, userAddress);
@@ -695,6 +777,10 @@ function WithdrawPanel({
       return;
     }
     setBusy(true);
+    // Lifted out of the try so the catch block can release the casino
+    // lock on any failure between lock and burn.
+    let casinoLocked = false;
+    const casinoLedger = new SupabaseLedger();
     try {
       if (chainKind === "dev") {
         const fakeHash = `0xdev${Math.floor(Math.random() * 1e16).toString(16).padStart(16, "0")}`;
@@ -727,6 +813,29 @@ function WithdrawPanel({
       if (!signer) {
         setError("Unable to get a signer. Unlock vault or connect MetaMask.");
         return;
+      }
+
+      // Step 0 — if signed in, lock the funds in the casino ledger so the
+      // user can't gamble them away while the on-chain withdraw is in
+      // flight. On any subsequent failure we unlock; on finalization we
+      // burn. (For anonymous users there's no off-chain balance to lock —
+      // the on-chain vault is the only state.)
+      const supabaseUser = wallet.user;
+      if (supabaseUser?.id) {
+        try {
+          await ensureCasinoUserRow(supabaseUser.id);
+          await casinoLedger.lock({
+            userId: supabaseUser.id,
+            chainId,
+            token,
+            delta: amountUnits,
+            reason: "withdraw",
+          });
+          casinoLocked = true;
+        } catch (e) {
+          setError(`Insufficient casino balance: ${(e as Error).message}`);
+          return;
+        }
       }
 
       // Step 1 — fetch current user nonce from the contract.
@@ -803,7 +912,46 @@ function WithdrawPanel({
           });
         },
       });
+
+      // Finalize the casino-side debit. We burn the locked amount —
+      // this matches what just left the vault on-chain.
+      if (casinoLocked && wallet.user?.id) {
+        try {
+          await casinoLedger.burn({
+            userId: wallet.user.id,
+            chainId,
+            token,
+            delta: amountUnits,
+            reason: "withdraw",
+            txHash,
+          });
+          casinoLocked = false;
+        } catch (e) {
+          // The on-chain payout went through but the ledger burn failed.
+          // Operator must reconcile manually. Surface the tx hash so
+          // support can correlate.
+          setStatus(
+            `On-chain withdraw finalized, but casino debit failed: ${(e as Error).message}. Contact support with tx ${shortAddr(txHash)}.`,
+          );
+          return;
+        }
+      }
     } catch (e) {
+      // Anything between "we locked" and "we burned" — release the lock
+      // so the user's casino balance is recoverable.
+      if (casinoLocked && wallet.user?.id) {
+        try {
+          await casinoLedger.unlock({
+            userId: wallet.user.id,
+            chainId,
+            token,
+            delta: amountUnits,
+            reason: "manual_adjustment",
+          });
+        } catch {
+          // best-effort
+        }
+      }
       setError((e as Error).message);
     } finally {
       setBusy(false);

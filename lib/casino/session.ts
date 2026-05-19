@@ -28,7 +28,6 @@ import type {
   TokenSpec,
 } from "./types";
 import { HmacRngStream, cryptoRandomId, cryptoRandomUuid } from "./rng";
-import type { Ledger } from "./balance";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "./rng";
 
@@ -323,8 +322,9 @@ export class CasinoSessionDriver {
  *  implementations.
  * ------------------------------------------------------------------------- */
 
-import { devLedger } from "./balance";
+import { devLedger, InMemoryLedger, SupabaseLedger, type Ledger } from "./balance";
 import { newSeedPair } from "./rng";
+import { InMemorySeedStore, SupabaseSeedStore, ensureCasinoUserRow, type SeedStore } from "./seed-store";
 
 export interface SessionFactoryConfig {
   defaultUserId: string;
@@ -334,17 +334,23 @@ export interface SessionFactoryConfig {
   seedInitialBalance?: bigint;
 }
 
+export interface BuiltSessionDriver {
+  driver: CasinoSessionDriver;
+  ledger: Ledger;
+  getSeedPair: () => SeedPair;
+  rotateSeed: (newClientSeed?: string) => { retired: SeedPair; next: SeedPair };
+  /** Whether this driver writes to a persistent backend. */
+  persistent: boolean;
+  /** Async-refresh the seed pair from the backing store. */
+  reloadSeedPair: () => Promise<SeedPair>;
+}
+
 /**
  * Builds a CasinoSessionDriver wired to in-memory state. Returned object
  * also exposes the driver, the seed store, and the ledger so the UI can
  * peek at balances without hitting Supabase.
  */
-export function buildDevSessionDriver(cfg: SessionFactoryConfig): {
-  driver: CasinoSessionDriver;
-  ledger: typeof devLedger;
-  getSeedPair: () => SeedPair;
-  rotateSeed: (newClientSeed?: string) => { retired: SeedPair; next: SeedPair };
-} {
+export function buildDevSessionDriver(cfg: SessionFactoryConfig): BuiltSessionDriver {
   let activePair = newSeedPair({ userId: cfg.defaultUserId });
   const seedArchive: SeedPair[] = [];
 
@@ -366,6 +372,10 @@ export function buildDevSessionDriver(cfg: SessionFactoryConfig): {
     driver,
     ledger: devLedger,
     getSeedPair: () => activePair,
+    persistent: false,
+    async reloadSeedPair() {
+      return activePair;
+    },
     rotateSeed(newClientSeed?: string) {
       const retired: SeedPair = {
         ...activePair,
@@ -375,6 +385,135 @@ export function buildDevSessionDriver(cfg: SessionFactoryConfig): {
       seedArchive.push(retired);
       activePair = newSeedPair({ userId: cfg.defaultUserId, clientSeed: newClientSeed });
       return { retired, next: activePair };
+    },
+  };
+}
+
+/* ---------------------------------------------------------------------------
+ *  Auth-mode factory — Supabase ledger + seed store.
+ *
+ *  Used by the casino UI when the user is signed in (i.e. there's a real
+ *  `auth.users.id` available). Balances, seed pairs, sessions, and actions
+ *  all persist; the casino survives browser reloads and works across
+ *  devices.
+ * ------------------------------------------------------------------------- */
+
+export interface AuthSessionDriverConfig {
+  /** Authenticated supabase user id (UUID). */
+  userId: string;
+  chainId: ChainId;
+  token: TokenSpec;
+}
+
+/**
+ * Builds an auth-mode session driver. The returned object mirrors
+ * `buildDevSessionDriver`'s surface but is backed by Supabase.
+ *
+ * NOTE: This function does NOT await initial seed-pair loading — the
+ * driver creates a temporary local seed pair synchronously and the
+ * caller should `await reloadSeedPair()` once mounted to pull in any
+ * existing active pair from the DB. This keeps construction synchronous
+ * (matching `buildDevSessionDriver`) so the React provider doesn't have
+ * to handle a promise.
+ */
+export function buildAuthSessionDriver(cfg: AuthSessionDriverConfig): BuiltSessionDriver {
+  const ledger = new SupabaseLedger();
+  const store = new SupabaseSeedStore();
+
+  // Local cache; the actual authoritative pair lives in Supabase but we
+  // hold a working copy so the session driver can be synchronous.
+  let activePair = newSeedPair({ userId: cfg.userId });
+
+  // Fire-and-forget user row creation + initial seed pair fetch.
+  void (async () => {
+    await ensureCasinoUserRow(cfg.userId);
+    const fromDb = await store.getActiveSeedPair(cfg.userId);
+    // If the DB had an active pair we couldn't reuse (no server_seed in
+    // memory), `store.getActiveSeedPair` returned a brand-new one already
+    // persisted. Either way, sync local with whatever store gave us.
+    activePair = fromDb;
+  })();
+
+  const driver = new CasinoSessionDriver({
+    ledger,
+    async getActiveSeedPair() {
+      return activePair;
+    },
+    async saveSeedPair(pair: SeedPair) {
+      activePair = pair;
+      await store.saveSeedPair(pair);
+    },
+  });
+
+  return {
+    driver,
+    ledger,
+    persistent: true,
+    getSeedPair: () => activePair,
+    async reloadSeedPair() {
+      activePair = await store.getActiveSeedPair(cfg.userId);
+      return activePair;
+    },
+    rotateSeed(newClientSeed?: string) {
+      const retired: SeedPair = {
+        ...activePair,
+        status: "retired",
+        retiredAt: new Date().toISOString(),
+      };
+      const next = newSeedPair({ userId: cfg.userId, clientSeed: newClientSeed });
+      // Fire-and-forget DB writes — UI reflects optimistic rotation.
+      void store.saveSeedPair(retired);
+      void store.saveSeedPair(next);
+      activePair = next;
+      return { retired, next };
+    },
+  };
+}
+
+/* ---------------------------------------------------------------------------
+ *  Anonymous-mode helper — gives a fresh InMemoryLedger so multiple
+ *  anonymous tabs don't clobber each other via the shared `devLedger`.
+ * ------------------------------------------------------------------------- */
+
+export function buildAnonymousSessionDriver(cfg: SessionFactoryConfig): BuiltSessionDriver {
+  const ledger = new InMemoryLedger();
+  if (cfg.seedInitialBalance && cfg.seedInitialBalance > 0n) {
+    ledger.seed(cfg.defaultUserId, cfg.defaultChainId, cfg.defaultToken, cfg.seedInitialBalance);
+  }
+  const store = new InMemorySeedStore();
+  let activePair = newSeedPair({ userId: cfg.defaultUserId });
+  void store.saveSeedPair(activePair);
+
+  const driver = new CasinoSessionDriver({
+    ledger,
+    async getActiveSeedPair() {
+      return activePair;
+    },
+    async saveSeedPair(pair: SeedPair) {
+      activePair = pair;
+      await store.saveSeedPair(pair);
+    },
+  });
+
+  return {
+    driver,
+    ledger,
+    persistent: false,
+    getSeedPair: () => activePair,
+    async reloadSeedPair() {
+      return activePair;
+    },
+    rotateSeed(newClientSeed?: string) {
+      const retired: SeedPair = {
+        ...activePair,
+        status: "retired",
+        retiredAt: new Date().toISOString(),
+      };
+      void store.saveSeedPair(retired);
+      const next = newSeedPair({ userId: cfg.defaultUserId, clientSeed: newClientSeed });
+      void store.saveSeedPair(next);
+      activePair = next;
+      return { retired, next };
     },
   };
 }

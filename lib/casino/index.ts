@@ -23,6 +23,7 @@ export * from "./chain-adapter";
 export * from "./ethereum-adapter";
 export * from "./operator";
 export * from "./session";
+export * from "./seed-store";
 export * from "./verify";
 export * from "./strategy";
 export * from "./persistence";
