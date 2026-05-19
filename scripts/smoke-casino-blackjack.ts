@@ -341,7 +341,95 @@ async function main() {
     );
   }
 
-  console.log("── 12. House-edge sanity (200 BJ hands at flat $10) ───────");
+  console.log("── 12. Dice/Limbo: math + 200k-roll RTP convergence ────────");
+  {
+    const { diceGame, diceMultiplier, diceWinChancePercent, limboTargetForMultiplier, DEFAULT_DICE_CONFIG, verifySession } = await import("../lib/casino");
+
+    // 12a. Pure-math sanity checks (no RNG).
+    assert(diceWinChancePercent("under", 5000) === 50, "under 50 → 50% win");
+    assert(Math.abs(diceWinChancePercent("over", 5000) - 49.99) < 1e-9, "over 50 → 49.99% win (boundary loses)");
+    assert(Math.abs(diceMultiplier("under", 5000) - 1.98) < 1e-9, "M for under 50 must equal 1.98");
+    assert(Math.abs(diceMultiplier("under", 200) - 49.5) < 1e-9, "M for under 2.00 must equal 49.5");
+    assert(Math.abs(diceMultiplier("over", 9800) - 9900 / 199) < 1e-9, "M for over 98 = 9900/199 (199 winning rolls)");
+    assert(limboTargetForMultiplier(2)!.targetBps > 0, "limbo 2x should be reachable");
+    assert(limboTargetForMultiplier(10_000_000) === null, "limbo 10M× out of reachable range");
+    console.log(`  math probes: under 50=1.98×, under 2=49.5×, over 98=${(9900/199).toFixed(4)}×, limbo bounds ✓`);
+
+    // 12b. Single roll + verifier round-trip.
+    const { driver: drvD, getSeedPair: dSeed } = buildDevSessionDriver({
+      defaultUserId: "ud",
+      defaultChainId: "dev-mock",
+      defaultToken: DEV_TOKEN,
+      seedInitialBalance: 10_000_000_000_000_000n,
+    });
+    let s = await drvD.openSession(diceGame, {
+      sessionId: newSessionId(),
+      userId: "ud",
+      gameId: diceGame.id,
+      chainId: "dev-mock",
+      token: DEV_TOKEN,
+      stake: 10_000_000n,
+      config: { targetBps: 5000, direction: "under" },
+    });
+    s = await drvD.settleSession(diceGame, s);
+    const v = verifySession({
+      game: diceGame,
+      serverSeed: dSeed().serverSeed!,
+      serverSeedHash: s.serverSeedHash,
+      clientSeed: s.clientSeed,
+      startNonce: s.startNonce,
+      bet: {
+        sessionId: s.id,
+        userId: "ud",
+        gameId: diceGame.id,
+        chainId: "dev-mock",
+        token: DEV_TOKEN,
+        stake: s.stake,
+        config: { ...s.state.config, targetBps: s.state.targetBps, direction: s.state.direction } as unknown as Record<string, unknown>,
+      },
+      actions: s.actions.map((a) => ({ ordinal: a.ordinal, action: a.action, actor: a.actor })),
+      expectedStateHashes: s.actions.map((a) => a.stateHash ?? ""),
+    });
+    assert(v.hashOk && v.finalStateMatches, "dice: verifier should pass");
+    console.log(`  single roll · ${(s.state.rollBps/100).toFixed(2)} ${s.state.direction} ${(s.state.targetBps/100).toFixed(2)} · pnl=${s.result!.pnlUnits} · replay ✓`);
+
+    // 12c. 200k rolls at fixed (under 50). Expected RTP ≈ 99%.
+    const rolls = 200_000;
+    const stake = 10_000_000n;
+    const { ledger: ledD } = buildDevSessionDriver({
+      defaultUserId: "ud2", defaultChainId: "dev-mock", defaultToken: DEV_TOKEN,
+      seedInitialBalance: 10_000_000_000_000_000n,
+    });
+    const drvD2 = buildDevSessionDriver({
+      defaultUserId: "ud2", defaultChainId: "dev-mock", defaultToken: DEV_TOKEN,
+      seedInitialBalance: 10_000_000_000_000_000n,
+    }).driver;
+    void DEFAULT_DICE_CONFIG;
+    void ledD;
+    // (use the same driver/ledger for the loop)
+    const driver = drvD2;
+    let wins = 0;
+    let wagered = 0n;
+    let payout = 0n;
+    for (let i = 0; i < rolls; i++) {
+      let rs = await driver.openSession(diceGame, {
+        sessionId: newSessionId(),
+        userId: "ud2", gameId: diceGame.id, chainId: "dev-mock", token: DEV_TOKEN, stake,
+        config: { targetBps: 5000, direction: "under" },
+      });
+      rs = await driver.settleSession(diceGame, rs);
+      wagered += rs.state.stake;
+      payout += rs.result!.totalPayoutUnits;
+      if (rs.state.won) wins++;
+    }
+    const winRate = wins / rolls;
+    const rtp = Number(payout * 1_000_000n / wagered) / 1_000_000;
+    console.log(`  ${rolls} rolls · win rate ${(winRate*100).toFixed(2)}% (target 50%) · empirical RTP ${(rtp*100).toFixed(2)}% (target 99%)`);
+    assert(winRate > 0.49 && winRate < 0.51, `dice win rate ${winRate} out of [0.49, 0.51]`);
+    assert(rtp > 0.97 && rtp < 1.01, `dice RTP ${rtp} out of [0.97, 1.01]`);
+  }
+
+  console.log("── 13. House-edge sanity (200 BJ hands at flat $10) ───────");
   const { driver: drv2, ledger: led2 } = buildDevSessionDriver({
     defaultUserId: "u2",
     defaultChainId: "dev-mock",
