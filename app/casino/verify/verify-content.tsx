@@ -28,6 +28,7 @@ import {
   crashGame,
   describePlacement,
   diceGame,
+  minesGame,
   plinkoGame,
   rouletteGame,
   slotsGame,
@@ -42,6 +43,8 @@ import {
   type DiceAction,
   type DiceState,
   type GameId,
+  type MinesAction,
+  type MinesState,
   type PlinkoAction,
   type PlinkoState,
   type RouletteAction,
@@ -64,6 +67,7 @@ const SUPPORTED_GAMES: { id: GameId; label: string }[] = [
   { id: "slots", label: "Slots" },
   { id: "crash", label: "Crash" },
   { id: "plinko", label: "Plinko" },
+  { id: "mines", label: "Mines" },
 ];
 
 type AnyAction =
@@ -73,7 +77,8 @@ type AnyAction =
   | RouletteAction
   | SlotsAction
   | CrashAction
-  | PlinkoAction;
+  | PlinkoAction
+  | MinesAction;
 type AnyState =
   | BlackjackState
   | CoinflipState
@@ -81,7 +86,8 @@ type AnyState =
   | RouletteState
   | SlotsState
   | CrashState
-  | PlinkoState;
+  | PlinkoState
+  | MinesState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -168,6 +174,8 @@ function reviveSession(raw: unknown): Session<AnyAction, AnyState> {
     }
     // crash
     if (r.state.rngDraw !== undefined) r.state.rngDraw = tryBig(r.state.rngDraw);
+    // mines
+    if (r.state.multiplierMicro !== undefined) r.state.multiplierMicro = tryBig(r.state.multiplierMicro);
   }
   // result.* bigints
   if (r.result) {
@@ -425,7 +433,8 @@ function pickGame(id: string):
         | typeof rouletteGame
         | typeof slotsGame
         | typeof crashGame
-        | typeof plinkoGame;
+        | typeof plinkoGame
+        | typeof minesGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -536,6 +545,23 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "mines") {
+    return {
+      module: minesGame,
+      renderState: (raw: unknown) => {
+        const s = raw as MinesState;
+        return [
+          { label: "Outcome", value: s.phase },
+          { label: "Mines", value: `${s.config.mines} / 25` },
+          { label: "Safe picks", value: String(s.picks) },
+          { label: "Multiplier", value: `${s.multiplier.toFixed(2)}×` },
+          { label: "Mine layout", value: s.mineLayout.join(", ") },
+          { label: "Revealed (order)", value: s.revealed.join(", ") || "—" },
+          { label: "Hit mine", value: s.hitMine === null ? "—" : `tile ${s.hitMine}` },
+        ];
+      },
+    };
+  }
   if (id === "crash") {
     return {
       module: crashGame,
@@ -601,6 +627,13 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
     return {
       rows: ps.config.rows,
       risk: ps.config.risk,
+    } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "mines") {
+    const ms = s as MinesState;
+    return {
+      mines: ms.config.mines,
+      houseEdgeBps: ms.config.houseEdgeBps,
     } as unknown as Record<string, unknown>;
   }
   return {};

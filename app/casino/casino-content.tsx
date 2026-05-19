@@ -105,6 +105,7 @@ const RouletteTable = dynamic(() => import("./roulette-table"), { ssr: false });
 const SlotsTable = dynamic(() => import("./slots-table"), { ssr: false });
 const CrashTable = dynamic(() => import("./crash-table"), { ssr: false });
 const PlinkoTable = dynamic(() => import("./plinko-table"), { ssr: false });
+const MinesTable = dynamic(() => import("./mines-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -194,12 +195,21 @@ const GAME_CATALOG: GameTile[] = [
     emoji: "𓏵",
   },
   {
+    id: "mines",
+    title: "Mines",
+    subtitle: "5×5 grid · 1–24 mines · flat 1% edge · cash out anytime",
+    rtp: "99.00%",
+    status: "live",
+    phase: "Phase 4.7",
+    emoji: "✸",
+  },
+  {
     id: "sportsbook",
     title: "Sportsbook",
     subtitle: "Hooks into the /parlays +EV engine",
     rtp: "varies",
     status: "soon",
-    phase: "Phase 4.7",
+    phase: "Phase 4.8",
     emoji: "🜨",
   },
   {
@@ -275,7 +285,7 @@ const CHAIN_TILES: ChainTile[] = [
  *  Page
  * ========================================================================= */
 
-type Tab = "lobby" | "blackjack" | "coinflip" | "dice" | "roulette" | "slots" | "crash" | "plinko" | "roadmap" | "fairness";
+type Tab = "lobby" | "blackjack" | "coinflip" | "dice" | "roulette" | "slots" | "crash" | "plinko" | "mines" | "roadmap" | "fairness";
 
 export default function CasinoContent() {
   const [tab, setTab] = useState<Tab>("lobby");
@@ -332,6 +342,9 @@ export default function CasinoContent() {
           {tab === "plinko" && (
             <PlinkoTable chainId={chainId} token={token} adapter={adapter} />
           )}
+          {tab === "mines" && (
+            <MinesTable chainId={chainId} token={token} adapter={adapter} />
+          )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
         </div>
@@ -354,6 +367,7 @@ function PageHeader({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     { id: "slots", label: "Slots", sub: "Play now" },
     { id: "crash", label: "Crash", sub: "Play now" },
     { id: "plinko", label: "Plinko", sub: "Play now" },
+    { id: "mines", label: "Mines", sub: "Play now" },
     { id: "fairness", label: "Provable fairness", sub: "Verify any hand" },
     { id: "roadmap", label: "Roadmap", sub: "What's next" },
   ];
@@ -648,7 +662,8 @@ function Lobby({
               g.id === "roulette" ||
               g.id === "slots" ||
               g.id === "crash" ||
-              g.id === "plinko"
+              g.id === "plinko" ||
+              g.id === "mines"
                 ? (g.id as Tab)
                 : null;
             return (
