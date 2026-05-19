@@ -103,6 +103,7 @@ const CoinflipTable = dynamic(() => import("./coinflip-table"), { ssr: false });
 const DiceTable = dynamic(() => import("./dice-table"), { ssr: false });
 const RouletteTable = dynamic(() => import("./roulette-table"), { ssr: false });
 const SlotsTable = dynamic(() => import("./slots-table"), { ssr: false });
+const CrashTable = dynamic(() => import("./crash-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -158,9 +159,9 @@ const GAME_CATALOG: GameTile[] = [
   {
     id: "crash",
     title: "Crash",
-    subtitle: "Multiplayer · cash out before the bust",
+    subtitle: "Real-time curve · auto-cashout · provable bust point",
     rtp: "99.00%",
-    status: "soon",
+    status: "live",
     phase: "Phase 4.3",
     emoji: "↗",
   },
@@ -273,7 +274,7 @@ const CHAIN_TILES: ChainTile[] = [
  *  Page
  * ========================================================================= */
 
-type Tab = "lobby" | "blackjack" | "coinflip" | "dice" | "roulette" | "slots" | "roadmap" | "fairness";
+type Tab = "lobby" | "blackjack" | "coinflip" | "dice" | "roulette" | "slots" | "crash" | "roadmap" | "fairness";
 
 export default function CasinoContent() {
   const [tab, setTab] = useState<Tab>("lobby");
@@ -324,6 +325,9 @@ export default function CasinoContent() {
           {tab === "slots" && (
             <SlotsTable chainId={chainId} token={token} adapter={adapter} />
           )}
+          {tab === "crash" && (
+            <CrashTable chainId={chainId} token={token} adapter={adapter} />
+          )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
         </div>
@@ -344,6 +348,7 @@ function PageHeader({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     { id: "dice", label: "Dice", sub: "Play now" },
     { id: "roulette", label: "Roulette", sub: "Play now" },
     { id: "slots", label: "Slots", sub: "Play now" },
+    { id: "crash", label: "Crash", sub: "Play now" },
     { id: "fairness", label: "Provable fairness", sub: "Verify any hand" },
     { id: "roadmap", label: "Roadmap", sub: "What's next" },
   ];
@@ -631,7 +636,15 @@ function Lobby({
         <h2 className="text-lg font-semibold mb-3">Games</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {GAME_CATALOG.map((g) => {
-            const route = g.id === "blackjack" || g.id === "coinflip" || g.id === "dice" || g.id === "roulette" || g.id === "slots" ? (g.id as Tab) : null;
+            const route =
+              g.id === "blackjack" ||
+              g.id === "coinflip" ||
+              g.id === "dice" ||
+              g.id === "roulette" ||
+              g.id === "slots" ||
+              g.id === "crash"
+                ? (g.id as Tab)
+                : null;
             return (
             <div
               key={g.id}

@@ -25,6 +25,7 @@ import {
   blackjackGame,
   cardLabel,
   coinflipGame,
+  crashGame,
   describePlacement,
   diceGame,
   rouletteGame,
@@ -35,6 +36,8 @@ import {
   type BlackjackState,
   type CoinflipAction,
   type CoinflipState,
+  type CrashAction,
+  type CrashState,
   type DiceAction,
   type DiceState,
   type GameId,
@@ -56,10 +59,23 @@ const SUPPORTED_GAMES: { id: GameId; label: string }[] = [
   { id: "dice", label: "Dice / Limbo" },
   { id: "roulette", label: "Roulette" },
   { id: "slots", label: "Slots" },
+  { id: "crash", label: "Crash" },
 ];
 
-type AnyAction = BlackjackAction | CoinflipAction | DiceAction | RouletteAction | SlotsAction;
-type AnyState = BlackjackState | CoinflipState | DiceState | RouletteState | SlotsState;
+type AnyAction =
+  | BlackjackAction
+  | CoinflipAction
+  | DiceAction
+  | RouletteAction
+  | SlotsAction
+  | CrashAction;
+type AnyState =
+  | BlackjackState
+  | CoinflipState
+  | DiceState
+  | RouletteState
+  | SlotsState
+  | CrashState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -144,6 +160,8 @@ function reviveSession(raw: unknown): Session<AnyAction, AnyState> {
         }
       }
     }
+    // crash
+    if (r.state.rngDraw !== undefined) r.state.rngDraw = tryBig(r.state.rngDraw);
   }
   // result.* bigints
   if (r.result) {
@@ -399,7 +417,8 @@ function pickGame(id: string):
         | typeof coinflipGame
         | typeof diceGame
         | typeof rouletteGame
-        | typeof slotsGame;
+        | typeof slotsGame
+        | typeof crashGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -495,6 +514,33 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "crash") {
+    return {
+      module: crashGame,
+      renderState: (raw: unknown) => {
+        const s = raw as CrashState;
+        const phase = s.phase;
+        const exit = s.exitMultiplier;
+        return [
+          { label: "Bust point", value: `${s.bustAt.toFixed(4)}×` },
+          {
+            label: "Auto-cashout",
+            value: s.autoCashoutMultiplier !== null ? `${s.autoCashoutMultiplier.toFixed(2)}×` : "—",
+          },
+          {
+            label: "Outcome",
+            value:
+              phase === "cashed_out"
+                ? `cashed_out @ ${exit?.toFixed(2)}×`
+                : phase === "busted"
+                  ? `busted @ ${s.bustAt.toFixed(2)}×`
+                  : phase,
+          },
+          { label: "RNG draw (52-bit)", value: s.rngDraw.toString() },
+        ];
+      },
+    };
+  }
   return null;
 }
 
@@ -520,6 +566,13 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
     // buildConfig contract — wrap it so the verifier rebuilds the same setup.
     const ss = s as SlotsState;
     return { config: ss.config } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "crash") {
+    const cs = s as CrashState;
+    return {
+      ...cs.config,
+      autoCashoutMultiplier: cs.autoCashoutMultiplier,
+    } as unknown as Record<string, unknown>;
   }
   return {};
 }

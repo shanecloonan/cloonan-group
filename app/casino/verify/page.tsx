@@ -1,9 +1,4 @@
-import dynamic from "next/dynamic";
-
-const VerifyContent = dynamic(() => import("./verify-content"), {
-  ssr: false,
-  loading: () => <div className="p-8 text-white/60">Loading verifier…</div>,
-});
+import VerifyContent from "./verify-content";
 
 export const metadata = {
   title: "Verify hand · Casino · MoneyFund",
