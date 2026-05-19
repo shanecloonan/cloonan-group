@@ -1,0 +1,19 @@
+/* ===========================================================================
+ *  MoneyFund Casino — public API
+ *  ---------------------------------------------------------------------------
+ *  The casino engine is a deliberately small public surface — most of the
+ *  code lives behind these re-exports. Import from "@/lib/casino" rather
+ *  than reaching into the submodules directly.
+ *
+ *  Architecture:           see docs/CASINO_ARCHITECTURE.md
+ *  Contract specs:         see infra/contracts/ethereum/ and infra/contracts/solana/
+ *  DB migration:           see infra/supabase/migrations/2026-05-19-casino-tables.sql
+ * ========================================================================= */
+
+export * from "./types";
+export * from "./rng";
+export * from "./deck";
+export * from "./blackjack";
+export * from "./balance";
+export * from "./chain-adapter";
+export * from "./session";
