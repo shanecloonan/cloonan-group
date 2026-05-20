@@ -37,3 +37,4 @@ export * from "./seed-store";
 export * from "./verify";
 export * from "./strategy";
 export * from "./persistence";
+export * from "./load-session-from-db";

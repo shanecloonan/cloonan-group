@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchPublicBetFeed, subscribePublicBetFeed, type FeedRow } from "@/lib/casino/leaderboard";
+import { HistoryVerifyLink } from "../history-verify-link";
 import { buildVerifyLink } from "../share-link";
 import { CasinoFilterPill } from "../casino-filter-pill";
 import { CasinoShell } from "../casino-shell";
@@ -42,6 +43,8 @@ interface HistoryRow {
   tokenDecimals: number;
   /** Origin: where this row came from, for the badge column. */
   origin: "local" | "supabase";
+  /** Supabase session id — used to load full audit log for verify. */
+  sessionId?: string;
   /** Raw session blob, used for the share-link feature. */
   session: unknown;
 }
@@ -196,13 +199,14 @@ export default function HistoryContent() {
             tokenSymbol: d.token_symbol,
             tokenDecimals: 6,
             origin: "supabase",
-            session: { state: d.state, result, gameId: d.game_id }, // partial — share-link won't work for supabase rows without full session
+            sessionId: d.id,
+            session: { state: d.state, result, gameId: d.game_id },
           };
         });
         // Merge, dedupe by (game, at) timestamp — local takes precedence (has the full session payload).
         setRows((local) => {
-          const dedupKeys = new Set(local.map((l) => `${l.game}@${l.at}`));
-          const remoteOnly = remoteRows.filter((r) => !dedupKeys.has(`${r.game}@${r.at}`));
+          const dedupKeys = new Set(local.map(historyRowKey));
+          const remoteOnly = remoteRows.filter((r) => !dedupKeys.has(historyRowKey(r)));
           return [...local, ...remoteOnly];
         });
         setLoadingRemote(false);
@@ -477,8 +481,10 @@ export default function HistoryContent() {
                           >
                             verify →
                           </a>
+                        ) : r.sessionId ? (
+                          <HistoryVerifyLink sessionId={r.sessionId} />
                         ) : (
-                          <span className="text-[11px] text-white/30">remote-only</span>
+                          <span className="text-[11px] text-white/30">—</span>
                         )}
                       </td>
                     </tr>
@@ -625,6 +631,15 @@ function formatTime(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function historyRowKey(r: HistoryRow): string {
+  if (r.sessionId) return r.sessionId;
+  if (r.session && typeof r.session === "object" && "id" in r.session) {
+    const id = (r.session as { id?: string }).id;
+    if (typeof id === "string" && id.length > 0) return id;
+  }
+  return `${r.game}@${r.at}`;
 }
 
 function extractTokenSymbol(session: unknown): string | null {

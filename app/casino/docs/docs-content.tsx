@@ -106,7 +106,7 @@ export default function DocsContent() {
               <PlatformCard
                 href="/casino/history"
                 title="Activity log"
-                body="Your sessions — merge local and cloud, sort, filter, export JSON/CSV, verify links — plus a global house feed tab with live refresh."
+                body="Your sessions — merge local and cloud, sort, filter, export JSON/CSV. Cloud rows load the full audit log for one-click verify. Global feed tab uses Supabase Realtime when enabled."
               />
             </div>
           </DocSection>

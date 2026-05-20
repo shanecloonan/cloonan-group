@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCasino } from "./casino-context";
 import { PlayMoneyChipStrip } from "./play-money-bar";
 import { btnGhost } from "./casino-ui";
@@ -45,6 +45,14 @@ export function CasinoActionStrip() {
     } finally {
       setBusy(false);
     }
+  }, [refreshBalance]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshBalance();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [refreshBalance]);
 
   if (!isVaultChain) return null;
