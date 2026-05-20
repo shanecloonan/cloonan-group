@@ -27,6 +27,7 @@ import { PokerOvalTable } from "./poker-table-visual";
 import { PokerTurnTimer } from "./poker-turn-timer";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, pillGold, pillLive } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
+import { POKER_TURN_MS } from "@/lib/casino/poker-constants";
 
 function humanToUnits(amount: number, token: TokenSpec): bigint {
   if (!Number.isFinite(amount) || amount <= 0) return 0n;
@@ -35,7 +36,7 @@ function humanToUnits(amount: number, token: TokenSpec): bigint {
 }
 
 async function pokerApi<T extends { room?: PokerRoomRow; error?: string }>(
-  path: "action" | "start" | "join" | "create",
+  path: "action" | "start" | "join" | "create" | "timeout",
   body: unknown,
 ): Promise<T> {
   const {
@@ -75,6 +76,7 @@ export function PokerMultiplayerPanel({
   const { getSeedPair, pushHistory, refreshBalance, ledger, userId: ctxUserId, balance } = useCasino();
   const settledRoomRef = useRef<string | null>(null);
   const lockedRoomRef = useRef<string | null>(null);
+  const timeoutKeyRef = useRef<string | null>(null);
   const [seatLabels, setSeatLabels] = useState<Record<string, string>>({});
 
   const refreshList = useCallback(() => {
@@ -261,6 +263,30 @@ export function PokerMultiplayerPanel({
   const labelForUid = (uid: string | null) =>
     uid ? (uid === userId ? "You" : seatLabels[uid] ?? "Player") : "open";
 
+  const enforceTimeout = useCallback(async () => {
+    if (!active?.id || !state || state.activeSeat === null) return;
+    if (!state.players[state.activeSeat]?.isHuman) return;
+    const key = `${active.version}-${state.activeSeat}`;
+    if (timeoutKeyRef.current === key) return;
+    const elapsed = Date.now() - new Date(active.updated_at).getTime();
+    if (elapsed < POKER_TURN_MS) return;
+    timeoutKeyRef.current = key;
+    const { room, error } = await pokerApi("timeout", {
+      roomId: active.id,
+      chainId,
+      token,
+    });
+    if (room) setActive(room);
+    else if (error && !/not expired|No human/i.test(error)) setMsg(error);
+  }, [active, state, chainId, token]);
+
+  useEffect(() => {
+    if (!active || active.status !== "active" || !state || state.activeSeat === null) return;
+    if (!state.players[state.activeSeat]?.isHuman) return;
+    const id = setInterval(() => void enforceTimeout(), 2000);
+    return () => clearInterval(id);
+  }, [active?.id, active?.version, active?.updated_at, state?.activeSeat, enforceTimeout]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -391,7 +417,11 @@ export function PokerMultiplayerPanel({
           {state && active.status === "active" && mySeat !== null && mySeat === state.activeSeat && (
             <div className="space-y-2">
               <span className={pillLive + " w-full justify-center"}>Your turn</span>
-              <PokerTurnTimer updatedAt={active.updated_at} active />
+              <PokerTurnTimer
+                updatedAt={active.updated_at}
+                active
+                onExpired={() => void enforceTimeout()}
+              />
               <PokerActionBar state={state} seat={mySeat} token={token} legal={legal} busy={busy} onAct={act} />
             </div>
           )}

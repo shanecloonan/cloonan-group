@@ -14,6 +14,7 @@ import {
   type PokerState,
 } from "./poker";
 import type { Bet, ChainId, Session, TokenSpec } from "./types";
+import { POKER_TURN_MS } from "./poker-constants";
 import { HmacRngStream, hashServerSeed } from "./rng";
 import { newSessionId } from "./session";
 
@@ -343,4 +344,49 @@ export async function serverApplyPokerRoomAction(
 
   if (error) return { room: null, error: error.message, status: 409 };
   return { room: data as PokerRoomRow };
+}
+
+/** Auto-fold when a human exceeds the turn clock (any seated player may trigger). */
+export async function serverEnforcePokerTurnTimeout(
+  supabase: SupabaseClient,
+  callerUserId: string,
+  roomId: string,
+  chainId: ChainId,
+  token: TokenSpec,
+): Promise<{ room: PokerRoomRow | null; error?: string; status?: number }> {
+  const { data: row, error: fetchErr } = await supabase
+    .from("casino_poker_rooms")
+    .select("*")
+    .eq("id", roomId)
+    .single();
+  if (fetchErr || !row) return { room: null, error: "Room not found", status: 404 };
+
+  const room = row as PokerRoomRow;
+  if (mySeatInRoom(room, callerUserId) === null) {
+    return { room: null, error: "Not seated at this table", status: 403 };
+  }
+  if (room.status !== "active" || !room.session_json) {
+    return { room: null, error: "No active hand", status: 409 };
+  }
+
+  const session = parseSession(room.session_json);
+  const seat = session.state.activeSeat;
+  if (seat === null || !session.state.players[seat]?.isHuman) {
+    return { room: null, error: "No human awaiting action", status: 409 };
+  }
+
+  const elapsed = Date.now() - new Date(room.updated_at).getTime();
+  if (elapsed < POKER_TURN_MS - 500) {
+    return { room: null, error: "Turn clock has not expired", status: 409 };
+  }
+
+  const actorUserId = room.seat_users[String(seat)];
+  if (!actorUserId) return { room: null, error: "Empty seat", status: 409 };
+
+  const legal = legalActionsForSeat(session.state, seat);
+  if (!legal.some((a) => a.type === "fold")) {
+    return { room: null, error: "Cannot fold — illegal state", status: 409 };
+  }
+
+  return serverApplyPokerRoomAction(supabase, actorUserId, roomId, { type: "fold" }, chainId, token);
 }

@@ -30,6 +30,9 @@ export const btnGhost =
 export const btnGold =
   "min-h-12 touch-manipulation h-11 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-400 to-amber-600 text-black hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
+export const btnDanger =
+  "min-h-12 touch-manipulation h-11 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-rose-500 to-orange-500 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+
 export const pill =
   "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-semibold uppercase tracking-[0.12em] border";
 

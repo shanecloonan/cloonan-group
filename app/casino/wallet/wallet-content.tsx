@@ -28,6 +28,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CasinoShell } from "../casino-shell";
+import { supabase } from "@/lib/supabase";
 import { useWallet } from "@/lib/wallet-context";
 import {
   CHAIN_ADAPTERS,
@@ -638,39 +639,54 @@ function DepositPanel({
         },
       });
 
-      // Credit the casino ledger if the user is signed in. The Supabase
-      // RPC is `security definer` so it bypasses RLS on `casino_balances`
-      // / `casino_balance_mutations` while still attributing the credit
-      // to the auth user. Idempotency: we tag the mutation with the
-      // deposit tx hash so re-runs of the same finalization don't
-      // double-credit (the journal has a unique index on tx_hash for
-      // deposit mutations — see migration 2026-05-19-casino-tx-hash-uniq).
       try {
         const supabaseUser = wallet.user;
         if (supabaseUser?.id) {
-          await ensureCasinoUserRow(supabaseUser.id);
-          const ledger = new SupabaseLedger();
-          await ledger.credit({
-            userId: supabaseUser.id,
-            chainId,
-            token,
-            delta: amountUnits,
-            reason: "deposit",
-            txHash: depositTxHash,
-          });
-          setStatus(
-            `Deposit credited to casino balance — ${fmtMoney(amountUnits, token)}`,
-          );
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          const jwt = session?.access_token;
+          if (!jwt) {
+            setStatus("Deposit finalized on-chain. Sign in again to credit balance.");
+          } else {
+            const res = await fetch("/api/casino/deposit-credit", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${jwt}`,
+              },
+              body: JSON.stringify({
+                chainId,
+                token,
+                txHash: depositTxHash,
+                walletAddress: userAddress,
+                amountUnits: amountUnits.toString(),
+              }),
+            });
+            const data = (await res.json()) as {
+              amount?: string;
+              alreadyCredited?: boolean;
+              error?: string;
+            };
+            if (!res.ok) {
+              setStatus(
+                `On-chain finalized, but casino credit failed: ${data.error ?? res.statusText}. Tx ${shortAddr(depositTxHash)}.`,
+              );
+            } else {
+              const credited = BigInt(data.amount ?? amountUnits.toString());
+              setStatus(
+                data.alreadyCredited
+                  ? `Deposit already credited — ${fmtMoney(credited, token)}`
+                  : `Deposit credited — ${fmtMoney(credited, token)}`,
+              );
+            }
+          }
         } else {
           setStatus(
             "Deposit finalized on-chain. Sign in to credit your casino balance.",
           );
         }
       } catch (e) {
-        // The on-chain tx is the source of truth; if the ledger credit
-        // failed (RLS rejection, race, etc.) the operator can retry
-        // server-side from the deposit row. Surface to the user so they
-        // know to contact support, but don't unmark the tx as finalized.
         setStatus(
           `On-chain finalized, but casino ledger credit failed: ${(e as Error).message}. Contact support with tx ${shortAddr(depositTxHash)}.`,
         );

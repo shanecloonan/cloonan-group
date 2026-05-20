@@ -165,6 +165,10 @@ export default function DocsContent() {
                 Check deployment status: <code className="text-amber-200/90">GET /api/casino/vault-status</code> (also
                 surfaced on the Wallet page when a chain is not configured).
               </li>
+              <li>
+                After a finalized deposit tx, <code className="text-amber-200/90">POST /api/casino/deposit-credit</code>{" "}
+                verifies the receipt on-chain and credits the Supabase ledger idempotently by tx hash.
+              </li>
             </ol>
             <p className="mt-3">
               Until vault addresses are configured, use Dev / Play Money on the lobby. Wallet UI at{" "}
@@ -306,7 +310,7 @@ export default function DocsContent() {
             rules={[
               "Solo: you (seat 0) vs five AI opponents. Multiplayer: host/join room codes, Supabase Realtime sync, profile display names.",
               "Multiplayer buy-in is locked from your casino balance when you take a seat; settlement credits your seat stack after the hand.",
-              "45s turn timer (UI) when it is your action. Bots fill empty seats.",
+              "45s turn timer; server auto-folds if time expires (any seated player can trigger).",
               "No-limit betting: fold, check, call, raise (min-raise = big blind).",
               "Blinds scale with buy-in (BB ≈ buy-in / 50). Rake on contested pots at showdown.",
             ]}

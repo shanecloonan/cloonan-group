@@ -42,6 +42,7 @@ import {
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { ShareLinkRow } from "./share-link";
+import { btnGhost, btnPrimary } from "./casino-ui";
 
 /* ---------------------------------------------------------------------------
  *  Shared style vocab
@@ -53,11 +54,6 @@ const labelCls =
   "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
 const inputCls =
   "w-full h-10 px-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
-const btnPrimary =
-  "h-11 px-6 rounded-lg font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
-const btnGhost =
-  "h-10 px-4 rounded-lg font-medium text-sm bg-white/[0.06] border border-white/[0.08] text-white/80 hover:bg-white/[0.10] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
-
 /* ---------------------------------------------------------------------------
  *  Money helpers
  * ------------------------------------------------------------------------- */
@@ -427,7 +423,7 @@ export default function SlotsTable({ chainId, token }: Props) {
         </div>
 
         {/* Bet controls */}
-        <div className={card + " p-5 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-end"}>
+        <div className={card + " p-5 flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_auto_auto_auto] sm:items-end"}>
           <div>
             <label className={labelCls}>Total bet ({numLines} lines)</label>
             <div className="flex gap-2">
@@ -464,7 +460,7 @@ export default function SlotsTable({ chainId, token }: Props) {
           </div>
 
           <button
-            className={btnPrimary + " min-w-[150px]"}
+            className={btnPrimary + " w-full sm:w-auto sm:min-w-[150px]"}
             disabled={animating || autoRunning || balance.available <= 0n}
             onClick={() => void spinOnce()}
           >
@@ -472,7 +468,7 @@ export default function SlotsTable({ chainId, token }: Props) {
           </button>
 
           <button
-            className={btnGhost}
+            className={btnGhost + " w-full sm:w-auto"}
             disabled={animating}
             onClick={() => setAutoOpen((o) => !o)}
           >
