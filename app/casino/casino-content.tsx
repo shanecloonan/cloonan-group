@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -306,6 +306,12 @@ const CHAIN_TILES: ChainTile[] = [
   },
 ];
 
+function effectiveChainStatus(tile: ChainTile, vaultLive: ReadonlySet<string>): "live" | "queued" {
+  if (tile.id === "dev-mock") return "live";
+  if (vaultLive.has(tile.id)) return "live";
+  return tile.status;
+}
+
 /* ===========================================================================
  *  Page
  * ========================================================================= */
@@ -314,6 +320,18 @@ export default function CasinoContent() {
   const [tab, setTab] = useState<GameTab>("lobby");
   const [chainId, setChainId] = useState<ChainId>("dev-mock");
   const [token, setToken] = useState<TokenSpec>(DEV_TOKEN);
+  const [vaultLiveChains, setVaultLiveChains] = useState<ReadonlySet<string>>(() => new Set());
+
+  useEffect(() => {
+    fetch("/api/casino/vault-status")
+      .then((r) => r.json())
+      .then((body: { chains?: { chainId: string; ready: boolean }[] }) => {
+        setVaultLiveChains(
+          new Set((body.chains ?? []).filter((c) => c.ready).map((c) => c.chainId)),
+        );
+      })
+      .catch(() => setVaultLiveChains(new Set()));
+  }, []);
 
   const adapter = useMemo<ChainAdapter>(() => {
     if (chainId === "dev-mock") return CHAIN_ADAPTERS["dev-mock"];
@@ -340,6 +358,7 @@ export default function CasinoContent() {
               chainId={chainId}
               token={token}
               adapter={adapter}
+              vaultLiveChains={vaultLiveChains}
               onSelectChain={selectChain}
               onSelectToken={setToken}
               onOpenGame={(g) => setTab(g)}
@@ -411,6 +430,7 @@ interface LobbyProps {
   chainId: ChainId;
   token: TokenSpec;
   adapter: ChainAdapter;
+  vaultLiveChains: ReadonlySet<string>;
   onSelectChain: (c: ChainId) => void;
   onSelectToken: (t: TokenSpec) => void;
   onOpenGame: (g: GameTab) => void;
@@ -420,6 +440,7 @@ function Lobby({
   chainId,
   token,
   adapter,
+  vaultLiveChains,
   onSelectChain,
   onSelectToken,
   onOpenGame,
@@ -524,17 +545,19 @@ function Lobby({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {CHAIN_TILES.map((c) => {
             const active = c.id === chainId;
+            const status = effectiveChainStatus(c, vaultLiveChains);
+            const vaultDeployed = vaultLiveChains.has(c.id);
             return (
               <button
                 key={c.id}
                 type="button"
-                disabled={c.status !== "live"}
+                disabled={status !== "live"}
                 onClick={() => onSelectChain(c.id)}
                 className={
                   "text-left p-4 rounded-2xl border transition-all relative " +
                   (active
                     ? "border-emerald-400/50 bg-emerald-500/10"
-                    : c.status === "live"
+                    : status === "live"
                       ? "border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] cursor-pointer"
                       : "border-white/[0.04] bg-white/[0.02] opacity-60 cursor-not-allowed")
                 }
@@ -549,12 +572,12 @@ function Lobby({
                   <span
                     className={
                       "text-[9px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full border " +
-                      (c.status === "live"
+                      (status === "live"
                         ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
                         : "border-amber-400/30 text-amber-300 bg-amber-500/10")
                     }
                   >
-                    {c.status}
+                    {vaultDeployed && c.id !== "dev-mock" ? "vault live" : status}
                   </span>
                 </div>
                 <p className="mt-2 text-[12px] text-white/60 leading-relaxed">{c.blurb}</p>
@@ -758,22 +781,23 @@ function RoadmapPanel() {
     {
       phase: "Phase 1",
       title: "Fairness polish",
-      status: "next",
+      status: "current",
       items: [
-        "Client-side hand replay worker",
-        "Seed rotation flow + revealed-seed archive",
+        "CasinoVerifyModal + session replay on all 10 games",
         "Public /casino/verify page",
+        "Seed rotation flow + revealed-seed archive",
         "Daily action-log hash anchored to Arweave",
       ],
     },
     {
       phase: "Phase 2",
       title: "Ethereum settlement",
-      status: "later",
+      status: "next",
       items: [
-        "Deploy CasinoVault.sol to Base Sepolia → audit → Base mainnet",
-        "EthereumAdapter live (deposit + EIP-712 withdraw)",
-        "Operator hot-signer service (HSM-backed)",
+        "Deploy CasinoVault.sol (Sepolia first via deploy script + env)",
+        "Wallet deposit/withdraw + vault-status panel",
+        "Signed-in play on vault-live chains (lobby auto-enables)",
+        "Operator hot-signer + EIP-712 withdraw webhook",
         "Optional Chainlink VRF v2 for on-chain mode",
       ],
     },
@@ -790,14 +814,12 @@ function RoadmapPanel() {
     },
     {
       phase: "Phase 4",
-      title: "Game catalog expansion",
-      status: "later",
+      title: "Game catalog",
+      status: "live",
       items: [
-        "Dice / Limbo (4.1) · Coinflip (4.2)",
-        "Crash multiplayer (4.3) · Roulette (4.4)",
-        "Plinko (4.5) · Slots (4.6)",
-        "Sportsbook tied to /parlays engine (4.7)",
-        "Video poker (4.8) · Multiplayer poker (4.9)",
+        "Blackjack · Coinflip · Dice · Crash · Roulette · Plinko · Slots · Mines · HiLo · Poker",
+        "Activity page: your sessions + global feed (Supabase Realtime)",
+        "Sportsbook tied to /parlays engine — upcoming",
       ],
     },
     {
