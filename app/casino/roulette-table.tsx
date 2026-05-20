@@ -23,6 +23,7 @@ import {
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { ShareLinkRow } from "./share-link";
+import { useLongPress } from "./use-long-press";
 
 /* ---------------------------------------------------------------------------
  *  Style + money helpers (shared idioms)
@@ -529,9 +530,11 @@ function BettingLayout({
 
   return (
     <div className="rounded-xl bg-emerald-950/30 border border-emerald-900/40 p-2 sm:p-3 select-none">
-      <p className="sm:hidden text-[10px] text-white/45 mb-2 px-0.5">Swipe the table horizontally to place bets →</p>
+      <p className="sm:hidden text-[10px] text-white/45 mb-2 px-0.5">
+        Swipe to browse · tap to bet · hold to remove
+      </p>
       <div className="overflow-x-auto overscroll-x-contain -mx-0.5 px-0.5 pb-1 touch-pan-x">
-        <div className="min-w-[34rem] sm:min-w-0 w-full">
+        <div className="min-w-[36rem] sm:min-w-0 w-full">
       <div className="flex gap-1 sm:gap-2">
         {/* Zero cell */}
         <NumberCell
@@ -608,6 +611,7 @@ function NumberCell({
 }) {
   const color = pocketColor(number);
   const has = stake !== undefined && stake > 0n;
+  const longPress = useLongPress(onRightClick);
   return (
     <button
       type="button"
@@ -617,9 +621,10 @@ function NumberCell({
         e.preventDefault();
         onRightClick();
       }}
+      {...longPress}
       className={
         "relative font-bold text-[10px] sm:text-sm transition-all rounded-md border " +
-        (big ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] flex items-center justify-center shrink-0 " : "h-7 sm:h-8 w-full min-w-[1.4rem] flex items-center justify-center ") +
+        (big ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] flex items-center justify-center shrink-0 " : "h-8 sm:h-8 w-full min-w-[1.55rem] flex items-center justify-center ") +
         (color === "red"
           ? "bg-rose-600/40 border-rose-500/40 text-rose-100 hover:bg-rose-600/60"
           : color === "black"
@@ -627,7 +632,7 @@ function NumberCell({
             : "bg-emerald-700/40 border-emerald-600/40 text-emerald-100 hover:bg-emerald-700/60") +
         (disabled ? " cursor-not-allowed opacity-70" : " cursor-pointer active:scale-95")
       }
-      title={`Click: place ${chip} ${token.symbol} · right-click: remove`}
+      title={`Tap: place ${chip} ${token.symbol} · hold / right-click: remove`}
     >
       {number}
       {has && <ChipBadge stake={stake!} token={token} />}
@@ -657,6 +662,7 @@ function OutsideCell({
   accent?: "red" | "black";
 }) {
   const has = stake !== undefined && stake > 0n;
+  const longPress = useLongPress(onRightClick);
   return (
     <button
       type="button"
@@ -666,9 +672,10 @@ function OutsideCell({
         e.preventDefault();
         onRightClick();
       }}
+      {...longPress}
       className={
-        "relative font-semibold text-[11px] uppercase tracking-[0.1em] rounded-md border transition-all " +
-        (small ? "h-8 px-1" : "h-10 px-2") +
+        "relative font-semibold text-[10px] sm:text-[11px] uppercase tracking-[0.08em] sm:tracking-[0.1em] rounded-md border transition-all " +
+        (small ? "h-8 px-0.5 sm:px-1" : "h-9 sm:h-10 px-1 sm:px-2") +
         " " +
         (accent === "red"
           ? "bg-rose-700/30 border-rose-500/30 text-rose-100 hover:bg-rose-700/50"
@@ -677,7 +684,7 @@ function OutsideCell({
             : "bg-emerald-900/30 border-emerald-700/30 text-emerald-100 hover:bg-emerald-900/50") +
         (disabled ? " cursor-not-allowed opacity-70" : " cursor-pointer active:scale-95")
       }
-      title={`Click: place ${chip} ${token.symbol} · right-click: remove`}
+      title={`Tap: place ${chip} ${token.symbol} · hold / right-click: remove`}
     >
       {label}
       {has && <ChipBadge stake={stake!} token={token} />}

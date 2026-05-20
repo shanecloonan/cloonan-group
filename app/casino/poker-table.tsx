@@ -17,7 +17,9 @@ import {
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { ShareLinkRow } from "./share-link";
+import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
+import { persistSettledSession } from "@/lib/casino";
 
 interface Props {
   chainId: ChainId;
@@ -63,6 +65,7 @@ export default function PokerTable({ chainId, token }: Props) {
 
   const [session, setSession] = useState<Session<PokerAction, PokerState> | null>(null);
   const [buyIn, setBuyIn] = useState(100);
+  const [mode, setMode] = useState<"solo" | "multi">("solo");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const runningBots = useRef(false);
@@ -109,6 +112,7 @@ export default function PokerTable({ chainId, token }: Props) {
         multiplier: Number(result.totalPayoutUnits) / Math.max(1, Number(result.totalStakedUnits)),
         session: settled,
       });
+      void persistSettledSession(settled, getSeedPair());
       await refreshBalance();
       return settled;
     },
@@ -187,8 +191,36 @@ export default function PokerTable({ chainId, token }: Props) {
       <section className={card + " p-5 flex flex-wrap items-center justify-between gap-4"}>
         <div>
           <h2 className="text-xl font-semibold text-white font-heading">Texas Hold&apos;em · 6-Max</h2>
-          <p className="text-sm text-white/50 mt-1">
-            You vs five AI opponents · 1% rake · provably fair shuffle
+          <div className="flex gap-2 mt-2">
+            <button
+              type="button"
+              className={
+                "h-8 px-3 rounded-lg text-xs font-medium border cursor-pointer " +
+                (mode === "solo"
+                  ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
+                  : "border-white/10 text-white/50")
+              }
+              onClick={() => setMode("solo")}
+            >
+              Solo vs bots
+            </button>
+            <button
+              type="button"
+              className={
+                "h-8 px-3 rounded-lg text-xs font-medium border cursor-pointer " +
+                (mode === "multi"
+                  ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
+                  : "border-white/10 text-white/50")
+              }
+              onClick={() => setMode("multi")}
+            >
+              Multiplayer lobby
+            </button>
+          </div>
+          <p className="text-sm text-white/50 mt-2">
+            {mode === "solo"
+              ? "Private table vs five AI opponents · 1% rake · provably fair shuffle"
+              : "Host or join a shared table — realtime sync for signed-in players"}
           </p>
         </div>
         <div className="text-right">
@@ -197,6 +229,11 @@ export default function PokerTable({ chainId, token }: Props) {
         </div>
       </section>
 
+      {mode === "multi" ? (
+        <section className={card + " p-5"}>
+          <PokerMultiplayerPanel chainId={chainId} token={token} buyInHuman={buyIn} />
+        </section>
+      ) : (
       <section className={card + " relative min-h-[520px] p-4 overflow-hidden"}>
         <div className="absolute inset-4 rounded-[50%] border-2 border-emerald-900/60 bg-gradient-to-b from-emerald-950/80 to-[#06070c] shadow-[inset_0_0_80px_rgba(16,185,129,0.15)]" />
 
@@ -263,8 +300,9 @@ export default function PokerTable({ chainId, token }: Props) {
           </div>
         )}
       </section>
+      )}
 
-      {session && !terminal && (
+      {mode === "solo" && session && !terminal && (
         <section className={card + " p-4 flex flex-wrap gap-2 justify-center"}>
           <ActionBtn label="Fold" disabled={busy || !legalTypes.has("fold")} onClick={() => apply({ type: "fold" })} danger />
           <ActionBtn
@@ -286,7 +324,7 @@ export default function PokerTable({ chainId, token }: Props) {
         </section>
       )}
 
-      {terminal && session?.result && (
+      {mode === "solo" && terminal && session?.result && (
         <section className={card + " p-5 space-y-3"}>
           <h3 className="text-lg font-semibold text-white">Hand complete</h3>
           <p className={"font-mono text-lg " + (session.result.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300")}>

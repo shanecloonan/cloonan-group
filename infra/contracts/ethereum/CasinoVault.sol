@@ -78,7 +78,8 @@ contract CasinoVault is ReentrancyGuard, EIP712 {
      * ────────────────────────────────────────────────────────────────── */
 
     /// keccak256("Withdrawal(address user,address token,uint256 amount,uint256 nonce,bytes32 sessionRef,uint256 expiresAt)")
-    bytes32 public constant WITHDRAWAL_TYPEHASH = 0x00; // populated in constructor
+    bytes32 public constant WITHDRAWAL_TYPEHASH =
+        keccak256("Withdrawal(address user,address token,uint256 amount,uint256 nonce,bytes32 sessionRef,uint256 expiresAt)");
 
     struct Withdrawal {
         address user;

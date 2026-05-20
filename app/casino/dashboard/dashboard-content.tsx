@@ -16,9 +16,11 @@ import {
   type CasinoGameId,
 } from "../casino-ui";
 import {
+  fetchOwnDashboardSessions,
   fetchOwnProfile,
   fetchPublicBetFeed,
   upsertCasinoProfile,
+  type DashboardSessionRow,
   type FeedRow,
 } from "@/lib/casino/leaderboard";
 import { buildVerifyLink } from "../share-link";
@@ -51,6 +53,8 @@ export default function DashboardContent() {
   const [showLb, setShowLb] = useState(true);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [authed, setAuthed] = useState(false);
+  const [cloudRows, setCloudRows] = useState<DashboardSessionRow[]>([]);
+  const [source, setSource] = useState<"merged" | "local" | "cloud">("merged");
 
   useEffect(() => {
     try {
@@ -66,14 +70,50 @@ export default function DashboardContent() {
         setShowLb(p.showOnLeaderboard);
       }
     });
-    supabase.auth.getUser().then(({ data }) => setAuthed(!!data.user));
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthed(!!data.user);
+      if (data.user) fetchOwnDashboardSessions(100).then(setCloudRows);
+    });
   }, []);
 
+  const mergedRows = useMemo(() => {
+    type Row = { game: string; at: string; stakeUnits: string; pnlUnits: string; session: unknown; origin: string };
+    const out: Row[] = [];
+    const seen = new Set<string>();
+    for (const r of localRows.slice().reverse()) {
+      const key = `${r.game}@${r.at}`;
+      seen.add(key);
+      out.push({
+        game: r.game,
+        at: r.at,
+        stakeUnits: r.stakeUnits,
+        pnlUnits: r.pnlUnits,
+        session: r.session,
+        origin: "local",
+      });
+    }
+    for (const c of cloudRows) {
+      const key = `${c.game_id}@${c.updated_at}`;
+      if (seen.has(key)) continue;
+      out.push({
+        game: c.game_id,
+        at: c.updated_at,
+        stakeUnits: c.stake,
+        pnlUnits: c.pnl,
+        session: { gameId: c.game_id, state: c.state, result: c.result },
+        origin: "cloud",
+      });
+    }
+    return out.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  }, [localRows, cloudRows]);
+
   const myFiltered = useMemo(() => {
-    let r = localRows.slice().reverse();
+    let r = mergedRows;
     if (gameFilter !== "all") r = r.filter((x) => x.game === gameFilter);
+    if (source === "local") r = r.filter((x) => x.origin === "local");
+    if (source === "cloud") r = r.filter((x) => x.origin === "cloud");
     return r.slice(0, 50);
-  }, [localRows, gameFilter]);
+  }, [mergedRows, gameFilter, source]);
 
   const stats = useMemo(() => {
     let wagered = 0n;
@@ -106,8 +146,12 @@ export default function DashboardContent() {
         <section className={card + " p-5 lg:col-span-2 space-y-4"}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-white">Your recent play</h2>
-            <div className="flex flex-wrap gap-1">
-              <FilterChip active={gameFilter === "all"} label="All" onClick={() => setGameFilter("all")} />
+            <div className="flex flex-wrap gap-1 items-center">
+              <FilterChip active={source === "merged"} label="All sources" onClick={() => setSource("merged")} />
+              <FilterChip active={source === "local"} label="Local" onClick={() => setSource("local")} />
+              <FilterChip active={source === "cloud"} label="Cloud" onClick={() => setSource("cloud")} disabled={!authed} />
+              <span className="w-px h-5 bg-white/10 mx-1 hidden sm:block" />
+              <FilterChip active={gameFilter === "all"} label="All games" onClick={() => setGameFilter("all")} />
               {ALL_GAMES.map((g) => (
                 <FilterChip
                   key={g}
@@ -132,20 +176,24 @@ export default function DashboardContent() {
 
           <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
             {myFiltered.length === 0 ? (
-              <p className="text-sm text-white/45 py-6 text-center">No local sessions yet — play a hand on the lobby.</p>
+              <p className="text-sm text-white/45 py-6 text-center">
+                No sessions yet — play on the lobby{authed ? " (cloud sync fills when hands settle)" : ""}.
+              </p>
             ) : (
               myFiltered.map((r) => {
                 const pnl = BigInt(r.pnlUnits);
                 return (
                   <div
-                    key={`${r.game}-${r.at}`}
+                    key={`${r.game}-${r.at}-${r.origin}`}
                     className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]"
                   >
                     <div>
                       <div className="text-sm font-medium text-white/90">
                         {GAME_LABELS[r.game as CasinoGameId] ?? r.game}
                       </div>
-                      <div className="text-[11px] text-white/40">{new Date(r.at).toLocaleString()}</div>
+                      <div className="text-[11px] text-white/40">
+                        {new Date(r.at).toLocaleString()} · {r.origin}
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className={"text-sm font-mono " + (pnl >= 0n ? "text-emerald-300" : "text-rose-300")}>
@@ -230,15 +278,18 @@ function FilterChip({
   label,
   active,
   onClick,
+  disabled,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={
         "h-7 px-2.5 rounded-lg text-[11px] font-medium border cursor-pointer " +
         (active

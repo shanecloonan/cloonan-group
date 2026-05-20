@@ -59,7 +59,7 @@ export default function DocsContent() {
         <div className="space-y-10 text-white/75 leading-relaxed text-sm">
           <DocSection id="overview" title="Overview">
             <p>
-              MoneyFund Casino runs nine live games on a shared engine: deterministic rules in{" "}
+              MoneyFund Casino runs ten live games on a shared engine: deterministic rules in{" "}
               <code className="text-amber-200/90">lib/casino/</code>, session audit logs, and HMAC-SHA256
               commit-reveal randomness. Dev-money mode uses an in-browser ledger; signed-in users sync to
               Supabase. On-chain settlement via <code className="text-amber-200/90">CasinoVault.sol</code> is
@@ -210,7 +210,7 @@ export default function DocsContent() {
             "No-limit style betting: fold, check, call, raise (min-raise = big blind).",
             "Blinds scale with buy-in (BB ≈ buy-in / 50). 1% rake taken from contested pots at showdown.",
             "Full deck order + every action logged — replay in /casino/verify after seed reveal.",
-            "True peer-to-peer multiplayer (Supabase realtime) ships in a future update; bots mirror live rake math today.",
+            "Multiplayer lobby: host/join tables via Supabase Realtime (beta). Solo mode uses five bots with the same rake math.",
           ]} />
         </div>
       </div>

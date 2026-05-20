@@ -96,6 +96,50 @@ export async function upsertCasinoProfile(input: {
   return { ok: true };
 }
 
+export type DashboardSessionRow = {
+  id: string;
+  game_id: string;
+  stake: string;
+  pnl: string;
+  token_symbol: string;
+  updated_at: string;
+  result: unknown;
+  state: unknown;
+};
+
+export async function fetchOwnDashboardSessions(limit = 80): Promise<DashboardSessionRow[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("casino_sessions")
+    .select("id, game_id, stake, result, token_symbol, updated_at, state")
+    .eq("user_id", user.id)
+    .eq("status", "settled")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+
+  return data.map((d) => {
+    const result = d.result as { pnlUnits?: string | number } | null;
+    const pnl =
+      result?.pnlUnits !== undefined ? String(result.pnlUnits) : "0";
+    return {
+      id: d.id,
+      game_id: d.game_id,
+      stake: String(d.stake),
+      pnl,
+      token_symbol: d.token_symbol,
+      updated_at: d.updated_at,
+      result: d.result,
+      state: d.state,
+    };
+  });
+}
+
 export async function fetchOwnProfile(): Promise<{
   displayName: string;
   showOnLeaderboard: boolean;

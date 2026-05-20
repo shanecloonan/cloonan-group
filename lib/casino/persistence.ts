@@ -2,7 +2,7 @@
  *  MoneyFund Casino — Supabase persistence (best-effort, fail-silent)
  *  ---------------------------------------------------------------------------
  *  Writes settled sessions + their action logs to Supabase. Called from the
- *  blackjack table after every settle. We treat this as **optional**:
+ *  game tables after every settle. We treat this as **optional**:
  *
  *   • Anonymous users → no writes attempted, no error.
  *   • DB unavailable / table missing → log + swallow.
@@ -16,7 +16,6 @@
  * ========================================================================= */
 
 import { supabase } from "../supabase";
-import type { BlackjackAction, BlackjackState } from "./blackjack";
 import type { SeedPair, Session } from "./types";
 
 /* ---------------------------------------------------------------------------
@@ -24,14 +23,14 @@ import type { SeedPair, Session } from "./types";
  * ------------------------------------------------------------------------- */
 
 /**
- * Persist a *settled* blackjack session and its full audit log. Best-effort.
+ * Persist a *settled* session and its full audit log. Best-effort.
  *
  * Returns:
  *   • `{ persisted: true }` if everything was written.
  *   • `{ persisted: false, reason }` otherwise — never throws.
  */
 export async function persistSettledSession(
-  session: Session<BlackjackAction, BlackjackState>,
+  session: Session<unknown, unknown>,
   seedPair: SeedPair,
 ): Promise<{ persisted: true } | { persisted: false; reason: string }> {
   try {
