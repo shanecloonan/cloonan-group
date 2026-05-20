@@ -7,6 +7,7 @@ import { card, GAME_LABELS, pillGold, type CasinoGameId } from "../casino-ui";
 
 const SECTIONS = [
   { id: "overview", label: "Overview" },
+  { id: "platform", label: "Platform" },
   { id: "fairness", label: "Provable fairness" },
   { id: "crypto", label: "Crypto & vault" },
   { id: "house", label: "House edge" },
@@ -86,6 +87,35 @@ export default function DocsContent() {
                 — export & verify links.
               </li>
             </ul>
+          </DocSection>
+
+          <DocSection id="platform" title="Platform & navigation">
+            <Callout title="Designed for low friction">
+              Every route uses the same luxury shell: sticky nav, gold accent tokens, and blur cards. Sign in
+              once to sync seeds, balances, and leaderboard visibility to Supabase.
+            </Callout>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              <PlatformCard
+                href="/casino/dashboard"
+                title="Player dashboard"
+                body="Filter your sessions by game and source (local vs cloud). Edit display name and opt in or out of public leaderboards."
+              />
+              <PlatformCard
+                href="/casino/feed"
+                title="Live bet feed"
+                body="Real-time log of settled bets from all opted-in players across every game. Auto-refreshes; filter by game."
+              />
+              <PlatformCard
+                href="/casino/leaderboard"
+                title="Leaderboard"
+                body="Top winners, top losers, biggest single win, and biggest single loss — powered by Supabase RPCs over settled sessions."
+              />
+              <PlatformCard
+                href="/casino/history"
+                title="History & export"
+                body="Merge local and cloud history, sort, filter, export JSON/CSV, and open one-click verify links per hand."
+              />
+            </div>
           </DocSection>
 
           <DocSection id="fairness" title="Provable fairness">
@@ -180,12 +210,20 @@ export default function DocsContent() {
             </div>
           </DocSection>
 
-          <GameDoc id="blackjack" title="Blackjack" rtp="99.58%" rules={[
-            "6-deck shoe, S17 (dealer stands soft 17) by default.",
-            "Blackjack pays 3:2 unless table config says otherwise.",
-            "Double on first two cards; split pairs once; insurance offered vs dealer Ace.",
-            "Full action log + card order reproducible from seed stream.",
-          ]} />
+          <GameDoc
+            id="blackjack"
+            title="Blackjack"
+            rtp="99.58%"
+            rules={[
+              "6-deck shoe, S17 (dealer stands soft 17) by default.",
+              "Blackjack pays 3:2 unless table config says otherwise.",
+              "Double on first two cards; split pairs once; insurance offered vs dealer Ace.",
+            ]}
+            verify={[
+              "Every card dealt consumes HMAC bytes in order; action log stores post-state hashes.",
+              "Verifier replays hit/stand/double/split and compares final hands and payout.",
+            ]}
+          />
 
           <GameDoc id="coinflip" title="Coinflip" rtp="99.00%" rules={[
             "Pick heads or tails; win pays 1.98× (1% house edge).",
@@ -201,7 +239,7 @@ export default function DocsContent() {
             "European single-zero wheel (37 pockets).",
             "Straight 35:1, splits 17:1, streets 11:1, corners 8:1, six-line 5:1, dozens/columns 2:1, even-money 1:1.",
             "La Partage not enabled — zero loses all outside bets.",
-            "Mobile: 6-column number grid + stacked outside bets (tap to bet, hold to remove). Desktop: classic felt layout.",
+            "Mobile: true 3×12 European rows (same order as the felt), zero on top, chips shown below numbers — no overlap. Desktop: classic scrollable felt.",
           ]} />
 
           <GameDoc id="slots" title="Slots" rtp="≈96%" rules={[
@@ -230,13 +268,20 @@ export default function DocsContent() {
             "Multipliers compound with 1% edge per step; cash out between rounds.",
           ]} />
 
-          <GameDoc id="poker" title="Poker (6-Max Hold'em)" rtp="skill-based" rules={[
-            "You (seat 0) vs five AI opponents at a single table.",
-            "No-limit style betting: fold, check, call, raise (min-raise = big blind).",
-            "Blinds scale with buy-in (BB ≈ buy-in / 50). 1% rake taken from contested pots at showdown.",
-            "Full deck order + every action logged — replay in /casino/verify after seed reveal.",
-            "Multiplayer lobby: host/join tables via Supabase Realtime (beta) with shared oval table UI. Solo mode uses five bots with the same rake math.",
-          ]} />
+          <GameDoc
+            id="poker"
+            title="Poker (6-Max Hold'em)"
+            rtp="skill-based · 1% rake"
+            rules={[
+              "Solo: you (seat 0) vs five AI opponents. Multiplayer: host/join room codes, Supabase Realtime sync.",
+              "No-limit betting: fold, check, call, raise (min-raise = big blind).",
+              "Blinds scale with buy-in (BB ≈ buy-in / 50). Rake on contested pots at showdown.",
+            ]}
+            verify={[
+              "Shoe order is deterministic from the seed stream; all streets and bot actions are in the session log.",
+              "Replay reconstructs community cards and showdown winners.",
+            ]}
+          />
         </div>
       </div>
     </CasinoShell>
@@ -268,27 +313,70 @@ function GameDoc({
   title,
   rtp,
   rules,
+  verify,
 }: {
   id: string;
   title: string;
   rtp: string;
   rules: string[];
+  verify?: string[];
 }) {
   return (
     <DocSection id={id} title={title}>
-      <p className="text-amber-200/90 font-mono text-xs mb-2">Published RTP {rtp}</p>
-      <ul className="list-disc pl-5 space-y-1">
+      <div className={card + " p-4 mb-4 flex flex-wrap items-center justify-between gap-2"}>
+        <span className="text-white/50 text-xs uppercase tracking-wider">Published RTP</span>
+        <span className="font-mono text-lg text-emerald-300/95">{rtp}</span>
+      </div>
+      <h3 className="text-xs uppercase tracking-[0.15em] text-white/40 font-semibold mb-2">Rules</h3>
+      <ul className="list-disc pl-5 space-y-1.5">
         {rules.map((r) => (
           <li key={r}>{r}</li>
         ))}
       </ul>
-      <p className="mt-3 text-white/50 text-xs">
-        Verify any session: export JSON →{" "}
+      {verify && verify.length > 0 && (
+        <>
+          <h3 className="text-xs uppercase tracking-[0.15em] text-white/40 font-semibold mt-4 mb-2">
+            Verifiability
+          </h3>
+          <ul className="list-disc pl-5 space-y-1.5 text-white/65">
+            {verify.map((v) => (
+              <li key={v}>{v}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="mt-4 text-white/50 text-xs border-t border-white/[0.06] pt-3">
+        Export session JSON from History or the in-table share link →{" "}
         <Link href="/casino/verify" className="text-amber-300 hover:underline">
-          verifier
-        </Link>
-        .
+          /casino/verify
+        </Link>{" "}
+        with your revealed server seed.
       </p>
     </DocSection>
+  );
+}
+
+function Callout({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className={card + " p-4 border-amber-400/20 bg-amber-500/[0.06]"}>
+      <div className="text-sm font-semibold text-amber-100 mb-1">{title}</div>
+      <div className="text-white/65 text-sm leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+function PlatformCard({ href, title, body }: { href: string; title: string; body: string }) {
+  return (
+    <Link
+      href={href}
+      className={
+        card +
+        " block p-4 hover:border-amber-400/30 transition-all group"
+      }
+    >
+      <div className="text-sm font-semibold text-white group-hover:text-amber-100">{title}</div>
+      <p className="mt-1.5 text-xs text-white/50 leading-relaxed">{body}</p>
+      <span className="inline-block mt-2 text-[11px] text-amber-300/80">Open →</span>
+    </Link>
   );
 }

@@ -34,4 +34,23 @@ contract CasinoVaultTest is Test {
         vm.stopPrank();
         assertEq(token.balanceOf(address(vault)), 1000e6);
     }
+
+    function testTokenMustBeAllowed() public {
+        MockUSDC other = new MockUSDC();
+        vm.startPrank(player);
+        other.approve(address(vault), 1e6);
+        vm.expectRevert("token not allowed");
+        vault.deposit(other, 1e6);
+        vm.stopPrank();
+    }
+
+    function testPauseBlocksDepositOnly() public {
+        vm.prank(owner);
+        vault.setPaused(true);
+        vm.startPrank(player);
+        token.approve(address(vault), 100e6);
+        vm.expectRevert("paused");
+        vault.deposit(token, 100e6);
+        vm.stopPrank();
+    }
 }

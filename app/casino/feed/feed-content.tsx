@@ -61,7 +61,14 @@ export default function FeedContent() {
       subtitle="Every settled session from players on the public leaderboard — all games, refreshed automatically."
     >
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex items-center gap-2 mr-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+          </span>
+          <span className="text-[10px] uppercase tracking-wider text-emerald-300/80">Live</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5 flex-1">
           <FilterPill active={gameFilter === "all"} label="All games" onClick={() => setGameFilter("all")} />
           {ALL_GAMES.map((g) => (
             <FilterPill

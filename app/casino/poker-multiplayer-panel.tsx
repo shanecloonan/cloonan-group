@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { HUMAN_SEAT, pokerGame, type ChainId, type PokerAction, type PokerState, type TokenSpec } from "@/lib/casino";
 import {
@@ -14,8 +14,11 @@ import {
   humanCount,
   type PokerRoomRow,
 } from "@/lib/casino/poker-multiplayer";
+import { useCasino } from "./casino-context";
+import { PokerActionBar } from "./poker-action-bar";
 import { PokerOvalTable } from "./poker-table-visual";
-import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
+import { btnGhost, btnPrimary, btnSecondary, card, inputCls, pillGold, pillLive } from "./casino-ui";
+import { persistSettledSession } from "@/lib/casino";
 
 function humanToUnits(amount: number, token: TokenSpec): bigint {
   if (!Number.isFinite(amount) || amount <= 0) return 0n;
@@ -38,6 +41,9 @@ export function PokerMultiplayerPanel({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState("");
+  const [copied, setCopied] = useState(false);
+  const { getSeedPair, pushHistory, refreshBalance } = useCasino();
+  const settledRoomRef = useRef<string | null>(null);
 
   const refreshList = useCallback(() => {
     listPokerRooms(16).then(setRooms);
@@ -52,8 +58,26 @@ export function PokerMultiplayerPanel({
 
   useEffect(() => {
     if (!active?.id) return;
-    return subscribePokerRoom(active.id, (room) => setActive(room));
-  }, [active?.id]);
+    return subscribePokerRoom(active.id, (room) => {
+      setActive(room);
+      if (room.status === "complete" && room.session_json) {
+        const sess = room.session_json;
+        if (sess.status === "settled" && sess.result && settledRoomRef.current !== room.id) {
+          settledRoomRef.current = room.id;
+          pushHistory({
+            game: "poker",
+            stakeUnits: sess.result.totalStakedUnits,
+            pnlUnits: sess.result.pnlUnits,
+            multiplier:
+              Number(sess.result.totalPayoutUnits) / Math.max(1, Number(sess.result.totalStakedUnits)),
+            session: sess,
+          });
+          void persistSettledSession(sess, getSeedPair());
+          void refreshBalance();
+        }
+      }
+    });
+  }, [active?.id, getSeedPair, pushHistory, refreshBalance]);
 
   const host = async () => {
     setBusy(true);
@@ -188,8 +212,21 @@ export function PokerMultiplayerPanel({
           <div className={card + " p-4 space-y-3"}>
           <div className="flex justify-between items-center">
             <div>
-              <div className="text-lg font-mono text-amber-200">{active.room_code}</div>
-              <div className="text-xs text-white/45">
+              <div className="flex items-center gap-2">
+                <div className="text-lg font-mono text-amber-200 tracking-widest">{active.room_code}</div>
+                <button
+                  type="button"
+                  className="text-[10px] text-amber-300/80 hover:text-amber-200 uppercase tracking-wider"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(active.room_code);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? "Copied" : "Copy code"}
+                </button>
+              </div>
+              <div className="text-xs text-white/45 mt-1">
                 Seat {mySeat ?? "—"} · {humanCount(active)} humans · {active.status}
               </div>
             </div>
@@ -202,21 +239,14 @@ export function PokerMultiplayerPanel({
               Deal hand (bots fill empty seats)
             </button>
           )}
-          {state && active.status === "active" && mySeat === state.activeSeat && (
-            <div className="flex flex-wrap gap-2">
-              {legal.map((a, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={btnSecondary}
-                  disabled={busy}
-                  onClick={() => act(a)}
-                >
-                  {a.type}
-                  {a.raiseTo ? ` ${a.raiseTo}` : ""}
-                </button>
-              ))}
+          {state && active.status === "active" && mySeat !== null && mySeat === state.activeSeat && (
+            <div className="space-y-2">
+              <span className={pillLive + " w-full justify-center"}>Your turn</span>
+              <PokerActionBar state={state} seat={mySeat} token={token} legal={legal} busy={busy} onAct={act} />
             </div>
+          )}
+          {state && active.status === "active" && mySeat !== state.activeSeat && (
+            <p className="text-xs text-center text-white/45 animate-pulse">Waiting for other players…</p>
           )}
           {state && (
             <p className="text-xs text-white/50 border-t border-white/[0.06] pt-3">

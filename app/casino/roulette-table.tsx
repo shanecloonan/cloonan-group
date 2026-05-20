@@ -624,10 +624,27 @@ function RouletteMobileLayout({
   midRow: number[];
   botRow: number[];
 }) {
-  const allNums = [...topRow, ...midRow, ...botRow];
+  const row = (nums: number[]) => (
+    <div className="grid grid-cols-12 gap-[3px] w-full min-w-0">
+      {nums.map((n) => (
+        <NumberCell
+          key={n}
+          number={n}
+          compact
+          stake={placements[`straight:${n}`] as bigint | undefined}
+          onClick={() => onClick(`straight:${n}`)}
+          onRightClick={() => onRightClick(`straight:${n}`)}
+          disabled={disabled}
+          chip={chip}
+          token={token}
+        />
+      ))}
+    </div>
+  );
+
   return (
-    <div className="sm:hidden space-y-3 mb-1">
-      <p className="text-[10px] text-white/45">Tap to bet · hold to remove</p>
+    <div className="sm:hidden space-y-3 mb-1 max-w-full overflow-hidden">
+      <p className="text-[10px] text-white/45">European layout · tap to bet · hold to remove</p>
       <NumberCell
         number={0}
         stake={placements["straight:0"] as bigint | undefined}
@@ -639,20 +656,10 @@ function RouletteMobileLayout({
         big
         compact
       />
-      <div className="grid grid-cols-6 gap-1.5">
-        {allNums.map((n) => (
-          <NumberCell
-            key={n}
-            number={n}
-            compact
-            stake={placements[`straight:${n}`] as bigint | undefined}
-            onClick={() => onClick(`straight:${n}`)}
-            onRightClick={() => onRightClick(`straight:${n}`)}
-            disabled={disabled}
-            chip={chip}
-            token={token}
-          />
-        ))}
+      <div className="space-y-[3px] w-full">
+        {row(topRow)}
+        {row(midRow)}
+        {row(botRow)}
       </div>
       <div className="grid grid-cols-3 gap-1.5">
         <OutsideCell compact label="1st 12" stake={placements["dozen_1"] as bigint | undefined} onClick={() => onClick("dozen_1")} onRightClick={() => onRightClick("dozen_1")} disabled={disabled} chip={chip} token={token} />
@@ -717,7 +724,7 @@ function NumberCell({
         (compact
           ? big
             ? "w-full h-12 text-sm"
-            : "aspect-square w-full min-h-[2.25rem] text-[11px]"
+            : "aspect-square w-full min-h-[2rem] max-h-[2.75rem] text-[10px] leading-none overflow-hidden"
           : big
             ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] shrink-0 text-sm"
             : "h-9 w-full min-w-[2.125rem] text-xs sm:text-sm") +
@@ -730,8 +737,8 @@ function NumberCell({
       }
       title={`Tap: place ${chip} ${token.symbol} · hold / right-click: remove`}
     >
-      {number}
-      {has && <ChipBadge stake={stake!} token={token} compact={compact} />}
+      <span className={compact ? "leading-none" : ""}>{number}</span>
+      {has && <ChipBadge stake={stake!} token={token} compact={compact} below={compact} />}
     </button>
   );
 }
@@ -785,13 +792,31 @@ function OutsideCell({
       title={`Tap: place ${chip} ${token.symbol} · hold / right-click: remove`}
     >
       {label}
-      {has && <ChipBadge stake={stake!} token={token} compact={compact} />}
+      {has && <ChipBadge stake={stake!} token={token} compact={compact} below={compact} />}
     </button>
   );
 }
 
-function ChipBadge({ stake, token, compact }: { stake: bigint; token: TokenSpec; compact?: boolean }) {
+function ChipBadge({
+  stake,
+  token,
+  compact,
+  below,
+}: {
+  stake: bigint;
+  token: TokenSpec;
+  compact?: boolean;
+  below?: boolean;
+}) {
   const human = unitsToHuman(stake, token);
+  const label = human < 1000 ? String(Math.round(human)) : `${(human / 1000).toFixed(human < 10000 ? 1 : 0)}k`;
+  if (below) {
+    return (
+      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-10 min-w-[14px] h-3.5 px-0.5 rounded-full bg-amber-400 border border-amber-100 text-amber-950 text-[7px] font-bold flex items-center justify-center shadow pointer-events-none">
+        {label}
+      </span>
+    );
+  }
   return (
     <span
       className={
@@ -799,7 +824,7 @@ function ChipBadge({ stake, token, compact }: { stake: bigint; token: TokenSpec;
         (compact ? " -top-1 -right-1 w-4 h-4 text-[7px]" : " -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 w-5 h-5 sm:w-6 sm:h-6 text-[8px] sm:text-[10px]")
       }
     >
-      {human < 1000 ? human : `${(human / 1000).toFixed(human < 10000 ? 1 : 0)}k`}
+      {label}
     </span>
   );
 }

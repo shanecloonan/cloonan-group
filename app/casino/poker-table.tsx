@@ -16,6 +16,7 @@ import {
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { ShareLinkRow } from "./share-link";
+import { PokerActionBar } from "./poker-action-bar";
 import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
 import { PokerOvalTable } from "./poker-table-visual";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
@@ -62,7 +63,6 @@ export default function PokerTable({ chainId, token }: Props) {
   const runningBots = useRef(false);
 
   const legal = session ? pokerGame.legalActions(session.state) : [];
-  const legalTypes = new Set(legal.map((a) => a.type + (a.raiseTo ? `:${a.raiseTo}` : "")));
 
   const advanceBots = useCallback(
     async (sess: Session<PokerAction, PokerState>): Promise<Session<PokerAction, PokerState>> => {
@@ -273,25 +273,16 @@ export default function PokerTable({ chainId, token }: Props) {
       </section>
       )}
 
-      {mode === "solo" && session && !terminal && (
-        <section className={card + " p-4 flex flex-wrap gap-2 justify-center"}>
-          <ActionBtn label="Fold" disabled={busy || !legalTypes.has("fold")} onClick={() => apply({ type: "fold" })} danger />
-          <ActionBtn
-            label={toCall === 0n ? "Check" : "Call"}
-            disabled={busy || (!legalTypes.has("check") && !legalTypes.has("call"))}
-            onClick={() => apply({ type: toCall === 0n ? "check" : "call" })}
+      {mode === "solo" && session && !terminal && st && human && (
+        <section className={card + " p-4"}>
+          <PokerActionBar
+            state={st}
+            seat={HUMAN_SEAT}
+            token={token}
+            legal={legal}
+            busy={busy}
+            onAct={apply}
           />
-          {legal
-            .filter((a) => a.type === "raise" && a.raiseTo)
-            .map((a, i) => (
-              <ActionBtn
-                key={i}
-                label={a.raiseTo === human!.betThisRound + human!.stack ? "All-in" : `Raise ${fmt(a.raiseTo!, token)}`}
-                disabled={busy}
-                onClick={() => apply(a)}
-                accent
-              />
-            ))}
         </section>
       )}
 
@@ -322,23 +313,3 @@ export default function PokerTable({ chainId, token }: Props) {
   );
 }
 
-function ActionBtn({
-  label,
-  onClick,
-  disabled,
-  danger,
-  accent,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-  accent?: boolean;
-}) {
-  const cls = danger ? btnGhost + " !border-rose-400/40 !text-rose-200" : accent ? btnPrimary : btnSecondary;
-  return (
-    <button type="button" className={cls} disabled={disabled} onClick={onClick}>
-      {label}
-    </button>
-  );
-}
