@@ -364,7 +364,7 @@ export default function SlotsTable({ chainId, token }: Props) {
   /* =================== render =================== */
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 pt-8">
+    <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 pt-4 sm:pt-8 pb-4 lg:pb-0">
       {/* ───── Main column ───── */}
       <section className="space-y-6">
         {/* Header */}
@@ -607,7 +607,6 @@ export default function SlotsTable({ chainId, token }: Props) {
  *  Reel window
  * ========================================================================= */
 
-const REEL_CELL_HEIGHT = 84;
 
 function ReelWindow({
   grid,
@@ -631,10 +630,7 @@ function ReelWindow({
           Free spin {freeSpinCount}/{totalFreeSpins}
         </div>
       )}
-      <div
-        className="grid grid-cols-5 gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl bg-gradient-to-b from-black/30 to-black/60 border border-white/[0.08]"
-        style={{ height: REEL_CELL_HEIGHT * 3 + 32 }}
-      >
+      <div className="grid grid-cols-5 gap-1 sm:gap-3 p-2 sm:p-4 rounded-xl bg-gradient-to-b from-black/30 to-black/60 border border-white/[0.08] min-w-0 max-w-full mx-auto h-[calc(58px*3+1rem)] sm:h-[calc(84px*3+2rem)]">
         {[0, 1, 2, 3, 4].map((col) => (
           <ReelColumn
             key={col}
@@ -692,7 +688,7 @@ function ReelCell({
   return (
     <div
       className={
-        "flex items-center justify-center font-bold text-3xl sm:text-4xl border-b border-white/[0.04] last:border-b-0 transition-all " +
+        "flex items-center justify-center font-bold text-2xl sm:text-4xl h-[58px] sm:h-[84px] border-b border-white/[0.04] last:border-b-0 transition-all " +
         SYMBOL_COLOR[symbol] +
         (isWin && !spinning
           ? " bg-emerald-400/15 ring-1 ring-inset ring-emerald-400/40 scale-105"
@@ -700,7 +696,6 @@ function ReelCell({
             ? " opacity-70 blur-[1px]"
             : "")
       }
-      style={{ height: REEL_CELL_HEIGHT }}
     >
       {SYMBOL_GLYPH[symbol]}
     </div>

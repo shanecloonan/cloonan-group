@@ -458,7 +458,7 @@ export default function CrashTable({ chainId, token }: Props) {
    * =========================================================================== */
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6 pb-4 lg:pb-0">
       {/* ───── Main column ───── */}
       <div className="space-y-5">
         {/* Curve canvas */}
@@ -742,7 +742,7 @@ function CurveCanvas({
         </span>
       </div>
 
-      <div className="relative" style={{ aspectRatio: `${width}/${height}` }}>
+      <div className="relative min-h-[200px] sm:min-h-[240px]" style={{ aspectRatio: `${width}/${height}` }}>
         <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 w-full h-full">
           <defs>
             <linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1">

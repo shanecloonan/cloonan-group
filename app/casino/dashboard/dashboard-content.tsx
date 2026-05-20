@@ -54,7 +54,6 @@ export default function DashboardContent() {
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [authed, setAuthed] = useState(false);
   const [cloudRows, setCloudRows] = useState<DashboardSessionRow[]>([]);
-  const [source, setSource] = useState<"merged" | "local" | "cloud">("merged");
   const [outcomeFilter, setOutcomeFilter] = useState<"all" | "wins" | "losses">("all");
   const [period, setPeriod] = useState<"all" | "7d" | "30d">("all");
 
@@ -112,8 +111,6 @@ export default function DashboardContent() {
   const myFiltered = useMemo(() => {
     let r = mergedRows;
     if (gameFilter !== "all") r = r.filter((x) => x.game === gameFilter);
-    if (source === "local") r = r.filter((x) => x.origin === "local");
-    if (source === "cloud") r = r.filter((x) => x.origin === "cloud");
     if (period !== "all") {
       const ms = period === "7d" ? 7 * 864e5 : 30 * 864e5;
       const cutoff = Date.now() - ms;
@@ -122,7 +119,7 @@ export default function DashboardContent() {
     if (outcomeFilter === "wins") r = r.filter((x) => BigInt(x.pnlUnits) > 0n);
     if (outcomeFilter === "losses") r = r.filter((x) => BigInt(x.pnlUnits) < 0n);
     return r.slice(0, 80);
-  }, [mergedRows, gameFilter, source, period, outcomeFilter]);
+  }, [mergedRows, gameFilter, period, outcomeFilter]);
 
   const stats = useMemo(() => {
     let wagered = 0n;
@@ -156,10 +153,6 @@ export default function DashboardContent() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className={sectionTitle}>Your recent play</h2>
             <div className="flex flex-wrap gap-1.5 items-center">
-              <CasinoFilterPill active={source === "merged"} label="All sources" onClick={() => setSource("merged")} />
-              <CasinoFilterPill active={source === "local"} label="Local" onClick={() => setSource("local")} />
-              <CasinoFilterPill active={source === "cloud"} label="Cloud" onClick={() => setSource("cloud")} disabled={!authed} />
-              <span className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
               <CasinoFilterPill active={period === "all"} label="All time" onClick={() => setPeriod("all")} />
               <CasinoFilterPill active={period === "7d"} label="7 days" onClick={() => setPeriod("7d")} />
               <CasinoFilterPill active={period === "30d"} label="30 days" onClick={() => setPeriod("30d")} />
@@ -209,7 +202,7 @@ export default function DashboardContent() {
                         {GAME_LABELS[r.game as CasinoGameId] ?? r.game}
                       </div>
                       <div className="text-[11px] text-white/40">
-                        {new Date(r.at).toLocaleString()} · {r.origin}
+                        {new Date(r.at).toLocaleString()}
                       </div>
                     </div>
                     <div className="text-right">

@@ -87,9 +87,12 @@ export default function HistoryContent() {
   }, []);
 
   useEffect(() => {
-    if (view !== "global") return;
     loadFeed();
-    const t = setInterval(loadFeed, 12_000);
+  }, [loadFeed]);
+
+  useEffect(() => {
+    if (view !== "global") return;
+    const t = setInterval(loadFeed, 8_000);
     return () => clearInterval(t);
   }, [view, loadFeed]);
 

@@ -96,7 +96,7 @@ export default function DocsContent() {
               <PlatformCard
                 href="/casino/dashboard"
                 title="Player dashboard"
-                body="Filter by game, source (local/cloud), 7d/30d window, and win/loss. Stats, profile, and a live house feed sidebar."
+                body="Filter by game, 7d/30d window, and win/loss. Stats, profile, and a live house feed sidebar."
               />
               <PlatformCard
                 href="/casino/leaderboard"

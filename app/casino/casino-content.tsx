@@ -465,7 +465,10 @@ function Lobby({
             <h2 className="text-lg font-semibold">Recent activity</h2>
             <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.12em]">
               <Link href="/casino/history" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
-                Full history →
+                Activity log →
+              </Link>
+              <Link href="/casino/history?view=global" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
+                Global feed →
               </Link>
               <Link href="/casino/verify" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
                 Verify any hand →
@@ -492,7 +495,10 @@ function Lobby({
             </div>
             <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.12em]">
               <Link href="/casino/history" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
-                Full history →
+                Activity log →
+              </Link>
+              <Link href="/casino/history?view=global" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
+                Global feed →
               </Link>
               <Link href="/casino/verify" className="text-emerald-300 hover:text-emerald-200 cursor-pointer">
                 Verify any hand →
@@ -600,7 +606,8 @@ function Lobby({
               g.id === "crash" ||
               g.id === "plinko" ||
               g.id === "mines" ||
-              g.id === "hilo"
+              g.id === "hilo" ||
+              g.id === "poker"
                 ? (g.id as GameTab)
                 : null;
             return (
