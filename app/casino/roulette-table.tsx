@@ -528,9 +528,11 @@ function BettingLayout({
   const botRow = Array.from({ length: 12 }, (_, i) => 1 + i * 3);
 
   return (
-    <div className="rounded-xl bg-emerald-950/30 border border-emerald-900/40 p-3 select-none">
-      {/* Main number grid */}
-      <div className="flex gap-2">
+    <div className="rounded-xl bg-emerald-950/30 border border-emerald-900/40 p-2 sm:p-3 select-none">
+      <p className="sm:hidden text-[10px] text-white/45 mb-2 px-0.5">Swipe the table horizontally to place bets →</p>
+      <div className="overflow-x-auto overscroll-x-contain -mx-0.5 px-0.5 pb-1 touch-pan-x">
+        <div className="min-w-[34rem] sm:min-w-0 w-full">
+      <div className="flex gap-1 sm:gap-2">
         {/* Zero cell */}
         <NumberCell
           number={0}
@@ -543,13 +545,13 @@ function BettingLayout({
           big
         />
         {/* 12 columns × 3 rows */}
-        <div className="flex-1 grid grid-cols-12 grid-rows-3 gap-1">
+        <div className="flex-1 grid grid-cols-12 grid-rows-3 gap-0.5 sm:gap-1 min-w-0">
           {topRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
           {midRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
           {botRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
         </div>
         {/* Column 2:1 markers (top → col_3, mid → col_2, bot → col_1) */}
-        <div className="grid grid-rows-3 gap-1 w-12">
+        <div className="grid grid-rows-3 gap-0.5 sm:gap-1 w-9 sm:w-12 shrink-0">
           <OutsideCell label="2:1" stake={placements["column_3"] as bigint | undefined} onClick={() => onClick("column_3")} onRightClick={() => onRightClick("column_3")} disabled={disabled} chip={chip} token={token} small />
           <OutsideCell label="2:1" stake={placements["column_2"] as bigint | undefined} onClick={() => onClick("column_2")} onRightClick={() => onRightClick("column_2")} disabled={disabled} chip={chip} token={token} small />
           <OutsideCell label="2:1" stake={placements["column_1"] as bigint | undefined} onClick={() => onClick("column_1")} onRightClick={() => onRightClick("column_1")} disabled={disabled} chip={chip} token={token} small />
@@ -557,20 +559,29 @@ function BettingLayout({
       </div>
 
       {/* Dozens row */}
-      <div className="mt-2 grid grid-cols-3 gap-1 ml-[3.5rem] mr-[3.5rem]">
+      <div className="mt-1.5 sm:mt-2 flex gap-1 sm:gap-2">
+        <div className="w-9 sm:w-12 shrink-0" aria-hidden />
+        <div className="flex-1 grid grid-cols-3 gap-0.5 sm:gap-1 min-w-0">
         <OutsideCell label="1st 12" stake={placements["dozen_1"] as bigint | undefined} onClick={() => onClick("dozen_1")} onRightClick={() => onRightClick("dozen_1")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="2nd 12" stake={placements["dozen_2"] as bigint | undefined} onClick={() => onClick("dozen_2")} onRightClick={() => onRightClick("dozen_2")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="3rd 12" stake={placements["dozen_3"] as bigint | undefined} onClick={() => onClick("dozen_3")} onRightClick={() => onRightClick("dozen_3")} disabled={disabled} chip={chip} token={token} />
+        </div>
+        <div className="w-9 sm:w-12 shrink-0" aria-hidden />
       </div>
 
-      {/* Outside even-money row */}
-      <div className="mt-2 grid grid-cols-6 gap-1 ml-[3.5rem] mr-[3.5rem]">
+      <div className="mt-1.5 sm:mt-2 flex gap-1 sm:gap-2">
+        <div className="w-9 sm:w-12 shrink-0" aria-hidden />
+        <div className="flex-1 grid grid-cols-6 gap-0.5 sm:gap-1 min-w-0">
         <OutsideCell label="1-18" stake={placements["low"] as bigint | undefined} onClick={() => onClick("low")} onRightClick={() => onRightClick("low")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="EVEN" stake={placements["even"] as bigint | undefined} onClick={() => onClick("even")} onRightClick={() => onRightClick("even")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="RED" stake={placements["red"] as bigint | undefined} onClick={() => onClick("red")} onRightClick={() => onRightClick("red")} disabled={disabled} chip={chip} token={token} accent="red" />
-        <OutsideCell label="BLACK" stake={placements["black"] as bigint | undefined} onClick={() => onClick("black")} onRightClick={() => onRightClick("black")} disabled={disabled} chip={chip} token={token} accent="black" />
+        <OutsideCell label="BLK" stake={placements["black"] as bigint | undefined} onClick={() => onClick("black")} onRightClick={() => onRightClick("black")} disabled={disabled} chip={chip} token={token} accent="black" />
         <OutsideCell label="ODD" stake={placements["odd"] as bigint | undefined} onClick={() => onClick("odd")} onRightClick={() => onRightClick("odd")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="19-36" stake={placements["high"] as bigint | undefined} onClick={() => onClick("high")} onRightClick={() => onRightClick("high")} disabled={disabled} chip={chip} token={token} />
+        </div>
+        <div className="w-9 sm:w-12 shrink-0" aria-hidden />
+      </div>
+        </div>
       </div>
     </div>
   );
@@ -607,8 +618,8 @@ function NumberCell({
         onRightClick();
       }}
       className={
-        "relative font-bold text-sm transition-all rounded-md border " +
-        (big ? "w-12 h-[6.5rem] flex items-center justify-center " : "h-8 w-full flex items-center justify-center ") +
+        "relative font-bold text-[10px] sm:text-sm transition-all rounded-md border " +
+        (big ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] flex items-center justify-center shrink-0 " : "h-7 sm:h-8 w-full min-w-[1.4rem] flex items-center justify-center ") +
         (color === "red"
           ? "bg-rose-600/40 border-rose-500/40 text-rose-100 hover:bg-rose-600/60"
           : color === "black"
@@ -677,7 +688,7 @@ function OutsideCell({
 function ChipBadge({ stake, token }: { stake: bigint; token: TokenSpec }) {
   const human = unitsToHuman(stake, token);
   return (
-    <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-amber-400 border-2 border-amber-200 text-amber-950 text-[10px] font-bold flex items-center justify-center shadow-md">
+    <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-amber-400 border border-amber-200 sm:border-2 text-amber-950 text-[8px] sm:text-[10px] font-bold flex items-center justify-center shadow-md">
       {human < 1000 ? human : `${(human / 1000).toFixed(human < 10000 ? 1 : 0)}k`}
     </span>
   );

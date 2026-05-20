@@ -18,6 +18,9 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { CasinoProvider, useCasino, type CasinoHistoryEntry } from "./casino-context";
+import { CasinoShell } from "./casino-shell";
+import { GameNav, type GameTab } from "./game-nav";
+import { pillGold, pillLive } from "./casino-ui";
 
 function StatBlock({
   label,
@@ -295,10 +298,8 @@ const CHAIN_TILES: ChainTile[] = [
  *  Page
  * ========================================================================= */
 
-type Tab = "lobby" | "blackjack" | "coinflip" | "dice" | "roulette" | "slots" | "crash" | "plinko" | "mines" | "hilo" | "roadmap" | "fairness";
-
 export default function CasinoContent() {
-  const [tab, setTab] = useState<Tab>("lobby");
+  const [tab, setTab] = useState<GameTab>("lobby");
   const [chainId, setChainId] = useState<ChainId>("dev-mock");
   const [token, setToken] = useState<TokenSpec>(DEV_TOKEN);
 
@@ -317,10 +318,10 @@ export default function CasinoContent() {
 
   return (
     <CasinoProvider chainId={chainId} token={token}>
-      <div className="min-h-[calc(100vh-56px)] w-full bg-[#08090e] text-white">
-        <PageHeader tab={tab} setTab={setTab} />
-
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-24">
+      <CasinoShell>
+        {tab === "lobby" && <LobbyHero />}
+        <GameNav tab={tab} setTab={setTab} />
+        <div>
           {tab === "lobby" && (
             <Lobby
               chainId={chainId}
@@ -361,100 +362,31 @@ export default function CasinoContent() {
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
         </div>
-      </div>
+      </CasinoShell>
     </CasinoProvider>
   );
 }
 
-/* ===========================================================================
- *  Header — title + nav between modes
- * ========================================================================= */
-
-function PageHeader({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
-  const tabs: { id: Tab; label: string; sub: string }[] = [
-    { id: "lobby", label: "Lobby", sub: "Pick a chain + a game" },
-    { id: "blackjack", label: "Blackjack", sub: "Play now" },
-    { id: "coinflip", label: "Coinflip", sub: "Play now" },
-    { id: "dice", label: "Dice", sub: "Play now" },
-    { id: "roulette", label: "Roulette", sub: "Play now" },
-    { id: "slots", label: "Slots", sub: "Play now" },
-    { id: "crash", label: "Crash", sub: "Play now" },
-    { id: "plinko", label: "Plinko", sub: "Play now" },
-    { id: "mines", label: "Mines", sub: "Play now" },
-    { id: "hilo", label: "HiLo", sub: "Play now" },
-    { id: "fairness", label: "Provable fairness", sub: "Verify any hand" },
-    { id: "roadmap", label: "Roadmap", sub: "What's next" },
-  ];
-  // Sibling pages — not full tabs, just quick deep links from the header.
-  const siblings: { href: string; label: string }[] = [
-    { href: "/casino/wallet", label: "Wallet" },
-    { href: "/casino/history", label: "History" },
-    { href: "/casino/verify", label: "Verify" },
-  ];
+function LobbyHero() {
   return (
-    <header className="border-b border-white/[0.06] bg-gradient-to-b from-emerald-900/30 via-[#08090e] to-[#08090e]">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-12 pb-8">
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className={pill + " border-emerald-400/30 text-emerald-300 bg-emerald-500/10"}>
-            ♠ Crypto Casino
-          </span>
-          <span className={pill}>Provably fair</span>
-          <span className={pill}>Multi-chain</span>
-          <span className={pill}>House edge 0.42% (BJ)</span>
-          <SyncStatusPill />
-        </div>
-        <h1 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight">
-          Casino<span className="text-emerald-400">.</span>
-        </h1>
-        <p className="mt-3 max-w-2xl text-white/60 leading-relaxed">
-          A crypto-native casino built on three principles: <span className="text-emerald-300">every hand is verifiable</span>,
-          every settlement lives on a chain you can audit, and the game catalog grows
-          one PR at a time. Blackjack is live in dev-money mode today; Base + Solana
-          settlement come online in Phase 2 and 3 of the
-          {" "}<button
-            type="button"
-            onClick={() => setTab("roadmap")}
-            className="text-emerald-300 underline-offset-2 hover:underline cursor-pointer"
-          >
-            roadmap
-          </button>.
-        </p>
-
-        <div className="mt-7 flex flex-wrap gap-2">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={
-                "group flex flex-col items-start px-4 py-2 rounded-xl border transition-all cursor-pointer " +
-                (tab === t.id
-                  ? "border-emerald-400/50 bg-emerald-500/10 text-white"
-                  : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:text-white hover:bg-white/[0.06]")
-              }
-            >
-              <span className="text-sm font-semibold">{t.label}</span>
-              <span className="text-[11px] text-white/40 group-hover:text-white/60">{t.sub}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-3 flex items-center gap-2 text-[11px] text-white/40">
-          <span>Quick links:</span>
-          {siblings.map((s) => (
-            <Link
-              key={s.href}
-              href={s.href}
-              className="px-2 py-0.5 rounded-full border border-white/[0.08] hover:border-emerald-400/40 hover:text-emerald-300 transition-colors"
-            >
-              {s.label} →
-            </Link>
-          ))}
-        </div>
+    <div className="-mt-6 mb-2 pb-6 border-b border-white/[0.05]">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <span className={pillLive}>Live · 9 games</span>
+        <span className={pillGold}>Provably fair</span>
+        <SyncStatusPill />
       </div>
-    </header>
+      <p className="max-w-2xl text-white/55 text-sm leading-relaxed">
+        High-stakes crypto casino — every outcome verifiable, every session auditable. Pick a chain, choose a
+        table, or open{" "}
+        <Link href="/casino/docs" className="text-amber-300 hover:underline">
+          docs
+        </Link>{" "}
+        for rules and RTP.
+      </p>
+    </div>
   );
 }
+
 
 /* ===========================================================================
  *  Lobby
@@ -466,7 +398,7 @@ interface LobbyProps {
   adapter: ChainAdapter;
   onSelectChain: (c: ChainId) => void;
   onSelectToken: (t: TokenSpec) => void;
-  onOpenGame: (g: Tab) => void;
+  onOpenGame: (g: GameTab) => void;
 }
 
 function Lobby({
@@ -679,7 +611,7 @@ function Lobby({
               g.id === "plinko" ||
               g.id === "mines" ||
               g.id === "hilo"
-                ? (g.id as Tab)
+                ? (g.id as GameTab)
                 : null;
             return (
             <div

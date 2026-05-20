@@ -21,6 +21,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { buildVerifyLink } from "../share-link";
+import { CasinoShell } from "../casino-shell";
+import { ALL_GAMES, GAME_LABELS, type CasinoGameId } from "../casino-ui";
 
 const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
 
@@ -43,7 +45,7 @@ interface HistoryRow {
   session: unknown;
 }
 
-type GameFilter = "all" | "blackjack" | "coinflip" | "dice";
+type GameFilter = "all" | CasinoGameId;
 type ResultFilter = "all" | "win" | "loss" | "push";
 type SortKey = "at" | "pnl" | "multiplier" | "stake";
 type SortDir = "asc" | "desc";
@@ -248,31 +250,12 @@ export default function HistoryContent() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-56px)] w-full bg-[#08090e] text-white">
-      <header className="border-b border-white/[0.06] bg-gradient-to-b from-emerald-900/30 via-[#08090e] to-[#08090e]">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 pt-12 pb-8">
-          <div className="text-[10px] uppercase tracking-[0.15em] text-emerald-300/60 mb-2">
-            Casino · Session history
-          </div>
-          <h1 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight">
-            Every hand, audited<span className="text-emerald-400">.</span>
-          </h1>
-          <p className="mt-3 max-w-2xl text-white/60 leading-relaxed">
-            Every settled session you&apos;ve played. Filter by game, by result, by date.
-            Every row has a one-click verify link. Export to JSON or CSV for your records.
-          </p>
-          <div className="mt-4 flex items-center gap-4 text-sm">
-            <Link href="/casino" className="text-emerald-300 hover:text-emerald-200 underline-offset-2 hover:underline">
-              ← back to casino
-            </Link>
-            <Link href="/casino/verify" className="text-emerald-300 hover:text-emerald-200 underline-offset-2 hover:underline">
-              verify a hand →
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 space-y-6">
+    <CasinoShell
+      badge="Audit trail"
+      title="Session history"
+      subtitle="Filter, sort, export, and verify every settled session."
+    >
+      <div className="space-y-6">
         {/* Aggregate stats */}
         <section className={card + " p-5"}>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -293,9 +276,7 @@ export default function HistoryContent() {
             onChange={(v) => setGameFilter(v as GameFilter)}
             options={[
               { id: "all", label: "All" },
-              { id: "blackjack", label: "Blackjack" },
-              { id: "coinflip", label: "Coinflip" },
-              { id: "dice", label: "Dice" },
+              ...ALL_GAMES.map((g) => ({ id: g, label: GAME_LABELS[g] })),
             ]}
           />
           <FilterPills
@@ -422,7 +403,7 @@ export default function HistoryContent() {
           </div>
         )}
       </div>
-    </div>
+    </CasinoShell>
   );
 }
 
