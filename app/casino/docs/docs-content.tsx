@@ -169,6 +169,15 @@ export default function DocsContent() {
                 After a finalized deposit tx, <code className="text-amber-200/90">POST /api/casino/deposit-credit</code>{" "}
                 verifies the receipt on-chain and credits the Supabase ledger idempotently by tx hash.
               </li>
+              <li>
+                After lock + finalized withdraw tx, <code className="text-amber-200/90">POST /api/casino/withdraw-debit</code>{" "}
+                verifies <code className="text-amber-200/90">Withdrawn</code> on-chain and burns locked balance by tx hash.
+              </li>
+              <li>
+                Operator indexer: <code className="text-amber-200/90">POST /api/casino/operator/deposit-credit</code> with{" "}
+                <code className="text-amber-200/90">Authorization: Bearer CASINO_OPERATOR_SECRET</code> and{" "}
+                <code className="text-amber-200/90">userId</code> in the body (same idempotent credit as the user route).
+              </li>
             </ol>
             <p className="mt-3">
               Until vault addresses are configured, use Dev / Play Money on the lobby. Wallet UI at{" "}

@@ -943,23 +943,51 @@ function WithdrawPanel({
         },
       });
 
-      // Finalize the casino-side debit. We burn the locked amount —
-      // this matches what just left the vault on-chain.
       if (casinoLocked && wallet.user?.id) {
         try {
-          await casinoLedger.burn({
-            userId: wallet.user.id,
-            chainId,
-            token,
-            delta: amountUnits,
-            reason: "withdraw",
-            txHash,
+          const {
+            data: { session: authSession },
+          } = await supabase.auth.getSession();
+          const jwt = authSession?.access_token;
+          if (!jwt) {
+            setStatus(
+              `Withdraw finalized on-chain. Sign in again to debit locked balance. Tx ${shortAddr(txHash)}.`,
+            );
+            return;
+          }
+          const res = await fetch("/api/casino/withdraw-debit", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${jwt}`,
+            },
+            body: JSON.stringify({
+              chainId,
+              token,
+              txHash,
+              walletAddress: userAddress,
+              amountUnits: amountUnits.toString(),
+            }),
           });
+          const data = (await res.json()) as {
+            amount?: string;
+            alreadyDebited?: boolean;
+            error?: string;
+          };
+          if (!res.ok) {
+            setStatus(
+              `On-chain withdraw finalized, but casino debit failed: ${data.error ?? res.statusText}. Contact support with tx ${shortAddr(txHash)}.`,
+            );
+            return;
+          }
           casinoLocked = false;
+          const debited = BigInt(data.amount ?? amountUnits.toString());
+          setStatus(
+            data.alreadyDebited
+              ? `Withdraw already debited — ${fmtMoney(debited, token)}`
+              : `Withdraw debited — ${fmtMoney(debited, token)}`,
+          );
         } catch (e) {
-          // The on-chain payout went through but the ledger burn failed.
-          // Operator must reconcile manually. Surface the tx hash so
-          // support can correlate.
           setStatus(
             `On-chain withdraw finalized, but casino debit failed: ${(e as Error).message}. Contact support with tx ${shortAddr(txHash)}.`,
           );

@@ -1,5 +1,5 @@
 /**
- * Idempotent on-chain deposit → Supabase ledger credit.
+ * Idempotent on-chain withdraw → burn locked casino balance.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -21,7 +21,7 @@ const EVM_CHAINS = new Set<string>([
   "ethereum-sepolia",
 ]);
 
-export async function serverCreditDeposit(
+export async function serverDebitWithdraw(
   supabase: SupabaseClient,
   userId: string,
   input: {
@@ -29,61 +29,74 @@ export async function serverCreditDeposit(
     token: TokenSpec;
     txHash: string;
     walletAddress: string;
-    /** Required for dev-mock; optional hint for EVM (verified from receipt). */
     amountUnits?: bigint;
   },
 ): Promise<
-  | { amount: bigint; alreadyCredited: boolean }
+  | { amount: bigint; alreadyDebited: boolean }
   | { error: string; status: number }
 > {
   const txHash = input.txHash.trim().toLowerCase();
   if (!txHash) return { error: "txHash required", status: 400 };
 
   const { data: existing } = await supabase
-    .from("casino_deposits")
-    .select("credited, amount")
+    .from("casino_withdrawals")
+    .select("debited, amount")
     .eq("tx_hash", txHash)
     .maybeSingle();
 
-  if (existing?.credited) {
+  if (existing?.debited) {
     return {
       amount: BigInt(existing.amount ?? "0"),
-      alreadyCredited: true,
+      alreadyDebited: true,
     };
   }
 
   let amount = input.amountUnits ?? 0n;
 
   if (input.chainId === "dev-mock") {
-    if (!txHash.startsWith("0xdev") && !txHash.startsWith("0x")) {
-      return { error: "invalid dev deposit tx", status: 400 };
-    }
-    if (amount <= 0n) return { error: "amountUnits required for dev deposit", status: 400 };
+    if (amount <= 0n) return { error: "amountUnits required for dev withdraw", status: 400 };
   } else if (EVM_CHAINS.has(input.chainId)) {
     const adapter = makeRealEthereumAdapter(input.chainId as EvmChainKind);
     if (!adapter) return { error: "chain not supported", status: 400 };
 
-    const receipt = await adapter.pollDeposit(txHash);
+    const receipt = await adapter.pollWithdraw(txHash);
     if (!receipt) return { error: "transaction not found yet", status: 404 };
-    if (!receipt.finalized) return { error: "deposit not finalized", status: 409 };
+    if (!receipt.finalized) return { error: "withdraw not finalized", status: 409 };
 
     const want = input.walletAddress.toLowerCase();
     const got = receipt.user.toLowerCase();
     if (got !== want) {
-      return { error: "deposit sender does not match wallet", status: 403 };
+      return { error: "withdraw recipient does not match wallet", status: 403 };
     }
     if (receipt.token.address.toLowerCase() !== input.token.address.toLowerCase()) {
       return { error: "token mismatch", status: 400 };
     }
     amount = receipt.amount;
-    if (amount <= 0n) return { error: "zero deposit amount", status: 400 };
+    if (amount <= 0n) return { error: "zero withdraw amount", status: 400 };
   } else {
     return { error: "unsupported chain", status: 400 };
   }
 
   await ensureCasinoUserRow(userId);
 
-  await supabase.from("casino_deposits").upsert(
+  const { data: bal } = await supabase
+    .from("casino_balances")
+    .select("locked")
+    .eq("user_id", userId)
+    .eq("chain_id", input.chainId)
+    .eq("token_symbol", input.token.symbol)
+    .eq("token_address", input.token.address)
+    .maybeSingle();
+
+  const locked = bal?.locked ? BigInt(bal.locked) : 0n;
+  if (locked < amount) {
+    return {
+      error: `insufficient locked balance (have ${locked}, need ${amount}) — lock funds before withdrawing`,
+      status: 409,
+    };
+  }
+
+  await supabase.from("casino_withdrawals").upsert(
     {
       user_id: userId,
       chain_id: input.chainId,
@@ -92,28 +105,29 @@ export async function serverCreditDeposit(
       amount: amount.toString(),
       tx_hash: txHash,
       finalized: true,
-      credited: false,
+      debited: false,
     },
-    { onConflict: "tx_hash", ignoreDuplicates: false },
+    { onConflict: "tx_hash" },
   );
 
-  const credited = await ledgerApply(supabase, {
+  const burned = await ledgerApply(supabase, {
     userId,
     chainId: input.chainId,
     token: input.token,
-    op: "credit",
+    op: "burn",
     delta: amount,
-    reason: "deposit",
+    reason: "withdraw",
     txHash,
   });
-  if ("error" in credited) {
-    return { error: credited.error, status: 500 };
+
+  if ("error" in burned) {
+    return { error: burned.error, status: 500 };
   }
 
   await supabase
-    .from("casino_deposits")
-    .update({ credited: true })
+    .from("casino_withdrawals")
+    .update({ debited: true })
     .eq("tx_hash", txHash);
 
-  return { amount, alreadyCredited: false };
+  return { amount, alreadyDebited: false };
 }

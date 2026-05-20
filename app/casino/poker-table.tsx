@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   HUMAN_SEAT,
   newSessionId,
   pickBotAction,
   pokerGame,
+  verifySession,
   type ChainAdapter,
   type ChainId,
   type PokerAction,
@@ -56,10 +57,12 @@ export default function PokerTable({ chainId, token }: Props) {
   } = useCasino();
 
   const [session, setSession] = useState<Session<PokerAction, PokerState> | null>(null);
+  const [verifyTarget, setVerifyTarget] = useState<Session<PokerAction, PokerState> | null>(null);
   const [buyIn, setBuyIn] = useState(100);
   const [mode, setMode] = useState<"solo" | "multi">("solo");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const seedPair = getSeedPair();
   const runningBots = useRef(false);
 
   const legal = session ? pokerGame.legalActions(session.state) : [];
@@ -297,18 +300,170 @@ export default function PokerTable({ chainId, token }: Props) {
               {st.players[w.seat].name}: {w.hand} · {fmt(w.amount, token)}
             </p>
           ))}
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-2">
             <button type="button" className={btnPrimary} onClick={clearTable}>
               New hand
+            </button>
+            <button type="button" className={btnSecondary} onClick={() => setVerifyTarget(session)}>
+              Verify hand
             </button>
             <ShareLinkRow session={session} serverSeed={lastRevealedSeed?.serverSeed ?? null} />
           </div>
         </section>
       )}
 
+      {verifyTarget && (
+        <PokerVerifyModal
+          session={verifyTarget}
+          revealedServerSeed={
+            seedPair.serverSeedHash === verifyTarget.serverSeedHash
+              ? seedPair.serverSeed ?? null
+              : lastRevealedSeed?.hash === verifyTarget.serverSeedHash
+                ? lastRevealedSeed.serverSeed
+                : null
+          }
+          token={token}
+          onClose={() => setVerifyTarget(null)}
+        />
+      )}
+
       {error && (
         <p className="text-sm text-rose-300 border border-rose-500/30 rounded-lg px-4 py-2 bg-rose-500/10">{error}</p>
       )}
+    </div>
+  );
+}
+
+function PokerVerifyModal({
+  session,
+  revealedServerSeed,
+  token,
+  onClose,
+}: {
+  session: Session<PokerAction, PokerState>;
+  revealedServerSeed: string | null;
+  token: TokenSpec;
+  onClose: () => void;
+}) {
+  const [inputSeed, setInputSeed] = useState(revealedServerSeed ?? "");
+
+  const verification = useMemo(() => {
+    if (!inputSeed) return null;
+    try {
+      return verifySession<PokerAction, PokerState>({
+        game: pokerGame,
+        serverSeed: inputSeed,
+        serverSeedHash: session.serverSeedHash,
+        clientSeed: session.clientSeed,
+        startNonce: session.startNonce,
+        bet: {
+          sessionId: session.id,
+          userId: session.userId,
+          gameId: pokerGame.id,
+          chainId: session.chainId,
+          token: session.token,
+          stake: session.stake,
+          config: { bigBlind: session.state.config.bigBlind },
+        },
+        actions: session.actions.map((a) => ({
+          ordinal: a.ordinal,
+          action: a.action as PokerAction,
+          actor: a.actor,
+        })),
+        expectedStateHashes: session.actions.map((a) => a.stateHash ?? ""),
+      });
+    } catch (err) {
+      return { error: (err as Error).message };
+    }
+  }, [session, inputSeed]);
+
+  const allOk =
+    verification &&
+    !("error" in verification) &&
+    verification.hashOk &&
+    verification.finalStateMatches &&
+    verification.stepMatches.every(Boolean);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-2xl bg-[#0c0d12] border border-white/[0.08] p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+        <header className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Provable fairness · client-side replay</div>
+            <h2 className="text-xl font-semibold mt-1">Verify poker hand</h2>
+          </div>
+          <button type="button" onClick={onClose} className="text-white/40 hover:text-white cursor-pointer text-2xl leading-none">
+            ×
+          </button>
+        </header>
+
+        <p className="text-sm text-white/60 leading-relaxed">
+          Paste the revealed <span className="text-emerald-300">server seed</span>. We replay the shuffle and every
+          action with the same HMAC stream used at deal time.
+        </p>
+
+        <div>
+          <label className={labelCls}>Server seed (hex)</label>
+          <input
+            type="text"
+            className={inputCls + " font-mono"}
+            value={inputSeed}
+            onChange={(e) => setInputSeed(e.target.value.trim())}
+            placeholder="Rotate seed to reveal, then paste here"
+          />
+        </div>
+
+        {!verification && <div className="text-[12px] text-white/40">Enter a server seed to run the replay.</div>}
+        {verification && "error" in verification && (
+          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
+            Verifier threw: {verification.error}
+          </div>
+        )}
+        {verification && !("error" in verification) && (
+          <div className="space-y-3">
+            <PokerCheckRow ok={verification.hashOk} label="SHA-256(seed) == published hash" />
+            <PokerCheckRow ok={verification.finalStateMatches} label="Replayed final state matches recorded outcome" />
+            <PokerCheckRow
+              ok={verification.stepMatches.every(Boolean)}
+              label={`All ${verification.stepMatches.length} per-step hashes match`}
+            />
+            <div
+              className={
+                "text-center py-2 rounded-lg font-semibold " +
+                (allOk
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
+                  : "bg-rose-500/15 text-rose-300 border border-rose-400/30")
+              }
+            >
+              {allOk ? "✓ Verified provably fair" : "✗ Verification failed"}
+            </div>
+          </div>
+        )}
+
+        <div className="text-[11px] text-white/40">
+          Settled at {new Date(session.updatedAt).toLocaleString()} · PnL{" "}
+          {(session.result?.pnlUnits ?? 0n) >= 0n ? "+" : ""}
+          {fmt(session.result?.pnlUnits ?? 0n, token)}.
+        </div>
+
+        <ShareLinkRow session={session} serverSeed={revealedServerSeed} />
+      </div>
+    </div>
+  );
+}
+
+function PokerCheckRow({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span
+        className={
+          "w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold " +
+          (ok ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300")
+        }
+      >
+        {ok ? "✓" : "✗"}
+      </span>
+      <span className={ok ? "text-white/80" : "text-rose-200"}>{label}</span>
     </div>
   );
 }
