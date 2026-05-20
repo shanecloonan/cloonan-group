@@ -1,15 +1,15 @@
-# Deploy CasinoVault.sol via Foundry (Base Sepolia example).
+# Deploy CasinoVault.sol via Foundry (Ethereum Sepolia example).
 # Prerequisites: forge installed, OpenZeppelin installed under infra/contracts/ethereum
 #
 # Usage:
 #   $env:DEPLOYER_KEY = "0x..."
 #   $env:CASINO_VAULT_OWNER = "0x..."
 #   $env:CASINO_VAULT_OPERATOR = "0x..."
-#   $env:BASE_SEPOLIA_RPC = "https://sepolia.base.org"
-#   .\scripts\deploy-casino-vault.ps1 -RpcUrl $env:BASE_SEPOLIA_RPC -EnvSuffix ETHEREUM_SEPOLIA
+#   $env:ETHEREUM_SEPOLIA_RPC = "https://rpc.sepolia.org"
+#   .\scripts\deploy-casino-vault.ps1 -RpcUrl $env:ETHEREUM_SEPOLIA_RPC -EnvSuffix ETHEREUM_SEPOLIA
 
 param(
-  [string]$RpcUrl = "https://sepolia.base.org",
+  [string]$RpcUrl = "https://rpc.sepolia.org",
   [string]$EnvSuffix = "ETHEREUM_SEPOLIA"
 )
 

@@ -21,7 +21,8 @@ import { CasinoProvider, useCasino, type CasinoHistoryEntry } from "./casino-con
 import { CasinoShell } from "./casino-shell";
 import { GameNav, type GameTab } from "./game-nav";
 import { pillGold } from "./casino-ui";
-import { PlayMoneyChipStrip, PlayMoneyPanel } from "./play-money-bar";
+import { CasinoActionStrip, VaultChainLobbyBanner } from "./casino-action-strip";
+import { PlayMoneyPanel } from "./play-money-bar";
 
 function StatBlock({
   label,
@@ -351,7 +352,7 @@ export default function CasinoContent() {
       <CasinoShell>
         {tab === "lobby" && <LobbyHero />}
         <GameNav tab={tab} setTab={setTab} />
-        {tab !== "lobby" && tab !== "fairness" && tab !== "roadmap" && <PlayMoneyChipStrip />}
+        {tab !== "lobby" && tab !== "fairness" && tab !== "roadmap" && <CasinoActionStrip />}
         <div>
           {tab === "lobby" && (
             <Lobby
@@ -622,6 +623,7 @@ function Lobby({
               ))}
             </div>
           </div>
+          <VaultChainLobbyBanner chainId={chainId} />
         </section>
       )}
 

@@ -26,6 +26,7 @@
  * ========================================================================= */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CasinoShell } from "../casino-shell";
 import { supabase } from "@/lib/supabase";
@@ -150,12 +151,25 @@ function saveHistory(history: WalletHistoryEntry[]) {
  *  Page
  * ========================================================================= */
 
+const WALLET_CHAIN_IDS = new Set(CHAIN_CATALOG.map((c) => c.id));
+
+function chainFromQuery(raw: string | null): ChainId | null {
+  if (!raw || !WALLET_CHAIN_IDS.has(raw as ChainId)) return null;
+  return raw as ChainId;
+}
+
 export default function WalletContent() {
   const wallet = useWallet();
+  const searchParams = useSearchParams();
 
   /* ----- Selected chain + token ----- */
 
-  const [chainId, setChainId] = useState<ChainId>("dev-mock");
+  const [chainId, setChainId] = useState<ChainId>(() => chainFromQuery(searchParams.get("chain")) ?? "dev-mock");
+
+  useEffect(() => {
+    const fromUrl = chainFromQuery(searchParams.get("chain"));
+    if (fromUrl) setChainId(fromUrl);
+  }, [searchParams]);
   const chainEntry = useMemo(
     () => CHAIN_CATALOG.find((c) => c.id === chainId)!,
     [chainId],

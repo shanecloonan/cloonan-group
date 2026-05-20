@@ -1,0 +1,150 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useState } from "react";
+import { useCasino } from "./casino-context";
+import { PlayMoneyChipStrip } from "./play-money-bar";
+import { btnGhost } from "./casino-ui";
+import type { ChainId } from "@/lib/casino";
+
+function formatBalance(units: bigint, decimals: number, symbol: string): string {
+  const denom = 10n ** BigInt(decimals);
+  const sign = units < 0n ? "-" : "";
+  const abs = units < 0n ? -units : units;
+  const w = abs / denom;
+  const f = (abs % denom).toString().padStart(decimals, "0");
+  const n = Number(`${w}.${f}`);
+  return `${sign}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${symbol}`;
+}
+
+/** Under game tabs: play-money chips, or vault balance + fairness controls. */
+export function CasinoActionStrip() {
+  const {
+    playMoney,
+    chainId,
+    persistent,
+    balance,
+    token,
+    refreshBalance,
+    getSeedPair,
+    rotateSeed,
+    lastRevealedSeed,
+    dismissRevealedSeed,
+  } = useCasino();
+
+  if (playMoney.enabled) return <PlayMoneyChipStrip />;
+
+  const [busy, setBusy] = useState(false);
+  const pair = getSeedPair();
+  const isVaultChain = chainId !== "dev-mock";
+
+  const onRefresh = useCallback(async () => {
+    setBusy(true);
+    try {
+      await refreshBalance();
+    } finally {
+      setBusy(false);
+    }
+  }, [refreshBalance]);
+
+  if (!isVaultChain) return null;
+
+  const walletHref = `/casino/wallet?chain=${encodeURIComponent(chainId)}`;
+
+  return (
+    <div className="-mx-4 sm:-mx-8 border-b border-white/[0.06] bg-white/[0.02]">
+      <div className="px-4 sm:px-8 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+          <span className="text-xs text-white/50 shrink-0">
+            Balance{" "}
+            <span className="font-mono text-emerald-300/90 font-semibold">
+              {formatBalance(balance.available, token.decimals, token.symbol)}
+            </span>
+            {balance.locked > 0n && (
+              <span className="text-white/35 ml-1.5">
+                ({formatBalance(balance.locked, token.decimals, token.symbol)} locked)
+              </span>
+            )}
+          </span>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void onRefresh()}
+            className={btnGhost + " !h-7 !px-2 !text-[10px]"}
+          >
+            Refresh
+          </button>
+          <Link
+            href={walletHref}
+            className="h-7 px-2.5 rounded-lg text-[10px] font-semibold border border-amber-400/35 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20 transition-colors"
+          >
+            Deposit / withdraw
+          </Link>
+          {!persistent && (
+            <Link href="/auth" className="text-[10px] text-amber-300 hover:text-amber-200 underline-offset-2 hover:underline">
+              Sign in to sync
+            </Link>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-[10px] text-white/45 min-w-0">
+          <span className="font-mono truncate max-w-[min(42vw,220px)]" title={pair.serverSeedHash}>
+            Commit {pair.serverSeedHash.slice(0, 14)}…
+          </span>
+          <button
+            type="button"
+            onClick={() => rotateSeed()}
+            className="h-7 px-2.5 rounded-lg border border-white/[0.1] text-white/70 hover:bg-white/[0.06] cursor-pointer transition-colors"
+          >
+            Rotate seed
+          </button>
+          <Link href="/casino/verify" className="text-emerald-300/90 hover:text-emerald-200">
+            Verify →
+          </Link>
+        </div>
+      </div>
+
+      {lastRevealedSeed && (
+        <div className="px-4 sm:px-8 pb-2.5 flex flex-wrap items-center gap-2 text-[10px]">
+          <span className="text-white/40 uppercase tracking-wider">Revealed seed</span>
+          <code className="font-mono text-emerald-200/90 break-all">{lastRevealedSeed.serverSeed}</code>
+          <button
+            type="button"
+            onClick={dismissRevealedSeed}
+            className="text-white/35 hover:text-white/60 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {!persistent && (
+        <p className="px-4 sm:px-8 pb-2.5 text-[10px] text-amber-200/85">
+          Playing as guest on {chainId.replaceAll("-", " ")} — balances stay local until you{" "}
+          <Link href="/auth" className="underline text-amber-300">
+            sign in
+          </Link>
+          . Deposits credit your account after on-chain confirmation.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function VaultChainLobbyBanner({ chainId }: { chainId: ChainId }) {
+  const { persistent } = useCasino();
+  if (chainId === "dev-mock" || persistent) return null;
+
+  return (
+    <div className="mt-4 p-4 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] text-sm text-amber-100/90">
+      <strong className="text-amber-200">Sign in</strong> to sync casino balance and session history on this chain.{" "}
+      <Link href="/auth" className="text-amber-300 hover:underline">
+        Sign in
+      </Link>
+      {" · "}
+      <Link href={`/casino/wallet?chain=${encodeURIComponent(chainId)}`} className="text-amber-300 hover:underline">
+        Open wallet
+      </Link>
+    </div>
+  );
+}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import WalletContent from "./wallet-content";
 
 export const metadata: Metadata = {
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function CasinoWalletPage() {
-  return <WalletContent />;
+  return (
+    <Suspense fallback={<div className="min-h-[40vh]" />}>
+      <WalletContent />
+    </Suspense>
+  );
 }
