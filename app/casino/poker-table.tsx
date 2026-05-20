@@ -6,7 +6,6 @@ import {
   newSessionId,
   pickBotAction,
   pokerGame,
-  verifySession,
   type ChainAdapter,
   type ChainId,
   type PokerAction,
@@ -17,6 +16,7 @@ import {
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal } from "./casino-verify-modal";
+import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { PokerActionBar } from "./poker-action-bar";
 import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
@@ -323,44 +323,21 @@ export default function PokerTable({ chainId, token }: Props) {
             </>
           }
           session={verifyTarget}
-          revealedServerSeed={
-            seedPair.serverSeedHash === verifyTarget.serverSeedHash
-              ? seedPair.serverSeed ?? null
-              : lastRevealedSeed?.hash === verifyTarget.serverSeedHash
-                ? lastRevealedSeed.serverSeed
-                : null
-          }
+          revealedServerSeed={pickRevealedServerSeed(seedPair, lastRevealedSeed, verifyTarget)}
           token={token}
           onClose={() => setVerifyTarget(null)}
           resultLabel="Replayed final state matches recorded outcome"
-          runVerify={(serverSeed) => {
-            try {
-              return verifySession<PokerAction, PokerState>({
-                game: pokerGame,
-                serverSeed,
-                serverSeedHash: verifyTarget.serverSeedHash,
-                clientSeed: verifyTarget.clientSeed,
-                startNonce: verifyTarget.startNonce,
-                bet: {
-                  sessionId: verifyTarget.id,
-                  userId: verifyTarget.userId,
-                  gameId: pokerGame.id,
-                  chainId: verifyTarget.chainId,
-                  token: verifyTarget.token,
-                  stake: verifyTarget.stake,
-                  config: { bigBlind: verifyTarget.state.config.bigBlind },
-                },
-                actions: verifyTarget.actions.map((a) => ({
-                  ordinal: a.ordinal,
-                  action: a.action as PokerAction,
-                  actor: a.actor,
-                })),
-                expectedStateHashes: verifyTarget.actions.map((a) => a.stateHash ?? ""),
-              });
-            } catch (err) {
-              return { error: (err as Error).message };
-            }
-          }}
+          runVerify={(serverSeed) =>
+            runSessionVerify(pokerGame, verifyTarget, serverSeed, {
+              sessionId: verifyTarget.id,
+              userId: verifyTarget.userId,
+              gameId: pokerGame.id,
+              chainId: verifyTarget.chainId,
+              token: verifyTarget.token,
+              stake: verifyTarget.stake,
+              config: { bigBlind: verifyTarget.state.config.bigBlind },
+            })
+          }
         />
       )}
 

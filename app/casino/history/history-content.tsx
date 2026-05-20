@@ -96,6 +96,14 @@ export default function HistoryContent() {
     return () => clearInterval(t);
   }, [view, loadFeed]);
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadFeed();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadFeed]);
+
   // 1. Load local rows from localStorage on mount.
   useEffect(() => {
     if (typeof window === "undefined") return;

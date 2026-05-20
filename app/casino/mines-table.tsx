@@ -35,6 +35,8 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
+import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
+import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnGold, btnPrimary } from "./casino-ui";
 
@@ -715,10 +717,45 @@ export default function MinesTable({ chainId, token }: Props) {
 
       {/* Verify modal */}
       {verifyTarget && (
-        <MinesVerifyModal
+        <CasinoVerifyModal
+          title="Verify mines round"
+          description={
+            <>
+              Paste the revealed server seed. We replay the Fisher–Yates mine layout from{" "}
+              <span className="font-mono text-emerald-300">HMAC(seed, client:nonce)</span> and every
+              pick/cashout step.
+            </>
+          }
           session={verifyTarget}
+          revealedServerSeed={pickRevealedServerSeed(seedPair, lastRevealedSeed, verifyTarget)}
+          token={token}
           onClose={() => setVerifyTarget(null)}
-          revealedSeed={lastRevealedSeed?.serverSeed ?? null}
+          resultLabel="Replayed round matches recorded outcome"
+          extraFields={
+            <div className="grid grid-cols-2 gap-3">
+              <VerifyField label="Phase" value={verifyTarget.state.phase} />
+              <VerifyField label="Multiplier" value={`${verifyTarget.state.multiplier.toFixed(2)}×`} />
+              <VerifyField label="Mines" value={`${verifyTarget.state.config.mines} / 25`} />
+              <VerifyField label="Safe picks" value={String(verifyTarget.state.picks)} />
+              <VerifyField
+                label="Mine layout"
+                value={verifyTarget.state.mineLayout.join(", ")}
+                mono
+              />
+              <VerifyField label="Picks order" value={verifyTarget.state.revealed.join(", ") || "—"} mono />
+            </div>
+          }
+          runVerify={(serverSeed) =>
+            runSessionVerify(minesGame, verifyTarget, serverSeed, {
+              sessionId: verifyTarget.id,
+              userId: verifyTarget.userId,
+              gameId: minesGame.id,
+              chainId: verifyTarget.chainId,
+              token: verifyTarget.token,
+              stake: verifyTarget.stake,
+              config: { mines: verifyTarget.state.config.mines } as Record<string, unknown>,
+            })
+          }
         />
       )}
     </div>
@@ -971,97 +1008,3 @@ function Stat({
   );
 }
 
-/* ===========================================================================
- *  Verify modal
- * ========================================================================= */
-
-function MinesVerifyModal({
-  session,
-  onClose,
-  revealedSeed,
-}: {
-  session: Session<MinesAction, MinesState>;
-  onClose: () => void;
-  revealedSeed: string | null;
-}) {
-  const state = session.state as MinesState;
-  const result = session.result;
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={card + " w-full max-w-xl p-5 max-h-[88vh] overflow-y-auto"}>
-        <div className="flex items-baseline justify-between mb-3">
-          <h3 className="font-semibold text-white text-lg">Verify this round</h3>
-          <button type="button" onClick={onClose} className={btnGhost + " h-8 px-3 text-[11px]"}>
-            Close
-          </button>
-        </div>
-        <div className="space-y-3 text-[12px]">
-          <div className="grid grid-cols-2 gap-2">
-            <FieldRow label="Outcome">
-              <code className="text-white/80">{state.phase}</code>
-            </FieldRow>
-            <FieldRow label="Multiplier">
-              <code className="text-white/80">{state.multiplier.toFixed(2)}×</code>
-            </FieldRow>
-            <FieldRow label="Mines">
-              <code className="text-white/80">{state.config.mines} / 25</code>
-            </FieldRow>
-            <FieldRow label="Safe picks">
-              <code className="text-white/80">{state.picks}</code>
-            </FieldRow>
-            <FieldRow label="PnL">
-              <code className={result && result.pnlUnits > 0n ? "text-emerald-300" : "text-rose-300"}>
-                {result?.pnlUnits.toString() ?? "—"}
-              </code>
-            </FieldRow>
-            <FieldRow label="Hit mine">
-              <code className="text-white/80">
-                {state.hitMine === null ? "—" : `tile ${state.hitMine}`}
-              </code>
-            </FieldRow>
-          </div>
-          <FieldRow label="Mine layout (sorted tile indices)">
-            <code className="text-white/80 break-all">{state.mineLayout.join(", ")}</code>
-          </FieldRow>
-          <FieldRow label="Revealed picks (in order)">
-            <code className="text-white/80 break-all">{state.revealed.join(", ")}</code>
-          </FieldRow>
-          <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[11px] leading-relaxed text-white/70">
-            <p className="mb-1">
-              <span className="text-white/40">Server seed hash:</span>{" "}
-              <code className="break-all">{session.serverSeedHash}</code>
-            </p>
-            <p className="mb-1">
-              <span className="text-white/40">Client seed:</span>{" "}
-              <code>{session.clientSeed}</code>
-            </p>
-            <p>
-              <span className="text-white/40">Nonce:</span>{" "}
-              <code>{session.startNonce}</code>
-            </p>
-          </div>
-          <ShareLinkRow
-            session={session as unknown as Session<unknown, unknown>}
-            serverSeed={revealedSeed}
-          />
-          <div className="text-[11px] text-white/40 leading-relaxed">
-            To independently replay this round, paste the session JSON and the
-            revealed server seed into <code className="text-emerald-300">/casino/verify</code>.
-            The engine runs a Fisher–Yates shuffle of [0, 25) driven by{" "}
-            <code className="text-emerald-300">HMAC(seed, client:nonce)</code> — the first M
-            shuffled positions are the mine layout above.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-      <div className="text-[9px] uppercase tracking-[0.15em] text-white/40">{label}</div>
-      <div className="text-[10px] font-mono mt-0.5">{children}</div>
-    </div>
-  );
-}

@@ -219,6 +219,7 @@ export default function WalletContent() {
         {/* ───── Cloud sync banner ───── */}
         <CloudSyncBanner signedIn={!!wallet.user} />
         <VaultDeployBanner chainId={chainId} adapterReady={adapterReady} />
+        <VaultDeploymentPanel />
 
         {/* ───── Top status row ───── */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -408,6 +409,88 @@ function StatusCard({
  *     can't credit it to a player ledger until they sign in (since the
  *     ledger is keyed by auth.users.id).
  */
+type VaultStatusResponse = {
+  anyDeployed: boolean;
+  operatorConfigured: boolean;
+  operatorWebhookConfigured: boolean;
+  serviceRoleConfigured: boolean;
+  chains: {
+    chainId: string;
+    display: string;
+    ready: boolean;
+    vaultAddress: string | null;
+    rpcConfigured: boolean;
+  }[];
+};
+
+function VaultDeploymentPanel() {
+  const [status, setStatus] = useState<VaultStatusResponse | null>(null);
+
+  useEffect(() => {
+    fetch("/api/casino/vault-status")
+      .then((r) => r.json())
+      .then(setStatus)
+      .catch(() => setStatus(null));
+  }, []);
+
+  if (!status) return null;
+
+  return (
+    <section className={card + " p-5"}>
+      <h2 className="text-lg font-semibold text-white mb-1">Vault deployment status</h2>
+      <p className="text-xs text-white/45 mb-4">
+        On-chain chains need <code className="text-emerald-300/90">NEXT_PUBLIC_CASINO_VAULT_*</code> and RPC env vars.
+        Operator key enables EIP-712 withdrawals.
+      </p>
+      <ul className="space-y-2">
+        {status.chains.map((c) => (
+          <li
+            key={c.chainId}
+            className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-sm"
+          >
+            <span className="font-medium text-white/85">{c.display}</span>
+            <span className="flex flex-wrap gap-2 text-[11px]">
+              <span
+                className={
+                  "px-2 py-0.5 rounded-full border " +
+                  (c.ready
+                    ? "border-emerald-400/35 text-emerald-200 bg-emerald-500/10"
+                    : "border-white/10 text-white/40")
+                }
+              >
+                {c.ready ? "vault set" : "vault unset"}
+              </span>
+              <span
+                className={
+                  "px-2 py-0.5 rounded-full border " +
+                  (c.rpcConfigured
+                    ? "border-emerald-400/35 text-emerald-200 bg-emerald-500/10"
+                    : "border-amber-400/30 text-amber-200/90 bg-amber-500/10")
+                }
+              >
+                {c.rpcConfigured ? "RPC ok" : "RPC missing"}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-white/45">
+        <span>Operator key: {status.operatorConfigured ? "✓" : "✗"}</span>
+        <span>Webhook secret: {status.operatorWebhookConfigured ? "✓" : "✗"}</span>
+        <span>Service role: {status.serviceRoleConfigured ? "✓" : "✗"}</span>
+      </div>
+      {!status.anyDeployed && (
+        <p className="mt-3 text-xs text-amber-200/80">
+          Deploy with <code className="text-amber-300">scripts/deploy-casino-vault.ps1</code> then set env vars.
+        </p>
+      )}
+      <Link href="/casino/docs#crypto" className="inline-block mt-3 text-xs text-amber-300 hover:underline">
+        Deployment guide →
+      </Link>
+    </section>
+  );
+}
+
 function VaultDeployBanner({
   chainId,
   adapterReady,
@@ -415,10 +498,7 @@ function VaultDeployBanner({
   chainId: ChainId;
   adapterReady: boolean;
 }) {
-  const [status, setStatus] = useState<{
-    anyDeployed: boolean;
-    chains: { chainId: string; display: string; ready: boolean }[];
-  } | null>(null);
+  const [status, setStatus] = useState<VaultStatusResponse | null>(null);
 
   useEffect(() => {
     fetch("/api/casino/vault-status")

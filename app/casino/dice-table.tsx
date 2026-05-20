@@ -9,7 +9,6 @@ import {
   limboTargetForMultiplier,
   newSessionId,
   persistSettledSession,
-  verifySession,
   type ChainAdapter,
   type ChainId,
   type DiceAction,
@@ -19,6 +18,8 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
+import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
+import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 
 /* ---------------------------------------------------------------------------
@@ -643,17 +644,50 @@ export default function DiceTable({ chainId, token }: Props) {
       </aside>
 
       {verifyTarget && (
-        <DiceVerifyModal
-          session={verifyTarget}
-          revealedServerSeed={
-            seedPair.serverSeedHash === verifyTarget.serverSeedHash
-              ? seedPair.serverSeed ?? null
-              : revealSeed?.hash === verifyTarget.serverSeedHash
-                ? revealSeed.serverSeed
-                : null
+        <CasinoVerifyModal
+          title="Verify roll"
+          description={
+            <>
+              Paste the revealed <span className="text-emerald-300">server seed</span>. We re-derive this roll
+              with <span className="font-mono">HMAC-SHA256(seed, clientSeed:nonce)</span> and rejection-sample a
+              uniform integer in [0, 10000).
+            </>
           }
+          session={verifyTarget}
+          revealedServerSeed={pickRevealedServerSeed(seedPair, revealSeed, verifyTarget)}
           token={token}
           onClose={() => setVerifyTarget(null)}
+          resultLabel="Replayed roll matches recorded outcome"
+          extraFields={
+            <div className="grid grid-cols-2 gap-3">
+              <VerifyField label="Roll" value={(verifyTarget.state.rollBps / 100).toFixed(2)} mono />
+              <VerifyField
+                label="Target"
+                value={`${(verifyTarget.state.targetBps / 100).toFixed(2)} (${verifyTarget.state.direction})`}
+              />
+              <VerifyField label="Win count / 10000" value={String(verifyTarget.state.winCount)} mono />
+              <VerifyField
+                label="Multiplier"
+                value={`${(Number(verifyTarget.state.multiplierNum) / Number(verifyTarget.state.multiplierDen)).toFixed(4)}×`}
+                mono
+              />
+            </div>
+          }
+          runVerify={(serverSeed) =>
+            runSessionVerify(diceGame, verifyTarget, serverSeed, {
+              sessionId: verifyTarget.id,
+              userId: verifyTarget.userId,
+              gameId: diceGame.id,
+              chainId: verifyTarget.chainId,
+              token: verifyTarget.token,
+              stake: verifyTarget.stake,
+              config: {
+                ...verifyTarget.state.config,
+                targetBps: verifyTarget.state.targetBps,
+                direction: verifyTarget.state.direction,
+              } as Record<string, unknown>,
+            })
+          }
         />
       )}
     </div>
@@ -830,125 +864,3 @@ function NumberField({ label, value, onChange, min, max, step, disabled }: { lab
   );
 }
 
-/* ===========================================================================
- *  Verify modal
- * ========================================================================= */
-
-function DiceVerifyModal({ session, revealedServerSeed, token, onClose }: {
-  session: Session<DiceAction, DiceState>;
-  revealedServerSeed: string | null;
-  token: TokenSpec;
-  onClose: () => void;
-}) {
-  const [inputSeed, setInputSeed] = useState(revealedServerSeed ?? "");
-
-  const verification = useMemo(() => {
-    if (!inputSeed) return null;
-    try {
-      return verifySession<DiceAction, DiceState>({
-        game: diceGame,
-        serverSeed: inputSeed,
-        serverSeedHash: session.serverSeedHash,
-        clientSeed: session.clientSeed,
-        startNonce: session.startNonce,
-        bet: {
-          sessionId: session.id,
-          userId: session.userId,
-          gameId: diceGame.id,
-          chainId: session.chainId,
-          token: session.token,
-          stake: session.stake,
-          config: {
-            ...session.state.config,
-            targetBps: session.state.targetBps,
-            direction: session.state.direction,
-          } as unknown as Record<string, unknown>,
-        },
-        actions: session.actions.map((a) => ({ ordinal: a.ordinal, action: a.action as DiceAction, actor: a.actor })),
-        expectedStateHashes: session.actions.map((a) => a.stateHash ?? ""),
-      });
-    } catch (err) {
-      return { error: (err as Error).message };
-    }
-  }, [session, inputSeed]);
-
-  const allOk = verification && !("error" in verification) && verification.hashOk && verification.finalStateMatches && verification.stepMatches.every(Boolean);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl bg-[#0c0d12] border border-white/[0.08] p-6 space-y-5">
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Provable fairness · client-side replay</div>
-            <h2 className="text-xl font-semibold mt-1">Verify roll</h2>
-          </div>
-          <button type="button" onClick={onClose} className="text-white/40 hover:text-white cursor-pointer text-2xl leading-none">×</button>
-        </header>
-
-        <p className="text-sm text-white/60 leading-relaxed">
-          Paste the revealed <span className="text-emerald-300">server seed</span>. We re-derive
-          this roll using <span className="font-mono">HMAC-SHA256(seed, clientSeed||nonce)</span>
-          and rejection-sample a uniform integer in [0, 10000).
-        </p>
-
-        <div>
-          <label className={labelCls}>Server seed (hex)</label>
-          <input type="text" className={inputCls + " font-mono"} value={inputSeed} onChange={(e) => setInputSeed(e.target.value.trim())}
-            placeholder="Rotate the seed to reveal yours, then paste here" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 text-[12px]">
-          <Field label="Roll" value={(session.state.rollBps / 100).toFixed(2)} />
-          <Field label="Target" value={`${(session.state.targetBps / 100).toFixed(2)} (${session.state.direction})`} />
-          <Field label="Win count / 10000" value={String(session.state.winCount)} />
-          <Field label="Multiplier" value={`${(Number(session.state.multiplierNum) / Number(session.state.multiplierDen)).toFixed(4)}×`} />
-        </div>
-
-        {!verification && <div className="text-[12px] text-white/40">Enter a server seed to run the replay.</div>}
-        {verification && "error" in verification && (
-          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
-            Verifier threw: {verification.error}
-          </div>
-        )}
-        {verification && !("error" in verification) && (
-          <div className="space-y-3">
-            <CheckRow ok={verification.hashOk} label="SHA-256(seed) == published hash" />
-            <CheckRow ok={verification.finalStateMatches} label="Replayed roll matches recorded outcome" />
-            <CheckRow ok={verification.stepMatches.every(Boolean)} label={`All ${verification.stepMatches.length} per-step hashes match`} />
-            <div className={"text-center py-2 rounded-lg font-semibold " + (allOk
-              ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
-              : "bg-rose-500/15 text-rose-300 border border-rose-400/30")}>
-              {allOk ? "✓ Verified provably fair" : "✗ Verification failed"}
-            </div>
-          </div>
-        )}
-
-        <div className="text-[11px] text-white/40">
-          Settled at {new Date(session.updatedAt).toLocaleString()} · Result {fmtMoney(session.result?.pnlUnits ?? 0n, token)}.
-        </div>
-
-        <ShareLinkRow session={session} serverSeed={revealedServerSeed} />
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-      <div className="text-[10px] uppercase tracking-[0.12em] text-white/40 mb-1">{label}</div>
-      <div className="text-[12px] text-white/80 break-all font-mono">{value}</div>
-    </div>
-  );
-}
-
-function CheckRow({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <div className="flex items-center gap-3 text-sm">
-      <span className={"w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold " + (ok ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300")}>
-        {ok ? "✓" : "✗"}
-      </span>
-      <span className={ok ? "text-white/80" : "text-rose-200"}>{label}</span>
-    </div>
-  );
-}
