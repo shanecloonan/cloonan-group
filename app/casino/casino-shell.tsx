@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CasinoMobileNav } from "./casino-mobile-nav";
-import { casinoPage, casinoShellBg, pillGold } from "./casino-ui";
+import { casinoPage, casinoShellBg } from "./casino-ui";
 
 const MAIN_NAV = [
   { href: "/casino", label: "Play", match: (p: string) => p === "/casino" },
@@ -49,7 +49,6 @@ export function CasinoShell({
               <span className="text-xl font-heading font-semibold tracking-tight">
                 Cloonan<span className="text-amber-400 group-hover:text-amber-300 transition-colors">Casino</span>
               </span>
-              <span className={pillGold + " hidden sm:inline-flex"}>Members</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-1 overflow-x-auto max-w-[min(54vw,560px)] scrollbar-none">

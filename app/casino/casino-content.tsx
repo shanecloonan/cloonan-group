@@ -20,8 +20,8 @@ import {
 import { CasinoProvider, useCasino, type CasinoHistoryEntry } from "./casino-context";
 import { CasinoShell } from "./casino-shell";
 import { GameNav, type GameTab } from "./game-nav";
+import { pillGold } from "./casino-ui";
 import { PlayMoneyChipStrip, PlayMoneyPanel } from "./play-money-bar";
-import { pillGold, pillLive } from "./casino-ui";
 
 function StatBlock({
   label,
@@ -377,11 +377,7 @@ function LobbyHero() {
   return (
     <div className="-mt-6 mb-2 pb-4 border-b border-white/[0.05]">
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <span className={pillLive}>Live · 10 games</span>
         <span className={pillGold}>Provably fair</span>
-        <span className="inline-flex h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider border border-emerald-400/35 text-emerald-200 bg-emerald-500/10">
-          Free play
-        </span>
         <SyncStatusPill />
       </div>
       <p className="max-w-2xl text-white/55 text-sm leading-relaxed">
