@@ -4,11 +4,9 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildPokerSeatMeta, type PokerRoomRow } from "./poker-multiplayer";
 import {
-  buildPokerSeatMeta,
-  type PokerRoomRow,
-} from "./poker-multiplayer";
-import {
+  HUMAN_SEAT,
   legalActionsForSeat,
   pickBotAction,
   pokerGame,
@@ -66,6 +64,54 @@ function mySeatInRoom(room: PokerRoomRow, userId: string): number | null {
     if (uid === userId) return Number(seat);
   }
   return null;
+}
+
+function randomRoomCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+export async function serverCreatePokerRoom(
+  supabase: SupabaseClient,
+  userId: string,
+  input: {
+    buyIn: bigint;
+    bigBlind: bigint;
+    smallBlind: bigint;
+    maxSeats?: number;
+  },
+): Promise<{ room: PokerRoomRow | null; error?: string; status?: number }> {
+  const maxSeats = input.maxSeats ?? 6;
+  const seatUsers: Record<string, string | null> = {};
+  for (let i = 0; i < maxSeats; i++) seatUsers[String(i)] = null;
+  seatUsers[String(HUMAN_SEAT)] = userId;
+
+  let code = randomRoomCode();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data, error } = await supabase
+      .from("casino_poker_rooms")
+      .insert({
+        room_code: code,
+        status: "waiting",
+        max_seats: maxSeats,
+        big_blind: input.bigBlind.toString(),
+        small_blind: input.smallBlind.toString(),
+        buy_in: input.buyIn.toString(),
+        seat_users: seatUsers,
+        created_by: userId,
+      })
+      .select("*")
+      .single();
+
+    if (!error && data) return { room: data as PokerRoomRow };
+    if (!/duplicate/i.test(error?.message ?? "")) {
+      return { room: null, error: error?.message ?? "Could not create room", status: 400 };
+    }
+    code = randomRoomCode();
+  }
+  return { room: null, error: "Could not allocate room code", status: 500 };
 }
 
 export async function serverJoinPokerRoom(

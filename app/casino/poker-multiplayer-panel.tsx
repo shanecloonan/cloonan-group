@@ -15,7 +15,6 @@ import {
 import {
   mySeatInRoom,
   listPokerRooms,
-  createPokerRoom,
   subscribePokerRoom,
   humanCount,
   seatedUserIds,
@@ -36,7 +35,7 @@ function humanToUnits(amount: number, token: TokenSpec): bigint {
 }
 
 async function pokerApi<T extends { room?: PokerRoomRow; error?: string }>(
-  path: "action" | "start" | "join",
+  path: "action" | "start" | "join" | "create",
   body: unknown,
 ): Promise<T> {
   const {
@@ -152,7 +151,11 @@ export function PokerMultiplayerPanel({
     const buyIn = humanToUnits(buyInHuman, token);
     const bb = buyIn / 50n;
     const sb = bb / 2n;
-    const { room, error } = await createPokerRoom({ buyIn, bigBlind: bb, smallBlind: sb });
+    const { room, error } = await pokerApi("create", {
+      buyIn: buyIn.toString(),
+      bigBlind: bb.toString(),
+      smallBlind: sb.toString(),
+    });
     setBusy(false);
     if (error) setMsg(error);
     else if (room) {

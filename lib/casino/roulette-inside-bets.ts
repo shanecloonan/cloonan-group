@@ -2,7 +2,14 @@
  * Inside-bet options for a pocket (mobile picker + helpers).
  */
 
-import { columnNumbers, cornerKey, splitKey, streetKey, type PlacementKey } from "./roulette-keys";
+import {
+  columnNumbers,
+  cornerKey,
+  sixLineKey,
+  splitKey,
+  streetKey,
+  type PlacementKey,
+} from "./roulette-keys";
 import { PAYOUT_TO_ONE } from "./roulette";
 
 export type InsideBetOption = {
@@ -22,7 +29,9 @@ function addOption(map: Map<PlacementKey, InsideBetOption>, key: PlacementKey, l
           ? PAYOUT_TO_ONE.street
           : key.startsWith("corner:")
             ? PAYOUT_TO_ONE.corner
-            : 0;
+            : key.startsWith("six_line:")
+              ? PAYOUT_TO_ONE.six_line
+              : 0;
   map.set(key, { key, label, payoutToOne });
 }
 
@@ -54,6 +63,7 @@ export function insideBetsForPocket(n: number): InsideBetOption[] {
   const next = col < 11 ? columnNumbers(col + 1) : null;
 
   if (next) {
+    addOption(map, sixLineKey(bot, mid, top, next.bot, next.mid, next.top), `Line ${bot}–${next.top}`);
     if (n === top) addOption(map, splitKey(top, next.top), `${top}/${next.top}`);
     if (n === mid) addOption(map, splitKey(mid, next.mid), `${mid}/${next.mid}`);
     if (n === bot) addOption(map, splitKey(bot, next.bot), `${bot}/${next.bot}`);
@@ -62,6 +72,8 @@ export function insideBetsForPocket(n: number): InsideBetOption[] {
   }
 
   if (prev) {
+    const p = prev;
+    addOption(map, sixLineKey(p.bot, p.mid, p.top, bot, mid, top), `Line ${p.bot}–${top}`);
     if (n === top) addOption(map, splitKey(top, prev.top), `${top}/${prev.top}`);
     if (n === mid) addOption(map, splitKey(mid, prev.mid), `${mid}/${prev.mid}`);
     if (n === bot) addOption(map, splitKey(bot, prev.bot), `${bot}/${prev.bot}`);

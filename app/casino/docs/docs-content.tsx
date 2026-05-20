@@ -249,7 +249,7 @@ export default function DocsContent() {
           <GameDoc id="roulette" title="Roulette" rtp="97.30%" rules={[
             "European single-zero wheel (37 pockets).",
             "Straight 35:1, splits 17:1, streets 11:1, corners 8:1, six-line 5:1, dozens/columns 2:1, even-money 1:1.",
-            "Desktop: gold edges between numbers for split/street; corner dots at intersections.",
+            "Desktop: gold edges (split/street), violet bar (six-line between columns), corner dots.",
             "La Partage not enabled — zero loses all outside bets.",
             "Mobile: tap a number, then pick split/street/corner from the inside bar; hold to clear chips on that pocket.",
             "Desktop: gold edges between numbers for split/street; corner dots at intersections.",

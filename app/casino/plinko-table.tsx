@@ -39,6 +39,7 @@ import {
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { ShareLinkRow } from "./share-link";
+import { btnGhost, btnPrimary } from "./casino-ui";
 
 /* ---------------------------------------------------------------------------
  *  Style vocab
@@ -48,12 +49,8 @@ const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-bl
 const labelCls = "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
 const inputCls =
   "w-full h-10 px-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
-const btnPrimary =
-  "h-11 px-5 rounded-lg font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 const btnDanger =
-  "h-11 px-5 rounded-lg font-semibold text-sm bg-gradient-to-r from-rose-500 to-orange-500 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
-const btnGhost =
-  "h-10 px-4 rounded-lg font-medium text-sm bg-white/[0.06] border border-white/[0.08] text-white/80 hover:bg-white/[0.10] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+  "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-sm bg-gradient-to-r from-rose-500 to-orange-500 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
 /* ---------------------------------------------------------------------------
  *  Money helpers

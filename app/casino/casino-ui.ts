@@ -27,6 +27,9 @@ export const btnSecondary =
 export const btnGhost =
   "h-10 px-4 rounded-xl font-medium text-sm bg-transparent border border-white/[0.1] text-white/75 hover:bg-white/[0.06] hover:text-white active:scale-[0.98] transition-all cursor-pointer";
 
+export const btnGold =
+  "min-h-12 touch-manipulation h-11 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-400 to-amber-600 text-black hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+
 export const pill =
   "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-semibold uppercase tracking-[0.12em] border";
 

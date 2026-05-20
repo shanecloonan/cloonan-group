@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   columnNumbers,
   cornerKey,
+  sixLineKey,
   describePlacement,
   newSessionId,
   parseInsideKey,
@@ -73,7 +74,12 @@ const LAST_CHIP_KEY = "mf_casino_roul_chip";
  * ------------------------------------------------------------------------- */
 
 function isInsideKey(key: PlacementKey): key is InsidePlacementKey {
-  return key.startsWith("split:") || key.startsWith("street:") || key.startsWith("corner:");
+  return (
+    key.startsWith("split:") ||
+    key.startsWith("street:") ||
+    key.startsWith("corner:") ||
+    key.startsWith("six_line:")
+  );
 }
 
 function keyToPlacement(key: PlacementKey, amount: bigint): RoulettePlacement {
@@ -102,6 +108,7 @@ function payoutForKey(key: PlacementKey): number {
   if (key.startsWith("split:")) return PAYOUT_TO_ONE.split;
   if (key.startsWith("street:")) return PAYOUT_TO_ONE.street;
   if (key.startsWith("corner:")) return PAYOUT_TO_ONE.corner;
+  if (key.startsWith("six_line:")) return PAYOUT_TO_ONE.six_line;
   return PAYOUT_TO_ONE[key as RoulettePlacementKind];
 }
 
@@ -819,6 +826,28 @@ function RouletteInsideGrid({
             />
             {next && (
               <>
+                {(() => {
+                  const six = sixLineKey(bot, mid, top, next.bot, next.mid, next.top);
+                  return (
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      title="Six line (6 numbers)"
+                      onClick={() => onClick(six)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        onRightClick(six);
+                      }}
+                      className={
+                        "absolute -right-0.5 top-[14%] bottom-[14%] z-[15] w-1 rounded-sm " +
+                        (placements[six]
+                          ? "bg-amber-400/85"
+                          : "bg-violet-400/25 hover:bg-violet-400/50 border border-violet-400/35") +
+                        (disabled ? " opacity-40 cursor-not-allowed" : " cursor-pointer")
+                      }
+                    />
+                  );
+                })()}
                 <InsideSideEdge
                   placementKey={sk(top, next.top)}
                   stake={placements[sk(top, next.top)]}

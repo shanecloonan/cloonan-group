@@ -8,7 +8,8 @@ import type { RoulettePlacementKind } from "./roulette";
 export type InsidePlacementKey =
   | `split:${string}`
   | `street:${string}`
-  | `corner:${string}`;
+  | `corner:${string}`
+  | `six_line:${string}`;
 
 export type OutsidePlacementKey =
   | `straight:${number}`
@@ -43,8 +44,22 @@ export function cornerKey(a: number, b: number, c: number, d: number): InsidePla
   return `corner:${numsKey([a, b, c, d])}`;
 }
 
+/** Double street — six numbers across two adjacent columns. */
+export function sixLineKey(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  e: number,
+  f: number,
+): InsidePlacementKey {
+  return `six_line:${numsKey([a, b, c, d, e, f])}`;
+}
+
 export function parseInsideKey(key: InsidePlacementKey): { kind: RoulettePlacementKind; numbers: number[] } {
-  const [kind, raw] = key.split(":") as [RoulettePlacementKind, string];
+  const colon = key.indexOf(":");
+  const kind = key.slice(0, colon) as RoulettePlacementKind;
+  const raw = key.slice(colon + 1);
   const numbers = raw.split(",").map((n) => Number(n));
   return { kind, numbers };
 }
