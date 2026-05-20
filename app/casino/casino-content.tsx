@@ -20,6 +20,7 @@ import {
 import { CasinoProvider, useCasino, type CasinoHistoryEntry } from "./casino-context";
 import { CasinoShell } from "./casino-shell";
 import { GameNav, type GameTab } from "./game-nav";
+import { PlayMoneyChipStrip, PlayMoneyPanel } from "./play-money-bar";
 import { pillGold, pillLive } from "./casino-ui";
 
 function StatBlock({
@@ -322,6 +323,7 @@ export default function CasinoContent() {
       <CasinoShell>
         {tab === "lobby" && <LobbyHero />}
         <GameNav tab={tab} setTab={setTab} />
+        {tab !== "lobby" && tab !== "fairness" && tab !== "roadmap" && <PlayMoneyChipStrip />}
         <div>
           {tab === "lobby" && (
             <Lobby
@@ -372,28 +374,19 @@ export default function CasinoContent() {
 }
 
 function LobbyHero() {
-  const { playMoney, chainId } = useCasino();
   return (
-    <div className="-mt-6 mb-2 pb-6 border-b border-white/[0.05]">
+    <div className="-mt-6 mb-2 pb-4 border-b border-white/[0.05]">
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <span className={pillLive}>Live · 10 games</span>
         <span className={pillGold}>Provably fair</span>
-        {playMoney.enabled && (
-          <span className="inline-flex h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider border border-emerald-400/35 text-emerald-200 bg-emerald-500/10">
-            Free play — no sign-up
-          </span>
-        )}
+        <span className="inline-flex h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider border border-emerald-400/35 text-emerald-200 bg-emerald-500/10">
+          Free play
+        </span>
         <SyncStatusPill />
       </div>
-      {playMoney.enabled && (
-        <p className="text-amber-100/90 text-sm font-medium mb-2">
-          You&apos;re playing as <span className="font-mono text-amber-300">{playMoney.displayName}</span>
-          {chainId === "dev-mock" && " · use the chip bar below for instant refills"}
-        </p>
-      )}
       <p className="max-w-2xl text-white/55 text-sm leading-relaxed">
-        High-stakes crypto casino — every outcome verifiable, every session auditable. Start on{" "}
-        <strong className="text-white/80">Dev / Play Money</strong> with a random guest name (no account), or open{" "}
+        High-stakes crypto casino — every outcome verifiable, every session auditable. Use{" "}
+        <strong className="text-white/80">Dev / Play Money</strong> below (no account), or open{" "}
         <Link href="/casino/docs" className="text-amber-300 hover:underline">
           docs
         </Link>{" "}
@@ -442,7 +435,9 @@ function Lobby({
   };
 
   return (
-    <div className="mt-8 space-y-8">
+    <div className="mt-6 space-y-8">
+      {chainId === "dev-mock" && <PlayMoneyPanel />}
+
       {/* Live status strip */}
       <section className={card + " p-5"}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -465,15 +460,6 @@ function Lobby({
             sub={stats.biggestLossUnits < 0n ? `worst: ${fmtMoney(stats.biggestLossUnits)}` : undefined}
           />
         </div>
-        {chainId === "dev-mock" && (
-          <p className="mt-4 pt-4 border-t border-white/[0.06] text-[11px] text-white/40">
-            Need more chips? Use the gold bar at the bottom (+10K / +100K / +1M). Real funds:{" "}
-            <Link href="/casino/wallet" className="text-amber-300 hover:underline">
-              Vault
-            </Link>
-            .
-          </p>
-        )}
       </section>
 
       {/* Cross-game recent activity */}

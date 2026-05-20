@@ -1,80 +1,136 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useCasino } from "./casino-context";
-import { btnGold, btnSecondary, pillGold } from "./casino-ui";
+import { btnGold, btnGhost, btnSecondary, card, sectionTitle } from "./casino-ui";
 import { PLAY_MONEY_CHIP_PRESETS, playMoneyUnits } from "@/lib/casino/guest-play";
 
-/** Sticky chip refill — play-money chain only (rendered inside CasinoProvider). */
-export function PlayMoneyBar() {
+function useChipActions() {
   const { playMoney, balance, token, refreshBalance } = useCasino();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  if (!playMoney.enabled) return null;
+  const run = useCallback(
+    async (fn: () => Promise<void>) => {
+      setBusy(true);
+      setMsg(null);
+      try {
+        await fn();
+        await refreshBalance();
+      } catch (e) {
+        setMsg((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [refreshBalance],
+  );
 
-  const run = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    setMsg(null);
-    try {
-      await fn();
-      await refreshBalance();
-    } catch (e) {
-      setMsg((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const fmtBal = () => {
+  const fmtBal = useCallback(() => {
     const d = 10n ** BigInt(token.decimals);
     const n = Number(balance.available) / Number(d);
     return `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${token.symbol}`;
-  };
+  }, [balance.available, token]);
 
-  const low = balance.available < playMoneyUnits(token.decimals, 1_000);
+  const refill100k = useCallback(async () => {
+    const target = playMoneyUnits(token.decimals, 100_000);
+    if (balance.available >= target) {
+      setMsg("Balance already at or above 100K");
+      return;
+    }
+    await playMoney.addChips(target - balance.available);
+  }, [balance.available, playMoney, token.decimals]);
+
+  return { playMoney, balance, token, busy, msg, run, fmtBal, refill100k, setMsg };
+}
+
+/** Lobby wallet card — guest identity + chip controls (not a popup). */
+export function PlayMoneyPanel() {
+  const { playMoney, busy, msg, run, fmtBal, refill100k } = useChipActions();
+
+  if (!playMoney.enabled) return null;
 
   return (
-    <div
+    <section
       className={
-        "fixed z-40 left-0 right-0 px-3 pointer-events-none " +
-        "bottom-[calc(3.75rem+env(safe-area-inset-bottom))] lg:bottom-4"
+        card +
+        " p-5 sm:p-6 border-amber-400/20 bg-gradient-to-br from-amber-500/[0.08] via-transparent to-emerald-500/[0.04]"
       }
     >
-      <div
-        className={
-          "pointer-events-auto max-w-3xl mx-auto rounded-2xl border p-3 sm:p-4 shadow-[0_12px_48px_rgba(0,0,0,0.55)] backdrop-blur-xl " +
-          (low
-            ? "border-amber-400/50 bg-gradient-to-r from-amber-500/20 via-[#0c0d14]/95 to-amber-600/15 animate-pulse"
-            : "border-amber-400/25 bg-[#0c0d14]/95")
-        }
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <div className="min-w-0">
-            <span className={pillGold + " !text-[9px]"}>Free play · no account</span>
-            <p className="text-sm font-semibold text-white mt-1 truncate">
-              {playMoney.displayName}
-            </p>
-            <p className="text-[11px] text-white/45 font-mono">{fmtBal()} available</p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-amber-300/80 font-semibold mb-1">
+            Guest wallet · no account
+          </p>
+          <h2 className={sectionTitle + " font-mono text-amber-100"}>{playMoney.displayName}</h2>
+          <p className="mt-1 text-sm text-white/50">
+            Free chips for every game on this chain. Balance resets in-browser when you refresh — use
+            Add chips anytime.
+          </p>
+        </div>
+        <div className="sm:text-right shrink-0">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-white/40">Available</p>
+          <p className="text-2xl font-bold font-mono text-emerald-300 tabular-nums">{fmtBal()}</p>
           <button
             type="button"
             disabled={busy}
             onClick={() => run(async () => playMoney.rerollDisplayName())}
-            className={btnSecondary + " !min-h-9 !h-9 !px-3 !text-xs shrink-0"}
+            className={btnGhost + " mt-2 !text-xs"}
           >
-            New name
+            New random name
           </button>
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
+        {PLAY_MONEY_CHIP_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            disabled={busy}
+            onClick={() => run(async () => playMoney.addChips(p.units))}
+            className={btnGold + " !min-h-10 !px-4"}
+          >
+            {p.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => run(refill100k)}
+          className={btnSecondary + " !min-h-10 !px-4"}
+        >
+          Refill to 100K
+        </button>
+      </div>
+
+      {msg && <p className="mt-3 text-xs text-white/55">{msg}</p>}
+    </section>
+  );
+}
+
+/** Slim strip under game tabs while playing (dev-mock only). */
+export function PlayMoneyChipStrip() {
+  const { playMoney, busy, msg, run, fmtBal, refill100k } = useChipActions();
+
+  if (!playMoney.enabled) return null;
+
+  return (
+    <div className="-mx-4 sm:-mx-8 px-4 sm:px-8 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="text-xs text-white/50 shrink-0">
+          <span className="text-amber-200/90 font-medium">{playMoney.displayName}</span>
+          <span className="text-white/30 mx-1.5">·</span>
+          <span className="font-mono text-emerald-300/90">{fmtBal()}</span>
+        </span>
+        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
           {PLAY_MONEY_CHIP_PRESETS.map((p) => (
             <button
               key={p.id}
               type="button"
               disabled={busy}
               onClick={() => run(async () => playMoney.addChips(p.units))}
-              className={btnGold + " !min-h-10 flex-1 min-w-[4.5rem] !text-xs sm:!text-sm"}
+              className="h-8 px-3 rounded-lg text-[11px] font-semibold border border-amber-400/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20 cursor-pointer disabled:opacity-40 transition-colors"
             >
               {p.label}
             </button>
@@ -82,28 +138,14 @@ export function PlayMoneyBar() {
           <button
             type="button"
             disabled={busy}
-            onClick={() =>
-              run(async () => {
-                const target = playMoneyUnits(token.decimals, 100_000);
-                if (balance.available >= target) {
-                  setMsg("Already above 100K — tap +100K or +1M");
-                  return;
-                }
-                const need = target - balance.available;
-                await playMoney.addChips(need);
-              })
-            }
-            className={btnSecondary + " !min-h-10 flex-1 min-w-[5rem] !text-xs sm:!text-sm"}
+            onClick={() => run(refill100k)}
+            className="h-8 px-3 rounded-lg text-[11px] font-medium border border-white/[0.1] text-white/70 hover:bg-white/[0.06] cursor-pointer disabled:opacity-40"
           >
             Refill 100K
           </button>
         </div>
-
-        {msg && <p className="mt-2 text-[11px] text-amber-200/90">{msg}</p>}
-        {low && !msg && (
-          <p className="mt-2 text-[11px] text-amber-200/80">Low balance — tap any button for instant chips.</p>
-        )}
       </div>
+      {msg && <p className="mt-1.5 text-[10px] text-white/45">{msg}</p>}
     </div>
   );
 }

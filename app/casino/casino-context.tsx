@@ -42,7 +42,6 @@ import {
   type GuestProfile,
 } from "@/lib/casino/guest-play";
 import { useWallet } from "@/lib/wallet-context";
-import { PlayMoneyBar } from "./play-money-bar";
 
 /* ---------------------------------------------------------------------------
  *  Types
@@ -376,10 +375,5 @@ export function CasinoProvider({
     [chainId, token, driver, ledger, userId, persistent, getSeedPair, rotateSeed, balance, refreshBalance, history, pushHistory, depositPlayMoney, playMoney, stats, lastRevealedSeed, dismissRevealedSeed],
   );
 
-  return (
-    <Ctx.Provider value={value}>
-      {children}
-      <PlayMoneyBar />
-    </Ctx.Provider>
-  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
