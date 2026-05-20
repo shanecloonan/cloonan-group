@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { HUMAN_SEAT, pokerGame, type ChainId, type PokerAction, type PokerState, type TokenSpec } from "@/lib/casino";
+import {
+  applySessionSettlement,
+  HUMAN_SEAT,
+  legalActionsForSeat,
+  settleForSeat,
+  type ChainId,
+  type PokerAction,
+  type PokerState,
+  type TokenSpec,
+} from "@/lib/casino";
 import {
   mySeatInRoom,
   listPokerRooms,
@@ -12,11 +21,14 @@ import {
   applyPokerRoomAction,
   subscribePokerRoom,
   humanCount,
+  seatedUserIds,
   type PokerRoomRow,
 } from "@/lib/casino/poker-multiplayer";
+import { fetchCasinoProfilesForUsers } from "@/lib/casino/leaderboard";
 import { useCasino } from "./casino-context";
 import { PokerActionBar } from "./poker-action-bar";
 import { PokerOvalTable } from "./poker-table-visual";
+import { PokerTurnTimer } from "./poker-turn-timer";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, pillGold, pillLive } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
 
@@ -42,8 +54,10 @@ export function PokerMultiplayerPanel({
   const [msg, setMsg] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
-  const { getSeedPair, pushHistory, refreshBalance } = useCasino();
+  const { getSeedPair, pushHistory, refreshBalance, ledger, userId: ctxUserId, balance } = useCasino();
   const settledRoomRef = useRef<string | null>(null);
+  const lockedRoomRef = useRef<string | null>(null);
+  const [seatLabels, setSeatLabels] = useState<Record<string, string>>({});
 
   const refreshList = useCallback(() => {
     listPokerRooms(16).then(setRooms);
@@ -57,27 +71,61 @@ export function PokerMultiplayerPanel({
   }, [refreshList]);
 
   useEffect(() => {
+    if (!active) return;
+    fetchCasinoProfilesForUsers(seatedUserIds(active)).then(setSeatLabels);
+  }, [active?.id, active?.seat_users, active?.updated_at]);
+
+  useEffect(() => {
     if (!active?.id) return;
-    return subscribePokerRoom(active.id, (room) => {
+    return subscribePokerRoom(active.id, async (room) => {
       setActive(room);
-      if (room.status === "complete" && room.session_json) {
-        const sess = room.session_json;
-        if (sess.status === "settled" && sess.result && settledRoomRef.current !== room.id) {
-          settledRoomRef.current = room.id;
-          pushHistory({
-            game: "poker",
-            stakeUnits: sess.result.totalStakedUnits,
-            pnlUnits: sess.result.pnlUnits,
-            multiplier:
-              Number(sess.result.totalPayoutUnits) / Math.max(1, Number(sess.result.totalStakedUnits)),
-            session: sess,
+      fetchCasinoProfilesForUsers(seatedUserIds(room)).then(setSeatLabels);
+
+      const sess = room.session_json;
+      const uid = userId ?? ctxUserId;
+      const mySeat = uid ? mySeatInRoom(room, uid) : null;
+      if (
+        room.status === "complete" &&
+        sess?.status === "settled" &&
+        sess.state &&
+        mySeat !== null &&
+        uid &&
+        settledRoomRef.current !== room.id
+      ) {
+        settledRoomRef.current = room.id;
+        const buyIn = BigInt(room.buy_in);
+        const seatResult = settleForSeat(sess.state as PokerState, {
+          sessionId: sess.id,
+          userId: uid,
+          gameId: "poker",
+          chainId,
+          token,
+          stake: buyIn,
+        }, mySeat);
+        const sessionForMe = { ...sess, result: seatResult, userId: uid };
+        pushHistory({
+          game: "poker",
+          stakeUnits: seatResult.totalStakedUnits,
+          pnlUnits: seatResult.pnlUnits,
+          multiplier:
+            Number(seatResult.totalPayoutUnits) / Math.max(1, Number(seatResult.totalStakedUnits)),
+          session: sessionForMe,
+        });
+        if (lockedRoomRef.current === room.id) {
+          lockedRoomRef.current = null;
+          await applySessionSettlement(ledger, {
+            userId: uid,
+            chainId,
+            token,
+            sessionId: `room-${room.id}`,
+            result: seatResult,
           });
-          void persistSettledSession(sess, getSeedPair());
-          void refreshBalance();
         }
+        void persistSettledSession(sessionForMe, getSeedPair());
+        void refreshBalance();
       }
     });
-  }, [active?.id, getSeedPair, pushHistory, refreshBalance]);
+  }, [active?.id, chainId, token, getSeedPair, pushHistory, refreshBalance, ledger, userId, ctxUserId]);
 
   const host = async () => {
     setBusy(true);
@@ -91,6 +139,34 @@ export function PokerMultiplayerPanel({
     else if (room) {
       setActive(room);
       refreshList();
+      const ok = await lockBuyIn(room);
+      if (!ok) setActive(null);
+    }
+  };
+
+  const lockBuyIn = async (room: PokerRoomRow) => {
+    const uid = userId ?? ctxUserId;
+    if (!uid) return true;
+    const buyIn = BigInt(room.buy_in);
+    if (balance.available < buyIn) {
+      setMsg("Insufficient balance for buy-in — deposit or use play money.");
+      return false;
+    }
+    try {
+      await ledger.lock({
+        userId: uid,
+        chainId,
+        token,
+        delta: buyIn,
+        reason: "session_lock",
+        sessionId: `room-${room.id}`,
+      });
+      lockedRoomRef.current = room.id;
+      await refreshBalance();
+      return true;
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Could not lock buy-in");
+      return false;
     }
   };
 
@@ -98,9 +174,17 @@ export function PokerMultiplayerPanel({
     setBusy(true);
     setMsg(null);
     const { room, error } = await joinPokerRoom(id, HUMAN_SEAT);
+    if (error) {
+      setBusy(false);
+      setMsg(error);
+      return;
+    }
+    if (room) {
+      setActive(room);
+      const ok = await lockBuyIn(room);
+      if (!ok) setActive(null);
+    }
     setBusy(false);
-    if (error) setMsg(error);
-    else if (room) setActive(room);
   };
 
   const joinByCode = async () => {
@@ -116,7 +200,7 @@ export function PokerMultiplayerPanel({
   const startHand = async () => {
     if (!active || !userId) return;
     setBusy(true);
-    const { room, error } = await startPokerRoomHand(active, chainId, token, userId);
+    const { room, error } = await startPokerRoomHand(active, chainId, token, userId, seatLabels);
     setBusy(false);
     if (error) setMsg(error);
     else if (room) setActive(room);
@@ -136,7 +220,10 @@ export function PokerMultiplayerPanel({
   const mySeat = active && userId ? mySeatInRoom(active, userId) : null;
   const session = active?.session_json ?? null;
   const state = session?.state as PokerState | undefined;
-  const legal = state && mySeat !== null ? pokerGame.legalActions(state) : [];
+  const legal =
+    state && mySeat !== null ? legalActionsForSeat(state, mySeat) : [];
+  const labelForUid = (uid: string | null) =>
+    uid ? (uid === userId ? "You" : seatLabels[uid] ?? "Player") : "open";
 
   return (
     <div className="space-y-4">
@@ -242,7 +329,7 @@ export function PokerMultiplayerPanel({
                         : "border-white/10 text-white/30")
                     }
                   >
-                    {seat}:{uid ? (uid === userId ? "you" : "taken") : "open"}
+                    {seat}:{labelForUid(uid)}
                   </span>
                 ))}
               </div>
@@ -259,6 +346,7 @@ export function PokerMultiplayerPanel({
           {state && active.status === "active" && mySeat !== null && mySeat === state.activeSeat && (
             <div className="space-y-2">
               <span className={pillLive + " w-full justify-center"}>Your turn</span>
+              <PokerTurnTimer updatedAt={active.updated_at} active />
               <PokerActionBar state={state} seat={mySeat} token={token} legal={legal} busy={busy} onAct={act} />
             </div>
           )}

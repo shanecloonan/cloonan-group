@@ -140,6 +140,26 @@ export async function fetchOwnDashboardSessions(limit = 80): Promise<DashboardSe
   });
 }
 
+/** Display names for seated poker players (and similar UIs). */
+export async function fetchCasinoProfilesForUsers(
+  userIds: string[],
+): Promise<Record<string, string>> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("casino_profiles")
+    .select("user_id, display_name")
+    .in("user_id", unique);
+
+  if (error || !data) return {};
+  const out: Record<string, string> = {};
+  for (const row of data) {
+    if (row.display_name) out[row.user_id] = row.display_name;
+  }
+  return out;
+}
+
 export async function fetchOwnProfile(): Promise<{
   displayName: string;
   showOnLeaderboard: boolean;

@@ -19,7 +19,7 @@
  * ========================================================================= */
 
 import { supabase } from "../supabase";
-import type { Balance, BalanceMutation, ChainId, TokenSpec } from "./types";
+import type { Balance, BalanceMutation, ChainId, GameResult, TokenSpec } from "./types";
 
 /* ---------------------------------------------------------------------------
  *  Common interface
@@ -276,3 +276,53 @@ export class SupabaseLedger implements Ledger {
  * mode.
  */
 export const devLedger = new InMemoryLedger();
+
+/** Move locked stake → available / burn / credit after a settled game result. */
+export async function applySessionSettlement(
+  ledger: Ledger,
+  args: {
+    userId: string;
+    chainId: ChainId;
+    token: TokenSpec;
+    sessionId: string;
+    result: GameResult;
+  },
+): Promise<void> {
+  const { userId, chainId, token, sessionId, result } = args;
+  const lockedUnits = result.totalStakedUnits;
+  const payoutUnits = result.totalPayoutUnits;
+  const unlockUnits = payoutUnits < lockedUnits ? payoutUnits : lockedUnits;
+  const burnUnits = lockedUnits - unlockUnits;
+  const creditUnits = payoutUnits - unlockUnits;
+
+  if (unlockUnits > 0n) {
+    await ledger.unlock({
+      userId,
+      chainId,
+      token,
+      delta: unlockUnits,
+      reason: "session_unlock",
+      sessionId,
+    });
+  }
+  if (burnUnits > 0n) {
+    await ledger.burn({
+      userId,
+      chainId,
+      token,
+      delta: burnUnits,
+      reason: "session_settle",
+      sessionId,
+    });
+  }
+  if (creditUnits > 0n) {
+    await ledger.credit({
+      userId,
+      chainId,
+      token,
+      delta: creditUnits,
+      reason: "session_settle",
+      sessionId,
+    });
+  }
+}

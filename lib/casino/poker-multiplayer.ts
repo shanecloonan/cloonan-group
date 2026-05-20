@@ -3,7 +3,14 @@
  */
 
 import { supabase } from "../supabase";
-import { HUMAN_SEAT, pickBotAction, pokerGame, type PokerAction, type PokerState } from "./poker";
+import {
+  HUMAN_SEAT,
+  pickBotAction,
+  pokerGame,
+  type PokerAction,
+  type PokerSeatMeta,
+  type PokerState,
+} from "./poker";
 import type { Bet, Session } from "./types";
 import { HmacRngStream, hashServerSeed } from "./rng";
 import { newSessionId } from "./session";
@@ -141,12 +148,41 @@ export function humanCount(room: PokerRoomRow): number {
   return Object.values(room.seat_users).filter(Boolean).length;
 }
 
+export function seatedUserIds(room: PokerRoomRow): string[] {
+  return Object.values(room.seat_users).filter((u): u is string => Boolean(u));
+}
+
+/** Build engine seat labels from room seats + optional profile display names. */
+export function buildPokerSeatMeta(
+  room: PokerRoomRow,
+  displayNames: Record<string, string>,
+): Record<string, PokerSeatMeta> {
+  const meta: Record<string, PokerSeatMeta> = {};
+  for (let seat = 0; seat < room.max_seats; seat++) {
+    const uid = room.seat_users[String(seat)];
+    if (uid) {
+      const label = displayNames[uid]?.trim();
+      meta[String(seat)] = {
+        name: label || `Player ${seat + 1}`,
+        isHuman: true,
+      };
+    } else {
+      meta[String(seat)] = {
+        name: `Bot ${seat + 1}`,
+        isHuman: false,
+      };
+    }
+  }
+  return meta;
+}
+
 /** Start hand when 2+ humans seated (fills empty with bots in engine). */
 export async function startPokerRoomHand(
   room: PokerRoomRow,
   chainId: ChainId,
   token: TokenSpec,
   userId: string,
+  displayNames: Record<string, string> = {},
 ): Promise<{ room: PokerRoomRow | null; error?: string }> {
   if (room.status !== "waiting") return { room, error: "Hand already in progress" };
   if (humanCount(room) < 1) return { room: null, error: "Need at least one player" };
@@ -161,7 +197,12 @@ export async function startPokerRoomHand(
     chainId,
     token,
     stake: buyIn,
-    config: { bigBlind, smallBlind: BigInt(room.small_blind), numSeats: room.max_seats },
+    config: {
+      bigBlind,
+      smallBlind: BigInt(room.small_blind),
+      numSeats: room.max_seats,
+      seatMeta: buildPokerSeatMeta(room, displayNames),
+    },
   };
 
   const pair = {
@@ -302,7 +343,8 @@ async function advanceRoomBots(
       state = pokerGame.step(state, { type: "advance_street" }, new HmacRngStream(pair, ++nonce));
       continue;
     }
-    if (state.activeSeat === HUMAN_SEAT) break;
+    const actor = state.activeSeat;
+    if (actor !== null && state.players[actor]?.isHuman) break;
     const action = pickBotAction(state);
     state = pokerGame.step(state, action, new HmacRngStream(pair, ++nonce));
   }

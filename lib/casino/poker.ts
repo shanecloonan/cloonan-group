@@ -20,6 +20,11 @@ export interface PokerAction {
   raiseTo?: bigint;
 }
 
+export interface PokerSeatMeta {
+  name: string;
+  isHuman: boolean;
+}
+
 export interface PokerConfig {
   numSeats: number;
   smallBlind: bigint;
@@ -27,6 +32,8 @@ export interface PokerConfig {
   /** House rake in basis points (100 = 1%). */
   rakeBps: number;
   humanSeat: number;
+  /** Multiplayer: per-seat labels (string keys "0".."5"). */
+  seatMeta?: Record<string, PokerSeatMeta>;
 }
 
 export const DEFAULT_POKER_CONFIG: PokerConfig = {
@@ -383,11 +390,14 @@ function initialState(bet: Bet, rng: RngStream): PokerState {
   const shoe = buildShoe(1);
   const players: PokerPlayer[] = [];
   for (let seat = 0; seat < n; seat++) {
+    const meta = config.seatMeta?.[String(seat)];
     const hole = [drawCard(shoe, rng), drawCard(shoe, rng)];
     players.push({
       seat,
-      name: seat === HUMAN_SEAT ? "You" : BOT_NAMES[seat - 1] ?? `Bot ${seat}`,
-      isHuman: seat === HUMAN_SEAT,
+      name:
+        meta?.name ??
+        (seat === config.humanSeat ? "You" : BOT_NAMES[seat - 1] ?? `Bot ${seat}`),
+      isHuman: meta?.isHuman ?? seat === config.humanSeat,
       hole,
       stack: buyIn,
       betThisRound: 0n,
@@ -444,7 +454,7 @@ function initialState(bet: Bet, rng: RngStream): PokerState {
   };
 }
 
-function legalActionsForSeat(state: PokerState, seat: number): PokerAction[] {
+export function legalActionsForSeat(state: PokerState, seat: number): PokerAction[] {
   if (state.phase === "complete" || state.phase === "showdown") return [];
   if (state.activeSeat !== seat) return [];
   const p = state.players[seat];
@@ -504,18 +514,23 @@ function isTerminal(state: PokerState): boolean {
 }
 
 function settle(state: PokerState, bet: Bet): GameResult {
-  const human = state.players[HUMAN_SEAT];
-  const payout = human.stack;
-  const staked = state.startingHumanStack;
+  return settleForSeat(state, bet, state.config.humanSeat);
+}
+
+/** Settlement for a specific seat (multiplayer uses each player's seat). */
+export function settleForSeat(state: PokerState, bet: Bet, seat: number): GameResult {
+  const player = state.players[seat];
+  const payout = player.stack;
+  const staked = bet.stake;
   return {
     totalStakedUnits: staked,
     totalPayoutUnits: payout,
     pnlUnits: payout - staked,
     breakdown: state.winners.map((w) => ({
       label: `${state.players[w.seat].name}: ${w.hand} · ${w.amount}`,
-      stakedUnits: w.seat === HUMAN_SEAT ? staked : 0n,
-      payoutUnits: w.seat === HUMAN_SEAT ? payout : 0n,
-      pnlUnits: w.seat === HUMAN_SEAT ? payout - staked : 0n,
+      stakedUnits: w.seat === seat ? staked : 0n,
+      payoutUnits: w.seat === seat ? payout : 0n,
+      pnlUnits: w.seat === seat ? payout - staked : 0n,
     })),
   };
 }
@@ -523,7 +538,7 @@ function settle(state: PokerState, bet: Bet): GameResult {
 /** Bot decision — deterministic from public state (audit replay uses logged actions). */
 export function pickBotAction(state: PokerState): PokerAction {
   const seat = state.activeSeat;
-  if (seat === null || seat === HUMAN_SEAT) return { type: "check" };
+  if (seat === null || state.players[seat]?.isHuman) return { type: "check" };
   const legal = legalActionsForSeat(state, seat);
   if (legal.length === 0) return { type: "fold" };
   const p = state.players[seat];

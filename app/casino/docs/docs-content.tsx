@@ -278,7 +278,9 @@ export default function DocsContent() {
             title="Poker (6-Max Hold'em)"
             rtp="skill-based · 1% rake"
             rules={[
-              "Solo: you (seat 0) vs five AI opponents. Multiplayer: host/join room codes, Supabase Realtime sync.",
+              "Solo: you (seat 0) vs five AI opponents. Multiplayer: host/join room codes, Supabase Realtime sync, profile display names.",
+              "Multiplayer buy-in is locked from your casino balance when you take a seat; settlement credits your seat stack after the hand.",
+              "45s turn timer (UI) when it is your action. Bots fill empty seats.",
               "No-limit betting: fold, check, call, raise (min-raise = big blind).",
               "Blinds scale with buy-in (BB ≈ buy-in / 50). Rake on contested pots at showdown.",
             ]}
