@@ -624,18 +624,20 @@ function Lobby({
                     <div className="text-[11px] text-white/40">{g.phase}</div>
                   </div>
                 </div>
-                <span
-                  className={
-                    "text-[9px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full border " +
-                    (g.status === "live"
-                      ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
-                      : g.status === "queued"
-                        ? "border-amber-400/30 text-amber-300 bg-amber-500/10"
-                        : "border-white/[0.08] text-white/40")
-                  }
-                >
-                  {g.status === "live" ? "play now" : g.status}
-                </span>
+                {!(g.status === "live" && route) && (
+                  <span
+                    className={
+                      "text-[9px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-full border " +
+                      (g.status === "live"
+                        ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
+                        : g.status === "queued"
+                          ? "border-amber-400/30 text-amber-300 bg-amber-500/10"
+                          : "border-white/[0.08] text-white/40")
+                    }
+                  >
+                    {g.status === "live" ? "play now" : g.status}
+                  </span>
+                )}
               </div>
               <p className="text-[12px] text-white/60 leading-relaxed">{g.subtitle}</p>
               <div className="flex items-center justify-between mt-1">
