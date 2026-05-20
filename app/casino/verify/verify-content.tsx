@@ -66,17 +66,57 @@ const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-bl
 const labelCls = "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
 const inputCls = "w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
 
-const SUPPORTED_GAMES: { id: GameId; label: string }[] = [
-  { id: "blackjack", label: "Blackjack" },
-  { id: "coinflip", label: "Coinflip" },
-  { id: "dice", label: "Dice / Limbo" },
-  { id: "roulette", label: "Roulette" },
-  { id: "slots", label: "Slots" },
-  { id: "crash", label: "Crash" },
-  { id: "plinko", label: "Plinko" },
-  { id: "mines", label: "Mines" },
-  { id: "hilo", label: "HiLo" },
-  { id: "poker", label: "Poker" },
+const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
+  {
+    id: "blackjack",
+    label: "Blackjack",
+    hint: "Replay deals from the shoe; every hit/stand/double is logged with a state hash.",
+  },
+  {
+    id: "coinflip",
+    label: "Coinflip",
+    hint: "One RNG byte decides the flip; check byte & 1 matches heads/tails.",
+  },
+  {
+    id: "dice",
+    label: "Dice / Limbo",
+    hint: "Roll in basis points vs your target; win-count table is deterministic from the seed.",
+  },
+  {
+    id: "roulette",
+    label: "Roulette",
+    hint: "Winning pocket + each placement (straight/split/street/corner/outside) settles from frozen bets.",
+  },
+  {
+    id: "slots",
+    label: "Slots",
+    hint: "Every spin’s reel stops and line wins replay from the same nonce chain.",
+  },
+  {
+    id: "crash",
+    label: "Crash",
+    hint: "Bust multiplier is derived from a 52-bit draw; cashout vs bust is in the action log.",
+  },
+  {
+    id: "plinko",
+    label: "Plinko",
+    hint: "Each peg bounce is one RNG bit; path → bin → multiplier is fully replayable.",
+  },
+  {
+    id: "mines",
+    label: "Mines",
+    hint: "Mine layout is shuffled once at open; each safe tile pick advances the nonce.",
+  },
+  {
+    id: "hilo",
+    label: "HiLo",
+    hint: "Card sequence and each higher/lower pick replay with logged probabilities.",
+  },
+  {
+    id: "poker",
+    label: "Poker",
+    hint: "Deck order, streets, and bot/human actions rebuild the same showdown.",
+  },
 ];
 
 type AnyAction =
@@ -400,8 +440,9 @@ export default function VerifyContent() {
               <div key={g.id} className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.05]">
                 <div className="text-sm font-semibold">{g.label}</div>
                 <div className="text-[11px] text-white/40 mt-0.5">{g.id}</div>
-                <div className="text-[11px] text-emerald-300 mt-2">
-                  Replayed deterministically in this browser
+                <p className="text-[11px] text-white/55 mt-2 leading-relaxed">{g.hint}</p>
+                <div className="text-[11px] text-emerald-300/90 mt-2">
+                  Replayed locally via HMAC-SHA256
                 </div>
               </div>
             ))}

@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  columnNumbers,
+  cornerKey,
   describePlacement,
   newSessionId,
+  parseInsideKey,
   PAYOUT_TO_ONE,
   persistSettledSession,
   placementFor,
@@ -11,9 +14,13 @@ import {
   RED_POCKETS,
   rouletteGame,
   ROULETTE_RTP_PERCENT,
+  splitKey,
+  streetKey,
   verifySession,
   type ChainAdapter,
   type ChainId,
+  type InsidePlacementKey,
+  type PlacementKey,
   type RouletteAction,
   type RoulettePlacement,
   type RoulettePlacementKind,
@@ -64,33 +71,36 @@ const LAST_CHIP_KEY = "mf_casino_roul_chip";
  *  Placement key → placement
  * ------------------------------------------------------------------------- */
 
-/**
- * The UI maintains a Record<placementKey, amount>. Keys describe both the
- * bet kind and the specific numbers covered, so we can re-derive the full
- * Placement object at spin time. Format:
- *   "straight:17", "red", "dozen_1", "column_2", etc.
- */
-type PlacementKey =
-  | `straight:${number}`
-  | `red` | `black` | `odd` | `even` | `low` | `high`
-  | `dozen_1` | `dozen_2` | `dozen_3`
-  | `column_1` | `column_2` | `column_3`;
+function isInsideKey(key: PlacementKey): key is InsidePlacementKey {
+  return key.startsWith("split:") || key.startsWith("street:") || key.startsWith("corner:");
+}
 
 function keyToPlacement(key: PlacementKey, amount: bigint): RoulettePlacement {
   if (key.startsWith("straight:")) {
     const n = Number(key.slice("straight:".length));
     return placementFor("straight", amount, [n]);
   }
+  if (isInsideKey(key)) {
+    const { kind, numbers } = parseInsideKey(key);
+    return placementFor(kind, amount, numbers);
+  }
   return placementFor(key as RoulettePlacementKind, amount);
 }
 
 function describeKey(key: PlacementKey): string {
   if (key.startsWith("straight:")) return `Straight ${key.slice("straight:".length)}`;
-  return describePlacement({ kind: key as RoulettePlacementKind, numbers: [] });
+  if (isInsideKey(key)) {
+    const { kind, numbers } = parseInsideKey(key);
+    return describePlacement({ kind, numbers });
+  }
+  return describePlacement(placementFor(key as RoulettePlacementKind, 1n));
 }
 
 function payoutForKey(key: PlacementKey): number {
   if (key.startsWith("straight:")) return PAYOUT_TO_ONE.straight;
+  if (key.startsWith("split:")) return PAYOUT_TO_ONE.split;
+  if (key.startsWith("street:")) return PAYOUT_TO_ONE.street;
+  if (key.startsWith("corner:")) return PAYOUT_TO_ONE.corner;
   return PAYOUT_TO_ONE[key as RoulettePlacementKind];
 }
 
@@ -543,7 +553,7 @@ function BettingLayout({
       />
 
       <p className="hidden md:block text-[10px] text-white/45 mb-2 px-0.5">
-        Click any zone to place a chip · right-click to remove
+        Click numbers, gold edges (split/street), or corners · right-click to remove
       </p>
       <div className="hidden md:block overflow-x-auto overscroll-x-contain -mx-0.5 px-0.5 pb-1">
         <div className="w-max min-w-full">
@@ -559,12 +569,14 @@ function BettingLayout({
           token={token}
           big
         />
-        {/* 12 columns × 3 rows — fixed width so numbers never overlap */}
-        <div className="grid grid-cols-12 grid-rows-3 gap-1 w-[39rem] shrink-0">
-          {topRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
-          {midRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
-          {botRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
-        </div>
+        <RouletteInsideGrid
+          placements={placements}
+          onClick={onClick}
+          onRightClick={onRightClick}
+          disabled={disabled}
+          chip={chip}
+          token={token}
+        />
         {/* Column 2:1 markers (top → col_3, mid → col_2, bot → col_1) */}
         <div className="grid grid-rows-3 gap-0.5 sm:gap-1 w-9 sm:w-12 shrink-0">
           <OutsideCell label="2:1" stake={placements["column_3"] as bigint | undefined} onClick={() => onClick("column_3")} onRightClick={() => onRightClick("column_3")} disabled={disabled} chip={chip} token={token} small />
@@ -645,7 +657,9 @@ function RouletteMobileLayout({
 
   return (
     <div className="md:hidden space-y-3 mb-1 w-full">
-      <p className="text-[10px] text-white/45">European layout · tap to bet · hold to remove</p>
+      <p className="text-[10px] text-white/45">
+        European layout · tap numbers · split/street/corner on desktop
+      </p>
       <NumberCell
         number={0}
         stake={placements["straight:0"] as bigint | undefined}
@@ -685,6 +699,211 @@ function RouletteMobileLayout({
         <OutsideCell compact small label="Col 3" stake={placements["column_3"] as bigint | undefined} onClick={() => onClick("column_3")} onRightClick={() => onRightClick("column_3")} disabled={disabled} chip={chip} token={token} />
       </div>
     </div>
+  );
+}
+
+/** Desktop 12×3 grid with split / street / corner hit zones. */
+function RouletteInsideGrid({
+  placements,
+  onClick,
+  onRightClick,
+  disabled,
+  chip,
+  token,
+}: {
+  placements: Record<string, bigint>;
+  onClick: (k: PlacementKey) => void;
+  onRightClick: (k: PlacementKey) => void;
+  disabled: boolean;
+  chip: number;
+  token: TokenSpec;
+}) {
+  return (
+    <div className="grid grid-cols-12 gap-1 w-[39rem] shrink-0">
+      {Array.from({ length: 12 }, (_, col) => {
+        const { top, mid, bot } = columnNumbers(col);
+        const next = col < 11 ? columnNumbers(col + 1) : null;
+        const sk = (a: number, b: number) => splitKey(a, b);
+        const street = streetKey(bot, mid, top);
+        return (
+          <div key={col} className="relative grid grid-rows-[1fr_auto_1fr_auto_1fr] gap-0 min-h-[6.5rem]">
+            <NumberCell
+              number={top}
+              stake={placements[`straight:${top}`] as bigint | undefined}
+              onClick={() => onClick(`straight:${top}`)}
+              onRightClick={() => onRightClick(`straight:${top}`)}
+              disabled={disabled}
+              chip={chip}
+              token={token}
+            />
+            <InsideEdge
+              placementKey={sk(top, mid)}
+              stake={placements[sk(top, mid)]}
+              onClick={onClick}
+              onRightClick={onRightClick}
+              disabled={disabled}
+            />
+            <NumberCell
+              number={mid}
+              stake={placements[`straight:${mid}`] as bigint | undefined}
+              onClick={() => onClick(`straight:${mid}`)}
+              onRightClick={() => onRightClick(`straight:${mid}`)}
+              disabled={disabled}
+              chip={chip}
+              token={token}
+            />
+            <InsideEdge
+              placementKey={sk(mid, bot)}
+              stake={placements[sk(mid, bot)]}
+              onClick={onClick}
+              onRightClick={onRightClick}
+              disabled={disabled}
+            />
+            <NumberCell
+              number={bot}
+              stake={placements[`straight:${bot}`] as bigint | undefined}
+              onClick={() => onClick(`straight:${bot}`)}
+              onRightClick={() => onRightClick(`straight:${bot}`)}
+              disabled={disabled}
+              chip={chip}
+              token={token}
+            />
+            <button
+              type="button"
+              disabled={disabled}
+              title="Street (3 numbers)"
+              onClick={() => onClick(street)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                onRightClick(street);
+              }}
+              className={
+                "absolute -left-1 top-1/2 -translate-y-1/2 z-20 w-1.5 h-10 rounded-full " +
+                (placements[street]
+                  ? "bg-amber-400/80"
+                  : "bg-amber-400/25 hover:bg-amber-400/50 border border-amber-400/40") +
+                (disabled ? " opacity-40 cursor-not-allowed" : " cursor-pointer")
+              }
+            />
+            {next && (
+              <>
+                <InsideSideEdge
+                  placementKey={sk(top, next.top)}
+                  stake={placements[sk(top, next.top)]}
+                  onClick={onClick}
+                  onRightClick={onRightClick}
+                  disabled={disabled}
+                  className="top-[6%] h-[26%]"
+                />
+                <InsideSideEdge
+                  placementKey={sk(mid, next.mid)}
+                  stake={placements[sk(mid, next.mid)]}
+                  onClick={onClick}
+                  onRightClick={onRightClick}
+                  disabled={disabled}
+                  className="top-[38%] h-[26%]"
+                />
+                <InsideSideEdge
+                  placementKey={sk(bot, next.bot)}
+                  stake={placements[sk(bot, next.bot)]}
+                  onClick={onClick}
+                  onRightClick={onRightClick}
+                  disabled={disabled}
+                  className="top-[70%] h-[26%]"
+                />
+                <button
+                  type="button"
+                  disabled={disabled}
+                  title="Corner (4 numbers)"
+                  onClick={() => onClick(cornerKey(bot, mid, next.bot, next.mid))}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    onRightClick(cornerKey(bot, mid, next.bot, next.mid));
+                  }}
+                  className={
+                    "absolute -right-1 bottom-0 z-20 w-2.5 h-2.5 rounded-sm " +
+                    (placements[cornerKey(bot, mid, next.bot, next.mid)]
+                      ? "bg-amber-300"
+                      : "bg-amber-400/30 hover:bg-amber-400/60 border border-amber-400/50") +
+                    (disabled ? " opacity-40 cursor-not-allowed" : " cursor-pointer")
+                  }
+                />
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function InsideEdge({
+  placementKey,
+  stake,
+  onClick,
+  onRightClick,
+  disabled,
+}: {
+  placementKey: PlacementKey;
+  stake?: bigint;
+  onClick: (k: PlacementKey) => void;
+  onRightClick: (k: PlacementKey) => void;
+  disabled: boolean;
+}) {
+  const has = stake !== undefined && stake > 0n;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onClick(placementKey)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onRightClick(placementKey);
+      }}
+      className={
+        "h-1 w-full shrink-0 rounded-sm z-10 " +
+        (has ? "bg-amber-400/70" : "bg-amber-400/20 hover:bg-amber-400/45 border border-amber-400/25") +
+        (disabled ? " cursor-not-allowed opacity-50" : " cursor-pointer")
+      }
+      title="Split"
+    />
+  );
+}
+
+function InsideSideEdge({
+  placementKey,
+  stake,
+  onClick,
+  onRightClick,
+  disabled,
+  className,
+}: {
+  placementKey: PlacementKey;
+  stake?: bigint;
+  onClick: (k: PlacementKey) => void;
+  onRightClick: (k: PlacementKey) => void;
+  disabled: boolean;
+  className: string;
+}) {
+  const has = stake !== undefined && stake > 0n;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onClick(placementKey)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onRightClick(placementKey);
+      }}
+      className={
+        "absolute -right-0.5 w-1.5 z-20 rounded-sm " +
+        className +
+        " " +
+        (has ? "bg-amber-400/70" : "bg-amber-400/20 hover:bg-amber-400/45 border border-amber-400/25") +
+        (disabled ? " cursor-not-allowed opacity-50" : " cursor-pointer")
+      }
+      title="Split"
+    />
   );
 }
 

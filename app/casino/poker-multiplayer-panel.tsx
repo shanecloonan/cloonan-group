@@ -17,8 +17,6 @@ import {
   listPokerRooms,
   createPokerRoom,
   joinPokerRoom,
-  startPokerRoomHand,
-  applyPokerRoomAction,
   subscribePokerRoom,
   humanCount,
   seatedUserIds,
@@ -36,6 +34,28 @@ function humanToUnits(amount: number, token: TokenSpec): bigint {
   if (!Number.isFinite(amount) || amount <= 0) return 0n;
   const denom = 10n ** BigInt(token.decimals);
   return BigInt(Math.floor(amount * Number(denom)));
+}
+
+async function pokerApi<T extends { room?: PokerRoomRow; error?: string }>(
+  path: "action" | "start",
+  body: unknown,
+): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const jwt = session?.access_token;
+  if (!jwt) return { error: "Sign in required" } as T;
+  const res = await fetch(`/api/casino/poker/${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${jwt}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json()) as T & { error?: string };
+  if (!res.ok) return { error: data.error ?? res.statusText } as T;
+  return data;
 }
 
 export function PokerMultiplayerPanel({
@@ -199,8 +219,17 @@ export function PokerMultiplayerPanel({
 
   const startHand = async () => {
     if (!active || !userId) return;
+    if (active.created_by !== userId) {
+      setMsg("Only the host can deal");
+      return;
+    }
     setBusy(true);
-    const { room, error } = await startPokerRoomHand(active, chainId, token, userId, seatLabels);
+    const { room, error } = await pokerApi("start", {
+      roomId: active.id,
+      chainId,
+      token,
+      displayNames: seatLabels,
+    });
     setBusy(false);
     if (error) setMsg(error);
     else if (room) setActive(room);
@@ -211,7 +240,12 @@ export function PokerMultiplayerPanel({
     const seat = mySeatInRoom(active, userId);
     if (seat === null) return;
     setBusy(true);
-    const { room, error } = await applyPokerRoomAction(active, seat, action, chainId, token, userId);
+    const { room, error } = await pokerApi("action", {
+      roomId: active.id,
+      action,
+      chainId,
+      token,
+    });
     setBusy(false);
     if (error) setMsg(error);
     else if (room) setActive(room);
@@ -229,7 +263,9 @@ export function PokerMultiplayerPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className={pillGold}>Multiplayer · beta</span>
-        <p className="text-xs text-white/50">Shared tables sync via Supabase Realtime. Sign in required.</p>
+        <p className="text-xs text-white/50">
+          Realtime sync · actions validated on server (turn + legal moves)
+        </p>
       </div>
 
       {!userId && (
@@ -339,8 +375,15 @@ export function PokerMultiplayerPanel({
             </button>
           </div>
           {active.status === "waiting" && (
-            <button type="button" className={btnPrimary + " w-full"} disabled={busy} onClick={startHand}>
-              Deal hand (bots fill empty seats)
+            <button
+              type="button"
+              className={btnPrimary + " w-full"}
+              disabled={busy || userId !== active.created_by}
+              onClick={startHand}
+            >
+              {userId === active.created_by
+                ? "Deal hand (bots fill empty seats)"
+                : "Waiting for host to deal…"}
             </button>
           )}
           {state && active.status === "active" && mySeat !== null && mySeat === state.activeSeat && (

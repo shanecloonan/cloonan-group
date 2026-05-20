@@ -243,8 +243,12 @@ export default function DocsContent() {
           <GameDoc id="roulette" title="Roulette" rtp="97.30%" rules={[
             "European single-zero wheel (37 pockets).",
             "Straight 35:1, splits 17:1, streets 11:1, corners 8:1, six-line 5:1, dozens/columns 2:1, even-money 1:1.",
+            "Desktop: gold edges between numbers for split/street; corner dots at intersections.",
             "La Partage not enabled — zero loses all outside bets.",
             "Mobile: true 3×12 European rows (same order as the felt), zero on top, chips shown below numbers — no overlap. Desktop: classic scrollable felt.",
+          ]} verify={[
+            "Placements freeze at spin; one RNG draw selects the winning pocket.",
+            "Verifier replays each bet’s payout (inside + outside) against that pocket.",
           ]} />
 
           <GameDoc id="slots" title="Slots" rtp="≈96%" rules={[
