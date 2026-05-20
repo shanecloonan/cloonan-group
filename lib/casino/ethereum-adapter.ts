@@ -523,6 +523,7 @@ import {
   ETH_NATIVE,
   USDC_BASE,
   USDC_ETHEREUM_MAINNET,
+  USDC_SEPOLIA,
 } from "./chain-adapter";
 
 type EvmChainId = RealEthereumAdapterConfig["chainId"];
@@ -571,7 +572,7 @@ const CHAIN_PRESETS: Record<EvmChainId, ChainPreset> = {
     defaultRpc: "https://rpc.sepolia.org",
     explorerBaseUrl: "https://sepolia.etherscan.io",
     defaultRequiredConfirmations: 3,
-    supportedTokens: [],
+    supportedTokens: [USDC_SEPOLIA],
     nativeCurrency: ETH_NATIVE,
   },
 };

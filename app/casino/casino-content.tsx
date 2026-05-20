@@ -10,6 +10,7 @@ import {
   SOL_NATIVE,
   USDC_BASE,
   USDC_ETHEREUM_MAINNET,
+  USDC_SEPOLIA,
   USDC_SOLANA,
   makeEthereumAdapter,
   makeSolanaAdapter,
@@ -273,7 +274,7 @@ const CHAIN_TILES: ChainTile[] = [
     phase: "Phase 1",
     blurb: "ETH vault on Sepolia for deposit/withdraw and settlement smoke tests before mainnet rails go live.",
     bestFor: "Vault E2E · operator QA · test ETH only",
-    tokens: [ETH_NATIVE],
+    tokens: [USDC_SEPOLIA, ETH_NATIVE],
   },
   {
     id: "ethereum-base",

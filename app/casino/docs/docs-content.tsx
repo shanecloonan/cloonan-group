@@ -177,6 +177,11 @@ export default function DocsContent() {
                 <code className="text-amber-200/90">userId</code> in the body (idempotent ledger credit/debit by tx hash).
               </li>
               <li>
+                Sepolia test USDC: allowlist Circle mint{" "}
+                <code className="text-amber-200/90">0x1c7D4B196Cb0C7B29D5Daedb9e2cCeDaD4d5D4f4</code> on the vault. Manual
+                credit: <code className="text-amber-200/90">npx tsx scripts/credit-casino-deposit.ts</code> with service role env.
+              </li>
+              <li>
                 Multiplayer poker uses <code className="text-amber-200/90">turn_started_at</code> for the 45s action clock so bot
                 updates do not reset the timer.
               </li>

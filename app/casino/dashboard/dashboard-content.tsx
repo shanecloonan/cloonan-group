@@ -24,6 +24,7 @@ import {
   type DashboardSessionRow,
   type FeedRow,
 } from "@/lib/casino/leaderboard";
+import { HistoryVerifyLink } from "../history-verify-link";
 import { buildVerifyLink } from "../share-link";
 
 const HISTORY_KEY = "mf_casino_history_v1";
@@ -88,11 +89,23 @@ export default function DashboardContent() {
   }, []);
 
   const mergedRows = useMemo(() => {
-    type Row = { game: string; at: string; stakeUnits: string; pnlUnits: string; session: unknown; origin: string };
+    type Row = {
+      game: string;
+      at: string;
+      stakeUnits: string;
+      pnlUnits: string;
+      session: unknown;
+      origin: string;
+      sessionId?: string;
+    };
     const out: Row[] = [];
     const seen = new Set<string>();
     for (const r of localRows.slice().reverse()) {
-      const key = `${r.game}@${r.at}`;
+      const sid =
+        r.session && typeof r.session === "object" && "id" in r.session
+          ? String((r.session as { id?: string }).id ?? "")
+          : "";
+      const key = sid || `${r.game}@${r.at}`;
       seen.add(key);
       out.push({
         game: r.game,
@@ -101,11 +114,13 @@ export default function DashboardContent() {
         pnlUnits: r.pnlUnits,
         session: r.session,
         origin: "local",
+        sessionId: sid || undefined,
       });
     }
     for (const c of cloudRows) {
-      const key = `${c.game_id}@${c.updated_at}`;
+      const key = c.id;
       if (seen.has(key)) continue;
+      seen.add(key);
       out.push({
         game: c.game_id,
         at: c.updated_at,
@@ -113,6 +128,7 @@ export default function DashboardContent() {
         pnlUnits: c.pnl,
         session: { gameId: c.game_id, state: c.state, result: c.result },
         origin: "cloud",
+        sessionId: c.id,
       });
     }
     return out.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
@@ -219,12 +235,16 @@ export default function DashboardContent() {
                       <div className={"text-sm font-mono " + (pnl >= 0n ? "text-emerald-300" : "text-rose-300")}>
                         {fmt(pnl)}
                       </div>
-                      <Link
-                        href={buildVerifyLink(r.session)}
-                        className="text-[10px] text-amber-300/80 hover:text-amber-200"
-                      >
-                        Verify →
-                      </Link>
+                      {r.origin === "cloud" && r.sessionId ? (
+                        <HistoryVerifyLink sessionId={r.sessionId} />
+                      ) : (
+                        <Link
+                          href={buildVerifyLink(r.session)}
+                          className="text-[10px] text-amber-300/80 hover:text-amber-200"
+                        >
+                          Verify →
+                        </Link>
+                      )}
                     </div>
                   </div>
                 );

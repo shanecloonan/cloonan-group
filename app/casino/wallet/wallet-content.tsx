@@ -36,6 +36,7 @@ import {
   ETH_NATIVE,
   USDC_BASE,
   USDC_ETHEREUM_MAINNET,
+  USDC_SEPOLIA,
   ensureCasinoUserRow,
   isAdapterReady,
   makeRealEthereumAdapter,
@@ -73,7 +74,7 @@ const CHAIN_CATALOG: { id: ChainId; display: string; kind: "dev" | "evm"; tokens
   { id: "ethereum-base", display: "Base", kind: "evm", tokens: [USDC_BASE, ETH_NATIVE] },
   { id: "ethereum-mainnet", display: "Ethereum mainnet", kind: "evm", tokens: [USDC_ETHEREUM_MAINNET, ETH_NATIVE] },
   { id: "ethereum-arbitrum", display: "Arbitrum One", kind: "evm", tokens: [ETH_NATIVE] },
-  { id: "ethereum-sepolia", display: "Sepolia testnet", kind: "evm", tokens: [ETH_NATIVE] },
+  { id: "ethereum-sepolia", display: "Sepolia testnet", kind: "evm", tokens: [USDC_SEPOLIA, ETH_NATIVE] },
 ];
 
 /* ---------------------------------------------------------------------------

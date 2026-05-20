@@ -32,7 +32,8 @@ console.log(
 const any = chains.some((c) => c.ready);
 if (!any) {
   console.log("\nNo vault deployed in env — use Dev / Play Money or run:");
-  console.log("  .\\scripts\\deploy-casino-vault.ps1 -RpcUrl https://sepolia.base.org");
+  console.log("  .\\scripts\\deploy-casino-vault.ps1");
+  console.log("  .\\scripts\\configure-casino-vault.ps1  # ALLOW_TOKEN=0x1c7D4B196Cb0C7B29D5Daedb9e2cCeDaD4d5D4f4");
   console.log("Then set NEXT_PUBLIC_CASINO_VAULT_ETHEREUM_SEPOLIA and CASINO_OPERATOR_KEY.");
 } else {
   console.log("\nAt least one chain has NEXT_PUBLIC_CASINO_VAULT_* set.");

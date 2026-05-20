@@ -62,6 +62,15 @@ export const USDC_BASE: TokenSpec = {
   coingeckoId: "usd-coin",
 };
 
+/** Circle test USDC on Ethereum Sepolia. */
+export const USDC_SEPOLIA: TokenSpec = {
+  symbol: "USDC",
+  display: "USD Coin (Sepolia)",
+  decimals: 6,
+  address: "0x1c7D4B196Cb0C7B29D5Daedb9e2cCeDaD4d5D4f4",
+  isNative: false,
+};
+
 /** Native ETH on Ethereum mainnet. Represented as the zero address. */
 export const ETH_NATIVE: TokenSpec = {
   symbol: "ETH",
@@ -416,7 +425,7 @@ export function makeEthereumAdapter(chainId: EthereumAdapterConfig["chainId"]): 
       display: "Sepolia (testnet)",
       vaultAddress: "0x0000000000000000000000000000000000000000",
       rpcUrl: "https://rpc.sepolia.org",
-      supportedTokens: [ETH_NATIVE],
+      supportedTokens: [USDC_SEPOLIA, ETH_NATIVE],
     },
   };
   const preset = presets[chainId];
