@@ -27,6 +27,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { CasinoShell } from "../casino-shell";
 import { useWallet } from "@/lib/wallet-context";
 import {
   CHAIN_ADAPTERS,
@@ -209,40 +210,12 @@ export default function WalletContent() {
   /* =================== render =================== */
 
   return (
-    <div className="min-h-[calc(100vh-56px)] w-full bg-[#08090e] text-white">
-      <header className="border-b border-white/[0.06] bg-gradient-to-b from-emerald-900/30 via-[#08090e] to-[#08090e]">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 pt-12 pb-8">
-          <div className="text-[10px] uppercase tracking-[0.15em] text-emerald-300/60 mb-2">
-            Casino · On-chain wallet
-          </div>
-          <h1 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight">
-            Deposit, withdraw, audit<span className="text-emerald-400">.</span>
-          </h1>
-          <p className="mt-3 max-w-2xl text-white/60 leading-relaxed">
-            Move tokens between your wallet and the casino vault. Deposits
-            are two-tx (approve + deposit) ERC-20 transfers into{" "}
-            <code className="text-emerald-300">CasinoVault.sol</code>.
-            Withdrawals require an EIP-712 voucher from the operator — the
-            contract verifies the signature on-chain and pays you out.
-          </p>
-          <div className="mt-4 flex gap-3">
-            <Link
-              href="/casino"
-              className="text-emerald-300 hover:text-emerald-200 underline-offset-2 hover:underline text-sm"
-            >
-              ← back to casino
-            </Link>
-            <Link
-              href="/casino/verify"
-              className="text-white/40 hover:text-white/80 underline-offset-2 hover:underline text-sm"
-            >
-              verify any hand
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 space-y-6">
+    <CasinoShell
+      badge="On-chain vault"
+      title="Wallet"
+      subtitle="Deposit and withdraw against CasinoVault.sol — EIP-712 withdrawals, explorer-linked history."
+    >
+      <div className="space-y-6">
         {/* ───── Cloud sync banner ───── */}
         <CloudSyncBanner signedIn={!!wallet.user} />
 
@@ -391,7 +364,7 @@ export default function WalletContent() {
           <HistoryPanel history={history} adapter={adapter} />
         )}
       </div>
-    </div>
+    </CasinoShell>
   );
 }
 

@@ -19,6 +19,7 @@ const SECTIONS = [
   { id: "plinko", label: "Plinko" },
   { id: "mines", label: "Mines" },
   { id: "hilo", label: "HiLo" },
+  { id: "poker", label: "Poker" },
 ] as const;
 
 export default function DocsContent() {
@@ -141,6 +142,7 @@ export default function DocsContent() {
                       ["hilo", "99.00%", "1.00%"],
                       ["roulette", "97.30%", "2.70%"],
                       ["slots", "≈96%", "≈4%"],
+                      ["poker", "skill", "1% rake"],
                     ] as const
                   ).map(([g, rtp, edge]) => (
                     <tr key={g} className="border-b border-white/[0.04]">
@@ -201,6 +203,14 @@ export default function DocsContent() {
           <GameDoc id="hilo" title="HiLo" rtp="99.00%" rules={[
             "13-rank deck; guess higher-or-same / lower-or-same vs current card.",
             "Multipliers compound with 1% edge per step; cash out between rounds.",
+          ]} />
+
+          <GameDoc id="poker" title="Poker (6-Max Hold'em)" rtp="skill-based" rules={[
+            "You (seat 0) vs five AI opponents at a single table.",
+            "No-limit style betting: fold, check, call, raise (min-raise = big blind).",
+            "Blinds scale with buy-in (BB ≈ buy-in / 50). 1% rake taken from contested pots at showdown.",
+            "Full deck order + every action logged — replay in /casino/verify after seed reveal.",
+            "True peer-to-peer multiplayer (Supabase realtime) ships in a future update; bots mirror live rake math today.",
           ]} />
         </div>
       </div>

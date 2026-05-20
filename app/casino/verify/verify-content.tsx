@@ -20,7 +20,7 @@
  * ========================================================================= */
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { CasinoShell } from "../casino-shell";
 import {
   blackjackGame,
   cardLabel,
@@ -30,6 +30,7 @@ import {
   describePlacement,
   diceGame,
   hiloGame,
+  pokerGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -47,6 +48,8 @@ import {
   type GameId,
   type HiloAction,
   type HiloState,
+  type PokerAction,
+  type PokerState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -73,6 +76,7 @@ const SUPPORTED_GAMES: { id: GameId; label: string }[] = [
   { id: "plinko", label: "Plinko" },
   { id: "mines", label: "Mines" },
   { id: "hilo", label: "HiLo" },
+  { id: "poker", label: "Poker" },
 ];
 
 type AnyAction =
@@ -84,7 +88,8 @@ type AnyAction =
   | CrashAction
   | PlinkoAction
   | MinesAction
-  | HiloAction;
+  | HiloAction
+  | PokerAction;
 type AnyState =
   | BlackjackState
   | CoinflipState
@@ -94,7 +99,8 @@ type AnyState =
   | CrashState
   | PlinkoState
   | MinesState
-  | HiloState;
+  | HiloState
+  | PokerState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -278,30 +284,12 @@ export default function VerifyContent() {
     result.outcome.stepMatches.every(Boolean);
 
   return (
-    <div className="min-h-[calc(100vh-56px)] w-full bg-[#08090e] text-white">
-      <header className="border-b border-white/[0.06] bg-gradient-to-b from-emerald-900/30 via-[#08090e] to-[#08090e]">
-        <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-12 pb-8">
-          <div className="text-[10px] uppercase tracking-[0.15em] text-emerald-300/60 mb-2">
-            Casino · Provable fairness
-          </div>
-          <h1 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight">
-            Verify any hand<span className="text-emerald-400">.</span>
-          </h1>
-          <p className="mt-3 max-w-2xl text-white/60 leading-relaxed">
-            Paste a settled session and the revealed server seed below. Your
-            browser will re-derive every card, every roll, every coinflip
-            byte using HMAC-SHA256 — locally, with zero trust in this site.
-            If the math doesn&apos;t check out, the house cheated.
-          </p>
-          <div className="mt-4">
-            <Link href="/casino" className="text-emerald-300 hover:text-emerald-200 underline-offset-2 hover:underline text-sm">
-              ← back to casino
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto px-5 sm:px-8 py-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <CasinoShell
+      badge="Provable fairness"
+      title="Verify any hand"
+      subtitle="Paste a settled session and the revealed server seed. Your browser re-derives every outcome with HMAC-SHA256 — locally, with zero trust in this site."
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Inputs */}
         <section className={card + " p-6 space-y-4"}>
           <h2 className="text-lg font-semibold">Inputs</h2>
@@ -405,10 +393,7 @@ export default function VerifyContent() {
           )}
         </section>
       </div>
-
-      {/* Supported games footer */}
-      <div className="max-w-5xl mx-auto px-5 sm:px-8 pb-16">
-        <section className={card + " p-6"}>
+      <section className={card + " p-6 mt-10"}>
           <h2 className="text-lg font-semibold mb-3">Supported games</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {SUPPORTED_GAMES.map((g) => (
@@ -422,8 +407,7 @@ export default function VerifyContent() {
             ))}
           </div>
         </section>
-      </div>
-    </div>
+    </CasinoShell>
   );
 }
 
@@ -442,7 +426,8 @@ function pickGame(id: string):
         | typeof crashGame
         | typeof plinkoGame
         | typeof minesGame
-        | typeof hiloGame;
+        | typeof hiloGame
+        | typeof pokerGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -570,6 +555,23 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "poker") {
+    return {
+      module: pokerGame,
+      renderState: (raw: unknown) => {
+        const s = raw as PokerState;
+        return [
+          { label: "Phase", value: s.phase },
+          { label: "Pot", value: String(s.pot) },
+          { label: "Community", value: s.community.map(cardLabel).join(" ") || "—" },
+          ...s.players.map((p) => ({
+            label: p.name,
+            value: `${p.hole.map(cardLabel).join(" ")} · stack ${p.stack}`,
+          })),
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -676,6 +678,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
     return {
       houseEdgeBps: hs.config.houseEdgeBps,
     } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "poker") {
+    const ps = s as PokerState;
+    return { bigBlind: ps.config.bigBlind, rakeBps: ps.config.rakeBps } as unknown as Record<string, unknown>;
   }
   return {};
 }

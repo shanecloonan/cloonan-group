@@ -110,6 +110,7 @@ const CrashTable = dynamic(() => import("./crash-table"), { ssr: false });
 const PlinkoTable = dynamic(() => import("./plinko-table"), { ssr: false });
 const MinesTable = dynamic(() => import("./mines-table"), { ssr: false });
 const HiloTable = dynamic(() => import("./hilo-table"), { ssr: false });
+const PokerTable = dynamic(() => import("./poker-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -228,10 +229,10 @@ const GAME_CATALOG: GameTile[] = [
   {
     id: "poker",
     title: "Poker",
-    subtitle: "Multiplayer · rake · anti-collusion",
-    rtp: "house rake",
-    status: "soon",
-    phase: "Phase 4.9",
+    subtitle: "6-max Hold'em · you vs five bots · 1% rake",
+    rtp: "skill + rake",
+    status: "live",
+    phase: "Phase 5",
     emoji: "♥",
   },
 ];
@@ -359,6 +360,9 @@ export default function CasinoContent() {
           {tab === "hilo" && (
             <HiloTable chainId={chainId} token={token} adapter={adapter} />
           )}
+          {tab === "poker" && (
+            <PokerTable chainId={chainId} token={token} adapter={adapter} />
+          )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
         </div>
@@ -371,7 +375,7 @@ function LobbyHero() {
   return (
     <div className="-mt-6 mb-2 pb-6 border-b border-white/[0.05]">
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <span className={pillLive}>Live · 9 games</span>
+        <span className={pillLive}>Live · 10 games</span>
         <span className={pillGold}>Provably fair</span>
         <SyncStatusPill />
       </div>

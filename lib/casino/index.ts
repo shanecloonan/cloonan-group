@@ -22,6 +22,8 @@ export * from "./crash";
 export * from "./plinko";
 export * from "./mines";
 export * from "./hilo";
+export * from "./poker";
+export * from "./poker-hands";
 export * from "./balance";
 export * from "./chain-adapter";
 export * from "./ethereum-adapter";
