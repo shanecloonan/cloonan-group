@@ -14,6 +14,7 @@ import {
   humanCount,
   type PokerRoomRow,
 } from "@/lib/casino/poker-multiplayer";
+import { PokerOvalTable } from "./poker-table-visual";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
 
 function humanToUnits(amount: number, token: TokenSpec): bigint {
@@ -174,7 +175,17 @@ export function PokerMultiplayerPanel({
           </div>
         </>
       ) : (
-        <div className={card + " p-4 space-y-3"}>
+        <div className="space-y-4">
+          <div className={card + " p-3 sm:p-4 overflow-hidden"}>
+            {state && active.status !== "waiting" ? (
+              <PokerOvalTable state={state} token={token} mySeat={mySeat} />
+            ) : (
+              <div className="py-16 text-center text-sm text-white/45">
+                Waiting for host to deal…
+              </div>
+            )}
+          </div>
+          <div className={card + " p-4 space-y-3"}>
           <div className="flex justify-between items-center">
             <div>
               <div className="text-lg font-mono text-amber-200">{active.room_code}</div>
@@ -208,10 +219,11 @@ export function PokerMultiplayerPanel({
             </div>
           )}
           {state && (
-            <p className="text-xs text-white/50">
-              {state.message} · pot {state.pot.toString()} · phase {state.phase}
+            <p className="text-xs text-white/50 border-t border-white/[0.06] pt-3">
+              {state.message}
             </p>
           )}
+          </div>
         </div>
       )}
     </div>

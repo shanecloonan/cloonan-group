@@ -655,24 +655,24 @@ function RouletteMobileLayout({
         ))}
       </div>
       <div className="grid grid-cols-3 gap-1.5">
-        <OutsideCell label="1st 12" stake={placements["dozen_1"] as bigint | undefined} onClick={() => onClick("dozen_1")} onRightClick={() => onRightClick("dozen_1")} disabled={disabled} chip={chip} token={token} />
-        <OutsideCell label="2nd 12" stake={placements["dozen_2"] as bigint | undefined} onClick={() => onClick("dozen_2")} onRightClick={() => onRightClick("dozen_2")} disabled={disabled} chip={chip} token={token} />
-        <OutsideCell label="3rd 12" stake={placements["dozen_3"] as bigint | undefined} onClick={() => onClick("dozen_3")} onRightClick={() => onRightClick("dozen_3")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact label="1st 12" stake={placements["dozen_1"] as bigint | undefined} onClick={() => onClick("dozen_1")} onRightClick={() => onRightClick("dozen_1")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact label="2nd 12" stake={placements["dozen_2"] as bigint | undefined} onClick={() => onClick("dozen_2")} onRightClick={() => onRightClick("dozen_2")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact label="3rd 12" stake={placements["dozen_3"] as bigint | undefined} onClick={() => onClick("dozen_3")} onRightClick={() => onRightClick("dozen_3")} disabled={disabled} chip={chip} token={token} />
       </div>
       <div className="grid grid-cols-3 gap-1.5">
-        <OutsideCell label="1-18" stake={placements["low"] as bigint | undefined} onClick={() => onClick("low")} onRightClick={() => onRightClick("low")} disabled={disabled} chip={chip} token={token} />
-        <OutsideCell label="EVEN" stake={placements["even"] as bigint | undefined} onClick={() => onClick("even")} onRightClick={() => onRightClick("even")} disabled={disabled} chip={chip} token={token} />
-        <OutsideCell label="ODD" stake={placements["odd"] as bigint | undefined} onClick={() => onClick("odd")} onRightClick={() => onRightClick("odd")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact label="1-18" stake={placements["low"] as bigint | undefined} onClick={() => onClick("low")} onRightClick={() => onRightClick("low")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact label="EVEN" stake={placements["even"] as bigint | undefined} onClick={() => onClick("even")} onRightClick={() => onRightClick("even")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact label="ODD" stake={placements["odd"] as bigint | undefined} onClick={() => onClick("odd")} onRightClick={() => onRightClick("odd")} disabled={disabled} chip={chip} token={token} />
       </div>
       <div className="grid grid-cols-3 gap-1.5">
-        <OutsideCell label="RED" stake={placements["red"] as bigint | undefined} onClick={() => onClick("red")} onRightClick={() => onRightClick("red")} disabled={disabled} chip={chip} token={token} accent="red" />
-        <OutsideCell label="BLK" stake={placements["black"] as bigint | undefined} onClick={() => onClick("black")} onRightClick={() => onRightClick("black")} disabled={disabled} chip={chip} token={token} accent="black" />
-        <OutsideCell label="19-36" stake={placements["high"] as bigint | undefined} onClick={() => onClick("high")} onRightClick={() => onRightClick("high")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact label="RED" stake={placements["red"] as bigint | undefined} onClick={() => onClick("red")} onRightClick={() => onRightClick("red")} disabled={disabled} chip={chip} token={token} accent="red" />
+        <OutsideCell compact label="BLK" stake={placements["black"] as bigint | undefined} onClick={() => onClick("black")} onRightClick={() => onRightClick("black")} disabled={disabled} chip={chip} token={token} accent="black" />
+        <OutsideCell compact label="19-36" stake={placements["high"] as bigint | undefined} onClick={() => onClick("high")} onRightClick={() => onRightClick("high")} disabled={disabled} chip={chip} token={token} />
       </div>
       <div className="grid grid-cols-3 gap-1.5">
-        <OutsideCell label="Col 1" stake={placements["column_1"] as bigint | undefined} onClick={() => onClick("column_1")} onRightClick={() => onRightClick("column_1")} disabled={disabled} chip={chip} token={token} small />
-        <OutsideCell label="Col 2" stake={placements["column_2"] as bigint | undefined} onClick={() => onClick("column_2")} onRightClick={() => onRightClick("column_2")} disabled={disabled} chip={chip} token={token} small />
-        <OutsideCell label="Col 3" stake={placements["column_3"] as bigint | undefined} onClick={() => onClick("column_3")} onRightClick={() => onRightClick("column_3")} disabled={disabled} chip={chip} token={token} small />
+        <OutsideCell compact small label="Col 1" stake={placements["column_1"] as bigint | undefined} onClick={() => onClick("column_1")} onRightClick={() => onRightClick("column_1")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact small label="Col 2" stake={placements["column_2"] as bigint | undefined} onClick={() => onClick("column_2")} onRightClick={() => onRightClick("column_2")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell compact small label="Col 3" stake={placements["column_3"] as bigint | undefined} onClick={() => onClick("column_3")} onRightClick={() => onRightClick("column_3")} disabled={disabled} chip={chip} token={token} />
       </div>
     </div>
   );
@@ -731,7 +731,7 @@ function NumberCell({
       title={`Tap: place ${chip} ${token.symbol} · hold / right-click: remove`}
     >
       {number}
-      {has && <ChipBadge stake={stake!} token={token} />}
+      {has && <ChipBadge stake={stake!} token={token} compact={compact} />}
     </button>
   );
 }
@@ -746,6 +746,7 @@ function OutsideCell({
   token,
   small,
   accent,
+  compact,
 }: {
   label: string;
   stake?: bigint;
@@ -756,6 +757,7 @@ function OutsideCell({
   token: TokenSpec;
   small?: boolean;
   accent?: "red" | "black";
+  compact?: boolean;
 }) {
   const has = stake !== undefined && stake > 0n;
   const longPress = useLongPress(onRightClick);
@@ -783,15 +785,20 @@ function OutsideCell({
       title={`Tap: place ${chip} ${token.symbol} · hold / right-click: remove`}
     >
       {label}
-      {has && <ChipBadge stake={stake!} token={token} />}
+      {has && <ChipBadge stake={stake!} token={token} compact={compact} />}
     </button>
   );
 }
 
-function ChipBadge({ stake, token }: { stake: bigint; token: TokenSpec }) {
+function ChipBadge({ stake, token, compact }: { stake: bigint; token: TokenSpec; compact?: boolean }) {
   const human = unitsToHuman(stake, token);
   return (
-    <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-amber-400 border border-amber-200 sm:border-2 text-amber-950 text-[8px] sm:text-[10px] font-bold flex items-center justify-center shadow-md">
+    <span
+      className={
+        "absolute z-10 rounded-full bg-amber-400 border-2 border-amber-100 text-amber-950 font-bold flex items-center justify-center shadow-md pointer-events-none " +
+        (compact ? " -top-1 -right-1 w-4 h-4 text-[7px]" : " -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 w-5 h-5 sm:w-6 sm:h-6 text-[8px] sm:text-[10px]")
+      }
+    >
       {human < 1000 ? human : `${(human / 1000).toFixed(human < 10000 ? 1 : 0)}k`}
     </span>
   );

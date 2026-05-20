@@ -45,7 +45,7 @@ export function CasinoShell({
               <span className={pillGold + " hidden sm:inline-flex"}>Private</span>
             </Link>
 
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-0.5 overflow-x-auto max-w-[min(52vw,520px)] scrollbar-none">
               {MAIN_NAV.map((item) => {
                 const active = item.match(pathname);
                 return (

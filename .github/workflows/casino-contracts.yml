@@ -1,0 +1,34 @@
+name: Casino contracts
+
+on:
+  push:
+    paths:
+      - "infra/contracts/ethereum/**"
+      - ".github/workflows/casino-contracts.yml"
+  pull_request:
+    paths:
+      - "infra/contracts/ethereum/**"
+
+jobs:
+  foundry:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/contracts/ethereum
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install dependencies
+        run: |
+          forge install foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts --no-commit
+
+      - name: Build
+        run: forge build
+
+      - name: Test
+        run: forge test -vv

@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState } from "react";
 import {
-  cardLabel,
   HUMAN_SEAT,
   newSessionId,
   pickBotAction,
@@ -18,6 +17,7 @@ import {
 import { useCasino } from "./casino-context";
 import { ShareLinkRow } from "./share-link";
 import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
+import { PokerOvalTable } from "./poker-table-visual";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
 
@@ -41,15 +41,6 @@ function humanToUnits(amount: number, token: TokenSpec): bigint {
 function fmt(units: bigint, token: TokenSpec): string {
   return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${token.symbol}`;
 }
-
-const SEAT_POS = [
-  "bottom-4 left-1/2 -translate-x-1/2",
-  "bottom-[28%] right-4",
-  "top-1/2 right-2 -translate-y-1/2",
-  "top-8 right-[22%]",
-  "top-8 left-[22%]",
-  "bottom-[28%] left-4",
-];
 
 export default function PokerTable({ chainId, token }: Props) {
   const {
@@ -234,30 +225,10 @@ export default function PokerTable({ chainId, token }: Props) {
           <PokerMultiplayerPanel chainId={chainId} token={token} buyInHuman={buyIn} />
         </section>
       ) : (
-      <section className={card + " relative min-h-[520px] p-4 overflow-hidden"}>
-        <div className="absolute inset-4 rounded-[50%] border-2 border-emerald-900/60 bg-gradient-to-b from-emerald-950/80 to-[#06070c] shadow-[inset_0_0_80px_rgba(16,185,129,0.15)]" />
-
-        {st && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2 z-10">
-            {st.community.map((c, i) => (
-              <CardFace key={i} card={c} />
-            ))}
-            {st.community.length === 0 && (
-              <span className="text-white/25 text-xs uppercase tracking-widest">Community</span>
-            )}
-          </div>
-        )}
-
-        {st?.players.map((p, i) => (
-          <div key={p.seat} className={"absolute z-10 " + SEAT_POS[i]}>
-            <SeatPanel
-              player={p}
-              token={token}
-              active={st.activeSeat === p.seat}
-              showCards={p.isHuman || st.phase === "complete" || st.phase === "showdown"}
-            />
-          </div>
-        ))}
+      <section className={card + " relative p-3 sm:p-4 overflow-hidden"}>
+        {st ? (
+          <PokerOvalTable state={st} token={token} mySeat={HUMAN_SEAT} />
+        ) : null}
 
         {!session && (
           <div className="relative z-20 flex flex-col items-center justify-center min-h-[480px] gap-4">
@@ -346,63 +317,6 @@ export default function PokerTable({ chainId, token }: Props) {
 
       {error && (
         <p className="text-sm text-rose-300 border border-rose-500/30 rounded-lg px-4 py-2 bg-rose-500/10">{error}</p>
-      )}
-    </div>
-  );
-}
-
-function CardFace({ card }: { card: { rank: string; suit: string } }) {
-  const red = card.suit === "♥" || card.suit === "♦";
-  return (
-    <div
-      className={
-        "w-11 h-16 sm:w-14 sm:h-20 rounded-lg border flex flex-col items-center justify-center font-bold shadow-lg " +
-        (red ? "bg-rose-950/80 border-rose-500/40 text-rose-100" : "bg-slate-900/90 border-white/20 text-white")
-      }
-    >
-      <span className="text-sm sm:text-base">{card.rank}</span>
-      <span className="text-lg sm:text-xl">{card.suit}</span>
-    </div>
-  );
-}
-
-function SeatPanel({
-  player,
-  token,
-  active,
-  showCards,
-}: {
-  player: PokerState["players"][0];
-  token: TokenSpec;
-  active: boolean;
-  showCards: boolean;
-}) {
-  return (
-    <div
-      className={
-        "rounded-xl px-3 py-2 min-w-[100px] border text-center transition-all " +
-        (active
-          ? "border-amber-400/60 bg-amber-500/15 shadow-[0_0_24px_rgba(245,158,11,0.2)]"
-          : "border-white/10 bg-black/50")
-      }
-    >
-      <div className="text-[11px] font-semibold text-white/90">{player.name}</div>
-      <div className="text-[10px] font-mono text-emerald-300/90">{Number(player.stack) > 0 ? "" : "—"}</div>
-      {player.folded && <div className="text-[10px] text-rose-300">Folded</div>}
-      {showCards && player.hole.length === 2 && (
-        <div className="flex gap-1 justify-center mt-1">
-          {player.hole.map((c, i) => (
-            <span key={i} className="text-[10px] font-mono bg-white/10 px-1 rounded">
-              {cardLabel(c)}
-            </span>
-          ))}
-        </div>
-      )}
-      {!showCards && !player.folded && (
-        <div className="flex gap-0.5 justify-center mt-1">
-          <span className="w-6 h-8 rounded bg-amber-900/40 border border-amber-600/30" />
-          <span className="w-6 h-8 rounded bg-amber-900/40 border border-amber-600/30" />
-        </div>
       )}
     </div>
   );

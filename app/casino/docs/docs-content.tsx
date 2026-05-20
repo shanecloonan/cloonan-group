@@ -235,7 +235,7 @@ export default function DocsContent() {
             "No-limit style betting: fold, check, call, raise (min-raise = big blind).",
             "Blinds scale with buy-in (BB ≈ buy-in / 50). 1% rake taken from contested pots at showdown.",
             "Full deck order + every action logged — replay in /casino/verify after seed reveal.",
-            "Multiplayer lobby: host/join tables via Supabase Realtime (beta). Solo mode uses five bots with the same rake math.",
+            "Multiplayer lobby: host/join tables via Supabase Realtime (beta) with shared oval table UI. Solo mode uses five bots with the same rake math.",
           ]} />
         </div>
       </div>
