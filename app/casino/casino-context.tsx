@@ -27,7 +27,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import {
   buildAuthSessionDriver,
   buildAnonymousSessionDriver,
-  cryptoRandomId,
   type BuiltSessionDriver,
   type ChainId,
   type Ledger,
@@ -35,7 +34,15 @@ import {
   type Session,
   type TokenSpec,
 } from "@/lib/casino";
+import {
+  GUEST_STARTING_UNITS,
+  getOrCreateGuestProfile,
+  markGuestStartingBalanceGranted,
+  rerollGuestDisplayName,
+  type GuestProfile,
+} from "@/lib/casino/guest-play";
 import { useWallet } from "@/lib/wallet-context";
+import { PlayMoneyBar } from "./play-money-bar";
 
 /* ---------------------------------------------------------------------------
  *  Types
@@ -85,8 +92,15 @@ export interface CasinoContextValue {
   history: CasinoHistoryEntry[];
   /** Append a freshly-settled session to the cross-game history. */
   pushHistory: (entry: Omit<CasinoHistoryEntry, "at">) => void;
-  /** Credit fictional play money (dev mode only). */
+  /** Credit fictional play money (dev-mock chain only). */
   depositPlayMoney: (amount: bigint) => Promise<void>;
+  /** Guest free-play (dev-mock): random username, chip buttons, no sign-in. */
+  playMoney: {
+    enabled: boolean;
+    displayName: string;
+    rerollDisplayName: () => void;
+    addChips: (amount: bigint) => Promise<void>;
+  };
   /** Lifetime aggregate stats for the in-memory dev session. */
   stats: {
     sessionsPlayed: number;
@@ -146,33 +160,39 @@ export function CasinoProvider({
   children: React.ReactNode;
 }) {
   const { user } = useWallet();
-  // Stable per-tab synthetic userId for the in-memory ledger when no
-  // Supabase user is signed in. Otherwise the real auth UUID is used.
-  const anonUserId = useMemo(() => `dev-${cryptoRandomId()}`, []);
-  const userId = user?.id ?? anonUserId;
+  const isPlayMoney = chainId === "dev-mock";
 
-  // Rebuild the driver whenever (auth user, chain, token) changes. Switching
-  // chain/token swaps environment, signing in switches to Supabase-backed
-  // persistence, signing out drops back to in-memory play money.
-  const built = useMemo<BuiltSessionDriver>(
-    () => {
-      if (user?.id) {
-        return buildAuthSessionDriver({
-          userId: user.id,
-          chainId,
-          token,
-        });
-      }
+  const [guestProfile, setGuestProfile] = useState<GuestProfile | null>(null);
+  useEffect(() => {
+    setGuestProfile(getOrCreateGuestProfile());
+  }, []);
+
+  // Play money always uses the guest ledger (even if signed in). Real chains use auth.
+  const userId = isPlayMoney
+    ? (guestProfile?.guestId ?? "guest-loading")
+    : (user?.id ?? guestProfile?.guestId ?? "guest-loading");
+
+  const built = useMemo<BuiltSessionDriver>(() => {
+    if (isPlayMoney && guestProfile) {
       return buildAnonymousSessionDriver({
-        defaultUserId: anonUserId,
+        defaultUserId: guestProfile.guestId,
         defaultChainId: chainId,
         defaultToken: token,
-        seedInitialBalance: 10_000n * 10n ** BigInt(token.decimals),
       });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user?.id, chainId, token.symbol, token.address],
-  );
+    }
+    if (user?.id) {
+      return buildAuthSessionDriver({
+        userId: user.id,
+        chainId,
+        token,
+      });
+    }
+    return buildAnonymousSessionDriver({
+      defaultUserId: guestProfile?.guestId ?? "guest-anon",
+      defaultChainId: chainId,
+      defaultToken: token,
+    });
+  }, [isPlayMoney, guestProfile?.guestId, user?.id, chainId, token.symbol, token.address]);
   const { driver, ledger, getSeedPair, rotateSeed: rawRotate, persistent, reloadSeedPair } = built;
 
   const [balance, setBalance] = useState<{ available: bigint; locked: bigint }>({
@@ -252,20 +272,64 @@ export function CasinoProvider({
   }, [rawRotate]);
   const dismissRevealedSeed = useCallback(() => setLastRevealedSeed(null), []);
 
-  const depositPlayMoney = useCallback(
-    async (amount: bigint) => {
-      if (persistent) {
-        // For authed users the only legitimate credit path is on-chain
-        // deposits → /casino/wallet → operator credit. Refuse to mint
-        // "free" play money against the real ledger.
-        throw new Error(
-          "Play money is disabled for signed-in accounts. Use /casino/wallet to deposit on-chain.",
-        );
+  // Fresh in-memory ledger each load — auto-credit when broke so guests never get stuck.
+  useEffect(() => {
+    if (!isPlayMoney || !guestProfile) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const b = await ledger.getBalance(userId, chainId, token);
+        if (cancelled) return;
+        if (b.available === 0n && b.locked === 0n) {
+          await ledger.credit({
+            userId,
+            chainId,
+            token,
+            delta: GUEST_STARTING_UNITS,
+            reason: "deposit",
+          });
+          if (!guestProfile.startingBalanceGranted) {
+            markGuestStartingBalanceGranted();
+            setGuestProfile((p) => (p ? { ...p, startingBalanceGranted: true } : p));
+          }
+          await refreshBalance();
+        }
+      } catch {
+        /* ignore */
       }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPlayMoney, guestProfile?.guestId, ledger, userId, chainId, token, refreshBalance, guestProfile?.startingBalanceGranted]);
+
+  const addChips = useCallback(
+    async (amount: bigint) => {
+      if (!isPlayMoney) {
+        throw new Error("Free chips are only available on Dev / Play Money.");
+      }
+      if (amount <= 0n) return;
       await ledger.credit({ userId, chainId, token, delta: amount, reason: "deposit" });
       await refreshBalance();
     },
-    [persistent, ledger, userId, chainId, token, refreshBalance],
+    [isPlayMoney, ledger, userId, chainId, token, refreshBalance],
+  );
+
+  const depositPlayMoney = addChips;
+
+  const rerollDisplayName = useCallback(() => {
+    const next = rerollGuestDisplayName();
+    setGuestProfile(next);
+  }, []);
+
+  const playMoney = useMemo(
+    () => ({
+      enabled: isPlayMoney && !!guestProfile,
+      displayName: guestProfile?.displayName ?? "Guest",
+      rerollDisplayName,
+      addChips,
+    }),
+    [isPlayMoney, guestProfile, rerollDisplayName, addChips],
   );
 
   // Lifetime aggregates derived from in-memory history.
@@ -304,12 +368,18 @@ export function CasinoProvider({
       history,
       pushHistory,
       depositPlayMoney,
+      playMoney,
       stats,
       lastRevealedSeed,
       dismissRevealedSeed,
     }),
-    [chainId, token, driver, ledger, userId, persistent, getSeedPair, rotateSeed, balance, refreshBalance, history, pushHistory, depositPlayMoney, stats, lastRevealedSeed, dismissRevealedSeed],
+    [chainId, token, driver, ledger, userId, persistent, getSeedPair, rotateSeed, balance, refreshBalance, history, pushHistory, depositPlayMoney, playMoney, stats, lastRevealedSeed, dismissRevealedSeed],
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      <PlayMoneyBar />
+    </Ctx.Provider>
+  );
 }

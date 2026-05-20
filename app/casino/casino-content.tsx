@@ -259,7 +259,7 @@ const CHAIN_TILES: ChainTile[] = [
     tag: "DEV",
     status: "live",
     phase: "Phase 0",
-    blurb: "Closed in-browser ledger. Instant deposits, no RPC. Perfect for learning rules.",
+    blurb: "Free chips, random guest name, no sign-up. Instant refills via the chip bar.",
     bestFor: "Learning the game · UI development · zero-stakes fun",
     tokens: [DEV_TOKEN],
   },
@@ -372,16 +372,28 @@ export default function CasinoContent() {
 }
 
 function LobbyHero() {
+  const { playMoney, chainId } = useCasino();
   return (
     <div className="-mt-6 mb-2 pb-6 border-b border-white/[0.05]">
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <span className={pillLive}>Live · 10 games</span>
         <span className={pillGold}>Provably fair</span>
+        {playMoney.enabled && (
+          <span className="inline-flex h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider border border-emerald-400/35 text-emerald-200 bg-emerald-500/10">
+            Free play — no sign-up
+          </span>
+        )}
         <SyncStatusPill />
       </div>
+      {playMoney.enabled && (
+        <p className="text-amber-100/90 text-sm font-medium mb-2">
+          You&apos;re playing as <span className="font-mono text-amber-300">{playMoney.displayName}</span>
+          {chainId === "dev-mock" && " · use the chip bar below for instant refills"}
+        </p>
+      )}
       <p className="max-w-2xl text-white/55 text-sm leading-relaxed">
-        High-stakes crypto casino — every outcome verifiable, every session auditable. Pick a chain, choose a
-        table, or open{" "}
+        High-stakes crypto casino — every outcome verifiable, every session auditable. Start on{" "}
+        <strong className="text-white/80">Dev / Play Money</strong> with a random guest name (no account), or open{" "}
         <Link href="/casino/docs" className="text-amber-300 hover:underline">
           docs
         </Link>{" "}
@@ -414,7 +426,7 @@ function Lobby({
   onOpenGame,
 }: LobbyProps) {
   const currentTile = CHAIN_TILES.find((c) => c.id === chainId);
-  const { balance, stats, history, depositPlayMoney } = useCasino();
+  const { balance, stats, history } = useCasino();
 
   const fmtMoney = (units: bigint, digits = 2): string => {
     const denom = 10n ** BigInt(token.decimals);
@@ -454,21 +466,13 @@ function Lobby({
           />
         </div>
         {chainId === "dev-mock" && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-white/[0.06]">
-            <span className="text-[11px] text-white/40">
-              Play money for development. Want to deposit real funds?{" "}
-              <Link href="/casino/wallet" className="text-emerald-300 hover:text-emerald-200 underline-offset-2 hover:underline">
-                Open wallet →
-              </Link>
-            </span>
-            <button
-              type="button"
-              onClick={() => depositPlayMoney(10_000n * 10n ** BigInt(token.decimals))}
-              className="h-8 px-3 rounded-lg text-xs font-semibold bg-white/[0.06] border border-white/[0.08] text-emerald-200 hover:text-emerald-100 hover:bg-white/[0.1] cursor-pointer transition-all"
-            >
-              + 10,000 {token.symbol}
-            </button>
-          </div>
+          <p className="mt-4 pt-4 border-t border-white/[0.06] text-[11px] text-white/40">
+            Need more chips? Use the gold bar at the bottom (+10K / +100K / +1M). Real funds:{" "}
+            <Link href="/casino/wallet" className="text-amber-300 hover:underline">
+              Vault
+            </Link>
+            .
+          </p>
         )}
       </section>
 

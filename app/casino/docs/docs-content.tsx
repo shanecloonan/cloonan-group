@@ -62,8 +62,9 @@ export default function DocsContent() {
             <p>
               MoneyFund Casino runs ten live games on a shared engine: deterministic rules in{" "}
               <code className="text-amber-200/90">lib/casino/</code>, session audit logs, and HMAC-SHA256
-              commit-reveal randomness. Dev-money mode uses an in-browser ledger; signed-in users sync to
-              Supabase. On-chain settlement via <code className="text-amber-200/90">CasinoVault.sol</code> is
+              commit-reveal randomness. <strong className="text-white">Dev / Play Money</strong> needs no account —
+              you get a random guest name and free chips (+10K / +100K / +1M) from the bottom chip bar. Signed-in users
+              on real chains sync to Supabase. On-chain settlement via <code className="text-amber-200/90">CasinoVault.sol</code> is
               Phase 2 (Base L2 first).
             </p>
             <ul className="list-disc pl-5 space-y-1 mt-3">
