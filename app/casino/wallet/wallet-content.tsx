@@ -33,7 +33,6 @@ import { useWallet } from "@/lib/wallet-context";
 import {
   CHAIN_ADAPTERS,
   ETH_NATIVE,
-  SupabaseLedger,
   USDC_BASE,
   USDC_ETHEREUM_MAINNET,
   ensureCasinoUserRow,
@@ -403,7 +402,7 @@ function StatusCard({
 /**
  * Tells the user whether their post-deposit casino balance will land in
  * Supabase or stay in their browser. The contract:
- *   • Signed in → on-chain deposit → SupabaseLedger.credit() → balance
+ *   • Signed in → on-chain deposit → POST /api/casino/deposit-credit → balance
  *     follows them across devices, persisted in `casino_balances`.
  *   • Not signed in → on-chain deposit lands in the vault, but the casino
  *     can't credit it to a player ledger until they sign in (since the
@@ -810,7 +809,6 @@ function WithdrawPanel({
     // Lifted out of the try so the catch block can release the casino
     // lock on any failure between lock and burn.
     let casinoLocked = false;
-    const casinoLedger = new SupabaseLedger();
     try {
       if (chainKind === "dev") {
         const fakeHash = `0xdev${Math.floor(Math.random() * 1e16).toString(16).padStart(16, "0")}`;
@@ -850,22 +848,33 @@ function WithdrawPanel({
       // flight. On any subsequent failure we unlock; on finalization we
       // burn. (For anonymous users there's no off-chain balance to lock —
       // the on-chain vault is the only state.)
-      const supabaseUser = wallet.user;
-      if (supabaseUser?.id) {
-        try {
-          await ensureCasinoUserRow(supabaseUser.id);
-          await casinoLedger.lock({
-            userId: supabaseUser.id,
-            chainId,
-            token,
-            delta: amountUnits,
-            reason: "withdraw",
-          });
-          casinoLocked = true;
-        } catch (e) {
-          setError(`Insufficient casino balance: ${(e as Error).message}`);
+      if (wallet.user?.id) {
+        const {
+          data: { session: lockSession },
+        } = await supabase.auth.getSession();
+        const lockJwt = lockSession?.access_token;
+        if (!lockJwt) {
+          setError("Sign in required to withdraw casino balance.");
           return;
         }
+        const lockRes = await fetch("/api/casino/withdraw-lock", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${lockJwt}`,
+          },
+          body: JSON.stringify({
+            chainId,
+            token,
+            amountUnits: amountUnits.toString(),
+          }),
+        });
+        const lockBody = (await lockRes.json()) as { error?: string };
+        if (!lockRes.ok) {
+          setError(`Insufficient casino balance: ${lockBody.error ?? lockRes.statusText}`);
+          return;
+        }
+        casinoLocked = true;
       }
 
       // Step 1 — fetch current user nonce from the contract.
@@ -999,13 +1008,24 @@ function WithdrawPanel({
       // so the user's casino balance is recoverable.
       if (casinoLocked && wallet.user?.id) {
         try {
-          await casinoLedger.unlock({
-            userId: wallet.user.id,
-            chainId,
-            token,
-            delta: amountUnits,
-            reason: "manual_adjustment",
-          });
+          const {
+            data: { session: unlockSession },
+          } = await supabase.auth.getSession();
+          const unlockJwt = unlockSession?.access_token;
+          if (unlockJwt) {
+            await fetch("/api/casino/withdraw-unlock", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${unlockJwt}`,
+              },
+              body: JSON.stringify({
+                chainId,
+                token,
+                amountUnits: amountUnits.toString(),
+              }),
+            });
+          }
         } catch {
           // best-effort
         }

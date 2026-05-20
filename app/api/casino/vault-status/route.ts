@@ -9,6 +9,8 @@ export async function GET() {
   return NextResponse.json({
     anyDeployed: isAnyVaultDeployed(),
     operatorConfigured: !!process.env.CASINO_OPERATOR_KEY,
+    operatorWebhookConfigured: !!process.env.CASINO_OPERATOR_SECRET,
+    serviceRoleConfigured: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     chains,
   });
 }

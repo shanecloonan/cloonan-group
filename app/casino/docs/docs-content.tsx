@@ -170,6 +170,11 @@ export default function DocsContent() {
                 verifies the receipt on-chain and credits the Supabase ledger idempotently by tx hash.
               </li>
               <li>
+                Before submitting a withdraw tx, <code className="text-amber-200/90">POST /api/casino/withdraw-lock</code>{" "}
+                moves available → locked (JWT). On failure, <code className="text-amber-200/90">POST /api/casino/withdraw-unlock</code>{" "}
+                releases the lock.
+              </li>
+              <li>
                 After lock + finalized withdraw tx, <code className="text-amber-200/90">POST /api/casino/withdraw-debit</code>{" "}
                 verifies <code className="text-amber-200/90">Withdrawn</code> on-chain and burns locked balance by tx hash.
               </li>
