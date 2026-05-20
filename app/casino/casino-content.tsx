@@ -265,6 +265,16 @@ const CHAIN_TILES: ChainTile[] = [
     tokens: [DEV_TOKEN],
   },
   {
+    id: "ethereum-sepolia",
+    display: "Sepolia (testnet)",
+    tag: "TEST",
+    status: "queued",
+    phase: "Phase 1",
+    blurb: "ETH vault on Sepolia for deposit/withdraw and settlement smoke tests before mainnet rails go live.",
+    bestFor: "Vault E2E · operator QA · test ETH only",
+    tokens: [ETH_NATIVE],
+  },
+  {
     id: "ethereum-base",
     display: "Base (L2)",
     tag: "ETH",

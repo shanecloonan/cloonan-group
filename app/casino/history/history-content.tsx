@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { fetchPublicBetFeed, type FeedRow } from "@/lib/casino/leaderboard";
+import { fetchPublicBetFeed, subscribePublicBetFeed, type FeedRow } from "@/lib/casino/leaderboard";
 import { buildVerifyLink } from "../share-link";
 import { CasinoFilterPill } from "../casino-filter-pill";
 import { CasinoShell } from "../casino-shell";
@@ -73,6 +73,7 @@ export default function HistoryContent() {
   const [feedOutcomeFilter, setFeedOutcomeFilter] = useState<"all" | "wins" | "losses">("all");
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedLastRefresh, setFeedLastRefresh] = useState<Date | null>(null);
+  const [feedRealtime, setFeedRealtime] = useState(false);
 
   const setView = (next: ActivityView) => {
     router.replace(next === "global" ? "/casino/history?view=global" : "/casino/history");
@@ -92,9 +93,27 @@ export default function HistoryContent() {
 
   useEffect(() => {
     if (view !== "global") return;
-    const t = setInterval(loadFeed, 8_000);
+    const t = setInterval(loadFeed, 30_000);
     return () => clearInterval(t);
   }, [view, loadFeed]);
+
+  useEffect(() => {
+    if (view !== "global") {
+      setFeedRealtime(false);
+      return;
+    }
+    const unsub = subscribePublicBetFeed({
+      onInsert: (row) => {
+        setFeedRows((prev) => {
+          if (prev.some((r) => r.session_id === row.session_id)) return prev;
+          return [row, ...prev].slice(0, 120);
+        });
+        setFeedLastRefresh(new Date());
+      },
+      onStatus: (status) => setFeedRealtime(status === "SUBSCRIBED"),
+    });
+    return unsub;
+  }, [view]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -331,6 +350,7 @@ export default function HistoryContent() {
           stats={feedStats}
           loading={feedLoading}
           lastRefresh={feedLastRefresh}
+          realtime={feedRealtime}
           gameFilter={feedGameFilter}
           outcomeFilter={feedOutcomeFilter}
           onGameFilter={setFeedGameFilter}
@@ -651,6 +671,7 @@ function GlobalFeedPanel({
   stats,
   loading,
   lastRefresh,
+  realtime,
   gameFilter,
   outcomeFilter,
   onGameFilter,
@@ -661,6 +682,7 @@ function GlobalFeedPanel({
   stats: { wins: number; losses: number; total: number };
   loading: boolean;
   lastRefresh: Date | null;
+  realtime: boolean;
   gameFilter: "all" | CasinoGameId;
   outcomeFilter: "all" | "wins" | "losses";
   onGameFilter: (g: "all" | CasinoGameId) => void;
@@ -675,7 +697,9 @@ function GlobalFeedPanel({
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
           </span>
-          <span className="text-[10px] uppercase tracking-wider text-emerald-300/80">Live</span>
+          <span className="text-[10px] uppercase tracking-wider text-emerald-300/80">
+            {realtime ? "Live · realtime" : "Live · polling"}
+          </span>
         </div>
         <div className="flex flex-wrap gap-1.5 flex-1">
           <CasinoFilterPill active={gameFilter === "all"} label="All games" onClick={() => onGameFilter("all")} />

@@ -77,7 +77,7 @@ export default function DocsContent() {
                 <Link href="/casino/history" className="text-amber-300 hover:underline">
                   Activity
                 </Link>{" "}
-                — your sessions plus global bet log;{" "}
+                — your sessions plus a global bet log (Supabase Realtime when the feed migration is applied);{" "}
                 <Link href="/casino/leaderboard" className="text-amber-300 hover:underline">
                   Leaderboard
                 </Link>{" "}

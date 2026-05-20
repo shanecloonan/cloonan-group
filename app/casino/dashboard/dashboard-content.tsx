@@ -19,6 +19,7 @@ import {
   fetchOwnDashboardSessions,
   fetchOwnProfile,
   fetchPublicBetFeed,
+  subscribePublicBetFeed,
   upsertCasinoProfile,
   type DashboardSessionRow,
   type FeedRow,
@@ -65,6 +66,14 @@ export default function DashboardContent() {
       /* ignore */
     }
     fetchPublicBetFeed(40).then(setFeed);
+    const unsubFeed = subscribePublicBetFeed({
+      onInsert: (row) => {
+        setFeed((prev) => {
+          if (prev.some((r) => r.session_id === row.session_id)) return prev;
+          return [row, ...prev].slice(0, 40);
+        });
+      },
+    });
     fetchOwnProfile().then((p) => {
       if (p) {
         setDisplayName(p.displayName);
@@ -75,6 +84,7 @@ export default function DashboardContent() {
       setAuthed(!!data.user);
       if (data.user) fetchOwnDashboardSessions(100).then(setCloudRows);
     });
+    return () => unsubFeed();
   }, []);
 
   const mergedRows = useMemo(() => {

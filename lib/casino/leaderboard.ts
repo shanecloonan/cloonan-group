@@ -71,6 +71,47 @@ export async function fetchPublicBetFeed(limit = 50): Promise<FeedRow[]> {
   return (data ?? []) as FeedRow[];
 }
 
+function mapFeedEventRow(raw: Record<string, unknown>): FeedRow {
+  return {
+    session_id: String(raw.session_id),
+    game_id: String(raw.game_id),
+    stake: String(raw.stake),
+    pnl: String(raw.pnl),
+    token_symbol: String(raw.token_symbol),
+    display_label: String(raw.display_label),
+    settled_at: String(raw.settled_at),
+    is_public: raw.is_public !== false,
+  };
+}
+
+/** Live INSERT stream on `casino_feed_events` (requires migration + Realtime enabled). */
+export function subscribePublicBetFeed(handlers: {
+  onInsert: (row: FeedRow) => void;
+  onStatus?: (status: "SUBSCRIBED" | "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED") => void;
+}): () => void {
+  const channel = supabase
+    .channel("casino-global-feed")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "casino_feed_events" },
+      (payload) => {
+        if (payload.new && typeof payload.new === "object") {
+          handlers.onInsert(mapFeedEventRow(payload.new as Record<string, unknown>));
+        }
+      },
+    )
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") handlers.onStatus?.("SUBSCRIBED");
+      else if (status === "CHANNEL_ERROR") handlers.onStatus?.("CHANNEL_ERROR");
+      else if (status === "TIMED_OUT") handlers.onStatus?.("TIMED_OUT");
+      else if (status === "CLOSED") handlers.onStatus?.("CLOSED");
+    });
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
 export async function upsertCasinoProfile(input: {
   displayName?: string;
   showOnLeaderboard?: boolean;
