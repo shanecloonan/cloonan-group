@@ -290,11 +290,14 @@ export function PokerMultiplayerPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={pillGold}>Multiplayer · beta</span>
-        <p className="text-xs text-white/50">
-          Realtime sync · actions validated on server (turn + legal moves)
-        </p>
+      <div className="rounded-xl border border-amber-400/20 bg-gradient-to-r from-amber-500/10 via-transparent to-violet-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span className={pillGold}>Texas Hold&apos;em · live</span>
+          <p className="text-xs text-white/55 mt-1.5 max-w-md">
+            Host a private 6-max table · realtime Supabase sync · 45s turn clock · server-validated actions
+          </p>
+        </div>
+        <span className={pillLive}>Realtime</span>
       </div>
 
       {!userId && (

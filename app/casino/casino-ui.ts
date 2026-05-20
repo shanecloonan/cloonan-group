@@ -1,10 +1,19 @@
 /* Shared casino design tokens — import from any table or page. */
 
 export const casinoPage =
-  "min-h-[calc(100vh-56px)] w-full bg-[#06070c] text-white selection:bg-amber-500/30";
+  "min-h-[calc(100vh-56px)] w-full bg-[#04050a] text-white selection:bg-amber-500/30";
 
 export const casinoShellBg =
-  "relative before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.12),transparent),radial-gradient(ellipse_60%_40%_at_100%_0%,rgba(245,158,11,0.06),transparent)]";
+  "relative before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_90%_55%_at_50%_-15%,rgba(245,158,11,0.14),transparent_55%),radial-gradient(ellipse_70%_45%_at_0%_40%,rgba(16,185,129,0.08),transparent),radial-gradient(ellipse_50%_40%_at_100%_80%,rgba(139,92,246,0.06),transparent)]";
+
+/** Premium section header used on hub pages */
+export const sectionTitle = "font-heading text-lg sm:text-xl font-semibold tracking-tight text-white";
+
+export const filterPillActive =
+  "border-amber-400/45 bg-gradient-to-r from-amber-500/20 to-amber-600/10 text-amber-50 shadow-[0_0_20px_rgba(245,158,11,0.15)]";
+
+export const filterPillIdle =
+  "border-white/[0.1] bg-white/[0.03] text-white/55 hover:text-white/90 hover:border-white/20";
 
 export const card =
   "rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.05] to-white/[0.02] backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.35)]";

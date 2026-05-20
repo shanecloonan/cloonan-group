@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { CasinoShell } from "../casino-shell";
-import { card, btnGhost, GAME_LABELS, tableHeader, pillGold } from "../casino-ui";
+import { CasinoFilterPill } from "../casino-filter-pill";
+import { card, GAME_LABELS, tableHeader, pillGold } from "../casino-ui";
 import {
   fetchLeaderboardLosers,
   fetchLeaderboardWinners,
@@ -68,25 +69,34 @@ export default function LeaderboardContent() {
   return (
     <CasinoShell
       badge="Hall of fortune"
-      title="Leaderboard"
-      subtitle="Aggregate PnL across all settled sessions, plus single-bet records. Opt out anytime in Dashboard → Profile."
+      title="Leaderboard & loserboard"
+      subtitle="Top overall winners and losers, plus the biggest single-hand wins and losses. Named rankings require opt-in — Dashboard → Profile."
     >
       <div className="flex flex-wrap gap-2 mb-6">
         {tabs.map((t) => (
-          <button
+          <CasinoFilterPill
             key={t.id}
-            type="button"
+            label={t.label}
+            active={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={
-              btnGhost +
-              " " +
-              (tab === t.id ? "!border-amber-400/40 !text-amber-100 !bg-amber-500/10" : "")
-            }
-          >
-            {t.label}
-          </button>
+          />
         ))}
       </div>
+
+      {!loading && (tab === "winners" || tab === "losers") && overall.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+          {overall.slice(0, 3).map((row, i) => (
+            <PodiumCard
+              key={row.user_id}
+              rank={i + 1}
+              label={row.display_label}
+              pnl={fmtUnits(row.total_pnl, row.token_symbol)}
+              sessions={row.session_count}
+              variant={tab === "losers" ? "loss" : "win"}
+            />
+          ))}
+        </div>
+      )}
 
       {note && (
         <p className="mb-4 text-sm text-white/50 border border-white/[0.08] rounded-xl px-4 py-3 bg-white/[0.02]">
@@ -167,5 +177,43 @@ export default function LeaderboardContent() {
         )}
       </section>
     </CasinoShell>
+  );
+}
+
+function PodiumCard({
+  rank,
+  label,
+  pnl,
+  sessions,
+  variant,
+}: {
+  rank: number;
+  label: string;
+  pnl: string;
+  sessions: number;
+  variant: "win" | "loss";
+}) {
+  const medals = ["🥇", "🥈", "🥉"];
+  return (
+    <div
+      className={
+        "rounded-2xl border p-5 text-center bg-gradient-to-b " +
+        (variant === "win"
+          ? "from-amber-500/15 to-transparent border-amber-400/25"
+          : "from-rose-500/12 to-transparent border-rose-400/20")
+      }
+    >
+      <div className="text-2xl mb-2">{medals[rank - 1] ?? rank}</div>
+      <div className="text-sm font-semibold text-white truncate">{label}</div>
+      <div
+        className={
+          "mt-2 font-mono text-lg font-bold " +
+          (variant === "win" ? "text-emerald-300" : "text-rose-300")
+        }
+      >
+        {pnl}
+      </div>
+      <div className="mt-1 text-[10px] uppercase tracking-wider text-white/40">{sessions} sessions</div>
+    </div>
   );
 }

@@ -76,7 +76,7 @@ export default function DocsContent() {
                 <Link href="/casino/feed" className="text-amber-300 hover:underline">
                   Live feed
                 </Link>{" "}
-                — all public bets;{" "}
+                — global bet log (all cloud sessions);{" "}
                 <Link href="/casino/leaderboard" className="text-amber-300 hover:underline">
                   Leaderboard
                 </Link>{" "}
@@ -99,17 +99,17 @@ export default function DocsContent() {
               <PlatformCard
                 href="/casino/dashboard"
                 title="Player dashboard"
-                body="Filter your sessions by game and source (local vs cloud). Edit display name and opt in or out of public leaderboards."
+                body="Filter by game, source (local/cloud), 7d/30d window, and win/loss. Stats, profile, and a live house feed sidebar."
               />
               <PlatformCard
                 href="/casino/feed"
-                title="Live bet feed"
-                body="Real-time log of settled bets from all opted-in players across every game. Auto-refreshes; filter by game."
+                title="Global bet log"
+                body="Every settled cloud session across all games — auto-refresh, filter by game and outcome. Private players show as Private table."
               />
               <PlatformCard
                 href="/casino/leaderboard"
-                title="Leaderboard"
-                body="Top winners, top losers, biggest single win, and biggest single loss — powered by Supabase RPCs over settled sessions."
+                title="Leaderboard & loserboard"
+                body="Top overall winners/losers plus biggest single-hand wins and losses. Named ranks require opt-in; feed still logs all bets."
               />
               <PlatformCard
                 href="/casino/history"
@@ -274,8 +274,7 @@ export default function DocsContent() {
             "Straight 35:1, splits 17:1, streets 11:1, corners 8:1, six-line 5:1, dozens/columns 2:1, even-money 1:1.",
             "Desktop: gold edges (split/street), violet bar (six-line between columns), corner dots.",
             "La Partage not enabled — zero loses all outside bets.",
-            "Mobile: tap a number, then pick split/street/corner from the inside bar; hold to clear chips on that pocket.",
-            "Desktop: gold edges between numbers for split/street; corner dots at intersections.",
+            "Mobile: 12-column grid (no overlapping digits); zero rail on the left; tap a pocket then inside bets in the amber bar; hold to clear chips.",
           ]} verify={[
             "Placements freeze at spin; one RNG draw selects the winning pocket.",
             "Verifier replays each bet’s payout (inside + outside) against that pocket.",

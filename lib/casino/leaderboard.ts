@@ -27,6 +27,7 @@ export type FeedRow = {
   token_symbol: string;
   display_label: string;
   settled_at: string;
+  is_public?: boolean;
 };
 
 export async function fetchLeaderboardWinners(limit = 25): Promise<LeaderboardRow[]> {

@@ -4,15 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { CasinoShell } from "../casino-shell";
+import { CasinoFilterPill } from "../casino-filter-pill";
 import {
   ALL_GAMES,
   card,
   btnPrimary,
-  btnGhost,
   GAME_LABELS,
   inputCls,
   labelCls,
-  tableHeader,
+  sectionTitle,
   type CasinoGameId,
 } from "../casino-ui";
 import {
@@ -55,6 +55,8 @@ export default function DashboardContent() {
   const [authed, setAuthed] = useState(false);
   const [cloudRows, setCloudRows] = useState<DashboardSessionRow[]>([]);
   const [source, setSource] = useState<"merged" | "local" | "cloud">("merged");
+  const [outcomeFilter, setOutcomeFilter] = useState<"all" | "wins" | "losses">("all");
+  const [period, setPeriod] = useState<"all" | "7d" | "30d">("all");
 
   useEffect(() => {
     try {
@@ -112,8 +114,15 @@ export default function DashboardContent() {
     if (gameFilter !== "all") r = r.filter((x) => x.game === gameFilter);
     if (source === "local") r = r.filter((x) => x.origin === "local");
     if (source === "cloud") r = r.filter((x) => x.origin === "cloud");
-    return r.slice(0, 50);
-  }, [mergedRows, gameFilter, source]);
+    if (period !== "all") {
+      const ms = period === "7d" ? 7 * 864e5 : 30 * 864e5;
+      const cutoff = Date.now() - ms;
+      r = r.filter((x) => new Date(x.at).getTime() >= cutoff);
+    }
+    if (outcomeFilter === "wins") r = r.filter((x) => BigInt(x.pnlUnits) > 0n);
+    if (outcomeFilter === "losses") r = r.filter((x) => BigInt(x.pnlUnits) < 0n);
+    return r.slice(0, 80);
+  }, [mergedRows, gameFilter, source, period, outcomeFilter]);
 
   const stats = useMemo(() => {
     let wagered = 0n;
@@ -140,20 +149,28 @@ export default function DashboardContent() {
     <CasinoShell
       badge="Private suite"
       title="Player dashboard"
-      subtitle="Filter your session log, tune leaderboard visibility, and watch the house feed in real time."
+      subtitle="Your command center — filter every session, track edge and PnL, control public visibility, and watch the global bet stream."
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <section className={card + " p-5 lg:col-span-2 space-y-4"}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-white">Your recent play</h2>
-            <div className="flex flex-wrap gap-1 items-center">
-              <FilterChip active={source === "merged"} label="All sources" onClick={() => setSource("merged")} />
-              <FilterChip active={source === "local"} label="Local" onClick={() => setSource("local")} />
-              <FilterChip active={source === "cloud"} label="Cloud" onClick={() => setSource("cloud")} disabled={!authed} />
-              <span className="w-px h-5 bg-white/10 mx-1 hidden sm:block" />
-              <FilterChip active={gameFilter === "all"} label="All games" onClick={() => setGameFilter("all")} />
+            <h2 className={sectionTitle}>Your recent play</h2>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <CasinoFilterPill active={source === "merged"} label="All sources" onClick={() => setSource("merged")} />
+              <CasinoFilterPill active={source === "local"} label="Local" onClick={() => setSource("local")} />
+              <CasinoFilterPill active={source === "cloud"} label="Cloud" onClick={() => setSource("cloud")} disabled={!authed} />
+              <span className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
+              <CasinoFilterPill active={period === "all"} label="All time" onClick={() => setPeriod("all")} />
+              <CasinoFilterPill active={period === "7d"} label="7 days" onClick={() => setPeriod("7d")} />
+              <CasinoFilterPill active={period === "30d"} label="30 days" onClick={() => setPeriod("30d")} />
+              <span className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
+              <CasinoFilterPill active={outcomeFilter === "all"} label="All outcomes" onClick={() => setOutcomeFilter("all")} />
+              <CasinoFilterPill active={outcomeFilter === "wins"} label="Wins" onClick={() => setOutcomeFilter("wins")} />
+              <CasinoFilterPill active={outcomeFilter === "losses"} label="Losses" onClick={() => setOutcomeFilter("losses")} />
+              <span className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
+              <CasinoFilterPill active={gameFilter === "all"} label="All games" onClick={() => setGameFilter("all")} />
               {ALL_GAMES.map((g) => (
-                <FilterChip
+                <CasinoFilterPill
                   key={g}
                   active={gameFilter === g}
                   label={GAME_LABELS[g]}
@@ -255,7 +272,7 @@ export default function DashboardContent() {
 
           <section className={card + " p-5"}>
             <h2 className="text-lg font-semibold text-white mb-3">Live house feed</h2>
-            <p className="text-xs text-white/45 mb-3">Latest settled bets from players who opted in.</p>
+            <p className="text-xs text-white/45 mb-3">Latest settled bets across the house (all games).</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {feed.length === 0 ? (
                 <p className="text-xs text-white/40">Feed empty — play with cloud sync to populate.</p>
@@ -276,34 +293,6 @@ export default function DashboardContent() {
         </aside>
       </div>
     </CasinoShell>
-  );
-}
-
-function FilterChip({
-  label,
-  active,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={
-        "h-7 px-2.5 rounded-lg text-[11px] font-medium border cursor-pointer " +
-        (active
-          ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
-          : "border-white/[0.08] text-white/50 hover:text-white/80")
-      }
-    >
-      {label}
-    </button>
   );
 }
 

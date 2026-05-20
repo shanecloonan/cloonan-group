@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CasinoShell } from "../casino-shell";
+import { CasinoFilterPill } from "../casino-filter-pill";
 import { ALL_GAMES, card, GAME_LABELS, pillGold, type CasinoGameId } from "../casino-ui";
 import { fetchPublicBetFeed, type FeedRow } from "@/lib/casino/leaderboard";
+
+type OutcomeFilter = "all" | "wins" | "losses";
 
 function fmtPnl(raw: string, symbol: string): string {
   const n = Number(raw);
@@ -22,12 +25,13 @@ function fmtStake(raw: string, symbol: string): string {
 export default function FeedContent() {
   const [rows, setRows] = useState<FeedRow[]>([]);
   const [gameFilter, setGameFilter] = useState<"all" | CasinoGameId>("all");
+  const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>("all");
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await fetchPublicBetFeed(80);
+    const data = await fetchPublicBetFeed(120);
     setRows(data);
     setLastRefresh(new Date());
     setLoading(false);
@@ -40,9 +44,12 @@ export default function FeedContent() {
   }, [load]);
 
   const filtered = useMemo(() => {
-    if (gameFilter === "all") return rows;
-    return rows.filter((r) => r.game_id === gameFilter);
-  }, [rows, gameFilter]);
+    let list = rows;
+    if (gameFilter !== "all") list = list.filter((r) => r.game_id === gameFilter);
+    if (outcomeFilter === "wins") list = list.filter((r) => Number(r.pnl) > 0);
+    if (outcomeFilter === "losses") list = list.filter((r) => Number(r.pnl) < 0);
+    return list;
+  }, [rows, gameFilter, outcomeFilter]);
 
   const stats = useMemo(() => {
     let wins = 0;
@@ -57,8 +64,8 @@ export default function FeedContent() {
   return (
     <CasinoShell
       badge="House pulse"
-      title="Live bet feed"
-      subtitle="Every settled session from players on the public leaderboard — all games, refreshed automatically."
+      title="Global bet log"
+      subtitle="Every settled hand across all games — live from the cloud. Named players opted in; others appear as Private table."
     >
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2 mr-2">
@@ -69,15 +76,19 @@ export default function FeedContent() {
           <span className="text-[10px] uppercase tracking-wider text-emerald-300/80">Live</span>
         </div>
         <div className="flex flex-wrap gap-1.5 flex-1">
-          <FilterPill active={gameFilter === "all"} label="All games" onClick={() => setGameFilter("all")} />
+          <CasinoFilterPill active={gameFilter === "all"} label="All games" onClick={() => setGameFilter("all")} />
           {ALL_GAMES.map((g) => (
-            <FilterPill
+            <CasinoFilterPill
               key={g}
               active={gameFilter === g}
               label={GAME_LABELS[g]}
               onClick={() => setGameFilter(g)}
             />
           ))}
+          <span className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
+          <CasinoFilterPill active={outcomeFilter === "all"} label="All outcomes" onClick={() => setOutcomeFilter("all")} />
+          <CasinoFilterPill active={outcomeFilter === "wins"} label="Wins" onClick={() => setOutcomeFilter("wins")} />
+          <CasinoFilterPill active={outcomeFilter === "losses"} label="Losses" onClick={() => setOutcomeFilter("losses")} />
         </div>
         <button
           type="button"
@@ -109,8 +120,7 @@ export default function FeedContent() {
         <div className="max-h-[min(70vh,640px)] overflow-y-auto divide-y divide-white/[0.04]">
           {filtered.length === 0 && !loading ? (
             <p className="text-sm text-white/45 text-center py-16 px-6">
-              No public bets yet. Play with cloud sync and leaderboard visibility enabled, or check back when
-              the house is busy.
+              No settled bets in view yet. Sign in and play — sessions sync to the cloud when hands complete.
             </p>
           ) : (
             filtered.map((r) => {
@@ -121,7 +131,14 @@ export default function FeedContent() {
                   className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-4 py-3 items-center hover:bg-white/[0.02] transition-colors"
                 >
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-white/90 truncate">{r.display_label}</div>
+                    <div className="text-sm font-medium text-white/90 truncate flex items-center gap-2">
+                      {r.display_label}
+                      {r.is_public === false && (
+                        <span className="text-[9px] uppercase tracking-wider text-white/35 border border-white/10 rounded px-1">
+                          anon
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[11px] text-white/45 flex items-center gap-2 mt-0.5">
                       <span className={pillGold + " !text-[9px] !py-0 !px-1.5"}>
                         {GAME_LABELS[r.game_id as CasinoGameId] ?? r.game_id}
@@ -151,7 +168,7 @@ export default function FeedContent() {
       </section>
 
       <p className="mt-6 text-xs text-white/40">
-        Only players who opted in appear here.{" "}
+        All cloud-settled bets appear here; display names require leaderboard opt-in.{" "}
         <Link href="/casino/leaderboard" className="text-amber-300 hover:underline">
           Leaderboard
         </Link>{" "}
@@ -161,31 +178,6 @@ export default function FeedContent() {
         </Link>
       </p>
     </CasinoShell>
-  );
-}
-
-function FilterPill({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        "h-8 px-3 rounded-lg text-[11px] font-medium border cursor-pointer transition-all " +
-        (active
-          ? "border-amber-400/40 bg-amber-500/15 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.12)]"
-          : "border-white/[0.08] text-white/50 hover:text-white/85 hover:border-white/15")
-      }
-    >
-      {label}
-    </button>
   );
 }
 

@@ -665,13 +665,13 @@ function RouletteMobileLayout({
   };
 
   const row = (nums: number[]) => (
-    <div className="flex gap-1 justify-between w-full min-w-[20.5rem]">
+    <div className="grid grid-cols-12 gap-[2px] w-full">
       {nums.map((n) => (
         <NumberCell
           key={n}
           number={n}
           compact
-          fixed
+          gridCell
           selected={mobileFocus === n}
           stake={stakeOnPocket(placements, n)}
           onClick={() => onMobileFocus(mobileFocus === n ? null : n)}
@@ -685,22 +685,10 @@ function RouletteMobileLayout({
   );
 
   return (
-    <div className="md:hidden space-y-3 mb-1 w-full">
+    <div className="md:hidden space-y-3 mb-1 w-full max-w-full overflow-hidden">
       <p className="text-[10px] text-white/45">
         Tap a number, pick inside bets below · hold number to clear its chips
       </p>
-      <NumberCell
-        number={0}
-        selected={mobileFocus === 0}
-        stake={stakeOnPocket(placements, 0)}
-        onClick={() => onMobileFocus(mobileFocus === 0 ? null : 0)}
-        onRightClick={() => clearPocket(0)}
-        disabled={disabled}
-        chip={chip}
-        token={token}
-        big
-        compact
-      />
       {mobileFocus !== null && (
         <RouletteMobileInsideBar
           pocket={mobileFocus}
@@ -710,8 +698,20 @@ function RouletteMobileLayout({
           onClose={() => onMobileFocus(null)}
         />
       )}
-      <div className="overflow-x-auto overscroll-x-contain touch-pan-x rounded-lg -mx-0.5 px-0.5">
-        <div className="space-y-1 py-0.5">
+      <div className="flex gap-1.5 w-full">
+        <NumberCell
+          number={0}
+          selected={mobileFocus === 0}
+          stake={stakeOnPocket(placements, 0)}
+          onClick={() => onMobileFocus(mobileFocus === 0 ? null : 0)}
+          onRightClick={() => clearPocket(0)}
+          disabled={disabled}
+          chip={chip}
+          token={token}
+          compact
+          zeroRail
+        />
+        <div className="flex-1 min-w-0 space-y-[2px]">
           {row(topRow)}
           {row(midRow)}
           {row(botRow)}
@@ -1048,6 +1048,8 @@ function NumberCell({
   big,
   compact,
   fixed,
+  gridCell,
+  zeroRail,
   selected,
 }: {
   number: number;
@@ -1061,6 +1063,10 @@ function NumberCell({
   compact?: boolean;
   /** Fixed 2rem width on mobile flex rows — prevents digit overlap. */
   fixed?: boolean;
+  /** Equal-width cell in 12-column mobile grid. */
+  gridCell?: boolean;
+  /** Zero pocket beside the number grid on mobile. */
+  zeroRail?: boolean;
   selected?: boolean;
 }) {
   const color = pocketColor(number);
@@ -1079,11 +1085,15 @@ function NumberCell({
       className={
         "relative font-bold tabular-nums transition-all rounded-md border flex items-center justify-center " +
         (compact
-          ? big
-            ? "w-full h-12 text-sm"
-            : fixed
-              ? "w-8 h-9 shrink-0 text-[11px] leading-none pb-1"
-              : "aspect-square w-full min-h-[2rem] max-h-[2.75rem] text-[10px] leading-none overflow-hidden"
+          ? zeroRail
+            ? "w-11 shrink-0 min-h-[5.75rem] text-sm self-stretch"
+            : gridCell
+              ? "w-full min-w-0 h-9 text-[10px] leading-none"
+              : big
+                ? "w-full h-12 text-sm"
+                : fixed
+                  ? "w-8 h-9 shrink-0 text-[11px] leading-none pb-1"
+                  : "aspect-square w-full min-h-[2rem] max-h-[2.75rem] text-[10px] leading-none overflow-hidden"
           : big
             ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] shrink-0 text-sm"
             : "h-9 w-full min-w-[2.125rem] text-xs sm:text-sm") +
