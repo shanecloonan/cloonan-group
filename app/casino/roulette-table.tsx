@@ -530,12 +530,24 @@ function BettingLayout({
 
   return (
     <div className="rounded-xl bg-emerald-950/30 border border-emerald-900/40 p-2 sm:p-3 select-none">
-      <p className="sm:hidden text-[10px] text-white/45 mb-2 px-0.5">
-        Swipe to browse · tap to bet · hold to remove
+      <RouletteMobileLayout
+        placements={placements}
+        onClick={onClick}
+        onRightClick={onRightClick}
+        disabled={disabled}
+        chip={chip}
+        token={token}
+        topRow={topRow}
+        midRow={midRow}
+        botRow={botRow}
+      />
+
+      <p className="hidden sm:block text-[10px] text-white/45 mb-2 px-0.5">
+        Click any zone to place a chip · right-click to remove
       </p>
-      <div className="overflow-x-auto overscroll-x-contain -mx-0.5 px-0.5 pb-1 touch-pan-x">
-        <div className="min-w-[36rem] sm:min-w-0 w-full">
-      <div className="flex gap-1 sm:gap-2">
+      <div className="hidden sm:block overflow-x-auto overscroll-x-contain -mx-0.5 px-0.5 pb-1">
+        <div className="w-max min-w-full">
+      <div className="flex gap-2">
         {/* Zero cell */}
         <NumberCell
           number={0}
@@ -547,8 +559,8 @@ function BettingLayout({
           token={token}
           big
         />
-        {/* 12 columns × 3 rows */}
-        <div className="flex-1 grid grid-cols-12 grid-rows-3 gap-0.5 sm:gap-1 min-w-0">
+        {/* 12 columns × 3 rows — fixed width so numbers never overlap */}
+        <div className="grid grid-cols-12 grid-rows-3 gap-1 w-[39rem] shrink-0">
           {topRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
           {midRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
           {botRow.map((n) => <NumberCell key={n} number={n} stake={placements[`straight:${n}`] as bigint | undefined} onClick={() => onClick(`straight:${n}`)} onRightClick={() => onRightClick(`straight:${n}`)} disabled={disabled} chip={chip} token={token} />)}
@@ -564,7 +576,7 @@ function BettingLayout({
       {/* Dozens row */}
       <div className="mt-1.5 sm:mt-2 flex gap-1 sm:gap-2">
         <div className="w-9 sm:w-12 shrink-0" aria-hidden />
-        <div className="flex-1 grid grid-cols-3 gap-0.5 sm:gap-1 min-w-0">
+        <div className="grid grid-cols-3 gap-1 w-[33.5rem] shrink-0">
         <OutsideCell label="1st 12" stake={placements["dozen_1"] as bigint | undefined} onClick={() => onClick("dozen_1")} onRightClick={() => onRightClick("dozen_1")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="2nd 12" stake={placements["dozen_2"] as bigint | undefined} onClick={() => onClick("dozen_2")} onRightClick={() => onRightClick("dozen_2")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="3rd 12" stake={placements["dozen_3"] as bigint | undefined} onClick={() => onClick("dozen_3")} onRightClick={() => onRightClick("dozen_3")} disabled={disabled} chip={chip} token={token} />
@@ -574,7 +586,7 @@ function BettingLayout({
 
       <div className="mt-1.5 sm:mt-2 flex gap-1 sm:gap-2">
         <div className="w-9 sm:w-12 shrink-0" aria-hidden />
-        <div className="flex-1 grid grid-cols-6 gap-0.5 sm:gap-1 min-w-0">
+        <div className="grid grid-cols-6 gap-1 w-[33.5rem] shrink-0">
         <OutsideCell label="1-18" stake={placements["low"] as bigint | undefined} onClick={() => onClick("low")} onRightClick={() => onRightClick("low")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="EVEN" stake={placements["even"] as bigint | undefined} onClick={() => onClick("even")} onRightClick={() => onRightClick("even")} disabled={disabled} chip={chip} token={token} />
         <OutsideCell label="RED" stake={placements["red"] as bigint | undefined} onClick={() => onClick("red")} onRightClick={() => onRightClick("red")} disabled={disabled} chip={chip} token={token} accent="red" />
@@ -590,6 +602,82 @@ function BettingLayout({
   );
 }
 
+/** Touch-first layout: 6-column number grid + full-width outside bets (no horizontal squeeze). */
+function RouletteMobileLayout({
+  placements,
+  onClick,
+  onRightClick,
+  disabled,
+  chip,
+  token,
+  topRow,
+  midRow,
+  botRow,
+}: {
+  placements: Record<string, bigint>;
+  onClick: (k: PlacementKey) => void;
+  onRightClick: (k: PlacementKey) => void;
+  disabled: boolean;
+  chip: number;
+  token: TokenSpec;
+  topRow: number[];
+  midRow: number[];
+  botRow: number[];
+}) {
+  const allNums = [...topRow, ...midRow, ...botRow];
+  return (
+    <div className="sm:hidden space-y-3 mb-1">
+      <p className="text-[10px] text-white/45">Tap to bet · hold to remove</p>
+      <NumberCell
+        number={0}
+        stake={placements["straight:0"] as bigint | undefined}
+        onClick={() => onClick("straight:0")}
+        onRightClick={() => onRightClick("straight:0")}
+        disabled={disabled}
+        chip={chip}
+        token={token}
+        big
+        compact
+      />
+      <div className="grid grid-cols-6 gap-1.5">
+        {allNums.map((n) => (
+          <NumberCell
+            key={n}
+            number={n}
+            compact
+            stake={placements[`straight:${n}`] as bigint | undefined}
+            onClick={() => onClick(`straight:${n}`)}
+            onRightClick={() => onRightClick(`straight:${n}`)}
+            disabled={disabled}
+            chip={chip}
+            token={token}
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        <OutsideCell label="1st 12" stake={placements["dozen_1"] as bigint | undefined} onClick={() => onClick("dozen_1")} onRightClick={() => onRightClick("dozen_1")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell label="2nd 12" stake={placements["dozen_2"] as bigint | undefined} onClick={() => onClick("dozen_2")} onRightClick={() => onRightClick("dozen_2")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell label="3rd 12" stake={placements["dozen_3"] as bigint | undefined} onClick={() => onClick("dozen_3")} onRightClick={() => onRightClick("dozen_3")} disabled={disabled} chip={chip} token={token} />
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        <OutsideCell label="1-18" stake={placements["low"] as bigint | undefined} onClick={() => onClick("low")} onRightClick={() => onRightClick("low")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell label="EVEN" stake={placements["even"] as bigint | undefined} onClick={() => onClick("even")} onRightClick={() => onRightClick("even")} disabled={disabled} chip={chip} token={token} />
+        <OutsideCell label="ODD" stake={placements["odd"] as bigint | undefined} onClick={() => onClick("odd")} onRightClick={() => onRightClick("odd")} disabled={disabled} chip={chip} token={token} />
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        <OutsideCell label="RED" stake={placements["red"] as bigint | undefined} onClick={() => onClick("red")} onRightClick={() => onRightClick("red")} disabled={disabled} chip={chip} token={token} accent="red" />
+        <OutsideCell label="BLK" stake={placements["black"] as bigint | undefined} onClick={() => onClick("black")} onRightClick={() => onRightClick("black")} disabled={disabled} chip={chip} token={token} accent="black" />
+        <OutsideCell label="19-36" stake={placements["high"] as bigint | undefined} onClick={() => onClick("high")} onRightClick={() => onRightClick("high")} disabled={disabled} chip={chip} token={token} />
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        <OutsideCell label="Col 1" stake={placements["column_1"] as bigint | undefined} onClick={() => onClick("column_1")} onRightClick={() => onRightClick("column_1")} disabled={disabled} chip={chip} token={token} small />
+        <OutsideCell label="Col 2" stake={placements["column_2"] as bigint | undefined} onClick={() => onClick("column_2")} onRightClick={() => onRightClick("column_2")} disabled={disabled} chip={chip} token={token} small />
+        <OutsideCell label="Col 3" stake={placements["column_3"] as bigint | undefined} onClick={() => onClick("column_3")} onRightClick={() => onRightClick("column_3")} disabled={disabled} chip={chip} token={token} small />
+      </div>
+    </div>
+  );
+}
+
 function NumberCell({
   number,
   stake,
@@ -599,6 +687,7 @@ function NumberCell({
   chip,
   token,
   big,
+  compact,
 }: {
   number: number;
   stake?: bigint;
@@ -608,6 +697,7 @@ function NumberCell({
   chip: number;
   token: TokenSpec;
   big?: boolean;
+  compact?: boolean;
 }) {
   const color = pocketColor(number);
   const has = stake !== undefined && stake > 0n;
@@ -623,8 +713,14 @@ function NumberCell({
       }}
       {...longPress}
       className={
-        "relative font-bold text-[10px] sm:text-sm transition-all rounded-md border " +
-        (big ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] flex items-center justify-center shrink-0 " : "h-8 sm:h-8 w-full min-w-[1.55rem] flex items-center justify-center ") +
+        "relative font-bold tabular-nums transition-all rounded-md border flex items-center justify-center " +
+        (compact
+          ? big
+            ? "w-full h-12 text-sm"
+            : "aspect-square w-full min-h-[2.25rem] text-[11px]"
+          : big
+            ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] shrink-0 text-sm"
+            : "h-9 w-full min-w-[2.125rem] text-xs sm:text-sm") +
         (color === "red"
           ? "bg-rose-600/40 border-rose-500/40 text-rose-100 hover:bg-rose-600/60"
           : color === "black"

@@ -9,6 +9,7 @@ const MAIN_NAV = [
   { href: "/casino", label: "Play", match: (p: string) => p === "/casino" },
   { href: "/casino/dashboard", label: "Dashboard", match: (p: string) => p.startsWith("/casino/dashboard") },
   { href: "/casino/leaderboard", label: "Leaderboard", match: (p: string) => p.startsWith("/casino/leaderboard") },
+  { href: "/casino/feed", label: "Live feed", match: (p: string) => p.startsWith("/casino/feed") },
   { href: "/casino/history", label: "History", match: (p: string) => p.startsWith("/casino/history") },
   { href: "/casino/docs", label: "Docs", match: (p: string) => p.startsWith("/casino/docs") },
 ] as const;

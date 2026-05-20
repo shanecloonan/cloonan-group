@@ -212,9 +212,14 @@ export default function DashboardContent() {
             )}
           </div>
 
-          <Link href="/casino/history" className="inline-block text-sm text-amber-300 hover:text-amber-200">
-            Full history & export →
-          </Link>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <Link href="/casino/history" className="text-amber-300 hover:text-amber-200">
+              Full history & export →
+            </Link>
+            <Link href="/casino/feed" className="text-amber-300 hover:text-amber-200">
+              Global live feed →
+            </Link>
+          </div>
         </section>
 
         <aside className="space-y-6">

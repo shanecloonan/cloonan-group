@@ -72,6 +72,10 @@ export default function DocsContent() {
                   Dashboard
                 </Link>{" "}
                 — filter your play;{" "}
+                <Link href="/casino/feed" className="text-amber-300 hover:underline">
+                  Live feed
+                </Link>{" "}
+                — all public bets;{" "}
                 <Link href="/casino/leaderboard" className="text-amber-300 hover:underline">
                   Leaderboard
                 </Link>{" "}
@@ -111,12 +115,32 @@ export default function DocsContent() {
               submit <code className="text-amber-200/90">withdraw()</code> themselves. Deposits can pause; withdrawals
               cannot — rescue path. Per-token daily caps and multisig timelock on admin functions.
             </p>
-            <p className="mt-2">
+            <ol className="list-decimal pl-5 space-y-2 mt-3 text-white/70">
+              <li>
+                Compile: <code className="text-amber-200/90">cd infra/contracts/ethereum</code>, then{" "}
+                <code className="text-amber-200/90">forge install OpenZeppelin/openzeppelin-contracts forge-std --no-commit</code>,{" "}
+                <code className="text-amber-200/90">forge build</code>.
+              </li>
+              <li>
+                Deploy with <code className="text-amber-200/90">script/DeployCasinoVault.s.sol</code> (owner = multisig,
+                operator = hot signer).
+              </li>
+              <li>
+                Set <code className="text-amber-200/90">NEXT_PUBLIC_CASINO_VAULT_*</code> and{" "}
+                <code className="text-amber-200/90">CASINO_OPERATOR_KEY</code> for withdraw signing via{" "}
+                <code className="text-amber-200/90">/api/casino/withdraw-authorize</code>.
+              </li>
+            </ol>
+            <p className="mt-3">
               Until vault addresses are configured, use Dev / Play Money on the lobby. Wallet UI at{" "}
               <Link href="/casino/wallet" className="text-amber-300 hover:underline">
                 /casino/wallet
               </Link>{" "}
-              exercises the full two-step deposit flow when env vars are set.
+              exercises the full two-step deposit flow when env vars are set. Public activity:{" "}
+              <Link href="/casino/feed" className="text-amber-300 hover:underline">
+                Live feed
+              </Link>
+              .
             </p>
           </DocSection>
 
@@ -177,6 +201,7 @@ export default function DocsContent() {
             "European single-zero wheel (37 pockets).",
             "Straight 35:1, splits 17:1, streets 11:1, corners 8:1, six-line 5:1, dozens/columns 2:1, even-money 1:1.",
             "La Partage not enabled — zero loses all outside bets.",
+            "Mobile: 6-column number grid + stacked outside bets (tap to bet, hold to remove). Desktop: classic felt layout.",
           ]} />
 
           <GameDoc id="slots" title="Slots" rtp="≈96%" rules={[
