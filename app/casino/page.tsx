@@ -6,7 +6,7 @@ const CasinoContent = dynamic(() => import("./casino-content"));
 export const metadata: Metadata = {
   title: "Casino | MoneyFund",
   description:
-    "MoneyFund Casino — a provably-fair, multi-chain crypto casino. Blackjack live now; full roadmap of games on Ethereum + Solana.",
+    "MoneyFund Casino — ten provably-fair games, live leaderboards, on-chain vault, and multiplayer poker.",
 };
 
 export default function CasinoPage() {

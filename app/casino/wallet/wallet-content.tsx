@@ -218,6 +218,7 @@ export default function WalletContent() {
       <div className="space-y-6">
         {/* ───── Cloud sync banner ───── */}
         <CloudSyncBanner signedIn={!!wallet.user} />
+        <VaultDeployBanner chainId={chainId} adapterReady={adapterReady} />
 
         {/* ───── Top status row ───── */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -407,6 +408,46 @@ function StatusCard({
  *     can't credit it to a player ledger until they sign in (since the
  *     ledger is keyed by auth.users.id).
  */
+function VaultDeployBanner({
+  chainId,
+  adapterReady,
+}: {
+  chainId: ChainId;
+  adapterReady: boolean;
+}) {
+  const [status, setStatus] = useState<{
+    anyDeployed: boolean;
+    chains: { chainId: string; display: string; ready: boolean }[];
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/casino/vault-status")
+      .then((r) => r.json())
+      .then(setStatus)
+      .catch(() => setStatus(null));
+  }, []);
+
+  if (chainId === "dev-mock" || adapterReady) return null;
+  const row = status?.chains.find((c) => c.chainId === chainId);
+
+  return (
+    <div className="p-4 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] text-sm text-amber-100/90">
+      <strong className="text-amber-200">Vault not live on this chain yet.</strong>{" "}
+      {row
+        ? `Deploy CasinoVault.sol and set NEXT_PUBLIC_CASINO_VAULT_${chainId.toUpperCase().replaceAll("-", "_")}.`
+        : "Check /api/casino/vault-status or use Dev play money on the lobby."}{" "}
+      {status && !status.anyDeployed && (
+        <span className="block mt-1 text-xs text-white/50">
+          No chain has a vault address in env — CI builds the contract; deployment is the next step.
+        </span>
+      )}
+      <Link href="/casino/docs#crypto" className="block mt-2 text-xs text-amber-300 hover:underline">
+        Deployment guide →
+      </Link>
+    </div>
+  );
+}
+
 function CloudSyncBanner({ signedIn }: { signedIn: boolean }) {
   if (signedIn) {
     return (

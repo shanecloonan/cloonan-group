@@ -91,8 +91,9 @@ export default function DocsContent() {
 
           <DocSection id="platform" title="Platform & navigation">
             <Callout title="Designed for low friction">
-              Every route uses the same luxury shell: sticky nav, gold accent tokens, and blur cards. Sign in
-              once to sync seeds, balances, and leaderboard visibility to Supabase.
+              Every route uses the same luxury shell: sticky top nav, gold accent tokens, blur cards, and a
+              bottom tab bar on phones (Play, Hub, Feed, Ranks, Wallet). Sign in once to sync seeds, balances,
+              and leaderboard visibility to Supabase.
             </Callout>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
               <PlatformCard
@@ -159,6 +160,10 @@ export default function DocsContent() {
                 Set <code className="text-amber-200/90">NEXT_PUBLIC_CASINO_VAULT_*</code> and{" "}
                 <code className="text-amber-200/90">CASINO_OPERATOR_KEY</code> for withdraw signing via{" "}
                 <code className="text-amber-200/90">/api/casino/withdraw-authorize</code>.
+              </li>
+              <li>
+                Check deployment status: <code className="text-amber-200/90">GET /api/casino/vault-status</code> (also
+                surfaced on the Wallet page when a chain is not configured).
               </li>
             </ol>
             <p className="mt-3">

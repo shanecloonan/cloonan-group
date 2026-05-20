@@ -542,10 +542,10 @@ function BettingLayout({
         botRow={botRow}
       />
 
-      <p className="hidden sm:block text-[10px] text-white/45 mb-2 px-0.5">
+      <p className="hidden md:block text-[10px] text-white/45 mb-2 px-0.5">
         Click any zone to place a chip · right-click to remove
       </p>
-      <div className="hidden sm:block overflow-x-auto overscroll-x-contain -mx-0.5 px-0.5 pb-1">
+      <div className="hidden md:block overflow-x-auto overscroll-x-contain -mx-0.5 px-0.5 pb-1">
         <div className="w-max min-w-full">
       <div className="flex gap-2">
         {/* Zero cell */}
@@ -602,7 +602,7 @@ function BettingLayout({
   );
 }
 
-/** Touch-first layout: 6-column number grid + full-width outside bets (no horizontal squeeze). */
+/** Touch-first layout: three flex rows (no grid squeeze) + stacked outside bets. */
 function RouletteMobileLayout({
   placements,
   onClick,
@@ -625,12 +625,13 @@ function RouletteMobileLayout({
   botRow: number[];
 }) {
   const row = (nums: number[]) => (
-    <div className="grid grid-cols-12 gap-[3px] w-full min-w-0">
+    <div className="flex gap-1 justify-between w-full min-w-[20.5rem]">
       {nums.map((n) => (
         <NumberCell
           key={n}
           number={n}
           compact
+          fixed
           stake={placements[`straight:${n}`] as bigint | undefined}
           onClick={() => onClick(`straight:${n}`)}
           onRightClick={() => onRightClick(`straight:${n}`)}
@@ -643,7 +644,7 @@ function RouletteMobileLayout({
   );
 
   return (
-    <div className="sm:hidden space-y-3 mb-1 max-w-full overflow-hidden">
+    <div className="md:hidden space-y-3 mb-1 w-full">
       <p className="text-[10px] text-white/45">European layout · tap to bet · hold to remove</p>
       <NumberCell
         number={0}
@@ -656,10 +657,12 @@ function RouletteMobileLayout({
         big
         compact
       />
-      <div className="space-y-[3px] w-full">
-        {row(topRow)}
-        {row(midRow)}
-        {row(botRow)}
+      <div className="overflow-x-auto overscroll-x-contain touch-pan-x rounded-lg -mx-0.5 px-0.5">
+        <div className="space-y-1 py-0.5">
+          {row(topRow)}
+          {row(midRow)}
+          {row(botRow)}
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-1.5">
         <OutsideCell compact label="1st 12" stake={placements["dozen_1"] as bigint | undefined} onClick={() => onClick("dozen_1")} onRightClick={() => onRightClick("dozen_1")} disabled={disabled} chip={chip} token={token} />
@@ -695,6 +698,7 @@ function NumberCell({
   token,
   big,
   compact,
+  fixed,
 }: {
   number: number;
   stake?: bigint;
@@ -705,6 +709,8 @@ function NumberCell({
   token: TokenSpec;
   big?: boolean;
   compact?: boolean;
+  /** Fixed 2rem width on mobile flex rows — prevents digit overlap. */
+  fixed?: boolean;
 }) {
   const color = pocketColor(number);
   const has = stake !== undefined && stake > 0n;
@@ -724,7 +730,9 @@ function NumberCell({
         (compact
           ? big
             ? "w-full h-12 text-sm"
-            : "aspect-square w-full min-h-[2rem] max-h-[2.75rem] text-[10px] leading-none overflow-hidden"
+            : fixed
+              ? "w-8 h-9 shrink-0 text-[11px] leading-none pb-1"
+              : "aspect-square w-full min-h-[2rem] max-h-[2.75rem] text-[10px] leading-none overflow-hidden"
           : big
             ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] shrink-0 text-sm"
             : "h-9 w-full min-w-[2.125rem] text-xs sm:text-sm") +

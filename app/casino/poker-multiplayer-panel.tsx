@@ -227,7 +227,24 @@ export function PokerMultiplayerPanel({
                 </button>
               </div>
               <div className="text-xs text-white/45 mt-1">
-                Seat {mySeat ?? "—"} · {humanCount(active)} humans · {active.status}
+                Seat {mySeat ?? "—"} · {humanCount(active)} / {active.max_seats} seated · {active.status}
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {Object.entries(active.seat_users).map(([seat, uid]) => (
+                  <span
+                    key={seat}
+                    className={
+                      "text-[10px] px-1.5 py-0.5 rounded border " +
+                      (uid
+                        ? uid === userId
+                          ? "border-amber-400/50 bg-amber-500/15 text-amber-100"
+                          : "border-emerald-400/30 bg-emerald-500/10 text-emerald-200/80"
+                        : "border-white/10 text-white/30")
+                    }
+                  >
+                    {seat}:{uid ? (uid === userId ? "you" : "taken") : "open"}
+                  </span>
+                ))}
               </div>
             </div>
             <button type="button" className={btnGhost} onClick={() => setActive(null)}>

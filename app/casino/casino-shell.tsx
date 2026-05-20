@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { CasinoMobileNav } from "./casino-mobile-nav";
 import { casinoPage, casinoShellBg, pillGold } from "./casino-ui";
 
 const MAIN_NAV = [
@@ -128,7 +129,8 @@ export function CasinoShell({
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-10 pb-28">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-10 pb-24 lg:pb-28">{children}</main>
+      <CasinoMobileNav />
     </div>
   );
 }
