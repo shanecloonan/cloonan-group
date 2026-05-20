@@ -68,6 +68,56 @@ function mySeatInRoom(room: PokerRoomRow, userId: string): number | null {
   return null;
 }
 
+export async function serverJoinPokerRoom(
+  supabase: SupabaseClient,
+  userId: string,
+  roomId: string,
+  preferredSeat?: number,
+): Promise<{ room: PokerRoomRow | null; error?: string; status?: number }> {
+  const { data: row, error: fetchErr } = await supabase
+    .from("casino_poker_rooms")
+    .select("*")
+    .eq("id", roomId)
+    .single();
+  if (fetchErr || !row) return { room: null, error: "Room not found", status: 404 };
+
+  const room = row as PokerRoomRow;
+  if (room.status !== "waiting") {
+    return { room: null, error: "Hand in progress — cannot join", status: 409 };
+  }
+
+  const seats = { ...(room.seat_users as Record<string, string | null>) };
+  if (Object.values(seats).includes(userId)) {
+    return { room };
+  }
+
+  const order =
+    preferredSeat !== undefined
+      ? [preferredSeat, ...Array.from({ length: room.max_seats }, (_, i) => i).filter((s) => s !== preferredSeat)]
+      : Array.from({ length: room.max_seats }, (_, i) => i);
+
+  let picked: number | null = null;
+  for (const s of order) {
+    if (!seats[String(s)]) {
+      picked = s;
+      break;
+    }
+  }
+  if (picked === null) return { room: null, error: "Table is full", status: 409 };
+
+  seats[String(picked)] = userId;
+  const { data, error } = await supabase
+    .from("casino_poker_rooms")
+    .update({ seat_users: seats, updated_at: new Date().toISOString() })
+    .eq("id", roomId)
+    .eq("version", room.version)
+    .select("*")
+    .single();
+
+  if (error) return { room: null, error: error.message, status: 409 };
+  return { room: data as PokerRoomRow };
+}
+
 export async function serverStartPokerRoomHand(
   supabase: SupabaseClient,
   userId: string,

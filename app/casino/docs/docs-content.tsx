@@ -233,11 +233,17 @@ export default function DocsContent() {
           <GameDoc id="coinflip" title="Coinflip" rtp="99.00%" rules={[
             "Pick heads or tails; win pays 1.98× (1% house edge).",
             "Auto-bet and martingale helpers are UI-only — engine still one fair flip per round.",
+          ]} verify={[
+            "One RNG byte drives the flip; bit 0 maps to heads/tails.",
+            "Replay checks prediction vs outcome and published server-seed hash.",
           ]} />
 
           <GameDoc id="dice" title="Dice / Limbo" rtp="99.00%" rules={[
             "Set win chance 2–98%; payout = 99 / chance (Limbo uses target multiplier with same edge).",
             "Roll under (or over) your threshold; max multiplier capped for display safety.",
+          ]} verify={[
+            "Roll in basis points and target/direction are frozen in the session config.",
+            "Verifier recomputes win/loss from the same HMAC draw.",
           ]} />
 
           <GameDoc id="roulette" title="Roulette" rtp="97.30%" rules={[
@@ -245,7 +251,8 @@ export default function DocsContent() {
             "Straight 35:1, splits 17:1, streets 11:1, corners 8:1, six-line 5:1, dozens/columns 2:1, even-money 1:1.",
             "Desktop: gold edges between numbers for split/street; corner dots at intersections.",
             "La Partage not enabled — zero loses all outside bets.",
-            "Mobile: true 3×12 European rows (same order as the felt), zero on top, chips shown below numbers — no overlap. Desktop: classic scrollable felt.",
+            "Mobile: tap a number, then pick split/street/corner from the inside bar; hold to clear chips on that pocket.",
+            "Desktop: gold edges between numbers for split/street; corner dots at intersections.",
           ]} verify={[
             "Placements freeze at spin; one RNG draw selects the winning pocket.",
             "Verifier replays each bet’s payout (inside + outside) against that pocket.",
@@ -254,27 +261,42 @@ export default function DocsContent() {
           <GameDoc id="slots" title="Slots" rtp="≈96%" rules={[
             "5×3 grid, 20 paylines, wilds, scatters, free-spin triggers.",
             "Paytable published in-game; empirical RTP checked via smoke suite (~96.5% at 100k spins).",
+          ]} verify={[
+            "Each spin’s reel stops and line wins are logged with nonce order.",
+            "Replay rebuilds the grid and scatter/free-spin triggers from the seed stream.",
           ]} />
 
           <GameDoc id="crash" title="Crash" rtp="99.00%" rules={[
             "Multiplier rises until bust; cash out before bust to win stake × multiplier.",
             "Bust point derived from HMAC stream; auto-cashout honored at tick.",
             "Max multiplier cap applies to UI and payout math.",
+          ]} verify={[
+            "Bust multiplier is fixed at session open from a 52-bit RNG draw.",
+            "Cashout action (manual or auto) is replayed against that bust point.",
           ]} />
 
           <GameDoc id="plinko" title="Plinko" rtp="99.00%" rules={[
             "16 rows, 3 risk tiers (low / medium / high) with different payout ladders.",
             "Bin chosen by cumulative probability from RNG bytes; RTP verified per configuration.",
+          ]} verify={[
+            "Each peg step is one RNG bit; the path determines the bin and multiplier.",
+            "Rows and risk tier are part of the frozen session config.",
           ]} />
 
           <GameDoc id="mines" title="Mines" rtp="99.00%" rules={[
             "5×5 grid, 1–24 mines; each safe reveal increases multiplier with flat 1% edge.",
             "Cash out anytime; hit mine loses stake.",
+          ]} verify={[
+            "Mine positions are shuffled once when the round opens.",
+            "Each tile pick is logged; replay exposes the full 25-cell layout at settle.",
           ]} />
 
           <GameDoc id="hilo" title="HiLo" rtp="99.00%" rules={[
             "13-rank deck; guess higher-or-same / lower-or-same vs current card.",
             "Multipliers compound with 1% edge per step; cash out between rounds.",
+          ]} verify={[
+            "Card sequence and each pick’s win/loss replay from the action log.",
+            "Published probabilities at pick time match the engine’s deck math.",
           ]} />
 
           <GameDoc

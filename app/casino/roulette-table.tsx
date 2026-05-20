@@ -14,6 +14,7 @@ import {
   RED_POCKETS,
   rouletteGame,
   ROULETTE_RTP_PERCENT,
+  insideBetsForPocket,
   splitKey,
   streetKey,
   verifySession,
@@ -144,6 +145,7 @@ export default function RouletteTable({ chainId, token }: Props) {
 
   const [placementsByKey, setPlacementsByKey] = useState<Record<string, bigint>>({});
   const [lastBet, setLastBet] = useState<Record<string, bigint> | null>(null);
+  const [mobileFocus, setMobileFocus] = useState<number | null>(null);
 
   const totalStakeUnits = useMemo(() => {
     let s = 0n;
@@ -250,6 +252,7 @@ export default function RouletteTable({ chainId, token }: Props) {
       void persistSettledSession(s as unknown as Parameters<typeof persistSettledSession>[0], getSeedPair());
       await refreshBalance();
       setSpinning(false);
+      setMobileFocus(null);
       // Keep placements for "rebet" but visually clear them.
       setPlacementsByKey({});
     } catch (err) {
@@ -356,6 +359,8 @@ export default function RouletteTable({ chainId, token }: Props) {
           disabled={spinning}
           chip={chip}
           token={token}
+          mobileFocus={mobileFocus}
+          onMobileFocus={setMobileFocus}
         />
 
         {/* Active placements bar */}
@@ -522,6 +527,8 @@ function BettingLayout({
   disabled,
   chip,
   token,
+  mobileFocus,
+  onMobileFocus,
 }: {
   placements: Record<string, bigint>;
   onClick: (k: PlacementKey) => void;
@@ -529,6 +536,8 @@ function BettingLayout({
   disabled: boolean;
   chip: number;
   token: TokenSpec;
+  mobileFocus: number | null;
+  onMobileFocus: (n: number | null) => void;
 }) {
   // Standard European table: 3 rows × 12 columns of 1-36, with 0 to the left.
   // Top row (display top-to-bottom): 3,6,9,...,36
@@ -550,6 +559,8 @@ function BettingLayout({
         topRow={topRow}
         midRow={midRow}
         botRow={botRow}
+        mobileFocus={mobileFocus}
+        onMobileFocus={onMobileFocus}
       />
 
       <p className="hidden md:block text-[10px] text-white/45 mb-2 px-0.5">
@@ -625,6 +636,8 @@ function RouletteMobileLayout({
   topRow,
   midRow,
   botRow,
+  mobileFocus,
+  onMobileFocus,
 }: {
   placements: Record<string, bigint>;
   onClick: (k: PlacementKey) => void;
@@ -635,7 +648,15 @@ function RouletteMobileLayout({
   topRow: number[];
   midRow: number[];
   botRow: number[];
+  mobileFocus: number | null;
+  onMobileFocus: (n: number | null) => void;
 }) {
+  const clearPocket = (n: number) => {
+    for (const opt of insideBetsForPocket(n)) {
+      if (placements[opt.key]) onRightClick(opt.key);
+    }
+  };
+
   const row = (nums: number[]) => (
     <div className="flex gap-1 justify-between w-full min-w-[20.5rem]">
       {nums.map((n) => (
@@ -644,9 +665,10 @@ function RouletteMobileLayout({
           number={n}
           compact
           fixed
-          stake={placements[`straight:${n}`] as bigint | undefined}
-          onClick={() => onClick(`straight:${n}`)}
-          onRightClick={() => onRightClick(`straight:${n}`)}
+          selected={mobileFocus === n}
+          stake={stakeOnPocket(placements, n)}
+          onClick={() => onMobileFocus(mobileFocus === n ? null : n)}
+          onRightClick={() => clearPocket(n)}
           disabled={disabled}
           chip={chip}
           token={token}
@@ -658,19 +680,29 @@ function RouletteMobileLayout({
   return (
     <div className="md:hidden space-y-3 mb-1 w-full">
       <p className="text-[10px] text-white/45">
-        European layout · tap numbers · split/street/corner on desktop
+        Tap a number, pick inside bets below · hold number to clear its chips
       </p>
       <NumberCell
         number={0}
-        stake={placements["straight:0"] as bigint | undefined}
-        onClick={() => onClick("straight:0")}
-        onRightClick={() => onRightClick("straight:0")}
+        selected={mobileFocus === 0}
+        stake={stakeOnPocket(placements, 0)}
+        onClick={() => onMobileFocus(mobileFocus === 0 ? null : 0)}
+        onRightClick={() => clearPocket(0)}
         disabled={disabled}
         chip={chip}
         token={token}
         big
         compact
       />
+      {mobileFocus !== null && (
+        <RouletteMobileInsideBar
+          pocket={mobileFocus}
+          placements={placements}
+          disabled={disabled}
+          onPlace={onClick}
+          onClose={() => onMobileFocus(null)}
+        />
+      )}
       <div className="overflow-x-auto overscroll-x-contain touch-pan-x rounded-lg -mx-0.5 px-0.5">
         <div className="space-y-1 py-0.5">
           {row(topRow)}
@@ -907,6 +939,75 @@ function InsideSideEdge({
   );
 }
 
+/** Sum stakes for any placement touching this pocket. */
+function stakeOnPocket(placements: Record<string, bigint>, n: number): bigint | undefined {
+  let sum = 0n;
+  let any = false;
+  for (const opt of insideBetsForPocket(n)) {
+    const v = placements[opt.key];
+    if (v && v > 0n) {
+      sum += v;
+      any = true;
+    }
+  }
+  return any ? sum : undefined;
+}
+
+function RouletteMobileInsideBar({
+  pocket,
+  placements,
+  disabled,
+  onPlace,
+  onClose,
+}: {
+  pocket: number;
+  placements: Record<string, bigint>;
+  disabled: boolean;
+  onPlace: (k: PlacementKey) => void;
+  onClose: () => void;
+}) {
+  const options = insideBetsForPocket(pocket);
+  return (
+    <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-2.5 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold text-amber-100">
+          Inside bets on <span className="font-mono">{pocket}</span>
+        </span>
+        <button
+          type="button"
+          className="text-[10px] text-white/50 hover:text-white cursor-pointer"
+          onClick={onClose}
+        >
+          Close
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => {
+          const has = placements[opt.key] !== undefined && placements[opt.key]! > 0n;
+          return (
+            <button
+              key={opt.key}
+              type="button"
+              disabled={disabled}
+              onClick={() => onPlace(opt.key)}
+              className={
+                "min-h-10 touch-manipulation px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-all " +
+                (has
+                  ? "border-amber-400/60 bg-amber-500/25 text-amber-50"
+                  : "border-white/15 bg-black/30 text-white/80 hover:border-amber-400/40") +
+                (disabled ? " opacity-50 cursor-not-allowed" : " cursor-pointer active:scale-95")
+              }
+            >
+              {opt.label}
+              <span className="text-white/45 ml-1">{opt.payoutToOne}:1</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function NumberCell({
   number,
   stake,
@@ -918,6 +1019,7 @@ function NumberCell({
   big,
   compact,
   fixed,
+  selected,
 }: {
   number: number;
   stake?: bigint;
@@ -930,6 +1032,7 @@ function NumberCell({
   compact?: boolean;
   /** Fixed 2rem width on mobile flex rows — prevents digit overlap. */
   fixed?: boolean;
+  selected?: boolean;
 }) {
   const color = pocketColor(number);
   const has = stake !== undefined && stake > 0n;
@@ -960,9 +1063,14 @@ function NumberCell({
           : color === "black"
             ? "bg-slate-900/70 border-slate-700/40 text-slate-200 hover:bg-slate-900"
             : "bg-emerald-700/40 border-emerald-600/40 text-emerald-100 hover:bg-emerald-700/60") +
+        (selected ? " ring-2 ring-amber-400 ring-offset-1 ring-offset-emerald-950 " : "") +
         (disabled ? " cursor-not-allowed opacity-70" : " cursor-pointer active:scale-95")
       }
-      title={`Tap: place ${chip} ${token.symbol} · hold / right-click: remove`}
+      title={
+        compact
+          ? `Select · hold to clear chips on ${number}`
+          : `Tap: place ${chip} ${token.symbol} · hold / right-click: remove`
+      }
     >
       <span className={compact ? "leading-none" : ""}>{number}</span>
       {has && <ChipBadge stake={stake!} token={token} compact={compact} below={compact} />}

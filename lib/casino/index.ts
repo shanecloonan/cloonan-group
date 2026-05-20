@@ -18,6 +18,7 @@ export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";
 export * from "./roulette-keys";
+export * from "./roulette-inside-bets";
 export * from "./slots";
 export * from "./crash";
 export * from "./plinko";

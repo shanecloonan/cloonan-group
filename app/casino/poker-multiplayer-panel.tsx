@@ -16,7 +16,6 @@ import {
   mySeatInRoom,
   listPokerRooms,
   createPokerRoom,
-  joinPokerRoom,
   subscribePokerRoom,
   humanCount,
   seatedUserIds,
@@ -37,7 +36,7 @@ function humanToUnits(amount: number, token: TokenSpec): bigint {
 }
 
 async function pokerApi<T extends { room?: PokerRoomRow; error?: string }>(
-  path: "action" | "start",
+  path: "action" | "start" | "join",
   body: unknown,
 ): Promise<T> {
   const {
@@ -193,7 +192,7 @@ export function PokerMultiplayerPanel({
   const joinById = async (id: string) => {
     setBusy(true);
     setMsg(null);
-    const { room, error } = await joinPokerRoom(id, HUMAN_SEAT);
+    const { room, error } = await pokerApi("join", { roomId: id, preferredSeat: HUMAN_SEAT });
     if (error) {
       setBusy(false);
       setMsg(error);

@@ -19,10 +19,10 @@ export const inputCls =
   "w-full h-10 px-3 rounded-xl bg-black/40 border border-white/[0.1] text-white/95 text-sm placeholder:text-white/35 outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/25 transition-all";
 
 export const btnPrimary =
-  "h-11 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-black shadow-[0_4px_20px_rgba(245,158,11,0.35)] hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+  "min-h-12 touch-manipulation h-11 px-5 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-black shadow-[0_4px_20px_rgba(245,158,11,0.35)] hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
 export const btnSecondary =
-  "h-11 px-5 rounded-xl font-semibold text-sm bg-white/[0.06] border border-white/[0.12] text-white/90 hover:bg-white/[0.1] hover:border-emerald-400/30 active:scale-[0.98] disabled:opacity-40 transition-all cursor-pointer";
+  "min-h-12 touch-manipulation h-11 px-5 rounded-xl font-semibold text-sm bg-white/[0.06] border border-white/[0.12] text-white/90 hover:bg-white/[0.1] hover:border-emerald-400/30 active:scale-[0.98] disabled:opacity-40 transition-all cursor-pointer";
 
 export const btnGhost =
   "h-10 px-4 rounded-xl font-medium text-sm bg-transparent border border-white/[0.1] text-white/75 hover:bg-white/[0.06] hover:text-white active:scale-[0.98] transition-all cursor-pointer";
