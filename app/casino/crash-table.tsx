@@ -27,18 +27,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  bustFromDraw,
   crashGame,
   curveMultiplierAt,
   DEFAULT_CRASH_CONFIG,
   expectedRtpAtCashout,
-  HmacRngStream,
-  hashServerSeed,
   newSessionId,
   persistSettledSession,
   probabilityBustAbove,
   timeToReachMultiplier,
-  verifySession,
   type ChainAdapter,
   type ChainId,
   type CrashAction,
@@ -47,6 +43,8 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
+import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
+import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnPrimary, btnDanger } from "./casino-ui";
 
@@ -681,12 +679,47 @@ export default function CrashTable({ chainId, token }: Props) {
 
       {/* Verify modal */}
       {verifyTarget && (
-        <CrashVerifyModal
+        <CasinoVerifyModal
+          title="Verify crash round"
+          description="Replay the 52-bit bust draw and full action log from the revealed server seed."
           session={verifyTarget}
+          revealedServerSeed={pickRevealedServerSeed(seedPair, lastRevealedSeed, verifyTarget)}
+          token={token}
           onClose={() => setVerifyTarget(null)}
-          revealedSeed={lastRevealedSeed?.serverSeed ?? null}
+          resultLabel="Replayed round matches recorded outcome"
+          extraFields={
+            <CrashVerifyFields session={verifyTarget} />
+          }
+          runVerify={(serverSeed) => {
+            const st = verifyTarget.state as CrashState;
+            return runSessionVerify(crashGame, verifyTarget, serverSeed, {
+              sessionId: verifyTarget.id,
+              userId: verifyTarget.userId,
+              gameId: "crash",
+              chainId: verifyTarget.chainId,
+              token: verifyTarget.token,
+              stake: verifyTarget.stake,
+              config: {
+                autoCashoutMultiplier: st.autoCashoutMultiplier ?? undefined,
+              },
+            });
+          }}
         />
       )}
+    </div>
+  );
+}
+
+function CrashVerifyFields({ session }: { session: Session<CrashAction, CrashState> }) {
+  const st = session.state as CrashState;
+  const autoLabel =
+    st.autoCashoutMultiplier != null ? `${st.autoCashoutMultiplier.toFixed(2)}×` : "—";
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <VerifyField label="Recorded bust" value={`${st.bustAt.toFixed(4)}×`} mono />
+      <VerifyField label="Auto cashout" value={autoLabel} />
+      <VerifyField label="Client seed" value={session.clientSeed} mono />
+      <VerifyField label="Nonce" value={String(session.startNonce)} mono />
     </div>
   );
 }
@@ -1057,175 +1090,3 @@ function AutoPanel({
   );
 }
 
-/* ===========================================================================
- *  Verify modal
- * ========================================================================= */
-
-function CrashVerifyModal({
-  session,
-  onClose,
-  revealedSeed,
-}: {
-  session: Session<CrashAction, CrashState>;
-  onClose: () => void;
-  revealedSeed: string | null;
-}) {
-  const [serverSeed, setServerSeed] = useState(revealedSeed ?? "");
-  const [result, setResult] = useState<{ ok: boolean; bustAt: number; hashOk: boolean } | null>(null);
-
-  const replay = useCallback(() => {
-    if (!serverSeed) return;
-    try {
-      const hashOk = hashServerSeed(serverSeed).toLowerCase() === session.serverSeedHash.toLowerCase();
-      // Pull the raw 52-bit draw deterministically using the same RNG pipeline.
-      // We mirror what crashGame.initialState does without needing the full
-      // session shape — the verify endpoint already has its own implementation,
-      // but this is the lightweight in-modal version.
-      const rng = new HmacRngStream(
-        {
-          id: "replay",
-          userId: session.userId,
-          serverSeed,
-          serverSeedHash: session.serverSeedHash,
-          clientSeed: session.clientSeed,
-          nonce: session.startNonce - 1,
-          status: "retired",
-          createdAt: new Date(0).toISOString(),
-          retiredAt: new Date(0).toISOString(),
-        },
-        session.startNonce,
-        serverSeed,
-      );
-      const hi = BigInt(rng.nextUint32());
-      const lo = BigInt(rng.nextUint32()) >> 12n;
-      const draw = (hi << 20n) | lo;
-      const bustAt = bustFromDraw(draw);
-      const matched = Math.abs(bustAt - (session.state as CrashState).bustAt) < 1e-9;
-      setResult({ ok: matched, bustAt, hashOk });
-    } catch (e) {
-      setResult({ ok: false, bustAt: 0, hashOk: false });
-      console.error(e);
-    }
-  }, [serverSeed, session]);
-
-  // Also build a deeper full-replay path that exercises the audit log.
-  const fullReplay = useMemo(() => {
-    if (!serverSeed) return null;
-    try {
-      const r = verifySession({
-        game: crashGame,
-        serverSeed,
-        serverSeedHash: session.serverSeedHash,
-        clientSeed: session.clientSeed,
-        startNonce: session.startNonce,
-        bet: {
-          sessionId: session.id,
-          userId: session.userId,
-          gameId: "crash",
-          chainId: session.chainId,
-          token: session.token,
-          stake: session.stake,
-          config: { autoCashoutMultiplier: (session.state as CrashState).autoCashoutMultiplier },
-        },
-        actions: session.actions
-          .filter((a) => a.actor === "player")
-          .map((a) => ({
-            ordinal: a.ordinal,
-            action: a.action as CrashAction,
-            actor: a.actor as "player",
-          })),
-        expectedStateHashes: session.actions.map((a) => a.stateHash ?? ""),
-      });
-      return r;
-    } catch {
-      return null;
-    }
-  }, [serverSeed, session]);
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={card + " w-full max-w-xl p-5 max-h-[88vh] overflow-y-auto"}>
-        <div className="flex items-baseline justify-between mb-3">
-          <h3 className="font-semibold text-white text-lg">Verify this round</h3>
-          <button type="button" onClick={onClose} className={btnGhost + " h-8 px-3 text-[11px]"}>
-            Close
-          </button>
-        </div>
-        <div className="space-y-3 text-[12px]">
-          <div className="grid grid-cols-2 gap-2">
-            <FieldRow label="Server seed hash">
-              <code className="text-white/80 break-all">{session.serverSeedHash}</code>
-            </FieldRow>
-            <FieldRow label="Client seed">
-              <code className="text-white/80 break-all">{session.clientSeed}</code>
-            </FieldRow>
-            <FieldRow label="Nonce">
-              <code className="text-white/80">{session.startNonce}</code>
-            </FieldRow>
-            <FieldRow label="Recorded bust">
-              <code className="text-white/80">{(session.state as CrashState).bustAt.toFixed(4)}×</code>
-            </FieldRow>
-          </div>
-          <div>
-            <label className={labelCls}>
-              Server seed (paste a revealed one to verify)
-            </label>
-            <input
-              type="text"
-              className={inputCls + " font-mono"}
-              value={serverSeed}
-              onChange={(e) => setServerSeed(e.target.value)}
-              placeholder="hex string"
-            />
-            <button type="button" className={btnPrimary + " mt-2 w-full"} onClick={replay} disabled={!serverSeed}>
-              Replay bust derivation
-            </button>
-          </div>
-          {result && (
-            <div
-              className={
-                "p-3 rounded-lg border " +
-                (result.ok && result.hashOk
-                  ? "bg-emerald-500/10 border-emerald-400/30 text-emerald-200"
-                  : "bg-rose-500/10 border-rose-500/20 text-rose-200")
-              }
-            >
-              <div className="font-semibold mb-1">
-                {result.ok && result.hashOk ? "✓ Round verified" : "✗ Mismatch"}
-              </div>
-              <div className="text-[11px] space-y-0.5">
-                <div>sha256(seed) match: {result.hashOk ? "yes" : "no"}</div>
-                <div>replayed bustAt: {result.bustAt.toFixed(4)}×</div>
-                <div>recorded bustAt: {(session.state as CrashState).bustAt.toFixed(4)}×</div>
-              </div>
-            </div>
-          )}
-          {fullReplay && (
-            <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[11px]">
-              <div className="text-white/70 font-semibold mb-1">Full audit replay</div>
-              <div className="text-white/50">
-                hashOk={String(fullReplay.hashOk)} · finalStateMatches={String(fullReplay.finalStateMatches)}
-              </div>
-              <div className="text-white/40 mt-1 break-all">
-                replayed hash: {fullReplay.replayedFinalHash.slice(0, 24)}…
-              </div>
-            </div>
-          )}
-          <ShareLinkRow
-            session={session as unknown as Session<unknown, unknown>}
-            serverSeed={revealedSeed}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-      <div className="text-[9px] uppercase tracking-[0.15em] text-white/40">{label}</div>
-      <div className="text-[10px] font-mono mt-0.5">{children}</div>
-    </div>
-  );
-}

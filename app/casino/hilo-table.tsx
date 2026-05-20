@@ -32,6 +32,8 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
+import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
+import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 
 /* ---------------------------------------------------------------------------
@@ -734,10 +736,42 @@ export default function HiloTable({ chainId, token }: Props) {
 
       {/* Verify modal */}
       {verifyTarget && (
-        <HiloVerifyModal
+        <CasinoVerifyModal
+          title="Verify HiLo round"
+          description="Each card is an unbiased nextInt(52) from the HMAC stream — replay picks and cashout."
           session={verifyTarget}
+          revealedServerSeed={pickRevealedServerSeed(seedPair, lastRevealedSeed, verifyTarget)}
+          token={token}
           onClose={() => setVerifyTarget(null)}
-          revealedSeed={lastRevealedSeed?.serverSeed ?? null}
+          resultLabel="Replayed round matches recorded outcome"
+          extraFields={
+            <div className="grid grid-cols-2 gap-3">
+              <VerifyField label="Phase" value={verifyTarget.state.phase} />
+              <VerifyField label="Multiplier" value={`${verifyTarget.state.multiplier.toFixed(2)}×`} />
+              <VerifyField label="Picks" value={String(verifyTarget.state.picks.length)} />
+              <VerifyField
+                label="Cards"
+                value={verifyTarget.state.revealedHistory
+                  .map((idx) => {
+                    const c = cardFromIndex(idx);
+                    return `${c.rank}${c.suit}`;
+                  })
+                  .join(" → ")}
+                mono
+              />
+            </div>
+          }
+          runVerify={(serverSeed) =>
+            runSessionVerify(hiloGame, verifyTarget, serverSeed, {
+              sessionId: verifyTarget.id,
+              userId: verifyTarget.userId,
+              gameId: hiloGame.id,
+              chainId: verifyTarget.chainId,
+              token: verifyTarget.token,
+              stake: verifyTarget.stake,
+              config: {},
+            })
+          }
         />
       )}
     </div>
@@ -1058,103 +1092,3 @@ function suitOf(cardIndex: number): string {
   return cardFromIndex(cardIndex).suit;
 }
 
-/* ===========================================================================
- *  Verify modal
- * ========================================================================= */
-
-function HiloVerifyModal({
-  session,
-  onClose,
-  revealedSeed,
-}: {
-  session: Session<HiloAction, HiloState>;
-  onClose: () => void;
-  revealedSeed: string | null;
-}) {
-  const state = session.state as HiloState;
-  const result = session.result;
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={card + " w-full max-w-xl p-5 max-h-[88vh] overflow-y-auto"}>
-        <div className="flex items-baseline justify-between mb-3">
-          <h3 className="font-semibold text-white text-lg">Verify this round</h3>
-          <button type="button" onClick={onClose} className={btnGhost + " h-8 px-3 text-[11px]"}>
-            Close
-          </button>
-        </div>
-        <div className="space-y-3 text-[12px]">
-          <div className="grid grid-cols-2 gap-2">
-            <FieldRow label="Outcome">
-              <code className="text-white/80">{state.phase}</code>
-            </FieldRow>
-            <FieldRow label="Multiplier">
-              <code className="text-white/80">{state.multiplier.toFixed(2)}×</code>
-            </FieldRow>
-            <FieldRow label="Picks">
-              <code className="text-white/80">{state.picks.length}</code>
-            </FieldRow>
-            <FieldRow label="PnL">
-              <code className={result && result.pnlUnits > 0n ? "text-emerald-300" : "text-rose-300"}>
-                {result?.pnlUnits.toString() ?? "—"}
-              </code>
-            </FieldRow>
-          </div>
-          <FieldRow label="Card sequence (start → revealed by each pick)">
-            <code className="text-white/80 break-all">
-              {state.revealedHistory
-                .map((idx) => {
-                  const c = cardFromIndex(idx);
-                  return `${c.rank}${c.suit}`;
-                })
-                .join("  →  ")}
-            </code>
-          </FieldRow>
-          <FieldRow label="Pick directions + outcomes">
-            <code className="text-white/80 break-all">
-              {state.picks
-                .map(
-                  (p) =>
-                    `${p.direction === "higher" ? "↑" : "↓"}${p.won ? "✓" : "✗"}@${(p.probability * 100).toFixed(1)}%`,
-                )
-                .join("  ")}
-            </code>
-          </FieldRow>
-          <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[11px] leading-relaxed text-white/70">
-            <p className="mb-1">
-              <span className="text-white/40">Server seed hash:</span>{" "}
-              <code className="break-all">{session.serverSeedHash}</code>
-            </p>
-            <p className="mb-1">
-              <span className="text-white/40">Client seed:</span>{" "}
-              <code>{session.clientSeed}</code>
-            </p>
-            <p>
-              <span className="text-white/40">Nonce:</span>{" "}
-              <code>{session.startNonce}</code>
-            </p>
-          </div>
-          <ShareLinkRow
-            session={session as unknown as Session<unknown, unknown>}
-            serverSeed={revealedSeed}
-          />
-          <div className="text-[11px] text-white/40 leading-relaxed">
-            To independently replay this round, paste the session JSON and the
-            revealed server seed into <code className="text-emerald-300">/casino/verify</code>.
-            Each card is an unbiased{" "}
-            <code className="text-emerald-300">nextInt(52)</code> draw from{" "}
-            <code className="text-emerald-300">HMAC(seed, client:nonce)</code>.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-      <div className="text-[9px] uppercase tracking-[0.15em] text-white/40">{label}</div>
-      <div className="text-[10px] font-mono mt-0.5">{children}</div>
-    </div>
-  );
-}

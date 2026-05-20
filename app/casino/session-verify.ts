@@ -1,5 +1,7 @@
 import type { Bet, Game, Session } from "@/lib/casino";
 import { verifySession } from "@/lib/casino";
+import { verifyBlackjackSession } from "@/lib/casino/verify";
+import type { BlackjackAction, BlackjackState } from "@/lib/casino";
 import type { VerifyRunResult } from "./casino-verify-modal";
 
 /** Best available revealed server seed for a settled session hash. */
@@ -35,6 +37,17 @@ export function runSessionVerify<Action, State>(
       })),
       expectedStateHashes: session.actions.map((a) => a.stateHash ?? ""),
     });
+  } catch (err) {
+    return { error: (err as Error).message };
+  }
+}
+
+export function runBlackjackVerify(
+  session: Session<BlackjackAction, BlackjackState>,
+  serverSeed: string,
+): VerifyRunResult<BlackjackState> {
+  try {
+    return verifyBlackjackSession(session, serverSeed);
   } catch (err) {
     return { error: (err as Error).message };
   }

@@ -28,6 +28,7 @@ export function CasinoVerifyModal<State>({
   runVerify,
   extraFields,
   resultLabel = "Replayed outcome matches recorded result",
+  renderVerifiedDetail,
 }: {
   title: string;
   description: ReactNode;
@@ -38,6 +39,8 @@ export function CasinoVerifyModal<State>({
   runVerify: (serverSeed: string) => VerifyRunResult<State> | null;
   extraFields?: ReactNode;
   resultLabel?: string;
+  /** Optional detail shown after replay checks (e.g. blackjack card layout). */
+  renderVerifiedDetail?: (verification: VerifyResult<State>) => ReactNode;
 }) {
   const [inputSeed, setInputSeed] = useState(revealedServerSeed ?? "");
 
@@ -105,6 +108,7 @@ export function CasinoVerifyModal<State>({
               ok={verification.stepMatches.every(Boolean)}
               label={`All ${verification.stepMatches.length} per-step hashes match`}
             />
+            {renderVerifiedDetail?.(verification)}
             <div
               className={
                 "text-center py-2 rounded-lg font-semibold " +

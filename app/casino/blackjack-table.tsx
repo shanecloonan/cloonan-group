@@ -9,7 +9,6 @@ import {
   evaluateHand,
   newSessionId,
   persistSettledSession,
-  verifyBlackjackSession,
   type BlackjackAction,
   type BlackjackActionType,
   type BlackjackConfig,
@@ -21,6 +20,8 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
+import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
+import { pickRevealedServerSeed, runBlackjackVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 
 /* ---------------------------------------------------------------------------
@@ -429,20 +430,42 @@ export default function BlackjackTable({ chainId, token }: Props) {
       </aside>
 
       {verifyTarget && (
-        <VerifyModal
-          session={verifyTarget}
-          revealedServerSeed={
-            // We can verify against the *active* server seed iff this is the
-            // session the player just played AND they haven't rotated yet —
-            // in dev mode the in-memory pair still holds the seed.
-            seedPair.serverSeedHash === verifyTarget.serverSeedHash
-              ? seedPair.serverSeed ?? null
-              : revealSeed?.hash === verifyTarget.serverSeedHash
-                ? revealSeed.serverSeed
-                : null
+        <CasinoVerifyModal
+          title="Verify hand"
+          description={
+            <>
+              Paste the revealed <span className="text-emerald-300">server seed</span>. We re-derive the
+              entire deal and every action with HMAC-SHA256 and compare state hashes.
+            </>
           }
+          session={verifyTarget}
+          revealedServerSeed={pickRevealedServerSeed(seedPair, revealSeed, verifyTarget)}
           token={token}
           onClose={() => setVerifyTarget(null)}
+          resultLabel="Replayed final state matches recorded fingerprint"
+          extraFields={
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <VerifyField label="Published hash" value={verifyTarget.serverSeedHash} mono />
+              <VerifyField label="Client seed" value={verifyTarget.clientSeed} mono />
+              <VerifyField label="Start nonce" value={String(verifyTarget.startNonce)} />
+              <VerifyField label="End nonce" value={String(verifyTarget.endNonce)} />
+            </div>
+          }
+          renderVerifiedDetail={(v) => (
+            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+              <div className="text-[11px] text-white/50 mb-1">Replayed final state</div>
+              <div className="text-[12px] text-white/80">
+                Player hands:{" "}
+                {v.replayedState.hands
+                  .map((h, i) => `${i + 1}: ${h.cards.map(cardLabel).join(" ")}`)
+                  .join(" · ")}
+              </div>
+              <div className="text-[12px] text-white/60">
+                Dealer: {v.replayedState.dealer.map(cardLabel).join(" ")}
+              </div>
+            </div>
+          )}
+          runVerify={(serverSeed) => runBlackjackVerify(verifyTarget, serverSeed)}
         />
       )}
 
@@ -967,164 +990,6 @@ function HistoryRow({
           verify →
         </button>
       </div>
-    </div>
-  );
-}
-
-/* ===========================================================================
- *  Verify modal
- * ========================================================================= */
-
-function VerifyModal({
-  session,
-  revealedServerSeed,
-  token,
-  onClose,
-}: {
-  session: Session<BlackjackAction, BlackjackState>;
-  revealedServerSeed: string | null;
-  token: TokenSpec;
-  onClose: () => void;
-}) {
-  const [inputSeed, setInputSeed] = useState(revealedServerSeed ?? "");
-  const verification = useMemo(() => {
-    if (!inputSeed) return null;
-    try {
-      return verifyBlackjackSession(session, inputSeed);
-    } catch (err) {
-      return { error: (err as Error).message };
-    }
-  }, [session, inputSeed]);
-
-  const allOk =
-    verification &&
-    !("error" in verification) &&
-    verification.hashOk &&
-    verification.finalStateMatches &&
-    verification.stepMatches.every(Boolean);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#0c0d12] border border-white/[0.08] p-6 space-y-5">
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">
-              Provable fairness · client-side replay
-            </div>
-            <h2 className="text-xl font-semibold mt-1">Verify hand</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-white/40 hover:text-white cursor-pointer text-2xl leading-none"
-          >
-            ×
-          </button>
-        </header>
-
-        <p className="text-sm text-white/60 leading-relaxed">
-          Paste the revealed <span className="text-emerald-300">server seed</span> for this
-          hand. We re-derive the entire deal + every action in your browser using HMAC-SHA256
-          and compare against the recorded state hashes. If the math doesn&apos;t match, the
-          house cheated.
-        </p>
-
-        <div>
-          <label className={labelCls}>Server seed (hex)</label>
-          <input
-            type="text"
-            className={inputCls + " font-mono"}
-            value={inputSeed}
-            onChange={(e) => setInputSeed(e.target.value.trim())}
-            placeholder="Rotate the seed to reveal yours, then paste here"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <VerifyField label="Published hash" value={session.serverSeedHash} mono />
-          <VerifyField label="Client seed" value={session.clientSeed} mono />
-          <VerifyField label="Start nonce" value={String(session.startNonce)} />
-          <VerifyField label="End nonce" value={String(session.endNonce)} />
-        </div>
-
-        {!verification && (
-          <div className="text-[12px] text-white/40">
-            Enter a server seed above to run the replay.
-          </div>
-        )}
-
-        {verification && "error" in verification && (
-          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
-            Verifier threw: {verification.error}
-          </div>
-        )}
-
-        {verification && !("error" in verification) && (
-          <div className="space-y-3">
-            <CheckRow ok={verification.hashOk} label="SHA-256(seed) == published hash" />
-            <CheckRow ok={verification.finalStateMatches} label="Replayed final state matches recorded fingerprint" />
-            <CheckRow
-              ok={verification.stepMatches.every(Boolean)}
-              label={`All ${verification.stepMatches.length} per-step hashes match`}
-            />
-            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-              <div className="text-[11px] text-white/50 mb-1">Replayed final state</div>
-              <div className="text-[12px] text-white/80">
-                Player hands: {verification.replayedState.hands
-                  .map((h, i) => `${i + 1}: ${h.cards.map(cardLabel).join(" ")}`)
-                  .join(" · ")}
-              </div>
-              <div className="text-[12px] text-white/60">
-                Dealer: {verification.replayedState.dealer.map(cardLabel).join(" ")}
-              </div>
-            </div>
-            <div
-              className={
-                "text-center py-2 rounded-lg font-semibold " +
-                (allOk
-                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
-                  : "bg-rose-500/15 text-rose-300 border border-rose-400/30")
-              }
-            >
-              {allOk ? "✓ Verified provably fair" : "✗ Verification failed"}
-            </div>
-          </div>
-        )}
-
-        <div className="text-[11px] text-white/40 leading-relaxed">
-          Settled at {new Date(session.updatedAt).toLocaleString()} · {session.actions.length} actions logged ·
-          Result {fmtMoney(session.result?.pnlUnits ?? 0n, token)}.
-        </div>
-
-        <ShareLinkRow session={session} serverSeed={revealedServerSeed} />
-      </div>
-    </div>
-  );
-}
-
-function VerifyField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-      <div className="text-[10px] uppercase tracking-[0.12em] text-white/40 mb-1">{label}</div>
-      <div className={"text-[12px] text-white/80 break-all " + (mono ? "font-mono" : "")}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function CheckRow({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <div className="flex items-center gap-3 text-sm">
-      <span
-        className={
-          "w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold " +
-          (ok ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300")
-        }
-      >
-        {ok ? "✓" : "✗"}
-      </span>
-      <span className={ok ? "text-white/80" : "text-rose-200"}>{label}</span>
     </div>
   );
 }

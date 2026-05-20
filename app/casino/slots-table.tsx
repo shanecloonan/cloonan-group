@@ -30,7 +30,6 @@ import {
   slotsGame,
   SYMBOL_COLOR,
   SYMBOL_GLYPH,
-  verifySession,
   type ChainAdapter,
   type ChainId,
   type Session,
@@ -41,6 +40,8 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
+import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
+import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnPrimary } from "./casino-ui";
 
@@ -586,17 +587,42 @@ export default function SlotsTable({ chainId, token }: Props) {
       </aside>
 
       {verifyTarget && (
-        <SlotsVerifyModal
+        <CasinoVerifyModal
+          title="Verify this spin"
+          description="Paste the revealed server seed to replay every reel stop and free-spin sequence."
           session={verifyTarget}
-          revealedServerSeed={
-            seedPair.serverSeedHash === verifyTarget.serverSeedHash
-              ? seedPair.serverSeed ?? null
-              : revealSeed?.hash === verifyTarget.serverSeedHash
-                ? revealSeed.serverSeed
-                : null
-          }
+          revealedServerSeed={pickRevealedServerSeed(seedPair, revealSeed, verifyTarget)}
           token={token}
           onClose={() => setVerifyTarget(null)}
+          resultLabel="Replayed spin matches recorded outcome"
+          extraFields={
+            <div className="grid grid-cols-2 gap-3">
+              <VerifyField label="Total stake" value={fmtMoney(verifyTarget.stake, token)} />
+              <VerifyField
+                label="Total payout"
+                value={fmtMoney(verifyTarget.result?.totalPayoutUnits ?? 0n, token)}
+              />
+              <VerifyField label="Spins played" value={String(verifyTarget.state.spins.length)} />
+              <VerifyField
+                label="Free spins"
+                value={
+                  verifyTarget.state.freeSpinsTriggered
+                    ? `Yes (${verifyTarget.state.freeSpinsPlayed})`
+                    : "No"
+                }
+              />
+            </div>
+          }
+          runVerify={(serverSeed) =>
+            runSessionVerify(slotsGame, verifyTarget, serverSeed, {
+              sessionId: verifyTarget.id,
+              userId: verifyTarget.userId,
+              gameId: verifyTarget.gameId,
+              chainId: verifyTarget.chainId,
+              token: verifyTarget.token,
+              stake: verifyTarget.stake,
+            })
+          }
         />
       )}
     </div>
@@ -1099,122 +1125,3 @@ function AutoPanel({
   );
 }
 
-/* ===========================================================================
- *  Verify modal
- * ========================================================================= */
-
-function SlotsVerifyModal({
-  session,
-  revealedServerSeed,
-  token,
-  onClose,
-}: {
-  session: Session<SlotsAction, SlotsState>;
-  revealedServerSeed: string | null;
-  token: TokenSpec;
-  onClose: () => void;
-}) {
-  const verifier = useMemo(() => {
-    if (!revealedServerSeed) return null;
-    try {
-      return verifySession({
-        game: slotsGame,
-        serverSeed: revealedServerSeed,
-        serverSeedHash: session.serverSeedHash,
-        clientSeed: session.clientSeed,
-        startNonce: session.startNonce,
-        bet: {
-          sessionId: session.id,
-          userId: session.userId,
-          gameId: session.gameId,
-          chainId: session.chainId,
-          token: session.token,
-          stake: session.stake,
-        },
-        actions: session.actions.map((a) => ({
-          ordinal: a.ordinal,
-          action: a.action,
-          actor: a.actor,
-        })),
-        expectedStateHashes: session.actions.map((a) => a.stateHash ?? ""),
-      });
-    } catch {
-      return null;
-    }
-  }, [revealedServerSeed, session]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-2xl rounded-2xl border border-white/[0.08] bg-[#0b0d12] p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Verify this spin</h2>
-          <button className="text-white/40 hover:text-white/80" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
-        <div className="space-y-3 text-[12px]">
-          <div className="flex justify-between gap-2">
-            <span className="text-white/50">Session</span>
-            <span className="font-mono text-white/80 break-all">
-              {session.id.slice(0, 12)}…{session.id.slice(-6)}
-            </span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span className="text-white/50">Total stake</span>
-            <span className="font-mono">{fmtMoney(session.stake, token)}</span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span className="text-white/50">Total payout</span>
-            <span className="font-mono">
-              {fmtMoney(session.result!.totalPayoutUnits, token)}
-            </span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span className="text-white/50">Spins played</span>
-            <span className="font-mono">{session.state.spins.length}</span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span className="text-white/50">Free spins triggered</span>
-            <span className="font-mono">
-              {session.state.freeSpinsTriggered ? `Yes (${session.state.freeSpinsPlayed})` : "No"}
-            </span>
-          </div>
-        </div>
-
-        {revealedServerSeed && verifier ? (
-          <div className="mt-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/30">
-            <div className="text-emerald-200 text-sm font-semibold mb-1">
-              ✓ {verifier.hashOk && verifier.finalStateMatches
-                ? "Verified provably fair"
-                : "Verification mismatch — escalate"}
-            </div>
-            <div className="text-[11px] text-white/60">
-              Hash check {verifier.hashOk ? "ok" : "FAIL"} · final-state{" "}
-              {verifier.finalStateMatches ? "ok" : "FAIL"} · {verifier.stepMatches.length}{" "}
-              step(s)
-            </div>
-          </div>
-        ) : (
-          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-400/30">
-            <div className="text-amber-200 text-sm font-semibold mb-1">
-              Server seed not yet revealed
-            </div>
-            <div className="text-[11px] text-white/60">
-              Rotate the seed to reveal it, or use{" "}
-              <code className="text-amber-200">/casino/verify</code> after rotation.
-            </div>
-          </div>
-        )}
-
-        <ShareLinkRow session={session} serverSeed={revealedServerSeed} />
-      </div>
-    </div>
-  );
-}

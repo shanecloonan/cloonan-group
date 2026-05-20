@@ -38,6 +38,8 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
+import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
+import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnPrimary } from "./casino-ui";
 
@@ -582,10 +584,51 @@ export default function PlinkoTable({ chainId, token }: Props) {
 
       {/* Verify modal */}
       {verifyTarget && (
-        <PlinkoVerifyModal
+        <CasinoVerifyModal
+          title="Verify this drop"
+          description={
+            <>
+              One HMAC byte per row — LSB is the L/R bit. Bin index equals the count of right turns.
+            </>
+          }
           session={verifyTarget}
+          revealedServerSeed={pickRevealedServerSeed(seedPair, lastRevealedSeed, verifyTarget)}
+          token={token}
           onClose={() => setVerifyTarget(null)}
-          revealedSeed={lastRevealedSeed?.serverSeed ?? null}
+          resultLabel="Replayed drop matches recorded outcome"
+          extraFields={
+            <div className="grid grid-cols-2 gap-3">
+              <VerifyField
+                label="Bin"
+                value={`${verifyTarget.state.bin} / ${verifyTarget.state.config.rows}`}
+                mono
+              />
+              <VerifyField label="Multiplier" value={`${verifyTarget.state.multiplier.toFixed(2)}×`} />
+              <VerifyField
+                label="Risk"
+                value={`${verifyTarget.state.config.risk} · ${verifyTarget.state.config.rows} rows`}
+              />
+              <VerifyField
+                label="Path"
+                value={verifyTarget.state.path.map((b) => (b ? "R" : "L")).join("")}
+                mono
+              />
+            </div>
+          }
+          runVerify={(serverSeed) =>
+            runSessionVerify(plinkoGame, verifyTarget, serverSeed, {
+              sessionId: verifyTarget.id,
+              userId: verifyTarget.userId,
+              gameId: plinkoGame.id,
+              chainId: verifyTarget.chainId,
+              token: verifyTarget.token,
+              stake: verifyTarget.stake,
+              config: {
+                rows: verifyTarget.state.config.rows,
+                risk: verifyTarget.state.config.risk,
+              } as Record<string, unknown>,
+            })
+          }
         />
       )}
     </div>
@@ -844,93 +887,3 @@ function Stat({
   );
 }
 
-/* ===========================================================================
- *  Verify modal
- * ========================================================================= */
-
-function PlinkoVerifyModal({
-  session,
-  onClose,
-  revealedSeed,
-}: {
-  session: Session<PlinkoAction, PlinkoState>;
-  onClose: () => void;
-  revealedSeed: string | null;
-}) {
-  const state = session.state as PlinkoState;
-  const result = session.result;
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={card + " w-full max-w-xl p-5 max-h-[88vh] overflow-y-auto"}>
-        <div className="flex items-baseline justify-between mb-3">
-          <h3 className="font-semibold text-white text-lg">Verify this drop</h3>
-          <button type="button" onClick={onClose} className={btnGhost + " h-8 px-3 text-[11px]"}>
-            Close
-          </button>
-        </div>
-        <div className="space-y-3 text-[12px]">
-          <div className="grid grid-cols-2 gap-2">
-            <FieldRow label="Bin">
-              <code className="text-white/80">
-                {state.bin} / {state.config.rows}
-              </code>
-            </FieldRow>
-            <FieldRow label="Multiplier">
-              <code className="text-white/80">{state.multiplier.toFixed(2)}×</code>
-            </FieldRow>
-            <FieldRow label="Risk">
-              <code className="text-white/80">
-                {state.config.risk} · {state.config.rows}r
-              </code>
-            </FieldRow>
-            <FieldRow label="PnL">
-              <code className={result && result.pnlUnits > 0n ? "text-emerald-300" : "text-rose-300"}>
-                {result?.pnlUnits.toString() ?? "—"}
-              </code>
-            </FieldRow>
-          </div>
-          <FieldRow label="Path (R = right, L = left)">
-            <code className="text-white/80 break-all">
-              {state.path.map((b) => (b ? "R" : "L")).join("")}
-            </code>
-          </FieldRow>
-          <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[11px] leading-relaxed text-white/70">
-            <p className="mb-1">
-              <span className="text-white/40">Server seed hash:</span>{" "}
-              <code className="break-all">{session.serverSeedHash}</code>
-            </p>
-            <p className="mb-1">
-              <span className="text-white/40">Client seed:</span>{" "}
-              <code>{session.clientSeed}</code>
-            </p>
-            <p>
-              <span className="text-white/40">Nonce:</span>{" "}
-              <code>{session.startNonce}</code>
-            </p>
-          </div>
-          <ShareLinkRow
-            session={session as unknown as Session<unknown, unknown>}
-            serverSeed={revealedSeed}
-          />
-          <div className="text-[11px] text-white/40 leading-relaxed">
-            To independently replay this drop, paste the session JSON and the
-            revealed server seed into{" "}
-            <code className="text-emerald-300">/casino/verify</code>. The
-            engine consumes one byte per row from
-            {" "}<code className="text-emerald-300">HMAC(seed, client:nonce)</code>{" "}
-            and uses the LSB as the L/R bit. Bin = count of 1s.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-      <div className="text-[9px] uppercase tracking-[0.15em] text-white/40">{label}</div>
-      <div className="text-[10px] font-mono mt-0.5">{children}</div>
-    </div>
-  );
-}
