@@ -27,6 +27,7 @@ import { PokerOvalTable } from "./poker-table-visual";
 import { PokerTurnTimer } from "./poker-turn-timer";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, pillGold, pillLive } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
+import { pokerTurnElapsedMs } from "@/lib/casino/poker-turn-clock";
 import { POKER_TURN_MS } from "@/lib/casino/poker-constants";
 
 function humanToUnits(amount: number, token: TokenSpec): bigint {
@@ -268,7 +269,7 @@ export function PokerMultiplayerPanel({
     if (!state.players[state.activeSeat]?.isHuman) return;
     const key = `${active.version}-${state.activeSeat}`;
     if (timeoutKeyRef.current === key) return;
-    const elapsed = Date.now() - new Date(active.updated_at).getTime();
+    const elapsed = pokerTurnElapsedMs(active);
     if (elapsed < POKER_TURN_MS) return;
     timeoutKeyRef.current = key;
     const { room, error } = await pokerApi("timeout", {
@@ -285,7 +286,7 @@ export function PokerMultiplayerPanel({
     if (!state.players[state.activeSeat]?.isHuman) return;
     const id = setInterval(() => void enforceTimeout(), 2000);
     return () => clearInterval(id);
-  }, [active?.id, active?.version, active?.updated_at, state?.activeSeat, enforceTimeout]);
+  }, [active?.id, active?.version, active?.turn_started_at, active?.updated_at, state?.activeSeat, enforceTimeout]);
 
   return (
     <div className="space-y-4">
@@ -418,6 +419,7 @@ export function PokerMultiplayerPanel({
             <div className="space-y-2">
               <span className={pillLive + " w-full justify-center"}>Your turn</span>
               <PokerTurnTimer
+                turnStartedAt={active.turn_started_at}
                 updatedAt={active.updated_at}
                 active
                 onExpired={() => void enforceTimeout()}

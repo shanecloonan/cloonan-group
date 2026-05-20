@@ -3,26 +3,29 @@
 import { useEffect, useRef, useState } from "react";
 import { POKER_TURN_MS } from "@/lib/casino/poker-constants";
 
-/** Countdown while it is your turn (uses room `updated_at` as turn start). */
+/** Countdown while it is your turn (`turnStartedAt` preferred over `updatedAt`). */
 export function PokerTurnTimer({
+  turnStartedAt,
   updatedAt,
   active,
   onExpired,
 }: {
+  turnStartedAt?: string | null;
   updatedAt: string;
   active: boolean;
   onExpired?: () => void;
 }) {
   const [left, setLeft] = useState(POKER_TURN_MS);
   const expiredRef = useRef(false);
+  const clockIso = turnStartedAt ?? updatedAt;
 
   useEffect(() => {
     expiredRef.current = false;
-  }, [updatedAt, active]);
+  }, [clockIso, active]);
 
   useEffect(() => {
     if (!active) return;
-    const start = new Date(updatedAt).getTime();
+    const start = new Date(clockIso).getTime();
     const tick = () => {
       const elapsed = Date.now() - start;
       const remaining = Math.max(0, POKER_TURN_MS - elapsed);
@@ -35,7 +38,7 @@ export function PokerTurnTimer({
     tick();
     const id = setInterval(tick, 250);
     return () => clearInterval(id);
-  }, [updatedAt, active, onExpired]);
+  }, [clockIso, active, onExpired]);
 
   if (!active) return null;
   const sec = Math.ceil(left / 1000);

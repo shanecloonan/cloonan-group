@@ -174,9 +174,14 @@ export default function DocsContent() {
                 verifies <code className="text-amber-200/90">Withdrawn</code> on-chain and burns locked balance by tx hash.
               </li>
               <li>
-                Operator indexer: <code className="text-amber-200/90">POST /api/casino/operator/deposit-credit</code> with{" "}
+                Operator indexer: <code className="text-amber-200/90">POST /api/casino/operator/deposit-credit</code> and{" "}
+                <code className="text-amber-200/90">POST /api/casino/operator/withdraw-debit</code> with{" "}
                 <code className="text-amber-200/90">Authorization: Bearer CASINO_OPERATOR_SECRET</code> and{" "}
-                <code className="text-amber-200/90">userId</code> in the body (same idempotent credit as the user route).
+                <code className="text-amber-200/90">userId</code> in the body (idempotent ledger credit/debit by tx hash).
+              </li>
+              <li>
+                Multiplayer poker uses <code className="text-amber-200/90">turn_started_at</code> for the 45s action clock so bot
+                updates do not reset the timer.
               </li>
             </ol>
             <p className="mt-3">

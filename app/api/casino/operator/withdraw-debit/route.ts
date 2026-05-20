@@ -1,11 +1,11 @@
 /**
- * Operator / indexer webhook — credit a user's ledger after on-chain deposit.
+ * Operator / indexer webhook — debit locked balance after on-chain withdraw.
  * Auth: Authorization: Bearer <CASINO_OPERATOR_SECRET>
  */
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { serverCreditDeposit } from "@/lib/casino/deposit-credit";
+import { serverDebitWithdraw } from "@/lib/casino/withdraw-debit";
 import {
   casinoOperatorSupabaseUrl,
   checkCasinoOperatorAuth,
@@ -31,7 +31,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   if (!serviceKey) {
-    return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "SUPABASE_SERVICE_ROLE_KEY not configured" },
+      { status: 503 },
+    );
   }
 
   let body: Body;
@@ -48,8 +51,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = createClient(casinoOperatorSupabaseUrl(), serviceKey);
-
   let amountUnits: bigint | undefined;
   if (body.amountUnits) {
     try {
@@ -59,7 +60,9 @@ export async function POST(req: Request) {
     }
   }
 
-  const result = await serverCreditDeposit(supabase, body.userId, {
+  const supabase = createClient(casinoOperatorSupabaseUrl(), serviceKey);
+
+  const result = await serverDebitWithdraw(supabase, body.userId, {
     chainId: body.chainId,
     token: body.token,
     txHash: body.txHash,
@@ -73,6 +76,6 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     amount: result.amount.toString(),
-    alreadyCredited: result.alreadyCredited,
+    alreadyDebited: result.alreadyDebited,
   });
 }

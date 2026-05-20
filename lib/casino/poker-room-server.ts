@@ -14,7 +14,7 @@ import {
   type PokerState,
 } from "./poker";
 import type { Bet, ChainId, Session, TokenSpec } from "./types";
-import { POKER_TURN_MS } from "./poker-constants";
+import { pokerTurnExpired, resolvePokerTurnStartedAt } from "./poker-turn-clock";
 import { HmacRngStream, hashServerSeed } from "./rng";
 import { newSessionId } from "./session";
 
@@ -239,6 +239,7 @@ export async function serverStartPokerRoomHand(
   state = await advanceRoomBots(session, pair);
   session.state = state;
 
+  const prevState = room.session_json?.state ?? null;
   const { data, error } = await supabase
     .from("casino_poker_rooms")
     .update({
@@ -246,6 +247,7 @@ export async function serverStartPokerRoomHand(
       session_json: jsonSession(session),
       version: room.version + 1,
       updated_at: new Date().toISOString(),
+      turn_started_at: resolvePokerTurnStartedAt(room, prevState, state),
     })
     .eq("id", room.id)
     .eq("version", room.version)
@@ -279,6 +281,7 @@ export async function serverApplyPokerRoomAction(
   }
 
   const session = parseSession(room.session_json);
+  const stateBeforeAction = session.state;
   if (session.state.activeSeat !== humanSeat) {
     return { room: null, error: "Not your turn", status: 409 };
   }
@@ -336,6 +339,7 @@ export async function serverApplyPokerRoomAction(
       session_json: jsonSession(session),
       version: room.version + 1,
       updated_at: new Date().toISOString(),
+      turn_started_at: resolvePokerTurnStartedAt(room, stateBeforeAction, session.state),
     })
     .eq("id", room.id)
     .eq("version", room.version)
@@ -375,8 +379,7 @@ export async function serverEnforcePokerTurnTimeout(
     return { room: null, error: "No human awaiting action", status: 409 };
   }
 
-  const elapsed = Date.now() - new Date(room.updated_at).getTime();
-  if (elapsed < POKER_TURN_MS - 500) {
+  if (!pokerTurnExpired(room)) {
     return { room: null, error: "Turn clock has not expired", status: 409 };
   }
 

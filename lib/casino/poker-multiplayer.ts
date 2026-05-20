@@ -29,6 +29,7 @@ export type PokerRoomRow = {
   version: number;
   created_by: string | null;
   updated_at: string;
+  turn_started_at?: string | null;
 };
 
 function randomCode(): string {
