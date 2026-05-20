@@ -1,10 +1,15 @@
+import { Suspense } from "react";
 import HistoryContent from "./history-content";
 
 export const metadata = {
-  title: "Casino · Session history",
-  description: "Every settled hand, roll, and flip in one auditable feed. Filter, sort, export, and verify.",
+  title: "Casino · Activity",
+  description: "Your session history and the global bet log — filter, export, verify, and watch the house live.",
 };
 
 export default function CasinoHistoryPage() {
-  return <HistoryContent />;
+  return (
+    <Suspense fallback={<div className="min-h-[40vh]" />}>
+      <HistoryContent />
+    </Suspense>
+  );
 }

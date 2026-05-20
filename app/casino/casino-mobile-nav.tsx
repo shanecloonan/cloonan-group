@@ -6,7 +6,12 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/casino", label: "Play", icon: "♠", match: (p: string) => p === "/casino" },
   { href: "/casino/dashboard", label: "Hub", icon: "◈", match: (p: string) => p.startsWith("/casino/dashboard") },
-  { href: "/casino/feed", label: "Bets", icon: "◎", match: (p: string) => p.startsWith("/casino/feed") },
+  {
+    href: "/casino/history",
+    label: "Bets",
+    icon: "◎",
+    match: (p: string) => p.startsWith("/casino/history") || p.startsWith("/casino/feed"),
+  },
   { href: "/casino/leaderboard", label: "Ranks", icon: "★", match: (p: string) => p.startsWith("/casino/leaderboard") },
   { href: "/casino/wallet", label: "Vault", icon: "◇", match: (p: string) => p.startsWith("/casino/wallet") },
 ] as const;

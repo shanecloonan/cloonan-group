@@ -1,11 +1,6 @@
-import type { Metadata } from "next";
-import FeedContent from "./feed-content";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Live Bet Feed | MoneyFund Casino",
-  description: "Real-time log of settled bets across all games and players who opted in.",
-};
-
+/** Legacy route — global feed lives on Activity. */
 export default function CasinoFeedPage() {
-  return <FeedContent />;
+  redirect("/casino/history?view=global");
 }

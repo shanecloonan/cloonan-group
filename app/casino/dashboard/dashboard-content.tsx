@@ -231,10 +231,10 @@ export default function DashboardContent() {
 
           <div className="flex flex-wrap gap-4 text-sm">
             <Link href="/casino/history" className="text-amber-300 hover:text-amber-200">
-              Full history & export →
+              Full activity log →
             </Link>
-            <Link href="/casino/feed" className="text-amber-300 hover:text-amber-200">
-              Global live feed →
+            <Link href="/casino/history?view=global" className="text-amber-300 hover:text-amber-200">
+              Global feed →
             </Link>
           </div>
         </section>

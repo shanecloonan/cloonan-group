@@ -17,14 +17,15 @@
  *      session payload).
  * ========================================================================= */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { fetchPublicBetFeed, type FeedRow } from "@/lib/casino/leaderboard";
 import { buildVerifyLink } from "../share-link";
+import { CasinoFilterPill } from "../casino-filter-pill";
 import { CasinoShell } from "../casino-shell";
-import { ALL_GAMES, GAME_LABELS, type CasinoGameId } from "../casino-ui";
-
-const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
+import { ALL_GAMES, GAME_LABELS, card, pillGold, type CasinoGameId } from "../casino-ui";
 
 /* ---------------------------------------------------------------------------
  *  Types
@@ -56,10 +57,41 @@ const HISTORY_STORAGE_KEY = "mf_casino_history_v1";
  *  Page
  * ------------------------------------------------------------------------- */
 
+type ActivityView = "mine" | "global";
+
 export default function HistoryContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const view: ActivityView = searchParams.get("view") === "global" ? "global" : "mine";
+
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loadingRemote, setLoadingRemote] = useState(false);
   const [remoteError, setRemoteError] = useState<string | null>(null);
+
+  const [feedRows, setFeedRows] = useState<FeedRow[]>([]);
+  const [feedGameFilter, setFeedGameFilter] = useState<"all" | CasinoGameId>("all");
+  const [feedOutcomeFilter, setFeedOutcomeFilter] = useState<"all" | "wins" | "losses">("all");
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedLastRefresh, setFeedLastRefresh] = useState<Date | null>(null);
+
+  const setView = (next: ActivityView) => {
+    router.replace(next === "global" ? "/casino/history?view=global" : "/casino/history");
+  };
+
+  const loadFeed = useCallback(async () => {
+    setFeedLoading(true);
+    const data = await fetchPublicBetFeed(120);
+    setFeedRows(data);
+    setFeedLastRefresh(new Date());
+    setFeedLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (view !== "global") return;
+    loadFeed();
+    const t = setInterval(loadFeed, 12_000);
+    return () => clearInterval(t);
+  }, [view, loadFeed]);
 
   // 1. Load local rows from localStorage on mount.
   useEffect(() => {
@@ -215,6 +247,24 @@ export default function HistoryContent() {
     return { totalWagered, totalPnl, wins, losses, pushes, biggestWin, biggestLoss, bestMultiplier, count: filtered.length };
   }, [filtered]);
 
+  const feedFiltered = useMemo(() => {
+    let list = feedRows;
+    if (feedGameFilter !== "all") list = list.filter((r) => r.game_id === feedGameFilter);
+    if (feedOutcomeFilter === "wins") list = list.filter((r) => Number(r.pnl) > 0);
+    if (feedOutcomeFilter === "losses") list = list.filter((r) => Number(r.pnl) < 0);
+    return list;
+  }, [feedRows, feedGameFilter, feedOutcomeFilter]);
+
+  const feedStats = useMemo(() => {
+    let wins = 0;
+    let losses = 0;
+    for (const r of feedFiltered) {
+      if (Number(r.pnl) > 0) wins++;
+      else if (Number(r.pnl) < 0) losses++;
+    }
+    return { wins, losses, total: feedFiltered.length };
+  }, [feedFiltered]);
+
   /* ----- Export ----- */
 
   const exportJson = () => {
@@ -251,10 +301,32 @@ export default function HistoryContent() {
 
   return (
     <CasinoShell
-      badge="Audit trail"
-      title="Session history"
-      subtitle="Filter, sort, export, and verify every settled session."
+      badge="Casino log"
+      title="Activity"
+      subtitle="Your sessions — filter, export, and verify — plus the global house bet stream."
     >
+      <div className="flex flex-wrap gap-2 mb-8">
+        <ActivityTab active={view === "mine"} onClick={() => setView("mine")}>
+          Your sessions
+        </ActivityTab>
+        <ActivityTab active={view === "global"} onClick={() => setView("global")}>
+          Global feed
+        </ActivityTab>
+      </div>
+
+      {view === "global" ? (
+        <GlobalFeedPanel
+          rows={feedFiltered}
+          stats={feedStats}
+          loading={feedLoading}
+          lastRefresh={feedLastRefresh}
+          gameFilter={feedGameFilter}
+          outcomeFilter={feedOutcomeFilter}
+          onGameFilter={setFeedGameFilter}
+          onOutcomeFilter={setFeedOutcomeFilter}
+          onRefresh={loadFeed}
+        />
+      ) : (
       <div className="space-y-6">
         {/* Aggregate stats */}
         <section className={card + " p-5"}>
@@ -322,16 +394,15 @@ export default function HistoryContent() {
                   <Th label="Stake" sortKey="stake" current={sortKey} dir={sortDir} onClick={(k) => toggle(k, sortKey, sortDir, setSortKey, setSortDir)} align="right" />
                   <Th label="Mult" sortKey="multiplier" current={sortKey} dir={sortDir} onClick={(k) => toggle(k, sortKey, sortDir, setSortKey, setSortDir)} align="right" />
                   <Th label="PnL" sortKey="pnl" current={sortKey} dir={sortDir} onClick={(k) => toggle(k, sortKey, sortDir, setSortKey, setSortDir)} align="right" />
-                  <Th label="Source" />
                   <Th label="" />
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center text-white/40">
+                    <td colSpan={6} className="px-4 py-10 text-center text-white/40">
                       {loadingRemote
-                        ? "Loading from Supabase…"
+                        ? "Loading sessions…"
                         : "No sessions yet — play a hand at /casino."}
                     </td>
                   </tr>
@@ -367,16 +438,6 @@ export default function HistoryContent() {
                         {won ? "+" : ""}
                         {fmt(r.pnlUnits, r.tokenDecimals, true)} {r.tokenSymbol}
                       </td>
-                      <td className="px-4 py-2.5">
-                        <span className={
-                          "text-[10px] uppercase tracking-[0.1em] px-1.5 py-0.5 rounded border " +
-                          (r.origin === "local"
-                            ? "border-white/[0.08] text-white/40"
-                            : "border-emerald-400/30 text-emerald-300 bg-emerald-500/5")
-                        }>
-                          {r.origin}
-                        </span>
-                      </td>
                       <td className="px-4 py-2.5 text-right">
                         {r.origin === "local" ? (
                           <a
@@ -399,10 +460,11 @@ export default function HistoryContent() {
 
         {remoteError && (
           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-400/20 text-sm text-amber-200">
-            Couldn&apos;t reach Supabase for cloud history: {remoteError}. Showing local rows only.
+            Couldn&apos;t load cloud history: {remoteError}. Showing local rows only.
           </div>
         )}
       </div>
+      )}
     </CasinoShell>
   );
 }
@@ -546,4 +608,200 @@ function extractTokenDecimals(session: unknown): number | null {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s = session as any;
   return typeof s?.token?.decimals === "number" ? s.token.decimals : null;
+}
+
+function ActivityTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        "h-9 px-4 rounded-full text-sm font-medium border transition-all cursor-pointer " +
+        (active
+          ? "bg-emerald-500/15 border-emerald-400/40 text-emerald-100"
+          : "bg-white/[0.03] border-white/[0.08] text-white/55 hover:text-white hover:bg-white/[0.06]")
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+function GlobalFeedPanel({
+  rows,
+  stats,
+  loading,
+  lastRefresh,
+  gameFilter,
+  outcomeFilter,
+  onGameFilter,
+  onOutcomeFilter,
+  onRefresh,
+}: {
+  rows: FeedRow[];
+  stats: { wins: number; losses: number; total: number };
+  loading: boolean;
+  lastRefresh: Date | null;
+  gameFilter: "all" | CasinoGameId;
+  outcomeFilter: "all" | "wins" | "losses";
+  onGameFilter: (g: "all" | CasinoGameId) => void;
+  onOutcomeFilter: (o: "all" | "wins" | "losses") => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2 mr-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+          </span>
+          <span className="text-[10px] uppercase tracking-wider text-emerald-300/80">Live</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5 flex-1">
+          <CasinoFilterPill active={gameFilter === "all"} label="All games" onClick={() => onGameFilter("all")} />
+          {ALL_GAMES.map((g) => (
+            <CasinoFilterPill
+              key={g}
+              active={gameFilter === g}
+              label={GAME_LABELS[g]}
+              onClick={() => onGameFilter(g)}
+            />
+          ))}
+          <span className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
+          <CasinoFilterPill active={outcomeFilter === "all"} label="All outcomes" onClick={() => onOutcomeFilter("all")} />
+          <CasinoFilterPill active={outcomeFilter === "wins"} label="Wins" onClick={() => onOutcomeFilter("wins")} />
+          <CasinoFilterPill active={outcomeFilter === "losses"} label="Losses" onClick={() => onOutcomeFilter("losses")} />
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={loading}
+          className="text-xs text-amber-300 hover:text-amber-100 border border-amber-400/30 rounded-lg px-3 py-1.5 disabled:opacity-50 cursor-pointer"
+        >
+          {loading ? "Refreshing…" : "Refresh now"}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <FeedStatCard label="In view" value={String(stats.total)} />
+        <FeedStatCard label="Wins" value={String(stats.wins)} accent="emerald" />
+        <FeedStatCard label="Losses" value={String(stats.losses)} accent="rose" />
+        <FeedStatCard label="Updated" value={lastRefresh ? lastRefresh.toLocaleTimeString() : "—"} />
+      </div>
+
+      <section className={card + " overflow-hidden"}>
+        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-4 py-3 border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-white/40 font-medium">
+          <span>Player · game</span>
+          <span className="text-right hidden sm:block">Stake</span>
+          <span className="text-right">PnL</span>
+          <span className="text-right hidden md:block">Time</span>
+        </div>
+        <div className="max-h-[min(70vh,640px)] overflow-y-auto divide-y divide-white/[0.04]">
+          {rows.length === 0 && !loading ? (
+            <p className="text-sm text-white/45 text-center py-16 px-6">
+              No settled bets in view yet. Sign in and play — sessions sync when hands complete.
+            </p>
+          ) : (
+            rows.map((r) => {
+              const pnl = Number(r.pnl);
+              return (
+                <div
+                  key={r.session_id}
+                  className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-4 py-3 items-center hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-white/90 truncate flex items-center gap-2">
+                      {r.display_label}
+                      {r.is_public === false && (
+                        <span className="text-[9px] uppercase tracking-wider text-white/35 border border-white/10 rounded px-1">
+                          anon
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-white/45 flex items-center gap-2 mt-0.5">
+                      <span className={pillGold + " !text-[9px] !py-0 !px-1.5"}>
+                        {GAME_LABELS[r.game_id as CasinoGameId] ?? r.game_id}
+                      </span>
+                      <span className="sm:hidden">{fmtFeedStake(r.stake, r.token_symbol)}</span>
+                    </div>
+                  </div>
+                  <span className="hidden sm:block text-right font-mono text-xs text-white/55">
+                    {fmtFeedStake(r.stake, r.token_symbol)}
+                  </span>
+                  <span
+                    className={
+                      "text-right font-mono text-sm font-semibold " +
+                      (pnl >= 0 ? "text-emerald-300" : "text-rose-300")
+                    }
+                  >
+                    {fmtFeedPnl(r.pnl, r.token_symbol)}
+                  </span>
+                  <span className="hidden md:block text-right text-[11px] text-white/40">
+                    {new Date(r.settled_at).toLocaleString()}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
+
+      <p className="text-xs text-white/40">
+        All cloud-settled bets appear here; display names require leaderboard opt-in.{" "}
+        <Link href="/casino/leaderboard" className="text-amber-300 hover:underline">
+          Leaderboard
+        </Link>{" "}
+        ·{" "}
+        <Link href="/casino/dashboard" className="text-amber-300 hover:underline">
+          Dashboard
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function FeedStatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: "emerald" | "rose";
+}) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.04] to-transparent p-4">
+      <div className="text-[10px] uppercase tracking-wider text-white/40">{label}</div>
+      <div
+        className={
+          "mt-1 font-mono text-lg font-semibold " +
+          (accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white")
+        }
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function fmtFeedPnl(raw: string, symbol: string): string {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return raw;
+  const sign = n < 0 ? "-" : n > 0 ? "+" : "";
+  return `${sign}${Math.abs(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${symbol}`;
+}
+
+function fmtFeedStake(raw: string, symbol: string): string {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return raw;
+  return `${(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${symbol}`;
 }

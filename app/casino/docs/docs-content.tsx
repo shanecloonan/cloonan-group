@@ -74,18 +74,14 @@ export default function DocsContent() {
                   Dashboard
                 </Link>{" "}
                 — filter your play;{" "}
-                <Link href="/casino/feed" className="text-amber-300 hover:underline">
-                  Live feed
+                <Link href="/casino/history" className="text-amber-300 hover:underline">
+                  Activity
                 </Link>{" "}
-                — global bet log (all cloud sessions);{" "}
+                — your sessions plus global bet log;{" "}
                 <Link href="/casino/leaderboard" className="text-amber-300 hover:underline">
                   Leaderboard
                 </Link>{" "}
-                — opt-in rankings;{" "}
-                <Link href="/casino/history" className="text-amber-300 hover:underline">
-                  History
-                </Link>{" "}
-                — export & verify links.
+                — opt-in rankings.
               </li>
             </ul>
           </DocSection>
@@ -93,7 +89,7 @@ export default function DocsContent() {
           <DocSection id="platform" title="Platform & navigation">
             <Callout title="Designed for low friction">
               Every route uses the same luxury shell: sticky top nav, gold accent tokens, blur cards, and a
-              bottom tab bar on phones (Play, Hub, Feed, Ranks, Wallet). Sign in once to sync seeds, balances,
+              bottom tab bar on phones (Play, Hub, Bets, Ranks, Vault). Sign in once to sync seeds, balances,
               and leaderboard visibility to Supabase.
             </Callout>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
@@ -103,19 +99,14 @@ export default function DocsContent() {
                 body="Filter by game, source (local/cloud), 7d/30d window, and win/loss. Stats, profile, and a live house feed sidebar."
               />
               <PlatformCard
-                href="/casino/feed"
-                title="Global bet log"
-                body="Every settled cloud session across all games — auto-refresh, filter by game and outcome. Private players show as Private table."
-              />
-              <PlatformCard
                 href="/casino/leaderboard"
                 title="Leaderboard & loserboard"
                 body="Top overall winners/losers plus biggest single-hand wins and losses. Named ranks require opt-in; feed still logs all bets."
               />
               <PlatformCard
                 href="/casino/history"
-                title="History & export"
-                body="Merge local and cloud history, sort, filter, export JSON/CSV, and open one-click verify links per hand."
+                title="Activity log"
+                body="Your sessions — merge local and cloud, sort, filter, export JSON/CSV, verify links — plus a global house feed tab with live refresh."
               />
             </div>
           </DocSection>
@@ -196,8 +187,8 @@ export default function DocsContent() {
                 /casino/wallet
               </Link>{" "}
               exercises the full two-step deposit flow when env vars are set. Public activity:{" "}
-              <Link href="/casino/feed" className="text-amber-300 hover:underline">
-                Live feed
+              <Link href="/casino/history?view=global" className="text-amber-300 hover:underline">
+                Activity · global feed
               </Link>
               .
             </p>

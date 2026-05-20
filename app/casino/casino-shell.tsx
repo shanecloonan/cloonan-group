@@ -9,9 +9,12 @@ import { casinoPage, casinoShellBg } from "./casino-ui";
 const MAIN_NAV = [
   { href: "/casino", label: "Play", match: (p: string) => p === "/casino" },
   { href: "/casino/dashboard", label: "Dashboard", match: (p: string) => p.startsWith("/casino/dashboard") },
-  { href: "/casino/feed", label: "Live feed", match: (p: string) => p.startsWith("/casino/feed") },
   { href: "/casino/leaderboard", label: "Rankings", match: (p: string) => p.startsWith("/casino/leaderboard") },
-  { href: "/casino/history", label: "History", match: (p: string) => p.startsWith("/casino/history") },
+  {
+    href: "/casino/history",
+    label: "Activity",
+    match: (p: string) => p.startsWith("/casino/history") || p.startsWith("/casino/feed"),
+  },
   { href: "/casino/docs", label: "Docs", match: (p: string) => p.startsWith("/casino/docs") },
 ] as const;
 
