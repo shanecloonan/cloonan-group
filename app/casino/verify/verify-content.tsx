@@ -36,6 +36,8 @@ import {
   videoPokerGame,
   kenoGame,
   wheelGame,
+  sicBoGame,
+  sicBoBetLabel,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -63,6 +65,8 @@ import {
   type KenoState,
   type WheelAction,
   type WheelState,
+  type SicBoAction,
+  type SicBoState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -150,6 +154,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Money Wheel",
     hint: "Segment index from one RNG draw; landing multiplier vs your bet is replayable.",
   },
+  {
+    id: "sic-bo",
+    label: "Sic Bo",
+    hint: "Three dice from three RNG draws; Big/Small/Triple/Total bets replay from the seed.",
+  },
 ];
 
 type AnyAction =
@@ -166,7 +175,8 @@ type AnyAction =
   | PokerAction
   | VideoPokerAction
   | KenoAction
-  | WheelAction;
+  | WheelAction
+  | SicBoAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -181,7 +191,8 @@ type AnyState =
   | PokerState
   | VideoPokerState
   | KenoState
-  | WheelState;
+  | WheelState
+  | SicBoState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -513,7 +524,8 @@ function pickGame(id: string):
         | typeof pokerGame
         | typeof videoPokerGame
         | typeof kenoGame
-        | typeof wheelGame;
+        | typeof wheelGame
+        | typeof sicBoGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -716,6 +728,20 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "sic-bo") {
+    return {
+      module: sicBoGame,
+      renderState: (raw: unknown) => {
+        const s = raw as SicBoState;
+        return [
+          { label: "Bet", value: sicBoBetLabel(s.betType, s.betValue) },
+          { label: "Dice", value: s.dice.join(" · ") },
+          { label: "Sum", value: String(s.sum) },
+          { label: "Outcome", value: s.won ? `${s.payReturnMult}×` : "loss" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -842,6 +868,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "wheel") {
     const ws = s as WheelState;
     return { betOn: ws.betOn } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "sic-bo") {
+    const ss = s as SicBoState;
+    return { betType: ss.betType, betValue: ss.betValue } as unknown as Record<string, unknown>;
   }
   return {};
 }

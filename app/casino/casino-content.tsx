@@ -118,6 +118,7 @@ const PokerTable = dynamic(() => import("./poker-table"), { ssr: false });
 const VideoPokerTable = dynamic(() => import("./video-poker-table"), { ssr: false });
 const KenoTable = dynamic(() => import("./keno-table"), { ssr: false });
 const WheelTable = dynamic(() => import("./wheel-table"), { ssr: false });
+const SicBoTable = dynamic(() => import("./sic-bo-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -277,6 +278,15 @@ const GAME_CATALOG: GameTile[] = [
     status: "live",
     phase: "Phase 4.9",
     emoji: "◎",
+  },
+  {
+    id: "sic-bo",
+    title: "Sic Bo",
+    subtitle: "Three dice · Big/Small · triples · totals 4–17",
+    rtp: "≈97%",
+    status: "live",
+    phase: "Phase 4.9",
+    emoji: "⚄",
   },
 ];
 
@@ -447,6 +457,9 @@ export default function CasinoContent() {
           )}
           {tab === "wheel" && (
             <WheelTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "sic-bo" && (
+            <SicBoTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -699,7 +712,8 @@ function Lobby({
               g.id === "poker" ||
               g.id === "video-poker" ||
               g.id === "keno" ||
-              g.id === "wheel"
+              g.id === "wheel" ||
+              g.id === "sic-bo"
                 ? (g.id as GameTab)
                 : null;
             return (
