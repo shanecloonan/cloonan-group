@@ -47,6 +47,8 @@ import {
   andarBaharGame,
   caribbeanStudGame,
   formatCaribbeanStudHand,
+  casinoHoldemGame,
+  formatCasinoHoldemCards,
   describeScore,
   minesGame,
   plinkoGame,
@@ -89,6 +91,8 @@ import {
   type AndarBaharState,
   type CaribbeanStudAction,
   type CaribbeanStudState,
+  type CasinoHoldemAction,
+  type CasinoHoldemState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -211,6 +215,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Caribbean Stud",
     hint: "Ten card draws plus fold/raise; 5-card poker ranks and Ace-King qualify replay.",
   },
+  {
+    id: "casino-holdem",
+    label: "Casino Hold'em",
+    hint: "Nine card draws plus fold/call; 7-card best hand and pair-of-4s qualify replay.",
+  },
 ];
 
 type AnyAction =
@@ -256,7 +265,8 @@ type AnyState =
   | RedDogState
   | ThreeCardPokerState
   | AndarBaharState
-  | CaribbeanStudState;
+  | CaribbeanStudState
+  | CasinoHoldemState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -595,7 +605,8 @@ function pickGame(id: string):
         | typeof redDogGame
         | typeof threeCardPokerGame
         | typeof andarBaharGame
-        | typeof caribbeanStudGame;
+        | typeof caribbeanStudGame
+        | typeof casinoHoldemGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -915,6 +926,27 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "casino-holdem") {
+    return {
+      module: casinoHoldemGame,
+      renderState: (raw: unknown) => {
+        const s = raw as CasinoHoldemState;
+        return [
+          { label: "You", value: formatCasinoHoldemCards(s.playerHole) },
+          { label: "Board", value: formatCasinoHoldemCards(s.board) },
+          { label: "Dealer", value: formatCasinoHoldemCards(s.dealerHole) },
+          {
+            label: "Hands",
+            value:
+              s.playerScore && s.dealerScore
+                ? `${describeScore(s.playerScore)} vs ${describeScore(s.dealerScore)}`
+                : "—",
+          },
+          { label: "Outcome", value: s.outcome ?? "—" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1069,6 +1101,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "caribbean-stud") {
     const cs = s as CaribbeanStudState;
     return { numDecks: cs.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "casino-holdem") {
+    const ch = s as CasinoHoldemState;
+    return { numDecks: ch.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }

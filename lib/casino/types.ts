@@ -154,7 +154,8 @@ export type GameId =
   | "red-dog"
   | "three-card-poker"
   | "andar-bahar"
-  | "caribbean-stud";
+  | "caribbean-stud"
+  | "casino-holdem";
 
 export interface Bet {
   sessionId: string;

@@ -125,6 +125,7 @@ const RedDogTable = dynamic(() => import("./red-dog-table"), { ssr: false });
 const ThreeCardPokerTable = dynamic(() => import("./three-card-poker-table"), { ssr: false });
 const AndarBaharTable = dynamic(() => import("./andar-bahar-table"), { ssr: false });
 const CaribbeanStudTable = dynamic(() => import("./caribbean-stud-table"), { ssr: false });
+const CasinoHoldemTable = dynamic(() => import("./casino-holdem-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -348,6 +349,15 @@ const GAME_CATALOG: GameTile[] = [
     phase: "Phase 5",
     emoji: "🏝",
   },
+  {
+    id: "casino-holdem",
+    title: "Casino Hold'em",
+    subtitle: "Texas vs dealer · shared board · pair of 4s to qualify",
+    rtp: "≈97.8%",
+    status: "live",
+    phase: "Phase 5",
+    emoji: "♠",
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -538,6 +548,9 @@ export default function CasinoContent() {
           )}
           {tab === "caribbean-stud" && (
             <CaribbeanStudTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "casino-holdem" && (
+            <CasinoHoldemTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -797,7 +810,8 @@ function Lobby({
               g.id === "red-dog" ||
               g.id === "three-card-poker" ||
               g.id === "andar-bahar" ||
-              g.id === "caribbean-stud"
+              g.id === "caribbean-stud" ||
+              g.id === "casino-holdem"
                 ? (g.id as GameTab)
                 : null;
             return (
