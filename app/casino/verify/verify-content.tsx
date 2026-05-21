@@ -53,6 +53,7 @@ import {
   formatLetItRideCards,
   mississippiStudGame,
   formatMississippiStudCards,
+  chuckALuckGame,
   describeScore,
   minesGame,
   plinkoGame,
@@ -101,6 +102,8 @@ import {
   type LetItRideState,
   type MississippiStudAction,
   type MississippiStudState,
+  type ChuckALuckAction,
+  type ChuckALuckState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -238,6 +241,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Mississippi Stud",
     hint: "Five card draws plus fold/street bets; pair-of-6s pay table replay.",
   },
+  {
+    id: "chuck-a-luck",
+    label: "Chuck-a-Luck",
+    hint: "Three dice plus face pick; match-count payout replay.",
+  },
 ];
 
 type AnyAction =
@@ -264,7 +272,8 @@ type AnyAction =
   | CaribbeanStudAction
   | CasinoHoldemAction
   | LetItRideAction
-  | MississippiStudAction;
+  | MississippiStudAction
+  | ChuckALuckAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -289,7 +298,8 @@ type AnyState =
   | CaribbeanStudState
   | CasinoHoldemState
   | LetItRideState
-  | MississippiStudState;
+  | MississippiStudState
+  | ChuckALuckState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -631,7 +641,8 @@ function pickGame(id: string):
         | typeof caribbeanStudGame
         | typeof casinoHoldemGame
         | typeof letItRideGame
-        | typeof mississippiStudGame;
+        | typeof mississippiStudGame
+        | typeof chuckALuckGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -1006,6 +1017,20 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "chuck-a-luck") {
+    return {
+      module: chuckALuckGame,
+      renderState: (raw: unknown) => {
+        const s = raw as ChuckALuckState;
+        return [
+          { label: "Pick", value: String(s.pick) },
+          { label: "Dice", value: s.dice.join("-") },
+          { label: "Hits", value: String(s.matchCount) },
+          { label: "Return", value: s.won ? `${s.payReturnMult}×` : "loss" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1172,6 +1197,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "mississippi-stud") {
     const ms = s as MississippiStudState;
     return { numDecks: ms.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "chuck-a-luck") {
+    const cal = s as ChuckALuckState;
+    return { pick: cal.pick } as unknown as Record<string, unknown>;
   }
   return {};
 }
