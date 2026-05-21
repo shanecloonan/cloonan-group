@@ -49,6 +49,8 @@ import {
   formatCaribbeanStudHand,
   casinoHoldemGame,
   formatCasinoHoldemCards,
+  letItRideGame,
+  formatLetItRideCards,
   describeScore,
   minesGame,
   plinkoGame,
@@ -93,6 +95,8 @@ import {
   type CaribbeanStudState,
   type CasinoHoldemAction,
   type CasinoHoldemState,
+  type LetItRideAction,
+  type LetItRideState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -220,6 +224,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Casino Hold'em",
     hint: "Nine card draws plus fold/call; 7-card best hand and pair-of-4s qualify replay.",
   },
+  {
+    id: "let-it-ride",
+    label: "Let It Ride",
+    hint: "Five card draws plus pull/ride; pair-of-10s pay table replay.",
+  },
 ];
 
 type AnyAction =
@@ -243,7 +252,9 @@ type AnyAction =
   | RedDogAction
   | ThreeCardPokerAction
   | AndarBaharAction
-  | CaribbeanStudAction;
+  | CaribbeanStudAction
+  | CasinoHoldemAction
+  | LetItRideAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -266,7 +277,8 @@ type AnyState =
   | ThreeCardPokerState
   | AndarBaharState
   | CaribbeanStudState
-  | CasinoHoldemState;
+  | CasinoHoldemState
+  | LetItRideState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -606,7 +618,8 @@ function pickGame(id: string):
         | typeof threeCardPokerGame
         | typeof andarBaharGame
         | typeof caribbeanStudGame
-        | typeof casinoHoldemGame;
+        | typeof casinoHoldemGame
+        | typeof letItRideGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -947,6 +960,23 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "let-it-ride") {
+    return {
+      module: letItRideGame,
+      renderState: (raw: unknown) => {
+        const s = raw as LetItRideState;
+        return [
+          { label: "You", value: formatLetItRideCards(s.playerCards) },
+          { label: "Board", value: formatLetItRideCards(s.community) },
+          {
+            label: "Bets riding",
+            value: `${s.bet1Active ? "1" : "—"} · ${s.bet2Active ? "2" : "—"} · ${s.bet3Active ? "3" : "—"}`,
+          },
+          { label: "Hand", value: s.handScore ? describeScore(s.handScore) : "—" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1105,6 +1135,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "casino-holdem") {
     const ch = s as CasinoHoldemState;
     return { numDecks: ch.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "let-it-ride") {
+    const lir = s as LetItRideState;
+    return { numDecks: lir.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }

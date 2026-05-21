@@ -26,6 +26,7 @@ export * from "./three-card-poker";
 export * from "./andar-bahar";
 export * from "./caribbean-stud";
 export * from "./casino-holdem";
+export * from "./let-it-ride";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";
