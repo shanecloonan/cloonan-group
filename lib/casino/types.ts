@@ -145,7 +145,8 @@ export type GameId =
   | "mines"
   | "hilo"
   | "poker"
-  | "video-poker";
+  | "video-poker"
+  | "keno";
 
 export interface Bet {
   sessionId: string;

@@ -34,6 +34,7 @@ import {
   hiloGame,
   pokerGame,
   videoPokerGame,
+  kenoGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -57,6 +58,8 @@ import {
   type PokerState,
   type VideoPokerAction,
   type VideoPokerState,
+  type KenoAction,
+  type KenoState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -134,6 +137,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Video Poker",
     hint: "Initial deal + hold mask + draw replacements replay from the shoe.",
   },
+  {
+    id: "keno",
+    label: "Keno",
+    hint: "20-number draw without replacement; hits vs your picks are replayable.",
+  },
 ];
 
 type AnyAction =
@@ -148,7 +156,8 @@ type AnyAction =
   | MinesAction
   | HiloAction
   | PokerAction
-  | VideoPokerAction;
+  | VideoPokerAction
+  | KenoAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -161,7 +170,8 @@ type AnyState =
   | MinesState
   | HiloState
   | PokerState
-  | VideoPokerState;
+  | VideoPokerState
+  | KenoState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -491,7 +501,8 @@ function pickGame(id: string):
         | typeof minesGame
         | typeof hiloGame
         | typeof pokerGame
-        | typeof videoPokerGame;
+        | typeof videoPokerGame
+        | typeof kenoGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -666,6 +677,20 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "keno") {
+    return {
+      module: kenoGame,
+      renderState: (raw: unknown) => {
+        const s = raw as KenoState;
+        return [
+          { label: "Hits", value: `${s.hits} / ${s.picks.length}` },
+          { label: "Pay", value: `${s.payMultiplier}×` },
+          { label: "Picks", value: s.picks.join(", ") },
+          { label: "Drawn", value: s.drawn.join(", ") },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -784,6 +809,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "video-poker") {
     const vs = s as VideoPokerState;
     return { numDecks: vs.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "keno") {
+    const ks = s as KenoState;
+    return { picks: ks.picks } as unknown as Record<string, unknown>;
   }
   return {};
 }

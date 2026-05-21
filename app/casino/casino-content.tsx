@@ -116,6 +116,7 @@ const MinesTable = dynamic(() => import("./mines-table"), { ssr: false });
 const HiloTable = dynamic(() => import("./hilo-table"), { ssr: false });
 const PokerTable = dynamic(() => import("./poker-table"), { ssr: false });
 const VideoPokerTable = dynamic(() => import("./video-poker-table"), { ssr: false });
+const KenoTable = dynamic(() => import("./keno-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -257,6 +258,15 @@ const GAME_CATALOG: GameTile[] = [
     status: "live",
     phase: "Phase 4.8",
     emoji: "🂡",
+  },
+  {
+    id: "keno",
+    title: "Keno",
+    subtitle: "Pick 1–10 of 80 · 20 balls drawn · classic pay table",
+    rtp: "≈92%",
+    status: "live",
+    phase: "Phase 4.9",
+    emoji: "🎱",
   },
 ];
 
@@ -421,6 +431,9 @@ export default function CasinoContent() {
           )}
           {tab === "video-poker" && (
             <VideoPokerTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "keno" && (
+            <KenoTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -671,7 +684,8 @@ function Lobby({
               g.id === "mines" ||
               g.id === "hilo" ||
               g.id === "poker" ||
-              g.id === "video-poker"
+              g.id === "video-poker" ||
+              g.id === "keno"
                 ? (g.id as GameTab)
                 : null;
             return (
@@ -848,7 +862,7 @@ function RoadmapPanel() {
       title: "Game catalog",
       status: "live",
       items: [
-        "Blackjack · Baccarat · Video Poker · Coinflip · Dice · Crash · Roulette · Plinko · Slots · Mines · HiLo · Poker",
+        "Blackjack · Baccarat · Video Poker · Keno · Coinflip · Dice · Crash · Roulette · Plinko · Slots · Mines · HiLo · Poker",
         "Activity page: your sessions + global feed (Supabase Realtime)",
         "Sportsbook tied to /parlays engine — upcoming",
       ],
