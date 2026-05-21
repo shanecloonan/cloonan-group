@@ -56,6 +56,7 @@ export const tableHeader =
 
 export const ALL_GAMES = [
   "blackjack",
+  "baccarat",
   "coinflip",
   "dice",
   "roulette",
@@ -71,6 +72,7 @@ export type CasinoGameId = (typeof ALL_GAMES)[number];
 
 export const GAME_LABELS: Record<CasinoGameId, string> = {
   blackjack: "Blackjack",
+  baccarat: "Baccarat",
   coinflip: "Coinflip",
   dice: "Dice / Limbo",
   roulette: "Roulette",

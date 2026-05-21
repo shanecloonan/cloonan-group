@@ -22,9 +22,11 @@
 import { useMemo, useState } from "react";
 import { CasinoShell } from "../casino-shell";
 import {
+  baccaratGame,
   blackjackGame,
   cardLabel,
   coinflipGame,
+  formatBaccaratCards,
   cardFromIndex,
   crashGame,
   describePlacement,
@@ -37,6 +39,8 @@ import {
   slotsGame,
   SYMBOL_GLYPH,
   verifySession,
+  type BaccaratAction,
+  type BaccaratState,
   type BlackjackAction,
   type BlackjackState,
   type CoinflipAction,
@@ -71,6 +75,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     id: "blackjack",
     label: "Blackjack",
     hint: "Replay deals from the shoe; every hit/stand/double is logged with a state hash.",
+  },
+  {
+    id: "baccarat",
+    label: "Baccarat",
+    hint: "8-deck shoe with standard third-card tableau; Player vs Banker totals mod 10.",
   },
   {
     id: "coinflip",
@@ -120,6 +129,7 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
 ];
 
 type AnyAction =
+  | BaccaratAction
   | BlackjackAction
   | CoinflipAction
   | DiceAction
@@ -131,6 +141,7 @@ type AnyAction =
   | HiloAction
   | PokerAction;
 type AnyState =
+  | BaccaratState
   | BlackjackState
   | CoinflipState
   | DiceState
@@ -459,6 +470,7 @@ export default function VerifyContent() {
 function pickGame(id: string):
   | {
       module:
+        | typeof baccaratGame
         | typeof blackjackGame
         | typeof coinflipGame
         | typeof diceGame
@@ -483,6 +495,21 @@ function pickGame(id: string):
             label: `Hand ${i + 1}`,
             value: `${h.cards.map(cardLabel).join(" ")} (${h.busted ? "bust" : h.surrendered ? "surrender" : h.stood ? "stand" : "active"})`,
           })),
+        ];
+      },
+    };
+  }
+  if (id === "baccarat") {
+    return {
+      module: baccaratGame,
+      renderState: (raw: unknown) => {
+        const s = raw as BaccaratState;
+        return [
+          { label: "Bet", value: s.betSpot },
+          { label: "Winner", value: s.winner },
+          { label: "Player", value: `${s.playerTotal} — ${formatBaccaratCards(s.playerCards)}` },
+          { label: "Banker", value: `${s.bankerTotal} — ${formatBaccaratCards(s.bankerCards)}` },
+          { label: "Natural", value: s.natural ? "yes" : "no" },
         ];
       },
     };
@@ -674,6 +701,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   const s = session.state as AnyState;
   if (session.gameId === "blackjack") {
     return (s as BlackjackState).config as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "baccarat") {
+    const bs = s as BaccaratState;
+    return { betSpot: bs.betSpot, numDecks: bs.config.numDecks } as unknown as Record<string, unknown>;
   }
   if (session.gameId === "coinflip") {
     const cs = s as CoinflipState;

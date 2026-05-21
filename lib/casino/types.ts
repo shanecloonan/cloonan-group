@@ -135,6 +135,7 @@ export interface Shoe {
 
 export type GameId =
   | "blackjack"
+  | "baccarat"
   | "coinflip"
   | "dice"
   | "crash"

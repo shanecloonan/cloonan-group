@@ -14,6 +14,7 @@ export * from "./types";
 export * from "./rng";
 export * from "./deck";
 export * from "./blackjack";
+export * from "./baccarat";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";

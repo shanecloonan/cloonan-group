@@ -105,6 +105,7 @@ function SyncStatusPill() {
 }
 
 const BlackjackTable = dynamic(() => import("./blackjack-table"), { ssr: false });
+const BaccaratTable = dynamic(() => import("./baccarat-table"), { ssr: false });
 const CoinflipTable = dynamic(() => import("./coinflip-table"), { ssr: false });
 const DiceTable = dynamic(() => import("./dice-table"), { ssr: false });
 const RouletteTable = dynamic(() => import("./roulette-table"), { ssr: false });
@@ -147,6 +148,15 @@ const GAME_CATALOG: GameTile[] = [
     status: "live",
     phase: "Phase 0",
     emoji: "♠",
+  },
+  {
+    id: "baccarat",
+    title: "Baccarat",
+    subtitle: "Punto banco · Player / Banker / Tie · 8-deck shoe",
+    rtp: "≈98.9%",
+    status: "live",
+    phase: "Phase 4.0",
+    emoji: "♦",
   },
   {
     id: "coinflip",
@@ -368,6 +378,9 @@ export default function CasinoContent() {
           )}
           {tab === "blackjack" && (
             <BlackjackTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "baccarat" && (
+            <BaccaratTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "coinflip" && (
             <CoinflipTable chainId={chainId} token={token} adapter={adapter} />
@@ -635,6 +648,7 @@ function Lobby({
           {GAME_CATALOG.map((g) => {
             const route =
               g.id === "blackjack" ||
+              g.id === "baccarat" ||
               g.id === "coinflip" ||
               g.id === "dice" ||
               g.id === "roulette" ||
@@ -820,7 +834,7 @@ function RoadmapPanel() {
       title: "Game catalog",
       status: "live",
       items: [
-        "Blackjack · Coinflip · Dice · Crash · Roulette · Plinko · Slots · Mines · HiLo · Poker",
+        "Blackjack · Baccarat · Coinflip · Dice · Crash · Roulette · Plinko · Slots · Mines · HiLo · Poker",
         "Activity page: your sessions + global feed (Supabase Realtime)",
         "Sportsbook tied to /parlays engine — upcoming",
       ],
