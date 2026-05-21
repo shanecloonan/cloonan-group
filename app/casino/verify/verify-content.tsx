@@ -51,6 +51,8 @@ import {
   formatCasinoHoldemCards,
   letItRideGame,
   formatLetItRideCards,
+  mississippiStudGame,
+  formatMississippiStudCards,
   describeScore,
   minesGame,
   plinkoGame,
@@ -97,6 +99,8 @@ import {
   type CasinoHoldemState,
   type LetItRideAction,
   type LetItRideState,
+  type MississippiStudAction,
+  type MississippiStudState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -229,6 +233,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Let It Ride",
     hint: "Five card draws plus pull/ride; pair-of-10s pay table replay.",
   },
+  {
+    id: "mississippi-stud",
+    label: "Mississippi Stud",
+    hint: "Five card draws plus fold/street bets; pair-of-6s pay table replay.",
+  },
 ];
 
 type AnyAction =
@@ -254,7 +263,8 @@ type AnyAction =
   | AndarBaharAction
   | CaribbeanStudAction
   | CasinoHoldemAction
-  | LetItRideAction;
+  | LetItRideAction
+  | MississippiStudAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -278,7 +288,8 @@ type AnyState =
   | AndarBaharState
   | CaribbeanStudState
   | CasinoHoldemState
-  | LetItRideState;
+  | LetItRideState
+  | MississippiStudState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -619,7 +630,8 @@ function pickGame(id: string):
         | typeof andarBaharGame
         | typeof caribbeanStudGame
         | typeof casinoHoldemGame
-        | typeof letItRideGame;
+        | typeof letItRideGame
+        | typeof mississippiStudGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -977,6 +989,23 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "mississippi-stud") {
+    return {
+      module: mississippiStudGame,
+      renderState: (raw: unknown) => {
+        const s = raw as MississippiStudState;
+        return [
+          { label: "Hand", value: formatMississippiStudCards(s.playerCards) },
+          {
+            label: "Streets",
+            value: `${s.streetBet1 > 0n ? "1×" : "—"} · ${s.streetBet2 > 0n ? "2×" : "—"} · ${s.streetBet3 > 0n ? "3×" : "—"}`,
+          },
+          { label: "Outcome", value: s.outcome ?? "—" },
+          { label: "Score", value: s.handScore ? describeScore(s.handScore) : "—" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1139,6 +1168,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "let-it-ride") {
     const lir = s as LetItRideState;
     return { numDecks: lir.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "mississippi-stud") {
+    const ms = s as MississippiStudState;
+    return { numDecks: ms.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }

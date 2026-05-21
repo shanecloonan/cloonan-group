@@ -27,6 +27,7 @@ export * from "./andar-bahar";
 export * from "./caribbean-stud";
 export * from "./casino-holdem";
 export * from "./let-it-ride";
+export * from "./mississippi-stud";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";

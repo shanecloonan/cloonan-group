@@ -156,7 +156,8 @@ export type GameId =
   | "andar-bahar"
   | "caribbean-stud"
   | "casino-holdem"
-  | "let-it-ride";
+  | "let-it-ride"
+  | "mississippi-stud";
 
 export interface Bet {
   sessionId: string;
