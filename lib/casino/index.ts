@@ -23,6 +23,7 @@ export * from "./dragon-tiger";
 export * from "./casino-war";
 export * from "./red-dog";
 export * from "./three-card-poker";
+export * from "./andar-bahar";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";

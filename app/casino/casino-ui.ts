@@ -74,6 +74,7 @@ export const ALL_GAMES = [
   "casino-war",
   "red-dog",
   "three-card-poker",
+  "andar-bahar",
 ] as const;
 
 export type CasinoGameId = (typeof ALL_GAMES)[number];
@@ -98,4 +99,5 @@ export const GAME_LABELS: Record<CasinoGameId, string> = {
   "casino-war": "Casino War",
   "red-dog": "Red Dog",
   "three-card-poker": "Three Card Poker",
+  "andar-bahar": "Andar Bahar",
 };

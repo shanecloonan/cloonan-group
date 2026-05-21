@@ -44,6 +44,7 @@ import {
   threeCardPokerGame,
   formatThreeCardHand,
   threeCardHandLabel,
+  andarBaharGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -81,6 +82,8 @@ import {
   type RedDogState,
   type ThreeCardPokerAction,
   type ThreeCardPokerState,
+  type AndarBaharAction,
+  type AndarBaharState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -193,6 +196,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Three Card Poker",
     hint: "Six card draws plus fold/play; Queen-Six qualify and 3-card ranks replay.",
   },
+  {
+    id: "andar-bahar",
+    label: "Andar Bahar",
+    hint: "Joker draw then alternating piles until rank match; side bet replays.",
+  },
 ];
 
 type AnyAction =
@@ -214,7 +222,8 @@ type AnyAction =
   | DragonTigerAction
   | CasinoWarAction
   | RedDogAction
-  | ThreeCardPokerAction;
+  | ThreeCardPokerAction
+  | AndarBaharAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -234,7 +243,8 @@ type AnyState =
   | DragonTigerState
   | CasinoWarState
   | RedDogState
-  | ThreeCardPokerState;
+  | ThreeCardPokerState
+  | AndarBaharState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -571,7 +581,8 @@ function pickGame(id: string):
         | typeof dragonTigerGame
         | typeof casinoWarGame
         | typeof redDogGame
-        | typeof threeCardPokerGame;
+        | typeof threeCardPokerGame
+        | typeof andarBaharGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -857,6 +868,20 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "andar-bahar") {
+    return {
+      module: andarBaharGame,
+      renderState: (raw: unknown) => {
+        const s = raw as AndarBaharState;
+        return [
+          { label: "Joker", value: cardLabel(s.jokerCard) },
+          { label: "Bet", value: s.betSide },
+          { label: "Winner", value: s.winner },
+          { label: "Cards", value: `${s.andarCards.length} Andar · ${s.baharCards.length} Bahar` },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1003,6 +1028,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "three-card-poker") {
     const tp = s as ThreeCardPokerState;
     return { numDecks: tp.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "andar-bahar") {
+    const ab = s as AndarBaharState;
+    return { betSide: ab.betSide, numDecks: ab.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }
