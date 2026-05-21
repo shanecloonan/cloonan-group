@@ -117,6 +117,7 @@ const HiloTable = dynamic(() => import("./hilo-table"), { ssr: false });
 const PokerTable = dynamic(() => import("./poker-table"), { ssr: false });
 const VideoPokerTable = dynamic(() => import("./video-poker-table"), { ssr: false });
 const KenoTable = dynamic(() => import("./keno-table"), { ssr: false });
+const WheelTable = dynamic(() => import("./wheel-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -267,6 +268,15 @@ const GAME_CATALOG: GameTile[] = [
     status: "live",
     phase: "Phase 4.9",
     emoji: "🎱",
+  },
+  {
+    id: "wheel",
+    title: "Money Wheel",
+    subtitle: "54 segments · bet 1×–40× · Dream Catcher layout",
+    rtp: "≈96%",
+    status: "live",
+    phase: "Phase 4.9",
+    emoji: "◎",
   },
 ];
 
@@ -434,6 +444,9 @@ export default function CasinoContent() {
           )}
           {tab === "keno" && (
             <KenoTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "wheel" && (
+            <WheelTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -685,7 +698,8 @@ function Lobby({
               g.id === "hilo" ||
               g.id === "poker" ||
               g.id === "video-poker" ||
-              g.id === "keno"
+              g.id === "keno" ||
+              g.id === "wheel"
                 ? (g.id as GameTab)
                 : null;
             return (

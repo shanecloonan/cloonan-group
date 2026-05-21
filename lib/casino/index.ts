@@ -17,6 +17,7 @@ export * from "./blackjack";
 export * from "./baccarat";
 export * from "./video-poker";
 export * from "./keno";
+export * from "./wheel";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";

@@ -35,6 +35,7 @@ import {
   pokerGame,
   videoPokerGame,
   kenoGame,
+  wheelGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -60,6 +61,8 @@ import {
   type VideoPokerState,
   type KenoAction,
   type KenoState,
+  type WheelAction,
+  type WheelState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -142,6 +145,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Keno",
     hint: "20-number draw without replacement; hits vs your picks are replayable.",
   },
+  {
+    id: "wheel",
+    label: "Money Wheel",
+    hint: "Segment index from one RNG draw; landing multiplier vs your bet is replayable.",
+  },
 ];
 
 type AnyAction =
@@ -157,7 +165,8 @@ type AnyAction =
   | HiloAction
   | PokerAction
   | VideoPokerAction
-  | KenoAction;
+  | KenoAction
+  | WheelAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -171,7 +180,8 @@ type AnyState =
   | HiloState
   | PokerState
   | VideoPokerState
-  | KenoState;
+  | KenoState
+  | WheelState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -502,7 +512,8 @@ function pickGame(id: string):
         | typeof hiloGame
         | typeof pokerGame
         | typeof videoPokerGame
-        | typeof kenoGame;
+        | typeof kenoGame
+        | typeof wheelGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -691,6 +702,20 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "wheel") {
+    return {
+      module: wheelGame,
+      renderState: (raw: unknown) => {
+        const s = raw as WheelState;
+        return [
+          { label: "Bet on", value: `${s.betOn}×` },
+          { label: "Landed", value: `${s.landedMult}×` },
+          { label: "Segment", value: `#${s.segmentIndex + 1}` },
+          { label: "Outcome", value: s.won ? "win" : "loss" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -813,6 +838,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "keno") {
     const ks = s as KenoState;
     return { picks: ks.picks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "wheel") {
+    const ws = s as WheelState;
+    return { betOn: ws.betOn } as unknown as Record<string, unknown>;
   }
   return {};
 }
