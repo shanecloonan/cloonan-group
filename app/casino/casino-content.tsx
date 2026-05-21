@@ -129,6 +129,7 @@ const CasinoHoldemTable = dynamic(() => import("./casino-holdem-table"), { ssr: 
 const LetItRideTable = dynamic(() => import("./let-it-ride-table"), { ssr: false });
 const MississippiStudTable = dynamic(() => import("./mississippi-stud-table"), { ssr: false });
 const ChuckALuckTable = dynamic(() => import("./chuck-a-luck-table"), { ssr: false });
+const UltimateTexasHoldemTable = dynamic(() => import("./ultimate-texas-holdem-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -388,6 +389,15 @@ const GAME_CATALOG: GameTile[] = [
     phase: "Phase 5",
     emoji: "🎲",
   },
+  {
+    id: "ultimate-texas-holdem",
+    title: "Ultimate Texas Hold'em",
+    subtitle: "Ante + play 4×/2×/1× · check streets · dealer pair qualifies",
+    rtp: "≈97.8%",
+    status: "live",
+    phase: "Phase 5",
+    emoji: "♥",
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -590,6 +600,9 @@ export default function CasinoContent() {
           )}
           {tab === "chuck-a-luck" && (
             <ChuckALuckTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "ultimate-texas-holdem" && (
+            <UltimateTexasHoldemTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -853,7 +866,8 @@ function Lobby({
               g.id === "casino-holdem" ||
               g.id === "let-it-ride" ||
               g.id === "mississippi-stud" ||
-              g.id === "chuck-a-luck"
+              g.id === "chuck-a-luck" ||
+              g.id === "ultimate-texas-holdem"
                 ? (g.id as GameTab)
                 : null;
             return (

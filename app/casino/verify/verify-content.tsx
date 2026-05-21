@@ -54,6 +54,8 @@ import {
   mississippiStudGame,
   formatMississippiStudCards,
   chuckALuckGame,
+  ultimateTexasHoldemGame,
+  formatUltimateHoldemCards,
   describeScore,
   minesGame,
   plinkoGame,
@@ -104,6 +106,8 @@ import {
   type MississippiStudState,
   type ChuckALuckAction,
   type ChuckALuckState,
+  type UltimateTexasHoldemAction,
+  type UltimateTexasHoldemState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -246,6 +250,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Chuck-a-Luck",
     hint: "Three dice plus face pick; match-count payout replay.",
   },
+  {
+    id: "ultimate-texas-holdem",
+    label: "Ultimate Texas Hold'em",
+    hint: "Nine card draws plus check/play streets; dealer pair qualify replay.",
+  },
 ];
 
 type AnyAction =
@@ -273,7 +282,8 @@ type AnyAction =
   | CasinoHoldemAction
   | LetItRideAction
   | MississippiStudAction
-  | ChuckALuckAction;
+  | ChuckALuckAction
+  | UltimateTexasHoldemAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -299,7 +309,8 @@ type AnyState =
   | CasinoHoldemState
   | LetItRideState
   | MississippiStudState
-  | ChuckALuckState;
+  | ChuckALuckState
+  | UltimateTexasHoldemState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -642,7 +653,8 @@ function pickGame(id: string):
         | typeof casinoHoldemGame
         | typeof letItRideGame
         | typeof mississippiStudGame
-        | typeof chuckALuckGame;
+        | typeof chuckALuckGame
+        | typeof ultimateTexasHoldemGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -1031,6 +1043,27 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "ultimate-texas-holdem") {
+    return {
+      module: ultimateTexasHoldemGame,
+      renderState: (raw: unknown) => {
+        const s = raw as UltimateTexasHoldemState;
+        return [
+          { label: "You", value: formatUltimateHoldemCards(s.playerHole) },
+          { label: "Board", value: formatUltimateHoldemCards(s.board) },
+          { label: "Dealer", value: formatUltimateHoldemCards(s.dealerHole) },
+          {
+            label: "Hands",
+            value:
+              s.playerScore && s.dealerScore
+                ? `${describeScore(s.playerScore)} vs ${describeScore(s.dealerScore)}`
+                : "—",
+          },
+          { label: "Outcome", value: s.outcome ?? "—" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1201,6 +1234,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "chuck-a-luck") {
     const cal = s as ChuckALuckState;
     return { pick: cal.pick } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "ultimate-texas-holdem") {
+    const uth = s as UltimateTexasHoldemState;
+    return { numDecks: uth.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }

@@ -29,6 +29,7 @@ export * from "./casino-holdem";
 export * from "./let-it-ride";
 export * from "./mississippi-stud";
 export * from "./chuck-a-luck";
+export * from "./ultimate-texas-holdem";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";
