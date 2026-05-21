@@ -45,6 +45,9 @@ import {
   formatThreeCardHand,
   threeCardHandLabel,
   andarBaharGame,
+  caribbeanStudGame,
+  formatCaribbeanStudHand,
+  describeScore,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -84,6 +87,8 @@ import {
   type ThreeCardPokerState,
   type AndarBaharAction,
   type AndarBaharState,
+  type CaribbeanStudAction,
+  type CaribbeanStudState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -201,6 +206,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Andar Bahar",
     hint: "Joker draw then alternating piles until rank match; side bet replays.",
   },
+  {
+    id: "caribbean-stud",
+    label: "Caribbean Stud",
+    hint: "Ten card draws plus fold/raise; 5-card poker ranks and Ace-King qualify replay.",
+  },
 ];
 
 type AnyAction =
@@ -223,7 +233,8 @@ type AnyAction =
   | CasinoWarAction
   | RedDogAction
   | ThreeCardPokerAction
-  | AndarBaharAction;
+  | AndarBaharAction
+  | CaribbeanStudAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -244,7 +255,8 @@ type AnyState =
   | CasinoWarState
   | RedDogState
   | ThreeCardPokerState
-  | AndarBaharState;
+  | AndarBaharState
+  | CaribbeanStudState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -582,7 +594,8 @@ function pickGame(id: string):
         | typeof casinoWarGame
         | typeof redDogGame
         | typeof threeCardPokerGame
-        | typeof andarBaharGame;
+        | typeof andarBaharGame
+        | typeof caribbeanStudGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -882,6 +895,26 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "caribbean-stud") {
+    return {
+      module: caribbeanStudGame,
+      renderState: (raw: unknown) => {
+        const s = raw as CaribbeanStudState;
+        return [
+          { label: "You", value: formatCaribbeanStudHand(s.playerCards) },
+          { label: "Dealer", value: formatCaribbeanStudHand(s.dealerCards) },
+          {
+            label: "Hands",
+            value:
+              s.playerScore && s.dealerScore
+                ? `${describeScore(s.playerScore)} vs ${describeScore(s.dealerScore)}`
+                : "—",
+          },
+          { label: "Outcome", value: s.outcome ?? "—" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1032,6 +1065,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "andar-bahar") {
     const ab = s as AndarBaharState;
     return { betSide: ab.betSide, numDecks: ab.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "caribbean-stud") {
+    const cs = s as CaribbeanStudState;
+    return { numDecks: cs.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }

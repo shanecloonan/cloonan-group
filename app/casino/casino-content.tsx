@@ -124,6 +124,7 @@ const CasinoWarTable = dynamic(() => import("./casino-war-table"), { ssr: false 
 const RedDogTable = dynamic(() => import("./red-dog-table"), { ssr: false });
 const ThreeCardPokerTable = dynamic(() => import("./three-card-poker-table"), { ssr: false });
 const AndarBaharTable = dynamic(() => import("./andar-bahar-table"), { ssr: false });
+const CaribbeanStudTable = dynamic(() => import("./caribbean-stud-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -338,6 +339,15 @@ const GAME_CATALOG: GameTile[] = [
     phase: "Phase 5",
     emoji: "🎴",
   },
+  {
+    id: "caribbean-stud",
+    title: "Caribbean Stud",
+    subtitle: "5-card stud · ante + raise · dealer Ace-King to qualify",
+    rtp: "≈94.8%",
+    status: "live",
+    phase: "Phase 5",
+    emoji: "🏝",
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -525,6 +535,9 @@ export default function CasinoContent() {
           )}
           {tab === "andar-bahar" && (
             <AndarBaharTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "caribbean-stud" && (
+            <CaribbeanStudTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -783,7 +796,8 @@ function Lobby({
               g.id === "casino-war" ||
               g.id === "red-dog" ||
               g.id === "three-card-poker" ||
-              g.id === "andar-bahar"
+              g.id === "andar-bahar" ||
+              g.id === "caribbean-stud"
                 ? (g.id as GameTab)
                 : null;
             return (
