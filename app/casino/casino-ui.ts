@@ -70,6 +70,7 @@ export const ALL_GAMES = [
   "keno",
   "wheel",
   "sic-bo",
+  "dragon-tiger",
 ] as const;
 
 export type CasinoGameId = (typeof ALL_GAMES)[number];
@@ -90,4 +91,5 @@ export const GAME_LABELS: Record<CasinoGameId, string> = {
   keno: "Keno",
   wheel: "Money Wheel",
   "sic-bo": "Sic Bo",
+  "dragon-tiger": "Dragon Tiger",
 };

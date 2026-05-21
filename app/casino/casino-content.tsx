@@ -119,6 +119,7 @@ const VideoPokerTable = dynamic(() => import("./video-poker-table"), { ssr: fals
 const KenoTable = dynamic(() => import("./keno-table"), { ssr: false });
 const WheelTable = dynamic(() => import("./wheel-table"), { ssr: false });
 const SicBoTable = dynamic(() => import("./sic-bo-table"), { ssr: false });
+const DragonTigerTable = dynamic(() => import("./dragon-tiger-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -287,6 +288,15 @@ const GAME_CATALOG: GameTile[] = [
     status: "live",
     phase: "Phase 4.9",
     emoji: "⚄",
+  },
+  {
+    id: "dragon-tiger",
+    title: "Dragon Tiger",
+    subtitle: "One card each · Ace low · tie pays 11:1 · half on tie",
+    rtp: "≈96%",
+    status: "live",
+    phase: "Phase 4.9",
+    emoji: "🐉",
   },
 ];
 
@@ -460,6 +470,9 @@ export default function CasinoContent() {
           )}
           {tab === "sic-bo" && (
             <SicBoTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "dragon-tiger" && (
+            <DragonTigerTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -713,7 +726,8 @@ function Lobby({
               g.id === "video-poker" ||
               g.id === "keno" ||
               g.id === "wheel" ||
-              g.id === "sic-bo"
+              g.id === "sic-bo" ||
+              g.id === "dragon-tiger"
                 ? (g.id as GameTab)
                 : null;
             return (

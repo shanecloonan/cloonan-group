@@ -38,6 +38,7 @@ import {
   wheelGame,
   sicBoGame,
   sicBoBetLabel,
+  dragonTigerGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -67,6 +68,8 @@ import {
   type WheelState,
   type SicBoAction,
   type SicBoState,
+  type DragonTigerAction,
+  type DragonTigerState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -159,6 +162,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Sic Bo",
     hint: "Three dice from three RNG draws; Big/Small/Triple/Total bets replay from the seed.",
   },
+  {
+    id: "dragon-tiger",
+    label: "Dragon Tiger",
+    hint: "Two card draws from the shoe; Ace-low rank comparison is replayable.",
+  },
 ];
 
 type AnyAction =
@@ -176,7 +184,8 @@ type AnyAction =
   | VideoPokerAction
   | KenoAction
   | WheelAction
-  | SicBoAction;
+  | SicBoAction
+  | DragonTigerAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -192,7 +201,8 @@ type AnyState =
   | VideoPokerState
   | KenoState
   | WheelState
-  | SicBoState;
+  | SicBoState
+  | DragonTigerState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -525,7 +535,8 @@ function pickGame(id: string):
         | typeof videoPokerGame
         | typeof kenoGame
         | typeof wheelGame
-        | typeof sicBoGame;
+        | typeof sicBoGame
+        | typeof dragonTigerGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -742,6 +753,20 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "dragon-tiger") {
+    return {
+      module: dragonTigerGame,
+      renderState: (raw: unknown) => {
+        const s = raw as DragonTigerState;
+        return [
+          { label: "Bet", value: s.betSpot },
+          { label: "Winner", value: s.winner },
+          { label: "Dragon", value: `${s.dragonRank} — ${cardLabel(s.dragonCard)}` },
+          { label: "Tiger", value: `${s.tigerRank} — ${cardLabel(s.tigerCard)}` },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -872,6 +897,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "sic-bo") {
     const ss = s as SicBoState;
     return { betType: ss.betType, betValue: ss.betValue } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "dragon-tiger") {
+    const dt = s as DragonTigerState;
+    return { betSpot: dt.betSpot, numDecks: dt.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }
