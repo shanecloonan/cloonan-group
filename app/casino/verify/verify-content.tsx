@@ -40,6 +40,7 @@ import {
   sicBoBetLabel,
   dragonTigerGame,
   casinoWarGame,
+  redDogGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -73,6 +74,8 @@ import {
   type DragonTigerState,
   type CasinoWarAction,
   type CasinoWarState,
+  type RedDogAction,
+  type RedDogState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -175,6 +178,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Casino War",
     hint: "Initial deal plus optional war burn and re-deal replay from the shoe.",
   },
+  {
+    id: "red-dog",
+    label: "Red Dog",
+    hint: "Two boundary cards plus optional third draw; spread payout is replayable.",
+  },
 ];
 
 type AnyAction =
@@ -194,7 +202,8 @@ type AnyAction =
   | WheelAction
   | SicBoAction
   | DragonTigerAction
-  | CasinoWarAction;
+  | CasinoWarAction
+  | RedDogAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -212,7 +221,8 @@ type AnyState =
   | WheelState
   | SicBoState
   | DragonTigerState
-  | CasinoWarState;
+  | CasinoWarState
+  | RedDogState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -547,7 +557,8 @@ function pickGame(id: string):
         | typeof wheelGame
         | typeof sicBoGame
         | typeof dragonTigerGame
-        | typeof casinoWarGame;
+        | typeof casinoWarGame
+        | typeof redDogGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -798,6 +809,21 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "red-dog") {
+    return {
+      module: redDogGame,
+      renderState: (raw: unknown) => {
+        const s = raw as RedDogState;
+        return [
+          { label: "1st", value: cardLabel(s.card1) },
+          { label: "2nd", value: cardLabel(s.card2) },
+          { label: "3rd", value: s.card3 ? cardLabel(s.card3) : "—" },
+          { label: "Spread", value: String(s.spread) },
+          { label: "Outcome", value: s.pushed ? "push" : s.won ? "win" : "loss" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -936,6 +962,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "casino-war") {
     const cw = s as CasinoWarState;
     return { numDecks: cw.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "red-dog") {
+    const rd = s as RedDogState;
+    return { numDecks: rd.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }

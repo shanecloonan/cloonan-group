@@ -121,6 +121,7 @@ const WheelTable = dynamic(() => import("./wheel-table"), { ssr: false });
 const SicBoTable = dynamic(() => import("./sic-bo-table"), { ssr: false });
 const DragonTigerTable = dynamic(() => import("./dragon-tiger-table"), { ssr: false });
 const CasinoWarTable = dynamic(() => import("./casino-war-table"), { ssr: false });
+const RedDogTable = dynamic(() => import("./red-dog-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -308,6 +309,15 @@ const GAME_CATALOG: GameTile[] = [
     phase: "Phase 4.9",
     emoji: "⚔",
   },
+  {
+    id: "red-dog",
+    title: "Red Dog",
+    subtitle: "Two cards set spread · third between wins · pair/consec push",
+    rtp: "≈95%",
+    status: "live",
+    phase: "Phase 4.9",
+    emoji: "🂡",
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -486,6 +496,9 @@ export default function CasinoContent() {
           )}
           {tab === "casino-war" && (
             <CasinoWarTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "red-dog" && (
+            <RedDogTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -741,7 +754,8 @@ function Lobby({
               g.id === "wheel" ||
               g.id === "sic-bo" ||
               g.id === "dragon-tiger" ||
-              g.id === "casino-war"
+              g.id === "casino-war" ||
+              g.id === "red-dog"
                 ? (g.id as GameTab)
                 : null;
             return (
