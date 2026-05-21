@@ -33,6 +33,7 @@ import {
   diceGame,
   hiloGame,
   pokerGame,
+  videoPokerGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -54,6 +55,8 @@ import {
   type HiloState,
   type PokerAction,
   type PokerState,
+  type VideoPokerAction,
+  type VideoPokerState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -126,6 +129,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Poker",
     hint: "Deck order, streets, and bot/human actions rebuild the same showdown.",
   },
+  {
+    id: "video-poker",
+    label: "Video Poker",
+    hint: "Initial deal + hold mask + draw replacements replay from the shoe.",
+  },
 ];
 
 type AnyAction =
@@ -139,7 +147,8 @@ type AnyAction =
   | PlinkoAction
   | MinesAction
   | HiloAction
-  | PokerAction;
+  | PokerAction
+  | VideoPokerAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -151,7 +160,8 @@ type AnyState =
   | PlinkoState
   | MinesState
   | HiloState
-  | PokerState;
+  | PokerState
+  | VideoPokerState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -480,7 +490,8 @@ function pickGame(id: string):
         | typeof plinkoGame
         | typeof minesGame
         | typeof hiloGame
-        | typeof pokerGame;
+        | typeof pokerGame
+        | typeof videoPokerGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -640,6 +651,21 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "video-poker") {
+    return {
+      module: videoPokerGame,
+      renderState: (raw: unknown) => {
+        const s = raw as VideoPokerState;
+        const holdStr = s.hold ? s.hold.map((h) => (h ? "H" : "—")).join("") : "—";
+        return [
+          { label: "Hand", value: s.handLabel ?? "—" },
+          { label: "Pay", value: `${s.payMultiplier}×` },
+          { label: "Hold mask", value: holdStr },
+          { label: "Cards", value: formatBaccaratCards(s.cards) },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -754,6 +780,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "poker") {
     const ps = s as PokerState;
     return { bigBlind: ps.config.bigBlind, rakeBps: ps.config.rakeBps } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "video-poker") {
+    const vs = s as VideoPokerState;
+    return { numDecks: vs.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }
