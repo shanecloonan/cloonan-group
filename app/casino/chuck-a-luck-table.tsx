@@ -17,24 +17,19 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
+import { btnPrimary } from "./casino-ui";
+import {
+  DiceRow,
+  ErrorBanner,
+  humanToUnits,
+  PnlBanner,
+  RulesHint,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const LAST_BET_KEY = "mf_casino_cal_bet";
 const LAST_PICK_KEY = "mf_casino_cal_pick";
@@ -43,21 +38,6 @@ interface Props {
   chainId: ChainId;
   token: TokenSpec;
   adapter: ChainAdapter;
-}
-
-function Die({ value, hit }: { value: number; hit?: boolean }) {
-  return (
-    <div
-      className={
-        "w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 flex items-center justify-center font-mono text-2xl sm:text-3xl font-bold shrink-0 " +
-        (hit
-          ? "border-amber-400 bg-amber-500/20 text-amber-100 shadow-[0_0_16px_rgba(245,158,11,0.2)]"
-          : "border-white/15 bg-white/[0.06] text-white/90")
-      }
-    >
-      {value}
-    </div>
-  );
 }
 
 export default function ChuckALuckTable({ chainId, token }: Props) {
@@ -138,135 +118,88 @@ export default function ChuckALuckTable({ chainId, token }: Props) {
 
   const st = lastSession?.state;
   const seedPair = getSeedPair();
+  const locked = busy || !!lastSession;
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-4"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Chuck-a-Luck</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
-              RTP {chuckALuckRtpLabel()}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <button
-                key={n}
-                type="button"
-                disabled={busy || !!lastSession}
-                onClick={() => setPick(n)}
-                className={
-                  "h-12 rounded-xl font-bold text-lg border transition-all cursor-pointer " +
-                  (pick === n
-                    ? "border-amber-400/60 bg-amber-500/20 text-amber-100"
-                    : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/25")
-                }
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-center text-xs text-white/45">
-            {"1 hit = 1:1 · 2 hits = 2:1 · 3 hits = 11:1"}
-          </p>
-
-          {st && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-3 justify-center py-2">
-                {st.dice.map((d, i) => (
-                  <Die key={i} value={d} hit={d === st.pick} />
-                ))}
-              </div>
-              {lastSession?.result && (
-                <p
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead title="Chuck-a-Luck" rtp={chuckALuckRtpLabel()} />
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={locked}
+                  onClick={() => setPick(n)}
                   className={
-                    "text-center text-sm font-mono " +
-                    (lastSession.result.pnlUnits > 0n
-                      ? "text-emerald-300"
-                      : lastSession.result.pnlUnits < 0n
-                        ? "text-rose-300"
-                        : "text-white/60")
+                    "min-h-12 touch-manipulation rounded-xl font-bold text-lg border transition-all cursor-pointer " +
+                    (pick === n
+                      ? "border-amber-400/60 bg-amber-500/25 text-amber-50 shadow-[0_0_16px_rgba(245,158,11,0.15)]"
+                      : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/25 active:scale-[0.98]")
                   }
                 >
-                  {st.matchCount > 0
-                    ? `${st.matchCount} match${st.matchCount === 1 ? "" : "es"} · ${chuckALuckPayHint(st.matchCount)}`
-                    : "No match"}
-                  {" · "}
-                  {lastSession.result.pnlUnits > 0n ? "+" : ""}
-                  {fmtMoney(lastSession.result.pnlUnits, token)}
+                  {n}
+                </button>
+              ))}
+            </div>
+            <RulesHint>Pick a face, then roll three dice. Payouts: 1 hit even money, 2 hits 2:1, 3 hits 11:1.</RulesHint>
+
+            {st && (
+              <div className="space-y-3 rounded-xl border border-white/[0.06] bg-black/20 p-4">
+                <p className="text-center text-xs text-white/50">
+                  Your pick: <span className="text-amber-200 font-semibold">{st.pick}</span>
                 </p>
-              )}
-            </div>
-          )}
+                <DiceRow dice={st.dice} highlightValue={st.pick} />
+                <p className="text-center text-sm text-white/70">
+                  {st.matchCount > 0
+                    ? `${st.matchCount} match${st.matchCount === 1 ? "" : "es"} · pays ${chuckALuckPayHint(st.matchCount)}`
+                    : "No matches"}
+                </p>
+                {lastSession?.result && <PnlBanner pnl={lastSession.result.pnlUnits} token={token} />}
+              </div>
+            )}
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={labelCls}>Bet ({token.symbol})</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={inputCls}
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                disabled={busy}
-              />
-            </div>
-            <button
-              type="button"
+            <StakeRow
+              label={`Bet on ${pick} (${token.symbol})`}
+              betAmount={betAmount}
+              onBetAmount={setBetAmount}
+              token={token}
               disabled={busy}
-              onClick={() => void roll()}
-              className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
-            >
-              {busy ? "Rolling…" : lastSession ? "Roll again" : "Roll"}
-            </button>
-          </div>
-
-          {lastSession && (
-            <button
-              type="button"
-              onClick={() => {
-                setLastSession(null);
-                setVerifyTarget(null);
-              }}
-              className={btnGhost + " w-full sm:w-auto mx-auto block"}
-            >
-              Clear
-            </button>
-          )}
-
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-        </section>
-
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnGhost + " w-full !text-xs !h-9"}>
-              Rotate seed
-            </button>
-            {lastSession && (
+              actionLabel={busy ? "Rolling…" : lastSession ? "Roll again" : "Roll dice"}
+              onAction={() => void roll()}
+              actionBusy={busy}
+            />
+            {lastSession && !busy && (
               <button
                 type="button"
-                onClick={() => setVerifyTarget(lastSession)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
+                onClick={() => {
+                  setLastSession(null);
+                  setVerifyTarget(null);
+                }}
+                className={btnPrimary + " w-full !bg-white/10 !text-white/80 !shadow-none border border-white/15"}
               >
-                Verify →
+                Change pick
               </button>
             )}
-          </section>
-        </aside>
-      </div>
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={lastSession ? () => setVerifyTarget(lastSession) : undefined}
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
-          title="Chuck-a-Luck · verify roll"
-          description="Replay three dice from the revealed server seed."
+          title="Chuck-a-Luck · verify"
+          description="Replay the three-dice roll and payout from the revealed seed."
           session={verifyTarget as Session<unknown, ChuckALuckState>}
           revealedServerSeed={pickRevealedServerSeed(seedPair, lastRevealedSeed, verifyTarget)}
           token={token}
@@ -293,6 +226,6 @@ export default function ChuckALuckTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }

@@ -10,7 +10,6 @@ import {
   type ChainAdapter,
   type ChainId,
   type CrapsAction,
-  type CrapsRoll,
   type CrapsState,
   type Session,
   type TokenSpec,
@@ -18,24 +17,21 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
+import {
+  DiceCube,
+  ErrorBanner,
+  fmtMoney,
+  humanToUnits,
+  NewHandButton,
+  PhaseChip,
+  PnlBanner,
+  RulesHint,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const LAST_BET_KEY = "mf_casino_craps_bet";
 
@@ -45,49 +41,18 @@ interface Props {
   adapter: ChainAdapter;
 }
 
-function DieFace({ value }: { value: number }) {
-  const pips: Record<number, string> = {
-    1: "●",
-    2: "●　●",
-    3: "●　●　●",
-    4: "●●\n●●",
-    5: "●●\n●\n●●",
-    6: "●●\n●●\n●●",
-  };
-  return (
-    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-white/20 bg-white/[0.08] flex items-center justify-center font-mono text-lg sm:text-xl text-white whitespace-pre leading-tight text-center shrink-0">
-      {pips[value] ?? value}
-    </div>
-  );
-}
-
-function RollRow({ roll, active }: { roll: CrapsRoll; active?: boolean }) {
-  return (
-    <div
-      className={
-        "flex items-center gap-2 rounded-lg px-2 py-1.5 " +
-        (active ? "bg-amber-500/15 border border-amber-400/30" : "bg-white/[0.03]")
-      }
-    >
-      <DieFace value={roll.die1} />
-      <DieFace value={roll.die2} />
-      <span className="text-sm font-mono text-white/80 ml-1">= {roll.sum}</span>
-    </div>
-  );
-}
-
-function outcomeText(st: CrapsState): string {
+function phaseLabel(st: CrapsState): { text: string; variant: "amber" | "emerald" | "rose" } {
   switch (st.outcome) {
     case "come_out_win":
-      return "Come-out win — 7 or 11";
+      return { text: "Come-out · 7 or 11", variant: "emerald" };
     case "come_out_lose":
-      return "Craps — 2, 3, or 12";
+      return { text: "Craps · 2, 3, or 12", variant: "rose" };
     case "point_win":
-      return `Winner — point ${st.point} made`;
+      return { text: `Point ${st.point} made`, variant: "emerald" };
     case "point_lose":
-      return `Loss — seven out (point ${st.point})`;
+      return { text: `Seven out · point was ${st.point}`, variant: "rose" };
     default:
-      return "";
+      return { text: "Pass line", variant: "amber" };
   }
 }
 
@@ -163,116 +128,76 @@ export default function CrapsTable({ chainId, token }: Props) {
 
   const st = lastSession?.state;
   const seedPair = getSeedPair();
-  const lastRoll = st?.rolls[st.rolls.length - 1];
+  const last = st?.rolls[st.rolls.length - 1];
+  const phase = st ? phaseLabel(st) : null;
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-4"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Craps</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">RTP {crapsRtpLabel()}</span>
-          </div>
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead title="Craps" rtp={crapsRtpLabel()} badge="Pass line" />
+            <RulesHint>
+              Win on come-out 7 or 11. Lose on 2, 3, or 12. Any other total sets the point — roll it again before a 7.
+            </RulesHint>
 
-          <p className="text-sm text-white/45 text-center">
-            Pass line — 7/11 wins on come-out; 2/3/12 loses; other totals set the point.
-          </p>
-
-          {st && (
-            <div className="space-y-3">
-              {st.point != null && (
-                <p className="text-center text-xs font-semibold uppercase tracking-wider text-amber-200/90">
-                  Point: {st.point}
-                </p>
-              )}
-              {lastRoll && (
-                <div className="flex justify-center gap-3 py-2">
-                  <DieFace value={lastRoll.die1} />
-                  <DieFace value={lastRoll.die2} />
-                  <div className="flex flex-col justify-center">
-                    <span className="text-2xl font-bold text-white">{lastRoll.sum}</span>
-                    <span className="text-[10px] text-white/40 uppercase">Last roll</span>
+            {st && last && (
+              <div className="space-y-4">
+                {st.point != null && st.rolls.length > 1 && (
+                  <PhaseChip variant="amber">Point {st.point}</PhaseChip>
+                )}
+                <div className="flex justify-center items-center gap-3 py-2">
+                  <DiceCube value={last.die1} highlight size="lg" />
+                  <span className="text-white/30 text-xl font-light">+</span>
+                  <DiceCube value={last.die2} highlight size="lg" />
+                  <div className="ml-1 text-center">
+                    <div className="text-3xl font-bold text-white tabular-nums">{last.sum}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-white/40">Total</div>
                   </div>
                 </div>
-              )}
-              {st.rolls.length > 1 && (
-                <div className="max-h-32 overflow-y-auto space-y-1 px-1">
-                  {st.rolls.map((r, i) => (
-                    <RollRow key={i} roll={r} active={i === st.rolls.length - 1} />
-                  ))}
-                </div>
-              )}
-              <p
-                className={
-                  "text-center text-sm " + (st.won ? "text-emerald-300" : "text-rose-300")
-                }
-              >
-                {outcomeText(st)}
-              </p>
-              {lastSession?.result && (
-                <p
-                  className={
-                    "text-center text-sm font-mono " +
-                    (lastSession.result.pnlUnits > 0n ? "text-emerald-300" : "text-rose-300")
-                  }
-                >
-                  {lastSession.result.pnlUnits > 0n ? "+" : ""}
-                  {fmtMoney(lastSession.result.pnlUnits, token)}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={labelCls}>Pass line ({token.symbol})</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={inputCls}
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                disabled={busy}
-              />
-            </div>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void shoot()}
-              className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
-            >
-              {busy ? "Rolling…" : lastSession ? "Shoot again" : "Shoot"}
-            </button>
-          </div>
-
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-        </section>
-
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4 text-[11px] text-white/45 leading-relaxed"}>
-            {"Come-out 7 or 11 wins. 2, 3, or 12 loses. Any other number becomes the point — roll it again before a 7."}
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnSecondary + " w-full !text-xs"}>
-              Rotate seed
-            </button>
-            {lastSession && (
-              <button
-                type="button"
-                onClick={() => setVerifyTarget(lastSession)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
-              >
-                Verify →
-              </button>
+                {phase && <PhaseChip variant={phase.variant}>{phase.text}</PhaseChip>}
+                {st.rolls.length > 1 && (
+                  <div className="max-h-28 overflow-y-auto rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2 space-y-1">
+                    {st.rolls.map((r, i) => (
+                      <p
+                        key={i}
+                        className={
+                          "text-xs font-mono " +
+                          (i === st.rolls.length - 1 ? "text-amber-200/90" : "text-white/45")
+                        }
+                      >
+                        Roll {i + 1}: {formatCrapsRoll(r)}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {lastSession?.result && <PnlBanner pnl={lastSession.result.pnlUnits} token={token} />}
+              </div>
             )}
-          </section>
-        </aside>
-      </div>
+
+            <StakeRow
+              label={`Pass line (${token.symbol})`}
+              betAmount={betAmount}
+              onBetAmount={setBetAmount}
+              token={token}
+              disabled={busy}
+              actionLabel={busy ? "Rolling…" : lastSession ? "Shoot again" : "Shoot"}
+              onAction={() => void shoot()}
+              actionBusy={busy}
+            />
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={lastSession ? () => setVerifyTarget(lastSession) : undefined}
+            hint="Pass line pays even money minus 1% edge on wins. Odds are fixed by the dice — every roll is verifiable."
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -298,16 +223,12 @@ export default function CrapsTable({ chainId, token }: Props) {
           }
           extraFields={
             <>
-              <VerifyField
-                label="Rolls"
-                value={verifyTarget.state.rolls.map(formatCrapsRoll).join(" → ")}
-              />
+              <VerifyField label="Rolls" value={verifyTarget.state.rolls.map(formatCrapsRoll).join(" → ")} />
               <VerifyField label="Point" value={verifyTarget.state.point != null ? String(verifyTarget.state.point) : "—"} />
-              <VerifyField label="Outcome" value={verifyTarget.state.outcome} />
             </>
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }

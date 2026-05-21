@@ -1,0 +1,391 @@
+"use client";
+
+import type { ReactNode } from "react";
+import type { Card, TokenSpec } from "@/lib/casino";
+import { btnGhost, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
+
+/* ---- Money ---- */
+
+export function unitsToHuman(units: bigint, token: TokenSpec): number {
+  const denom = 10n ** BigInt(token.decimals);
+  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
+}
+
+export function humanToUnits(amount: number, token: TokenSpec): bigint {
+  if (!Number.isFinite(amount) || amount <= 0) return 0n;
+  const denom = 10n ** BigInt(token.decimals);
+  const whole = BigInt(Math.floor(amount));
+  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
+  return whole * denom + frac;
+}
+
+export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
+  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: maxFrac })} ${token.symbol}`;
+}
+
+/* ---- Layout ---- */
+
+export function TablePage({ children }: { children: ReactNode }) {
+  return <div className="mt-4 space-y-4 max-w-4xl mx-auto pb-24 lg:pb-4">{children}</div>;
+}
+
+export function TableGrid({ main, aside }: { main: ReactNode; aside: ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_200px] gap-4">
+      <section className={card + " p-4 sm:p-6 space-y-4"}>{main}</section>
+      <aside className="space-y-3">{aside}</aside>
+    </div>
+  );
+}
+
+export function TableHead({
+  title,
+  rtp,
+  badge,
+}: {
+  title: string;
+  rtp?: string;
+  badge?: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h2 className="text-lg font-semibold text-white tracking-tight">{title}</h2>
+      <div className="flex items-center gap-2">
+        {badge && (
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-400/35 text-amber-200/90 bg-amber-500/10">
+            {badge}
+          </span>
+        )}
+        {rtp && (
+          <span className="text-[10px] uppercase tracking-wider text-white/40">RTP {rtp}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function RulesHint({ children }: { children: ReactNode }) {
+  return <p className="text-sm text-white/45 text-center leading-relaxed">{children}</p>;
+}
+
+/* ---- Cards ---- */
+
+const panelTone = {
+  player: "border-emerald-500/25 bg-emerald-500/5",
+  dealer: "border-white/10 bg-white/[0.03]",
+  board: "border-amber-500/20 bg-amber-500/5",
+  accent: "border-orange-500/25 bg-orange-500/5",
+} as const;
+
+export function PlayingCard({
+  c,
+  hidden,
+  large,
+}: {
+  c?: Card;
+  hidden?: boolean;
+  large?: boolean;
+}) {
+  const sz = large ? "w-12 h-16 sm:w-14 sm:h-[4.25rem]" : "w-11 h-[3.75rem] sm:w-12 sm:h-16";
+  if (hidden || !c) {
+    return (
+      <div
+        className={
+          sz +
+          " rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/30 shrink-0 font-mono"
+        }
+      >
+        ?
+      </div>
+    );
+  }
+  const red = c.suit === "♥" || c.suit === "♦";
+  return (
+    <div
+      className={
+        sz +
+        " rounded-lg border flex flex-col items-center justify-center font-mono shrink-0 shadow-sm " +
+        (red
+          ? "border-rose-400/30 text-rose-200 bg-gradient-to-b from-rose-950/50 to-rose-950/20"
+          : "border-white/15 text-white bg-gradient-to-b from-white/[0.08] to-white/[0.02]")
+      }
+    >
+      <span className="text-sm sm:text-base font-bold leading-none">{c.rank}</span>
+      <span className="text-[10px] sm:text-xs leading-none mt-0.5">{c.suit}</span>
+    </div>
+  );
+}
+
+export function HandPanel({
+  label,
+  cards,
+  hiddenCount = 0,
+  score,
+  tone = "player",
+  center = true,
+}: {
+  label: string;
+  cards: Card[];
+  hiddenCount?: number;
+  score?: string | null;
+  tone?: keyof typeof panelTone;
+  center?: boolean;
+}) {
+  return (
+    <div className={"rounded-xl border p-3 sm:p-4 " + panelTone[tone]}>
+      <div className={labelCls + (tone === "player" ? " !text-emerald-200/70" : tone === "board" ? " !text-amber-200/70" : "")}>
+        {label}
+      </div>
+      <div className={"flex flex-wrap gap-1.5 py-2 " + (center ? "justify-center" : "")}>
+        {cards.map((c, i) => (
+          <PlayingCard key={i} c={c} hidden={i >= cards.length - hiddenCount} />
+        ))}
+      </div>
+      {score && <p className="text-center text-xs font-medium text-white/75">{score}</p>}
+    </div>
+  );
+}
+
+/* ---- Dice ---- */
+
+export function DiceCube({
+  value,
+  highlight,
+  size = "md",
+}: {
+  value: number;
+  highlight?: boolean;
+  size?: "md" | "lg";
+}) {
+  const sz = size === "lg" ? "w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] text-3xl" : "w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl";
+  return (
+    <div
+      className={
+        sz +
+        " rounded-xl border-2 flex items-center justify-center font-mono font-bold shrink-0 transition-all " +
+        (highlight
+          ? "border-amber-400 bg-amber-500/20 text-amber-50 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+          : "border-white/15 bg-white/[0.06] text-white/90")
+      }
+    >
+      {value}
+    </div>
+  );
+}
+
+export function DiceRow({
+  dice,
+  highlightValue,
+}: {
+  dice: number[];
+  highlightValue?: number;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 sm:gap-3 justify-center py-2">
+      {dice.map((d, i) => (
+        <DiceCube key={i} value={d} highlight={highlightValue != null && d === highlightValue} size="lg" />
+      ))}
+    </div>
+  );
+}
+
+/* ---- Status ---- */
+
+export function PhaseChip({ children, variant = "amber" }: { children: ReactNode; variant?: "amber" | "emerald" | "rose" }) {
+  const cls =
+    variant === "emerald"
+      ? "border-emerald-400/40 text-emerald-200 bg-emerald-500/10"
+      : variant === "rose"
+        ? "border-rose-400/40 text-rose-200 bg-rose-500/10"
+        : "border-amber-400/40 text-amber-200 bg-amber-500/10";
+  return (
+    <p className={"text-center text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border " + cls}>
+      {children}
+    </p>
+  );
+}
+
+export function StreetSteps({
+  steps,
+  activeIndex,
+  doneThrough,
+}: {
+  steps: string[];
+  activeIndex: number;
+  doneThrough?: number;
+}) {
+  return (
+    <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+      {steps.map((label, i) => {
+        const done = i < (doneThrough ?? activeIndex);
+        const active = i === activeIndex;
+        return (
+          <span
+            key={label}
+            className={
+              "text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors " +
+              (done
+                ? "border-emerald-400/40 text-emerald-200/90 bg-emerald-500/15"
+                : active
+                  ? "border-amber-400/50 text-amber-100 bg-amber-500/20"
+                  : "border-white/10 text-white/35 bg-white/[0.02]")
+            }
+          >
+            {label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+export function BetStatusPills({
+  items,
+}: {
+  items: { label: string; active: boolean }[];
+}) {
+  return (
+    <div className="flex flex-wrap justify-center gap-2">
+      {items.map((it) => (
+        <span
+          key={it.label}
+          className={
+            "text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border " +
+            (it.active
+              ? "border-emerald-400/40 text-emerald-200 bg-emerald-500/15"
+              : "border-white/12 text-white/40 bg-white/[0.02] line-through decoration-white/25")
+          }
+        >
+          {it.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export function PnlBanner({ pnl, token }: { pnl: bigint; token: TokenSpec }) {
+  return (
+    <p
+      className={
+        "text-center text-base sm:text-lg font-mono font-semibold " +
+        (pnl > 0n ? "text-emerald-300" : pnl < 0n ? "text-rose-300" : "text-white/55")
+      }
+    >
+      {pnl > 0n ? "+" : ""}
+      {fmtMoney(pnl, token)}
+    </p>
+  );
+}
+
+/* ---- Controls ---- */
+
+export function StakeRow({
+  label,
+  betAmount,
+  onBetAmount,
+  token,
+  disabled,
+  actionLabel,
+  onAction,
+  actionBusy,
+  hideAction,
+}: {
+  label: string;
+  betAmount: number;
+  onBetAmount: (n: number) => void;
+  token: TokenSpec;
+  disabled?: boolean;
+  actionLabel: string;
+  onAction: () => void;
+  actionBusy?: boolean;
+  hideAction?: boolean;
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+      <div className="flex-1 min-w-0">
+        <label className={labelCls}>{label}</label>
+        <input
+          type="number"
+          min="0"
+          step="any"
+          inputMode="decimal"
+          className={inputCls}
+          value={betAmount}
+          onChange={(e) => onBetAmount(Number(e.target.value))}
+          disabled={disabled}
+        />
+      </div>
+      {!hideAction && (
+        <button
+          type="button"
+          disabled={disabled || actionBusy}
+          onClick={onAction}
+          className={
+            "min-h-12 touch-manipulation h-11 px-5 rounded-xl font-semibold text-sm w-full sm:w-auto sm:min-w-[8.5rem] " +
+            "bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-black shadow-[0_4px_20px_rgba(245,158,11,0.35)] " +
+            "hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+          }
+        >
+          {actionBusy ? "…" : actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Mobile-first action buttons: full-width stack, 2-col from sm. */
+export function ActionStack({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2">{children}</div>;
+}
+
+export function TableAside({
+  balance,
+  token,
+  onRotateSeed,
+  onVerify,
+  hint,
+}: {
+  balance: bigint;
+  token: TokenSpec;
+  onRotateSeed: () => void;
+  onVerify?: () => void;
+  hint?: string;
+}) {
+  return (
+    <>
+      <section className={card + " p-4"}>
+        <div className={labelCls}>Balance</div>
+        <div className="text-lg font-mono text-emerald-300 tabular-nums">{fmtMoney(balance, token)}</div>
+      </section>
+      {hint && (
+        <section className={card + " p-4 text-[11px] text-white/45 leading-relaxed"}>{hint}</section>
+      )}
+      <section className={card + " p-4 space-y-2"}>
+        <button type="button" onClick={onRotateSeed} className={btnSecondary + " w-full !text-xs !min-h-10 !h-10"}>
+          Rotate seed
+        </button>
+        {onVerify && (
+          <button
+            type="button"
+            onClick={onVerify}
+            className="text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer py-1"
+          >
+            Verify hand →
+          </button>
+        )}
+      </section>
+    </>
+  );
+}
+
+export function NewHandButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={btnGhost + " w-full sm:w-auto mx-auto block"}>
+      New hand
+    </button>
+  );
+}
+
+export function ErrorBanner({ message }: { message: string }) {
+  return <p className="text-sm text-rose-300 text-center">{message}</p>;
+}
