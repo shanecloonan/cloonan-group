@@ -130,6 +130,7 @@ const LetItRideTable = dynamic(() => import("./let-it-ride-table"), { ssr: false
 const MississippiStudTable = dynamic(() => import("./mississippi-stud-table"), { ssr: false });
 const ChuckALuckTable = dynamic(() => import("./chuck-a-luck-table"), { ssr: false });
 const UltimateTexasHoldemTable = dynamic(() => import("./ultimate-texas-holdem-table"), { ssr: false });
+const CrapsTable = dynamic(() => import("./craps-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -398,6 +399,15 @@ const GAME_CATALOG: GameTile[] = [
     phase: "Phase 5",
     emoji: "♥",
   },
+  {
+    id: "craps",
+    title: "Craps",
+    subtitle: "Pass line · come-out 7/11 · point before seven-out",
+    rtp: "≈98.6%",
+    status: "live",
+    phase: "Phase 5",
+    emoji: "🎲",
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -603,6 +613,9 @@ export default function CasinoContent() {
           )}
           {tab === "ultimate-texas-holdem" && (
             <UltimateTexasHoldemTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "craps" && (
+            <CrapsTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -867,7 +880,8 @@ function Lobby({
               g.id === "let-it-ride" ||
               g.id === "mississippi-stud" ||
               g.id === "chuck-a-luck" ||
-              g.id === "ultimate-texas-holdem"
+              g.id === "ultimate-texas-holdem" ||
+              g.id === "craps"
                 ? (g.id as GameTab)
                 : null;
             return (

@@ -56,6 +56,8 @@ import {
   chuckALuckGame,
   ultimateTexasHoldemGame,
   formatUltimateHoldemCards,
+  crapsGame,
+  formatCrapsRoll,
   describeScore,
   minesGame,
   plinkoGame,
@@ -108,6 +110,8 @@ import {
   type ChuckALuckState,
   type UltimateTexasHoldemAction,
   type UltimateTexasHoldemState,
+  type CrapsAction,
+  type CrapsState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -255,6 +259,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Ultimate Texas Hold'em",
     hint: "Nine card draws plus check/play streets; dealer pair qualify replay.",
   },
+  {
+    id: "craps",
+    label: "Craps",
+    hint: "Pass-line dice sequence until win/loss; full roll log replay.",
+  },
 ];
 
 type AnyAction =
@@ -283,7 +292,8 @@ type AnyAction =
   | LetItRideAction
   | MississippiStudAction
   | ChuckALuckAction
-  | UltimateTexasHoldemAction;
+  | UltimateTexasHoldemAction
+  | CrapsAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -310,7 +320,8 @@ type AnyState =
   | LetItRideState
   | MississippiStudState
   | ChuckALuckState
-  | UltimateTexasHoldemState;
+  | UltimateTexasHoldemState
+  | CrapsState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -654,7 +665,8 @@ function pickGame(id: string):
         | typeof letItRideGame
         | typeof mississippiStudGame
         | typeof chuckALuckGame
-        | typeof ultimateTexasHoldemGame;
+        | typeof ultimateTexasHoldemGame
+        | typeof crapsGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -1064,6 +1076,20 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "craps") {
+    return {
+      module: crapsGame,
+      renderState: (raw: unknown) => {
+        const s = raw as CrapsState;
+        return [
+          { label: "Bet", value: "Pass line" },
+          { label: "Rolls", value: s.rolls.map(formatCrapsRoll).join(" → ") },
+          { label: "Point", value: s.point != null ? String(s.point) : "—" },
+          { label: "Outcome", value: s.outcome },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1238,6 +1264,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "ultimate-texas-holdem") {
     const uth = s as UltimateTexasHoldemState;
     return { numDecks: uth.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "craps") {
+    const cr = s as CrapsState;
+    return { betType: cr.betType } as unknown as Record<string, unknown>;
   }
   return {};
 }
