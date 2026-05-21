@@ -41,6 +41,9 @@ import {
   dragonTigerGame,
   casinoWarGame,
   redDogGame,
+  threeCardPokerGame,
+  formatThreeCardHand,
+  threeCardHandLabel,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -76,6 +79,8 @@ import {
   type CasinoWarState,
   type RedDogAction,
   type RedDogState,
+  type ThreeCardPokerAction,
+  type ThreeCardPokerState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -183,6 +188,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Red Dog",
     hint: "Two boundary cards plus optional third draw; spread payout is replayable.",
   },
+  {
+    id: "three-card-poker",
+    label: "Three Card Poker",
+    hint: "Six card draws plus fold/play; Queen-Six qualify and 3-card ranks replay.",
+  },
 ];
 
 type AnyAction =
@@ -203,7 +213,8 @@ type AnyAction =
   | SicBoAction
   | DragonTigerAction
   | CasinoWarAction
-  | RedDogAction;
+  | RedDogAction
+  | ThreeCardPokerAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -222,7 +233,8 @@ type AnyState =
   | SicBoState
   | DragonTigerState
   | CasinoWarState
-  | RedDogState;
+  | RedDogState
+  | ThreeCardPokerState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -558,7 +570,8 @@ function pickGame(id: string):
         | typeof sicBoGame
         | typeof dragonTigerGame
         | typeof casinoWarGame
-        | typeof redDogGame;
+        | typeof redDogGame
+        | typeof threeCardPokerGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -824,6 +837,26 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "three-card-poker") {
+    return {
+      module: threeCardPokerGame,
+      renderState: (raw: unknown) => {
+        const s = raw as ThreeCardPokerState;
+        return [
+          { label: "You", value: formatThreeCardHand(s.playerCards) },
+          { label: "Dealer", value: formatThreeCardHand(s.dealerCards) },
+          {
+            label: "Hands",
+            value:
+              s.playerScore && s.dealerScore
+                ? `${threeCardHandLabel(s.playerScore)} vs ${threeCardHandLabel(s.dealerScore)}`
+                : "—",
+          },
+          { label: "Outcome", value: s.outcome ?? "—" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -966,6 +999,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "red-dog") {
     const rd = s as RedDogState;
     return { numDecks: rd.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "three-card-poker") {
+    const tp = s as ThreeCardPokerState;
+    return { numDecks: tp.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }
