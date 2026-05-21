@@ -149,7 +149,8 @@ export type GameId =
   | "keno"
   | "wheel"
   | "sic-bo"
-  | "dragon-tiger";
+  | "dragon-tiger"
+  | "casino-war";
 
 export interface Bet {
   sessionId: string;

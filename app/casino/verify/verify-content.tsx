@@ -39,6 +39,7 @@ import {
   sicBoGame,
   sicBoBetLabel,
   dragonTigerGame,
+  casinoWarGame,
   minesGame,
   plinkoGame,
   rouletteGame,
@@ -70,6 +71,8 @@ import {
   type SicBoState,
   type DragonTigerAction,
   type DragonTigerState,
+  type CasinoWarAction,
+  type CasinoWarState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -167,6 +170,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Dragon Tiger",
     hint: "Two card draws from the shoe; Ace-low rank comparison is replayable.",
   },
+  {
+    id: "casino-war",
+    label: "Casino War",
+    hint: "Initial deal plus optional war burn and re-deal replay from the shoe.",
+  },
 ];
 
 type AnyAction =
@@ -185,7 +193,8 @@ type AnyAction =
   | KenoAction
   | WheelAction
   | SicBoAction
-  | DragonTigerAction;
+  | DragonTigerAction
+  | CasinoWarAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -202,7 +211,8 @@ type AnyState =
   | KenoState
   | WheelState
   | SicBoState
-  | DragonTigerState;
+  | DragonTigerState
+  | CasinoWarState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -536,7 +546,8 @@ function pickGame(id: string):
         | typeof kenoGame
         | typeof wheelGame
         | typeof sicBoGame
-        | typeof dragonTigerGame;
+        | typeof dragonTigerGame
+        | typeof casinoWarGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -767,6 +778,26 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "casino-war") {
+    return {
+      module: casinoWarGame,
+      renderState: (raw: unknown) => {
+        const s = raw as CasinoWarState;
+        return [
+          { label: "You", value: cardLabel(s.playerCard) },
+          { label: "Dealer", value: cardLabel(s.dealerCard) },
+          { label: "Resolution", value: s.resolution ?? "tie choice" },
+          {
+            label: "War",
+            value:
+              s.warPlayerCard && s.warDealerCard
+                ? `${cardLabel(s.warPlayerCard)} vs ${cardLabel(s.warDealerCard)}`
+                : "—",
+          },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -901,6 +932,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "dragon-tiger") {
     const dt = s as DragonTigerState;
     return { betSpot: dt.betSpot, numDecks: dt.config.numDecks } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "casino-war") {
+    const cw = s as CasinoWarState;
+    return { numDecks: cw.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }

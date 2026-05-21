@@ -20,6 +20,7 @@ export * from "./keno";
 export * from "./wheel";
 export * from "./sic-bo";
 export * from "./dragon-tiger";
+export * from "./casino-war";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";
