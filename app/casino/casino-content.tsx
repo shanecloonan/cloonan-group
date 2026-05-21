@@ -131,6 +131,7 @@ const MississippiStudTable = dynamic(() => import("./mississippi-stud-table"), {
 const ChuckALuckTable = dynamic(() => import("./chuck-a-luck-table"), { ssr: false });
 const UltimateTexasHoldemTable = dynamic(() => import("./ultimate-texas-holdem-table"), { ssr: false });
 const CrapsTable = dynamic(() => import("./craps-table"), { ssr: false });
+const TeenPattiTable = dynamic(() => import("./teen-patti-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Styling vocabulary
@@ -408,6 +409,15 @@ const GAME_CATALOG: GameTile[] = [
     phase: "Phase 5",
     emoji: "🎲",
   },
+  {
+    id: "teen-patti",
+    title: "Teen Patti",
+    subtitle: "3-card vs dealer · trail/sequence/color · fold or play",
+    rtp: "≈96.2%",
+    status: "live",
+    phase: "Phase 5",
+    emoji: "🃏",
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -616,6 +626,9 @@ export default function CasinoContent() {
           )}
           {tab === "craps" && (
             <CrapsTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "teen-patti" && (
+            <TeenPattiTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "roadmap" && <RoadmapPanel />}
           {tab === "fairness" && <FairnessPanel />}
@@ -881,7 +894,8 @@ function Lobby({
               g.id === "mississippi-stud" ||
               g.id === "chuck-a-luck" ||
               g.id === "ultimate-texas-holdem" ||
-              g.id === "craps"
+              g.id === "craps" ||
+              g.id === "teen-patti"
                 ? (g.id as GameTab)
                 : null;
             return (

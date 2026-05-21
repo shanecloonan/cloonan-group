@@ -58,6 +58,8 @@ import {
   formatUltimateHoldemCards,
   crapsGame,
   formatCrapsRoll,
+  teenPattiGame,
+  formatTeenPattiHand,
   describeScore,
   minesGame,
   plinkoGame,
@@ -112,6 +114,8 @@ import {
   type UltimateTexasHoldemState,
   type CrapsAction,
   type CrapsState,
+  type TeenPattiAction,
+  type TeenPattiState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -264,6 +268,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Craps",
     hint: "Pass-line dice sequence until win/loss; full roll log replay.",
   },
+  {
+    id: "teen-patti",
+    label: "Teen Patti",
+    hint: "Six card draws plus fold/play; Teen Patti 3-card ranks replay.",
+  },
 ];
 
 type AnyAction =
@@ -293,7 +302,8 @@ type AnyAction =
   | MississippiStudAction
   | ChuckALuckAction
   | UltimateTexasHoldemAction
-  | CrapsAction;
+  | CrapsAction
+  | TeenPattiAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -321,7 +331,8 @@ type AnyState =
   | MississippiStudState
   | ChuckALuckState
   | UltimateTexasHoldemState
-  | CrapsState;
+  | CrapsState
+  | TeenPattiState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -666,7 +677,8 @@ function pickGame(id: string):
         | typeof mississippiStudGame
         | typeof chuckALuckGame
         | typeof ultimateTexasHoldemGame
-        | typeof crapsGame;
+        | typeof crapsGame
+        | typeof teenPattiGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -1090,6 +1102,26 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "teen-patti") {
+    return {
+      module: teenPattiGame,
+      renderState: (raw: unknown) => {
+        const s = raw as TeenPattiState;
+        return [
+          { label: "You", value: formatTeenPattiHand(s.playerCards) },
+          { label: "Dealer", value: formatTeenPattiHand(s.dealerCards) },
+          {
+            label: "Hands",
+            value:
+              s.playerScore && s.dealerScore
+                ? `${threeCardHandLabel(s.playerScore)} vs ${threeCardHandLabel(s.dealerScore)}`
+                : "—",
+          },
+          { label: "Outcome", value: s.outcome ?? "—" },
+        ];
+      },
+    };
+  }
   if (id === "hilo") {
     return {
       module: hiloGame,
@@ -1268,6 +1300,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "craps") {
     const cr = s as CrapsState;
     return { betType: cr.betType } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "teen-patti") {
+    const tp = s as TeenPattiState;
+    return { numDecks: tp.config.numDecks } as unknown as Record<string, unknown>;
   }
   return {};
 }
