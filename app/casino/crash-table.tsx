@@ -617,6 +617,7 @@ export default function CrashTable({ chainId, token }: Props) {
           <RevealedSeedCard
             serverSeed={lastRevealedSeed.serverSeed}
             publishedHash={lastRevealedSeed.hash}
+            verifyDigest
             onDismiss={dismissRevealedSeed}
           />
         )}

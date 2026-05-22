@@ -239,11 +239,14 @@ export function RevealedSeedCard({
   publishedHash,
   onDismiss,
   hint,
+  verifyDigest,
 }: {
   serverSeed: string;
   publishedHash?: string;
   onDismiss: () => void;
   hint?: ReactNode;
+  /** Show `sha256(seed) == …` under the full published hash (crash). */
+  verifyDigest?: boolean;
 }) {
   return (
     <section className={card + " p-4 border-emerald-400/30 bg-emerald-500/[0.04]"}>
@@ -260,10 +263,42 @@ export function RevealedSeedCard({
       {hint ? <div className="text-[11px] text-white/55 leading-relaxed mb-2">{hint}</div> : null}
       <div className="text-[10px] text-white/60 font-mono break-all">{serverSeed}</div>
       {publishedHash ? (
-        <div className="mt-1.5 text-[10px] text-white/40">
-          <code>sha256(seed) == {shortSeedHash(publishedHash, 18)}</code>
-        </div>
+        <>
+          <div className="mt-2 text-[10px] text-white/40">Published hash:</div>
+          <div className="text-[10px] text-white/60 font-mono break-all">{publishedHash}</div>
+          {verifyDigest ? (
+            <div className="mt-1.5 text-[10px] text-white/40">
+              <code>sha256(seed) == {shortSeedHash(publishedHash, 18)}</code>
+            </div>
+          ) : null}
+        </>
       ) : null}
+    </section>
+  );
+}
+
+/** Dev-mock only: quick play-money top-up in the table sidebar. */
+export function DevBankrollCard({
+  chainId,
+  token,
+  onDeposit,
+  amountHuman = 1000,
+}: {
+  chainId: ChainId;
+  token: TokenSpec;
+  onDeposit: () => void;
+  amountHuman?: number;
+}) {
+  if (chainId !== "dev-mock") return null;
+  return (
+    <section className={card + " p-5"}>
+      <h3 className="text-sm font-semibold text-white mb-2">Dev bankroll</h3>
+      <p className="text-[12px] text-white/50 mb-3 leading-relaxed">
+        Play money for testing. In production, fund the vault instead.
+      </p>
+      <button type="button" className={btnGhost + " w-full"} onClick={onDeposit}>
+        +{amountHuman.toLocaleString()} {token.symbol}
+      </button>
     </section>
   );
 }

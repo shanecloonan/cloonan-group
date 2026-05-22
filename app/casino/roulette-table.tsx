@@ -41,6 +41,7 @@ import {
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   LegacyThreeColLayout,
+  RevealedSeedCard,
   SettlementBanner,
   TableBalanceHeader,
   unitsToHuman,
@@ -480,13 +481,7 @@ export default function RouletteTable({ chainId, token }: Props) {
         </SidePanel>
 
         {revealSeed && (
-          <SidePanel title="Revealed server seed" subtitle="verify it">
-            <div className="text-[11px] text-white/50">Server seed:</div>
-            <div className="font-mono text-[11px] text-white/80 break-all">{revealSeed.serverSeed}</div>
-            <button type="button" onClick={dismissRevealedSeed} className="mt-3 text-[11px] text-white/40 hover:text-white cursor-pointer">
-              Dismiss →
-            </button>
-          </SidePanel>
+          <RevealedSeedCard serverSeed={revealSeed.serverSeed} onDismiss={dismissRevealedSeed} />
         )}
       </aside>
 

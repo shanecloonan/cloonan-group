@@ -30,6 +30,7 @@ import {
   ErrorBanner,
   FairnessStrip,
   LegacyThreeColLayout,
+  RevealedSeedCard,
   TableBalanceHeader,
   unitsToHuman,
 } from "./table-kit";
@@ -362,23 +363,11 @@ export default function BlackjackTable({ chainId, token }: Props) {
         </SidePanel>
 
         {revealSeed && (
-          <SidePanel title="Last revealed server seed" subtitle="verify it">
-            <div className="text-[11px] text-white/50">Server seed:</div>
-            <div className="font-mono text-[11px] text-white/80 break-all">
-              {revealSeed.serverSeed}
-            </div>
-            <div className="mt-2 text-[11px] text-white/50">Published hash:</div>
-            <div className="font-mono text-[11px] text-white/80 break-all">
-              {revealSeed.hash}
-            </div>
-            <button
-              type="button"
-              onClick={dismissRevealedSeed}
-              className="mt-3 text-[11px] text-white/40 hover:text-white cursor-pointer"
-            >
-              Dismiss →
-            </button>
-          </SidePanel>
+          <RevealedSeedCard
+            serverSeed={revealSeed.serverSeed}
+            publishedHash={revealSeed.hash}
+            onDismiss={dismissRevealedSeed}
+          />
         )}
       </aside>
 

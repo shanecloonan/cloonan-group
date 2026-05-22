@@ -46,6 +46,7 @@ import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
   BalanceSummary,
+  DevBankrollCard,
   ErrorBanner,
   FairnessCard,
   fmtMoney as fmtMoneyKit,
@@ -505,17 +506,11 @@ export default function SlotsTable({ chainId, token }: Props) {
           rejection sampling. Rotate to reveal the prior server seed and verify any settled spin.
         </FairnessCard>
 
-        <SidePanel title="Dev bankroll">
-          <div className="text-[12px] text-white/50 mb-3">
-            Play money for testing. In prod this is replaced by on-chain deposits.
-          </div>
-          <button
-            className={btnGhost + " w-full"}
-            onClick={() => void depositPlayMoney(1000n * 10n ** BigInt(token.decimals))}
-          >
-            +1,000 {token.symbol}
-          </button>
-        </SidePanel>
+        <DevBankrollCard
+          chainId={chainId}
+          token={token}
+          onDeposit={() => void depositPlayMoney(1000n * 10n ** BigInt(token.decimals))}
+        />
 
         {revealSeed && (
           <RevealedSeedCard

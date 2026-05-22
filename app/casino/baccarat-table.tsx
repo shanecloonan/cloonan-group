@@ -28,6 +28,7 @@ import {
   humanToUnits,
   RulesHint,
   SettlementBanner,
+  shortSeedHash,
   StakeRow,
   TableAside,
   TableGrid,
@@ -198,7 +199,7 @@ export default function BaccaratTable({ chainId, token }: Props) {
               token={token}
               onRotateSeed={() => rotateSeed()}
               onVerify={lastSession ? () => setVerifyTarget(lastSession) : undefined}
-              hint={`Seed ${seedPair.serverSeedHash.slice(0, 12)}…`}
+              hint={`Seed ${shortSeedHash(seedPair.serverSeedHash, 12)}`}
             />
             {history.length > 0 && (
               <section className={card + " p-4 max-h-48 overflow-y-auto"}>
