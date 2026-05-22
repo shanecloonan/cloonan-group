@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { Card, ChainId, TokenSpec } from "@/lib/casino";
+import type { Card, ChainId, SeedPair, TokenSpec } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { btnGhost, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
 
@@ -105,6 +105,94 @@ export function TableBalanceHeader({
         )}
       </div>
     </div>
+  );
+}
+
+/** Single-column play pages (poker, etc.). */
+export function WideTableShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-full max-w-6xl mx-auto pb-6 lg:pb-0 mt-4 sm:mt-6 space-y-4 sm:space-y-6">
+      {children}
+    </div>
+  );
+}
+
+export function shortSeedHash(hash: string, head = 14, tail?: number): string {
+  if (tail != null && tail > 0) {
+    return hash.length <= head + tail ? hash : `${hash.slice(0, head)}…${hash.slice(-tail)}`;
+  }
+  return hash.length <= head ? hash : `${hash.slice(0, head)}…`;
+}
+
+/** Inline provable-fairness footer on the main play surface. */
+export function FairnessStrip({
+  seedPair,
+  onRotateSeed,
+}: {
+  seedPair: { serverSeedHash: string; nonce: number };
+  onRotateSeed: () => void;
+}) {
+  return (
+    <div className="mt-auto pt-5 border-t border-white/[0.06] flex items-center justify-between gap-3 flex-wrap text-[11px]">
+      <div className="text-white/40 min-w-0">
+        <span className="uppercase tracking-[0.12em]">server seed hash:</span>{" "}
+        <span className="font-mono text-white/60 break-all">
+          {shortSeedHash(seedPair.serverSeedHash, 18, 6)}
+        </span>
+      </div>
+      <div className="text-white/40">
+        <span className="uppercase tracking-[0.12em]">nonce:</span>{" "}
+        <span className="font-mono text-white/80">{seedPair.nonce}</span>
+      </div>
+      <button
+        type="button"
+        onClick={onRotateSeed}
+        className="text-[11px] px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/[0.08] cursor-pointer transition-all"
+      >
+        Rotate seed →
+      </button>
+    </div>
+  );
+}
+
+/** Sidebar provable-fairness panel on instant games. */
+export function FairnessCard({
+  seedPair,
+  onRotateSeed,
+  children,
+}: {
+  seedPair: { serverSeedHash: string; clientSeed: string; nonce: number };
+  onRotateSeed: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <section className={card + " p-5"}>
+      <div className="flex items-baseline justify-between mb-2">
+        <h3 className="font-semibold text-white">Provable fairness</h3>
+        <button
+          type="button"
+          className="text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer"
+          onClick={onRotateSeed}
+        >
+          Rotate seed →
+        </button>
+      </div>
+      <div className="text-[11px] text-white/60 space-y-1.5 leading-relaxed">
+        <div>
+          <span className="text-white/40">Server seed hash:</span>{" "}
+          <span className="font-mono text-white/80">{shortSeedHash(seedPair.serverSeedHash, 14)}</span>
+        </div>
+        <div>
+          <span className="text-white/40">Client seed:</span>{" "}
+          <span className="font-mono text-white/80">{shortSeedHash(seedPair.clientSeed, 14)}</span>
+        </div>
+        <div>
+          <span className="text-white/40">Next nonce:</span>{" "}
+          <span className="font-mono text-white/80">{seedPair.nonce + 1}</span>
+        </div>
+        {children ? <div className="mt-2 pt-2 border-t border-white/[0.06]">{children}</div> : null}
+      </div>
+    </section>
   );
 }
 

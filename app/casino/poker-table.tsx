@@ -23,7 +23,7 @@ import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
 import { PokerOvalTable } from "./poker-table-visual";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
-import { ErrorBanner, fmtMoney, humanToUnits } from "./table-kit";
+import { ErrorBanner, fmtMoney, humanToUnits, WideTableShell } from "./table-kit";
 
 interface Props {
   chainId: ChainId;
@@ -168,7 +168,7 @@ export default function PokerTable({ chainId, token }: Props) {
   const toCall = st && human ? st.currentBet - human.betThisRound : 0n;
 
   return (
-    <div className="mt-6 space-y-6">
+    <WideTableShell>
       <section className={card + " p-5 flex flex-wrap items-center justify-between gap-4"}>
         <div>
           <h2 className="text-xl font-semibold text-white font-heading">Texas Hold&apos;em · 6-Max</h2>
@@ -205,8 +205,15 @@ export default function PokerTable({ chainId, token }: Props) {
           </p>
         </div>
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wider text-white/40">Balance</div>
-          <div className="font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
+          <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Available</div>
+          <div className="text-xl font-bold font-mono text-white tabular-nums">
+            {fmtMoney(balance.available, token, 2)}
+          </div>
+          {balance.locked > 0n && (
+            <div className="text-[11px] text-white/40 font-mono tabular-nums">
+              {fmtMoney(balance.locked, token, 2)} locked
+            </div>
+          )}
         </div>
       </section>
 
@@ -328,7 +335,7 @@ export default function PokerTable({ chainId, token }: Props) {
       )}
 
       {error && <ErrorBanner message={error} />}
-    </div>
+    </WideTableShell>
   );
 }
 

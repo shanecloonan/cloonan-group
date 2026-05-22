@@ -24,6 +24,7 @@ import { ShareLinkRow } from "./share-link";
 import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
   ErrorBanner,
+  FairnessStrip,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   LegacyThreeColLayout,
@@ -409,26 +410,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
           )}
         </div>
 
-        {/* Provable fairness footer */}
-        <div className="mt-auto pt-5 border-t border-white/[0.06] flex items-center justify-between gap-3 flex-wrap text-[11px]">
-          <div className="text-white/40 min-w-0">
-            <span className="uppercase tracking-[0.12em]">seed hash:</span>{" "}
-            <span className="font-mono text-white/60 break-all">
-              {seedPair.serverSeedHash.slice(0, 18)}…{seedPair.serverSeedHash.slice(-6)}
-            </span>
-          </div>
-          <div className="text-white/40">
-            <span className="uppercase tracking-[0.12em]">nonce:</span>{" "}
-            <span className="font-mono text-white/80">{seedPair.nonce}</span>
-          </div>
-          <button
-            type="button"
-            onClick={onRotateSeed}
-            className="text-[11px] px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/[0.08] cursor-pointer transition-all"
-          >
-            Rotate seed →
-          </button>
-        </div>
+        <FairnessStrip seedPair={seedPair} onRotateSeed={onRotateSeed} />
       </section>
 
       {/* Right column: side panels */}

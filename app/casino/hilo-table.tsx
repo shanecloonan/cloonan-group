@@ -38,6 +38,7 @@ import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnGold, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
   ErrorBanner,
+  FairnessCard,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   InstantSideLayout,
@@ -378,7 +379,6 @@ export default function HiloTable({ chainId, token }: Props) {
   /* ----- Render --------------------------------------------------------- */
 
   const seedPair = getSeedPair();
-  const hashShort = seedPair.serverSeedHash.slice(0, 14) + "…";
   const currentPayout = liveState
     ? (liveState.stake * liveState.multiplierMicro) / 1_000_000n
     : 0n;
@@ -665,40 +665,13 @@ export default function HiloTable({ chainId, token }: Props) {
           )}
         </section>
 
-        {/* Fairness card */}
-        <section className={card + " p-5"}>
-          <div className="flex items-baseline justify-between mb-2">
-            <h3 className="font-semibold text-white">Provable fairness</h3>
-            <button
-              type="button"
-              className="text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer"
-              onClick={() => rotateSeed()}
-            >
-              Rotate seed →
-            </button>
-          </div>
-          <div className="text-[11px] text-white/60 space-y-1.5 leading-relaxed">
-            <div>
-              <span className="text-white/40">Server seed hash:</span>{" "}
-              <span className="font-mono text-white/80">{hashShort}</span>
-            </div>
-            <div>
-              <span className="text-white/40">Client seed:</span>{" "}
-              <span className="font-mono text-white/80">{seedPair.clientSeed.slice(0, 14)}…</span>
-            </div>
-            <div>
-              <span className="text-white/40">Next nonce:</span>{" "}
-              <span className="font-mono text-white/80">{seedPair.nonce + 1}</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-white/[0.06]">
-              Each card is an independent unbiased draw from the 52-card deck via{" "}
-              <code className="text-emerald-300">HMAC-SHA256(server_seed, client_seed:nonce)</code>.
-              The starting card uses the first draw; each subsequent pick uses the next.
-              Both buttons count ties as wins — that&apos;s how the flat 1% edge applies
-              symmetrically across all 13 ranks.
-            </div>
-          </div>
-        </section>
+        <FairnessCard seedPair={seedPair} onRotateSeed={() => rotateSeed()}>
+          Each card is an independent unbiased draw from the 52-card deck via{" "}
+          <code className="text-emerald-300">HMAC-SHA256(server_seed, client_seed:nonce)</code>.
+          The starting card uses the first draw; each subsequent pick uses the next.
+          Both buttons count ties as wins — that&apos;s how the flat 1% edge applies
+          symmetrically across all 13 ranks.
+        </FairnessCard>
 
         {lastRevealedSeed && (
           <section className={card + " p-4 border-emerald-400/30 bg-emerald-500/[0.04]"}>
