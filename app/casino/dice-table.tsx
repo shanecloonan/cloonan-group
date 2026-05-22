@@ -32,6 +32,7 @@ import {
   KeyHint,
   LegacyThreeColLayout,
   NumberField,
+  fmtPnl,
   RevealedSeedCard,
   TableBalanceHeader,
   unitsToHuman,
@@ -583,7 +584,7 @@ export default function DiceTable({ chainId, token }: Props) {
                   </div>
                   <div className="text-right">
                     <div className={"text-[11px] font-mono " + (r.won ? "text-emerald-300" : "text-rose-300")}>
-                      {r.won ? "+" : ""}{fmtMoney(h.result!.pnlUnits, token)}
+                      {fmtPnl(h.result!.pnlUnits, token)}
                     </div>
                     <button type="button" onClick={() => setVerifyTarget(h)}
                       className="text-[10px] text-white/40 hover:text-emerald-300 cursor-pointer"

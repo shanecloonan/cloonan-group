@@ -45,6 +45,8 @@ import { btnDanger, btnGhost, btnPrimary, card, inputCls, labelCls } from "./cas
 import {
   DevQuickTopUpBar,
   ErrorBanner,
+  MetricStat,
+  fmtPnl,
   FairnessCard,
   RevealedSeedCard,
   fmtMoney as fmtMoneyKit,
@@ -386,18 +388,18 @@ export default function PlinkoTable({ chainId, token }: Props) {
 
           {/* Stats row */}
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
-            <Stat label="Available" value={fmtMoney(balance.available, token)} />
-            <Stat
+            <MetricStat label="Available" value={fmtMoney(balance.available, token)} />
+            <MetricStat
               label="Theoretical RTP"
               value={`${(rtp * 100).toFixed(2)}%`}
               sub={`house edge ${((1 - rtp) * 100).toFixed(2)}%`}
             />
-            <Stat
+            <MetricStat
               label="Max payout"
               value={`${Math.max(...payouts).toLocaleString()}×`}
               sub={`prob ${(plinkoBinProbability(rows, 0) * 100).toFixed(3)}%`}
             />
-            <Stat
+            <MetricStat
               label="Min payout"
               value={`${Math.min(...payouts).toFixed(2)}×`}
               sub={`drops you lose`}
@@ -477,8 +479,7 @@ export default function PlinkoTable({ chainId, token }: Props) {
                         (won ? "text-emerald-300" : "text-rose-300")
                       }
                     >
-                      {won ? "+" : ""}
-                      {fmtMoney(s.result?.pnlUnits ?? 0n, token)}
+                      {fmtPnl(s.result?.pnlUnits ?? 0n, token)}
                     </div>
                   </button>
                 );
@@ -788,22 +789,3 @@ function AutoPanel({
 /* ===========================================================================
  *  Small UI primitives
  * ========================================================================= */
-
-function Stat({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-}) {
-  return (
-    <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-      <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">{label}</div>
-      <div className="mt-1 font-mono text-[14px] text-white">{value}</div>
-      {sub && <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>}
-    </div>
-  );
-}
-

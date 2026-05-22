@@ -27,7 +27,7 @@ import { buildVerifyLink } from "../share-link";
 import { CasinoFilterPill } from "../casino-filter-pill";
 import { CasinoShell } from "../casino-shell";
 import { ALL_GAMES, GAME_LABELS, card, pillGold, type CasinoGameId } from "../casino-ui";
-import { fmtMoney, tokenFromParts } from "../table-kit";
+import { fmtMoney, fmtPnl, MetricStat, tokenFromParts } from "../table-kit";
 
 const DEV_HISTORY_TOKEN = tokenFromParts("DEV", 6);
 
@@ -370,16 +370,22 @@ export default function HistoryContent() {
         {/* Aggregate stats */}
         <section className={card + " p-5"}>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-            <Stat label="Sessions" value={stats.count.toLocaleString()} />
-            <Stat label="Wins" value={`${stats.wins} · ${stats.count > 0 ? ((stats.wins / stats.count) * 100).toFixed(1) : "0"}%`} accent="emerald" />
-            <Stat label="Losses" value={`${stats.losses}`} accent="rose" />
-            <Stat label="Wagered" value={fmtMoney(stats.totalWagered, DEV_HISTORY_TOKEN, 2)} />
-            <Stat
-              label="Net PnL"
-              value={(stats.totalPnl >= 0n ? "+" : "") + fmtMoney(stats.totalPnl, DEV_HISTORY_TOKEN, 2)}
-              accent={stats.totalPnl >= 0n ? "emerald" : "rose"}
+            <MetricStat label="Sessions" value={stats.count.toLocaleString()} variant="inline" />
+            <MetricStat
+              label="Wins"
+              value={`${stats.wins} · ${stats.count > 0 ? ((stats.wins / stats.count) * 100).toFixed(1) : "0"}%`}
+              accent="emerald"
+              variant="inline"
             />
-            <Stat label="Best multiplier" value={stats.bestMultiplier.toFixed(2) + "×"} />
+            <MetricStat label="Losses" value={`${stats.losses}`} accent="rose" variant="inline" />
+            <MetricStat label="Wagered" value={fmtMoney(stats.totalWagered, DEV_HISTORY_TOKEN, 2)} variant="inline" />
+            <MetricStat
+              label="Net PnL"
+              value={fmtPnl(stats.totalPnl, DEV_HISTORY_TOKEN, 2)}
+              accent={stats.totalPnl >= 0n ? "emerald" : "rose"}
+              variant="inline"
+            />
+            <MetricStat label="Best multiplier" value={stats.bestMultiplier.toFixed(2) + "×"} variant="inline" />
           </div>
         </section>
 
@@ -478,8 +484,7 @@ export default function HistoryContent() {
                           (won ? "text-emerald-300" : push ? "text-white/60" : "text-rose-300")
                         }
                       >
-                        {won ? "+" : ""}
-                        {fmtMoney(r.pnlUnits, tokenFromParts(r.tokenSymbol, r.tokenDecimals), 2)}
+                        {fmtPnl(r.pnlUnits, tokenFromParts(r.tokenSymbol, r.tokenDecimals), 2)}
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         {r.origin === "local" ? (
@@ -517,23 +522,6 @@ export default function HistoryContent() {
 /* ---------------------------------------------------------------------------
  *  Subcomponents + helpers
  * ------------------------------------------------------------------------- */
-
-function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: "emerald" | "rose" }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-[0.12em] text-white/40">{label}</div>
-      <div
-        className={
-          "text-base font-bold font-mono mt-0.5 " +
-          (accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white")
-        }
-      >
-        {value}
-      </div>
-      {sub && <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>}
-    </div>
-  );
-}
 
 function FilterPills({
   label,

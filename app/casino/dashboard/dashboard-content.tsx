@@ -26,6 +26,9 @@ import {
 } from "@/lib/casino/leaderboard";
 import { HistoryVerifyLink } from "../history-verify-link";
 import { buildVerifyLink } from "../share-link";
+import { fmtMoney, fmtPnl, tokenFromParts } from "../table-kit";
+
+const DASHBOARD_TOKEN = tokenFromParts("DEV", 6);
 
 const HISTORY_KEY = "mf_casino_history_v1";
 
@@ -37,15 +40,6 @@ type LocalRow = {
   multiplier: number;
   session: unknown;
 };
-
-function fmt(units: bigint, decimals = 6, symbol = "DEV"): string {
-  const denom = 10n ** BigInt(decimals);
-  const sign = units < 0n ? "-" : units > 0n ? "+" : "";
-  const abs = units < 0n ? -units : units;
-  const w = abs / denom;
-  const f = (abs % denom).toString().padStart(decimals, "0");
-  return `${sign}${Number(`${w}.${f}`).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${symbol}`;
-}
 
 export default function DashboardContent() {
   const [localRows, setLocalRows] = useState<LocalRow[]>([]);
@@ -202,10 +196,10 @@ export default function DashboardContent() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <MiniStat label="Sessions" value={String(stats.count)} />
             <MiniStat label="Win rate" value={stats.count ? `${((stats.wins / stats.count) * 100).toFixed(0)}%` : "—"} />
-            <MiniStat label="Wagered" value={fmt(stats.wagered)} />
+            <MiniStat label="Wagered" value={fmtMoney(stats.wagered, DASHBOARD_TOKEN, 2)} />
             <MiniStat
               label="Net PnL"
-              value={fmt(stats.pnl)}
+              value={fmtPnl(stats.pnl, DASHBOARD_TOKEN, 2)}
               accent={stats.pnl >= 0n ? "emerald" : "rose"}
             />
           </div>
@@ -233,7 +227,7 @@ export default function DashboardContent() {
                     </div>
                     <div className="text-right">
                       <div className={"text-sm font-mono " + (pnl >= 0n ? "text-emerald-300" : "text-rose-300")}>
-                        {fmt(pnl)}
+                        {fmtPnl(pnl, DASHBOARD_TOKEN, 2)}
                       </div>
                       {r.origin === "cloud" && r.sessionId ? (
                         <HistoryVerifyLink sessionId={r.sessionId} />

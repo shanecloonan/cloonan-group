@@ -29,6 +29,40 @@ export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
   return `${sign}${unitsToHuman(abs, token).toLocaleString(undefined, { maximumFractionDigits: maxFrac })} ${token.symbol}`;
 }
 
+/** PnL display: leading + when units are positive (losses keep fmtMoney minus). */
+export function fmtPnl(units: bigint, token: TokenSpec, maxFrac = 4): string {
+  return units > 0n ? `+${fmtMoney(units, token, maxFrac)}` : fmtMoney(units, token, maxFrac);
+}
+
+/** Label / value stat — `tile` for instant-game grids, `inline` for history aggregates. */
+export function MetricStat({
+  label,
+  value,
+  sub,
+  accent,
+  variant = "tile",
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: "emerald" | "rose";
+  variant?: "tile" | "inline";
+}) {
+  const accentCls =
+    accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white";
+  const valueCls =
+    variant === "tile" ? `mt-1 font-mono text-[14px] ${accentCls}` : `text-base font-bold font-mono mt-0.5 ${accentCls}`;
+  const inner = (
+    <>
+      <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">{label}</div>
+      <div className={valueCls}>{value}</div>
+      {sub ? <div className="text-[10px] text-white/40 mt-0.5">{sub}</div> : null}
+    </>
+  );
+  if (variant === "inline") return <div>{inner}</div>;
+  return <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">{inner}</div>;
+}
+
 /** Token view when only symbol and decimals are known (history rows, CSV). */
 export function tokenFromParts(symbol: string, decimals: number): TokenSpec {
   return { symbol, display: symbol, decimals, address: "", isNative: false };
@@ -654,8 +688,7 @@ export function PnlBanner({ pnl, token }: { pnl: bigint; token: TokenSpec }) {
         (pnl > 0n ? "text-emerald-300" : pnl < 0n ? "text-rose-300" : "text-white/55")
       }
     >
-      {pnl > 0n ? "+" : ""}
-      {fmtMoney(pnl, token)}
+      {fmtPnl(pnl, token)}
     </p>
   );
 }

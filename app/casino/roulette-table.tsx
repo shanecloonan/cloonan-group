@@ -43,6 +43,7 @@ import {
   AsideSection,
   DEV_PLAY_MONEY_HUMAN,
   KeyHint,
+  fmtPnl,
   LegacyThreeColLayout,
   RevealedSeedCard,
   SettlementBanner,
@@ -471,7 +472,7 @@ export default function RouletteTable({ chainId, token }: Props) {
                   </div>
                   <div className="text-right">
                     <div className={"text-[11px] font-mono " + (won ? "text-emerald-300" : push ? "text-white/60" : "text-rose-300")}>
-                      {won ? "+" : ""}{fmtMoney(h.result!.pnlUnits, token)}
+                      {fmtPnl(h.result!.pnlUnits, token)}
                     </div>
                     <button type="button" onClick={() => setVerifyTarget(h)}
                       className="text-[10px] text-white/40 hover:text-emerald-300 cursor-pointer"

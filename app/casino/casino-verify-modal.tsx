@@ -5,7 +5,7 @@ import type { VerifyResult } from "@/lib/casino/verify";
 import type { Session, TokenSpec } from "@/lib/casino";
 import { ShareLinkRow } from "./share-link";
 import { inputCls, labelCls } from "./casino-ui";
-import { fmtMoney } from "./table-kit";
+import { fmtMoney, fmtPnl } from "./table-kit";
 
 export type VerifyRunResult<State> = VerifyResult<State> | { error: string };
 
@@ -116,7 +116,7 @@ export function CasinoVerifyModal<State>({
 
         <div className="text-[11px] text-white/40">
           Settled at {new Date(session.updatedAt).toLocaleString()} · PnL{" "}
-          {(pnl >= 0n ? "+" : "") + fmtMoney(pnl, token)}
+          {fmtPnl(pnl, token)}
         </div>
 
         <ShareLinkRow session={session} serverSeed={revealedServerSeed} />

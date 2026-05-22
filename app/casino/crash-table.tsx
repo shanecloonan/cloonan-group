@@ -50,6 +50,8 @@ import { btnDanger, btnGhost, btnPrimary, card, inputCls, labelCls } from "./cas
 import {
   DevQuickTopUpBar,
   ErrorBanner,
+  MetricStat,
+  fmtPnl,
   FairnessCard,
   RevealedSeedCard,
   fmtMoney as fmtMoneyKit,
@@ -509,19 +511,19 @@ export default function CrashTable({ chainId, token }: Props) {
 
           {/* Live stats row */}
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
-            <Stat label="Available" value={fmtMoney(balance.available, token)} />
-            <Stat
+            <MetricStat label="Available" value={fmtMoney(balance.available, token)} />
+            <MetricStat
               label="If autocashed"
               value={fmtMoney(projectedPayout, token)}
               sub={`+${fmtMoney(projectedPayout - stakeUnits, token)} pnl`}
               accent="emerald"
             />
-            <Stat
+            <MetricStat
               label="P(bust > auto)"
               value={`${(probAtAuto * 100).toFixed(1)}%`}
               sub={`RTP ${(rtpAtAuto * 100).toFixed(2)}%`}
             />
-            <Stat label="House edge" value="≈1%" sub={`floor formula`} />
+            <MetricStat label="House edge" value="≈1%" sub={`floor formula`} />
           </div>
 
           {phase === "settled" && lastResult && (
@@ -853,33 +855,6 @@ function CurveCanvas({
  *  Small UI primitives
  * ========================================================================= */
 
-function Stat({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: "emerald" | "rose";
-}) {
-  return (
-    <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-      <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">{label}</div>
-      <div
-        className={
-          "mt-1 font-mono text-[14px] " +
-          (accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white")
-        }
-      >
-        {value}
-      </div>
-      {sub && <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>}
-    </div>
-  );
-}
-
 function RecentRoundRow({
   row,
   token,
@@ -913,7 +888,7 @@ function RecentRoundRow({
         </span>
       </div>
       <div className={"text-[12px] font-mono " + (won ? "text-emerald-300" : "text-rose-300")}>
-        {won ? "+" : ""}{fmtMoney(pnl, token)}
+        {fmtPnl(pnl, token)}
       </div>
     </button>
   );

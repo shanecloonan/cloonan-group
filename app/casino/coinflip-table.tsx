@@ -32,6 +32,7 @@ import {
   KeyHint,
   LegacyThreeColLayout,
   NumberField,
+  fmtPnl,
   RevealedSeedCard,
   TableBalanceHeader,
   unitsToHuman,
@@ -335,7 +336,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
                     : "border-rose-400/40 text-rose-300 bg-rose-500/10")
                 }
               >
-                {lastWon ? "+" : ""}{fmtMoney(lastSession!.result!.pnlUnits, token)} ·
+                {fmtPnl(lastSession!.result!.pnlUnits, token)} ·
                 {" "}called {lastResult.prediction}, landed {lastResult.result}
               </div>
             )}
@@ -563,7 +564,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
                   </div>
                   <div className="text-right">
                     <div className={"text-[11px] font-mono " + (won ? "text-emerald-300" : "text-rose-300")}>
-                      {won ? "+" : ""}{fmtMoney(h.result!.pnlUnits, token)}
+                      {fmtPnl(h.result!.pnlUnits, token)}
                     </div>
                     <button
                       type="button"
