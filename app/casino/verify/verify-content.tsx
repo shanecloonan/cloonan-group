@@ -127,10 +127,7 @@ import {
   type SlotsAction,
   type SlotsState,
 } from "@/lib/casino";
-
-const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
-const labelCls = "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
-const inputCls = "w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
+import { card, inputCls, labelCls } from "../casino-ui";
 
 const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
   {

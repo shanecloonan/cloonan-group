@@ -43,21 +43,8 @@ import {
   type ChainId,
   type TokenSpec,
 } from "@/lib/casino";
-
-/* ---------------------------------------------------------------------------
- *  Style vocab
- * ------------------------------------------------------------------------- */
-
-const card =
-  "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
-const labelCls =
-  "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
-const inputCls =
-  "w-full h-10 px-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
-const btnPrimary =
-  "h-11 px-6 rounded-lg font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
-const btnGhost =
-  "h-10 px-4 rounded-lg font-medium text-sm bg-white/[0.06] border border-white/[0.08] text-white/80 hover:bg-white/[0.10] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+import { btnGhost, btnPrimary, card, inputCls, labelCls } from "../casino-ui";
+import { fmtMoney, humanToUnits } from "../table-kit";
 
 /* ---------------------------------------------------------------------------
  *  Chain catalog (UI side — what the user can pick)
@@ -76,32 +63,6 @@ const CHAIN_CATALOG: { id: ChainId; display: string; kind: "dev" | "evm"; tokens
   { id: "ethereum-arbitrum", display: "Arbitrum One", kind: "evm", tokens: [ETH_NATIVE] },
   { id: "ethereum-sepolia", display: "Sepolia testnet", kind: "evm", tokens: [USDC_SEPOLIA, ETH_NATIVE] },
 ];
-
-/* ---------------------------------------------------------------------------
- *  Money helpers
- * ------------------------------------------------------------------------- */
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = units / denom;
-  const frac = units % denom;
-  return Number(`${whole}.${frac.toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec, digits = 4): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: digits,
-  })} ${token.symbol}`;
-}
 
 function shortAddr(addr: string | null | undefined): string {
   if (!addr) return "—";

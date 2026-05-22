@@ -25,7 +25,7 @@ import { GameLobby } from "./game-lobby";
 import { GamePlayHeader } from "./game-play-header";
 import type { GameTab } from "./game-types";
 import { isPlayableGame } from "./game-catalog";
-import { btnGhost } from "./casino-ui";
+import { btnGhost, card } from "./casino-ui";
 import { CasinoActionStrip } from "./casino-action-strip";
 import type { CasinoGameId } from "./casino-ui";
 
@@ -59,13 +59,7 @@ const CrapsTable = dynamic(() => import("./craps-table"), { ssr: false });
 const TeenPattiTable = dynamic(() => import("./teen-patti-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
- *  Styling vocabulary
- * ------------------------------------------------------------------------- */
-
-const card =
-  "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
-/* ---------------------------------------------------------------------------
- *  Chain catalog â€” which chain is the user playing on?
+ *  Chain catalog — which chain is the user playing on?
  * ------------------------------------------------------------------------- */
 
 interface ChainTile {
