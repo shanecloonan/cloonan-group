@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 const TABS = [
   { href: "/casino", label: "Games", icon: "▦", match: (p: string) => p === "/casino" },
@@ -16,10 +17,12 @@ const TABS = [
   { href: "/casino/wallet", label: "Vault", icon: "◇", match: (p: string) => p.startsWith("/casino/wallet") },
 ] as const;
 
-/** Sticky bottom nav — thumb-friendly hopping between casino routes. */
-export function CasinoMobileNav() {
+function CasinoMobileNavInner() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   if (!pathname.startsWith("/casino")) return null;
+  if (pathname === "/casino" && searchParams.get("game")) return null;
 
   return (
     <nav
@@ -38,12 +41,7 @@ export function CasinoMobileNav() {
                 (active ? "text-amber-300" : "text-white/40")
               }
             >
-              <span
-                className={
-                  "text-base leading-none " +
-                  (active ? "drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]" : "")
-                }
-              >
+              <span className={"text-base leading-none " + (active ? "drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]" : "")}>
                 {t.icon}
               </span>
               <span className="text-[9px] font-bold uppercase tracking-[0.14em]">{t.label}</span>
@@ -55,5 +53,14 @@ export function CasinoMobileNav() {
         })}
       </div>
     </nav>
+  );
+}
+
+/** Sticky bottom nav — hidden while a table is open on /casino?game= */
+export function CasinoMobileNav() {
+  return (
+    <Suspense fallback={null}>
+      <CasinoMobileNavInner />
+    </Suspense>
   );
 }

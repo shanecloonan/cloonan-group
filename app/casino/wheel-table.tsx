@@ -21,7 +21,17 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
+import { labelCls } from "./casino-ui";
+import {
+  ErrorBanner,
+  humanToUnits,
+  SettlementBanner,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const MULT_COLOR: Record<WheelBetMult, string> = {
   1: "#64748b",
@@ -31,23 +41,6 @@ const MULT_COLOR: Record<WheelBetMult, string> = {
   20: "#f97316",
   40: "#eab308",
 };
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
 
 const LAST_BET_KEY = "mf_casino_wheel_bet";
 const LAST_PICK_KEY = "mf_casino_wheel_pick";
@@ -118,6 +111,7 @@ export default function WheelTable({ chainId, token }: Props) {
     }
     setBusy(true);
     setLastSession(null);
+    setSpinDeg(0);
     try {
       let s = await driver.openSession(wheelGame, {
         sessionId: newSessionId(),
@@ -137,7 +131,6 @@ export default function WheelTable({ chainId, token }: Props) {
       await new Promise((r) => setTimeout(r, 3200));
 
       setLastSession(s);
-      setVerifyTarget(s);
       pushHistory({
         game: "wheel",
         stakeUnits: s.result!.totalStakedUnits,
@@ -159,15 +152,14 @@ export default function WheelTable({ chainId, token }: Props) {
   const seedPair = getSeedPair();
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-5"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Money Wheel</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
-              RTP {wheelRtpLabel()} · {WHEEL_SEGMENT_COUNT} segments
-            </span>
-          </div>
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead
+              title="Money Wheel"
+              rtp={`${wheelRtpLabel()} · ${WHEEL_SEGMENT_COUNT} segments`}
+            />
 
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="relative w-[min(100%,280px)] aspect-square shrink-0">
@@ -228,89 +220,39 @@ export default function WheelTable({ chainId, token }: Props) {
                   );
                 })}
               </div>
-              {st && (
-                <p
-                  className={
-                    "text-sm font-mono " +
-                    (lastSession!.result!.pnlUnits > 0n
-                      ? "text-emerald-300"
-                      : lastSession!.result!.pnlUnits < 0n
-                        ? "text-rose-300"
-                        : "text-white/60")
-                  }
-                >
-                  You bet {st.betOn}× · landed {st.landedMult}× ·{" "}
-                  {lastSession!.result!.pnlUnits > 0n ? "+" : ""}
-                  {fmtMoney(lastSession!.result!.pnlUnits, token)}
-                </p>
+              {st && lastSession?.result && (
+                <SettlementBanner
+                  headline={`You bet ${st.betOn}× · landed ${st.landedMult}×`}
+                  pnl={lastSession.result.pnlUnits}
+                  token={token}
+                />
               )}
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={labelCls}>Bet ({token.symbol})</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={inputCls}
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                disabled={busy}
-              />
-            </div>
-            {!st ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void spin()}
-                className={btnPrimary + " w-full sm:w-auto sm:min-w-[140px]"}
-              >
-                {busy ? "Spinning…" : "Spin"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setLastSession(null);
-                  setVerifyTarget(null);
-                  setSpinDeg(0);
-                }}
-                className={btnGhost + " w-full sm:w-auto"}
-              >
-                New spin
-              </button>
-            )}
-          </div>
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-        </section>
-
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4 text-[11px] text-white/50 space-y-1"}>
-            <p>Win pays stake × landed multiplier (1% edge on wins).</p>
-            <p>Segment layout matches live Dream Catcher wheels.</p>
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnGhost + " w-full !text-xs"}>
-              Rotate seed
-            </button>
-            {st && (
-              <button
-                type="button"
-                onClick={() => setVerifyTarget(lastSession)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
-              >
-                Verify →
-              </button>
-            )}
-          </section>
-        </aside>
-      </div>
+            <StakeRow
+              label={`Bet (${token.symbol})`}
+              betAmount={betAmount}
+              onBetAmount={setBetAmount}
+              token={token}
+              disabled={busy}
+              actionLabel={busy ? "Spinning…" : lastSession ? "Spin again" : "Spin"}
+              onAction={() => void spin()}
+              actionBusy={busy}
+            />
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={lastSession ? () => setVerifyTarget(lastSession) : undefined}
+            hint="Win pays stake × landed multiplier. Segment layout matches Dream Catcher wheels."
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -343,6 +285,6 @@ export default function WheelTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }

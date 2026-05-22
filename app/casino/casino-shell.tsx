@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, type ReactNode } from "react";
 import { CasinoMobileNav } from "./casino-mobile-nav";
 import { casinoPage, casinoShellBg } from "./casino-ui";
 
@@ -12,18 +13,20 @@ const DESKTOP_NAV = [
   { href: "/casino/leaderboard", label: "Rankings", match: (p: string) => p.startsWith("/casino/leaderboard") },
 ] as const;
 
-export function CasinoShell({
+function CasinoShellInner({
   children,
   title,
   subtitle,
   badge,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   title?: string;
   subtitle?: string;
   badge?: string;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const inTable = pathname === "/casino" && !!searchParams.get("game");
 
   return (
     <div className={casinoPage + " " + casinoShellBg}>
@@ -92,8 +95,27 @@ export function CasinoShell({
         </div>
       )}
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 lg:pb-10">{children}</main>
+      <main
+        className={
+          "max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 " + (inTable ? "pb-6 lg:pb-10" : "pb-24 lg:pb-10")
+        }
+      >
+        {children}
+      </main>
       <CasinoMobileNav />
     </div>
+  );
+}
+
+export function CasinoShell(props: {
+  children: ReactNode;
+  title?: string;
+  subtitle?: string;
+  badge?: string;
+}) {
+  return (
+    <Suspense fallback={<div className={casinoPage + " min-h-[40vh]"} />}>
+      <CasinoShellInner {...props} />
+    </Suspense>
   );
 }

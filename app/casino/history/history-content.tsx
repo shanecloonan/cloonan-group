@@ -337,7 +337,7 @@ export default function HistoryContent() {
     <CasinoShell
       badge="Casino log"
       title="Activity"
-      subtitle="Your sessions — filter, export, and verify — plus the global house bet stream."
+      subtitle="Filter your sessions, export, verify hands, or watch the global feed."
     >
       <div className="flex flex-wrap gap-2 mb-8">
         <ActivityTab active={view === "mine"} onClick={() => setView("mine")}>
@@ -455,7 +455,7 @@ export default function HistoryContent() {
                       </td>
                       <td className="px-4 py-2.5">
                         <span className="px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] rounded-md bg-white/[0.04] border border-white/[0.06] text-white/70">
-                          {r.game}
+                          {GAME_LABELS[r.game as CasinoGameId] ?? r.game}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono text-white/80 text-[12px]">

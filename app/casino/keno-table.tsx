@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   KENO_MAX_PICKS,
   KENO_POOL,
@@ -18,24 +18,19 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnPrimary, btnGhost, card, inputCls, labelCls } from "./casino-ui";
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
+import { btnGhost } from "./casino-ui";
+import {
+  ErrorBanner,
+  humanToUnits,
+  KenoBoard,
+  RulesHint,
+  SettlementBanner,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const LAST_BET_KEY = "mf_casino_keno_bet";
 const LAST_PICKS_KEY = "mf_casino_keno_picks";
@@ -86,12 +81,6 @@ export default function KenoTable({ chainId, token }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [verifyTarget, setVerifyTarget] = useState<Session<KenoAction, KenoState> | null>(null);
 
-  const drawnSet = useMemo(
-    () => new Set(lastSession?.state.drawn ?? []),
-    [lastSession?.state.drawn],
-  );
-  const pickSet = useMemo(() => new Set(picks), [picks]);
-
   const toggle = (n: number) => {
     if (lastSession) return;
     setPicks((prev) => {
@@ -112,6 +101,7 @@ export default function KenoTable({ chainId, token }: Props) {
 
   const play = useCallback(async () => {
     setError(null);
+    setLastSession(null);
     if (picks.length < 1) {
       setError(`Select 1–${KENO_MAX_PICKS} numbers.`);
       return;
@@ -138,7 +128,6 @@ export default function KenoTable({ chainId, token }: Props) {
       });
       s = await driver.settleSession(kenoGame, s);
       setLastSession(s);
-      setVerifyTarget(s);
       pushHistory({
         game: "keno",
         stakeUnits: s.result!.totalStakedUnits,
@@ -156,83 +145,49 @@ export default function KenoTable({ chainId, token }: Props) {
     }
   }, [balance.available, betAmount, chainId, driver, getSeedPair, picks, pushHistory, refreshBalance, token, userId]);
 
-  const seedPair = getSeedPair();
   const st = lastSession?.state;
+  const seedPair = getSeedPair();
+  const locked = busy || !!lastSession; // lock picks while showing result
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-4"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Keno</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
-              RTP {kenoRtpLabel(picks.length || 1)} · 20 of {KENO_POOL} drawn
-            </span>
-          </div>
-
-          <div className="grid grid-cols-8 sm:grid-cols-10 gap-1.5 sm:gap-2">
-            {Array.from({ length: KENO_POOL }, (_, i) => i + 1).map((n) => {
-              const selected = pickSet.has(n);
-              const hit = st && selected && drawnSet.has(n);
-              const drawnOnly = st && !selected && drawnSet.has(n);
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  disabled={busy || !!st}
-                  onClick={() => toggle(n)}
-                  className={
-                    "aspect-square min-h-[2.25rem] touch-manipulation rounded-lg text-xs sm:text-sm font-semibold font-mono transition-all cursor-pointer disabled:cursor-default " +
-                    (hit
-                      ? "bg-emerald-500/30 border-2 border-emerald-400 text-emerald-100"
-                      : selected
-                        ? "bg-amber-500/25 border-2 border-amber-400/70 text-amber-100"
-                        : drawnOnly
-                          ? "bg-white/[0.08] border border-white/20 text-white/70"
-                          : "bg-white/[0.03] border border-white/[0.08] text-white/55 hover:bg-white/[0.08]")
-                  }
-                >
-                  {n}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-wrap gap-2 text-[11px]">
-            <span className="inline-flex items-center gap-1.5 text-white/45">
-              <span className="w-3 h-3 rounded border-2 border-amber-400/70 bg-amber-500/20" /> Your pick
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-white/45">
-              <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-400" /> Hit
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-white/45">
-              <span className="w-3 h-3 rounded bg-white/[0.08] border border-white/15" /> Drawn
-            </span>
-          </div>
-
-          {st && (
-            <p
-              className={
-                "text-center text-sm font-mono " +
-                (lastSession!.result!.pnlUnits > 0n
-                  ? "text-emerald-300"
-                  : lastSession!.result!.pnlUnits < 0n
-                    ? "text-rose-300"
-                    : "text-white/60")
-              }
-            >
-              {st.hits} hits · {st.payMultiplier > 0 ? `${st.payMultiplier}×` : "no pay"} ·{" "}
-              {lastSession!.result!.pnlUnits > 0n ? "+" : ""}
-              {fmtMoney(lastSession!.result!.pnlUnits, token)}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm text-white/60">
-              <strong className="text-white">{picks.length}</strong> / {KENO_MAX_PICKS} selected
-            </span>
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead
+              title="Keno"
+              rtp={`${kenoRtpLabel(picks.length || 1)} · 20 of ${KENO_POOL}`}
+            />
+            <KenoBoard
+              pool={KENO_POOL}
+              picks={picks}
+              drawn={st?.drawn ?? []}
+              disabled={locked}
+              onToggle={toggle}
+            />
+            <div className="flex flex-wrap gap-3 text-[11px] text-white/45">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded border-2 border-amber-400/70 bg-amber-500/20" /> Pick
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-400" /> Hit
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded bg-white/[0.08] border border-white/15" /> Drawn
+              </span>
+            </div>
+            {st && lastSession?.result && (
+              <SettlementBanner
+                headline={`${st.hits} hits · ${st.payMultiplier > 0 ? `${st.payMultiplier}×` : "no pay"}`}
+                pnl={lastSession.result.pnlUnits}
+                token={token}
+              />
+            )}
             {!st && (
-              <>
+              <div className="flex flex-wrap gap-2 items-center text-sm text-white/60">
+                <span>
+                  <strong className="text-white">{picks.length}</strong> / {KENO_MAX_PICKS} selected
+                </span>
                 <button type="button" onClick={quickPick} disabled={busy} className={btnGhost + " !h-8 !text-xs"}>
                   Quick pick 10
                 </button>
@@ -244,70 +199,31 @@ export default function KenoTable({ chainId, token }: Props) {
                 >
                   Clear
                 </button>
-              </>
+              </div>
             )}
-            {st && (
-              <button
-                type="button"
-                onClick={() => {
-                  setLastSession(null);
-                  setVerifyTarget(null);
-                }}
-                className={btnGhost + " !h-8 !text-xs"}
-              >
-                New card
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={labelCls}>Bet ({token.symbol})</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={inputCls}
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                disabled={busy || !!st}
-              />
-            </div>
-            {!st && (
-              <button
-                type="button"
-                disabled={busy || picks.length < 1}
-                onClick={() => void play()}
-                className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
-              >
-                {busy ? "Drawing…" : "Play"}
-              </button>
-            )}
-          </div>
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-        </section>
-
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnGhost + " w-full !text-xs"}>
-              Rotate seed
-            </button>
-            {st && (
-              <button
-                type="button"
-                onClick={() => setVerifyTarget(lastSession)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
-              >
-                Verify →
-              </button>
-            )}
-          </section>
-        </aside>
-      </div>
+            <RulesHint>Pick up to 10 numbers. Twenty balls are drawn from 1–80.</RulesHint>
+            <StakeRow
+              label={`Bet (${token.symbol})`}
+              betAmount={betAmount}
+              onBetAmount={setBetAmount}
+              token={token}
+              disabled={busy}
+              actionLabel={busy ? "Drawing…" : lastSession ? "Draw again" : "Play"}
+              onAction={() => void play()}
+              actionBusy={busy}
+            />
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={lastSession ? () => setVerifyTarget(lastSession) : undefined}
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -341,6 +257,6 @@ export default function KenoTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }

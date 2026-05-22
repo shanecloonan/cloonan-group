@@ -122,7 +122,6 @@ export default function RedDogTable({ chainId, token }: Props) {
       s = await driver.settleSession(redDogGame, s);
       await new Promise((r) => setTimeout(r, 500));
       setLastSession(s);
-      setVerifyTarget(s);
       pushHistory({
         game: "red-dog",
         stakeUnits: s.result!.totalStakedUnits,

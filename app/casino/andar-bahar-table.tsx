@@ -141,7 +141,6 @@ export default function AndarBaharTable({ chainId, token }: Props) {
       s = await driver.settleSession(andarBaharGame, s);
       await new Promise((r) => setTimeout(r, 600));
       setLastSession(s);
-      setVerifyTarget(s);
       pushHistory({
         game: "andar-bahar",
         stakeUnits: s.result!.totalStakedUnits,

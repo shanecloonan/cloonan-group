@@ -426,6 +426,89 @@ export function SettlementBanner({
 }
 
 /** Numeric pick grid (chuck-a-luck, sic-bo faces, etc.). */
+/** Toggleable bet / option tile (Sic Bo, wheel multipliers, etc.). */
+export function ChoiceButton({
+  active,
+  disabled,
+  onClick,
+  label,
+  hint,
+  className = "",
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  label: ReactNode;
+  hint?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={
+        "touch-manipulation min-h-12 rounded-xl border-2 px-2 py-2 text-left transition-all cursor-pointer disabled:opacity-50 " +
+        (active
+          ? "border-amber-400 bg-amber-500/15 text-amber-50"
+          : "border-white/10 bg-white/[0.04] text-white/75 hover:border-white/25") +
+        " " +
+        className
+      }
+    >
+      <span className="block text-sm font-semibold">{label}</span>
+      {hint && <span className="block text-[10px] text-white/45 mt-0.5">{hint}</span>}
+    </button>
+  );
+}
+
+/** Keno / lotto-style number board. */
+export function KenoBoard({
+  pool,
+  picks,
+  drawn,
+  disabled,
+  onToggle,
+}: {
+  pool: number;
+  picks: number[];
+  drawn: number[];
+  disabled?: boolean;
+  onToggle: (n: number) => void;
+}) {
+  const pickSet = new Set(picks);
+  const drawnSet = new Set(drawn);
+  return (
+    <div className="grid grid-cols-8 sm:grid-cols-10 gap-1.5 sm:gap-2">
+      {Array.from({ length: pool }, (_, i) => i + 1).map((n) => {
+        const selected = pickSet.has(n);
+        const hit = drawn.length > 0 && selected && drawnSet.has(n);
+        const drawnOnly = drawn.length > 0 && !selected && drawnSet.has(n);
+        return (
+          <button
+            key={n}
+            type="button"
+            disabled={disabled}
+            onClick={() => onToggle(n)}
+            className={
+              "aspect-square min-h-[2.25rem] touch-manipulation rounded-lg text-xs sm:text-sm font-semibold font-mono transition-all cursor-pointer disabled:cursor-default " +
+              (hit
+                ? "bg-emerald-500/30 border-2 border-emerald-400 text-emerald-100"
+                : selected
+                  ? "bg-amber-500/25 border-2 border-amber-400/70 text-amber-100"
+                  : drawnOnly
+                    ? "bg-white/[0.08] border border-white/20 text-white/70"
+                    : "bg-white/[0.03] border border-white/[0.08] text-white/55 hover:bg-white/[0.08]")
+            }
+          >
+            {n}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PickGrid({
   values,
   selected,

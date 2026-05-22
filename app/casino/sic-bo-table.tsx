@@ -19,7 +19,19 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
+import { labelCls } from "./casino-ui";
+import {
+  ChoiceButton,
+  DiceCube,
+  ErrorBanner,
+  humanToUnits,
+  SettlementBanner,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const TOTAL_PAYS: Record<number, number> = {
   4: 61, 5: 31, 6: 18, 7: 13, 8: 9, 9: 7, 10: 7, 11: 7, 12: 7, 13: 9, 14: 13, 15: 18, 16: 31, 17: 61,
@@ -32,23 +44,6 @@ const MAIN_BETS: { type: SicBoBetType; label: string; hint: string }[] = [
   { type: "even", label: "Even", hint: "2×" },
 ];
 
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
-
 const LAST_BET_KEY = "mf_casino_sicbo_bet";
 const LAST_TYPE_KEY = "mf_casino_sicbo_type";
 const LAST_VAL_KEY = "mf_casino_sicbo_val";
@@ -57,21 +52,6 @@ interface Props {
   chainId: ChainId;
   token: TokenSpec;
   adapter: ChainAdapter;
-}
-
-function Die({ value, highlight }: { value: number; highlight?: boolean }) {
-  return (
-    <div
-      className={
-        "w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 flex items-center justify-center font-mono text-2xl sm:text-3xl font-bold transition-all " +
-        (highlight
-          ? "border-emerald-400 bg-emerald-500/20 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.25)]"
-          : "border-white/15 bg-white/[0.06] text-white/90")
-      }
-    >
-      {value > 0 ? value : "?"}
-    </div>
-  );
 }
 
 export default function SicBoTable({ chainId, token }: Props) {
@@ -122,6 +102,7 @@ export default function SicBoTable({ chainId, token }: Props) {
 
   const roll = useCallback(async () => {
     setError(null);
+    setLastSession(null);
     const stake = humanToUnits(betAmount, token);
     if (stake <= 0n) {
       setError("Bet must be > 0");
@@ -153,7 +134,6 @@ export default function SicBoTable({ chainId, token }: Props) {
       s = await driver.settleSession(sicBoGame, s);
       await new Promise((r) => setTimeout(r, 700));
       setLastSession(s);
-      setVerifyTarget(s);
       pushHistory({
         game: "sic-bo",
         stakeUnits: s.result!.totalStakedUnits,
@@ -176,50 +156,40 @@ export default function SicBoTable({ chainId, token }: Props) {
   const payHint = sicBoPayReturnHint(betType, betValue);
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-4"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Sic Bo</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">RTP {sicBoRtpLabel()}</span>
-          </div>
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead title="Sic Bo" rtp={sicBoRtpLabel()} />
+            <div className="flex justify-center gap-3 sm:gap-4 py-2">
+              {(st?.dice ?? [0, 0, 0]).map((d, i) => (
+                <DiceCube key={i} value={d || 0} highlight={!!st} size="lg" />
+              ))}
+            </div>
+            {st && (
+              <p className="text-center text-sm text-white/55 font-mono">
+                Sum {st.sum}
+                {st.isTriple ? " · triple" : ""}
+              </p>
+            )}
 
-          <div className="flex justify-center gap-3 sm:gap-4 py-2">
-            {(st?.dice ?? [0, 0, 0]).map((d, i) => (
-              <Die key={i} value={d || 1} highlight={!!st} />
-            ))}
-          </div>
-          {st && (
-            <p className="text-center text-sm text-white/55 font-mono">
-              Sum {st.sum}
-              {st.isTriple ? " · triple" : ""}
-            </p>
-          )}
-
-          {!st && (
-            <>
-              <div>
-                <div className={labelCls}>Main bets</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {MAIN_BETS.map((b) => (
-                    <button
-                      key={b.type}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => selectBet(b.type)}
-                      className={
-                        "touch-manipulation min-h-12 rounded-xl border-2 px-2 py-2 text-left transition-all cursor-pointer " +
-                        (betType === b.type
-                          ? "border-amber-400 bg-amber-500/15 text-amber-50"
-                          : "border-white/10 bg-white/[0.04] text-white/75 hover:border-white/25")
-                      }
-                    >
-                      <span className="block text-sm font-semibold">{b.label}</span>
-                      <span className="block text-[10px] text-white/45">{b.hint}</span>
-                    </button>
-                  ))}
+            {!st && (
+              <>
+                <div>
+                  <div className={labelCls}>Main bets</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1.5">
+                    {MAIN_BETS.map((b) => (
+                      <ChoiceButton
+                        key={b.type}
+                        active={betType === b.type}
+                        disabled={busy}
+                        onClick={() => selectBet(b.type)}
+                        label={b.label}
+                        hint={b.hint}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
 
               <div>
                 <div className={labelCls}>Triples</div>
@@ -289,85 +259,37 @@ export default function SicBoTable({ chainId, token }: Props) {
             </p>
           )}
 
-          {st && (
-            <p
-              className={
-                "text-center text-sm font-mono " +
-                (lastSession!.result!.pnlUnits > 0n
-                  ? "text-emerald-300"
-                  : lastSession!.result!.pnlUnits < 0n
-                    ? "text-rose-300"
-                    : "text-white/60")
-              }
-            >
-              {sicBoBetLabel(st.betType, st.betValue)} ·{" "}
-              {lastSession!.result!.pnlUnits > 0n ? "+" : ""}
-              {fmtMoney(lastSession!.result!.pnlUnits, token)}
-            </p>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={labelCls}>Bet ({token.symbol})</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={inputCls}
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                disabled={busy}
+            {st && lastSession?.result && (
+              <SettlementBanner
+                headline={sicBoBetLabel(st.betType, st.betValue)}
+                pnl={lastSession.result.pnlUnits}
+                token={token}
               />
-            </div>
-            {!st ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void roll()}
-                className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
-              >
-                {busy ? "Rolling…" : "Roll"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setLastSession(null);
-                  setVerifyTarget(null);
-                }}
-                className={btnGhost + " w-full sm:w-auto"}
-              >
-                New roll
-              </button>
             )}
-          </div>
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-        </section>
 
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4 text-[11px] text-white/50"}>
-            {`Big, Small, Odd, and Even lose on any triple. Wins include a 1 percent house edge.`}
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnGhost + " w-full !text-xs"}>
-              Rotate seed
-            </button>
-            {st && (
-              <button
-                type="button"
-                onClick={() => setVerifyTarget(lastSession)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
-              >
-                Verify →
-              </button>
-            )}
-          </section>
-        </aside>
-      </div>
+            <StakeRow
+              label={`Bet (${token.symbol})`}
+              betAmount={betAmount}
+              onBetAmount={setBetAmount}
+              token={token}
+              disabled={busy}
+              actionLabel={busy ? "Rolling…" : lastSession ? "Roll again" : "Roll"}
+              onAction={() => void roll()}
+              actionBusy={busy}
+            />
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={lastSession ? () => setVerifyTarget(lastSession) : undefined}
+            hint="Big, Small, Odd, and Even lose on any triple."
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -400,6 +322,6 @@ export default function SicBoTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }
