@@ -27,6 +27,7 @@ import {
   FairnessStrip,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
+  AsideSection,
   LegacyThreeColLayout,
   RevealedSeedCard,
   TableBalanceHeader,
@@ -416,7 +417,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
 
       {/* Right column: side panels */}
       <aside className="space-y-4">
-        <SidePanel
+        <AsideSection
           title="Auto-bet"
           right={
             autoRunning ? (
@@ -508,9 +509,9 @@ export default function CoinflipTable({ chainId, token }: Props) {
               Configure martingale or flat-bet runs of 10–10,000 flips with stop-profit / stop-loss guards.
             </div>
           )}
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Streak" subtitle="longest winning streak">
+        <AsideSection title="Streak" subtitle="longest winning streak">
           <div className="text-[12px] text-white/70 space-y-1">
             <div>
               Current: <span className="text-white">{streak.side ?? "—"}</span>
@@ -520,18 +521,18 @@ export default function CoinflipTable({ chainId, token }: Props) {
               Longest win streak: <span className="font-mono text-emerald-300">{streak.longestWin}</span>
             </div>
           </div>
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Hot keys" subtitle="flip faster">
+        <AsideSection title="Hot keys" subtitle="flip faster">
           <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-[11px]">
             <KeyHint k="H" label="Heads" />
             <KeyHint k="T" label="Tails" />
             <KeyHint k="Enter" label="Flip" />
             <KeyHint k="Esc" label="Close modal" />
           </div>
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Recent flips" subtitle={`${history.length} settled`}>
+        <AsideSection title="Recent flips" subtitle={`${history.length} settled`}>
           {history.length === 0 && (
             <div className="text-[12px] text-white/40">No flips yet. Pick a side.</div>
           )}
@@ -573,7 +574,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
               );
             })}
           </div>
-        </SidePanel>
+        </AsideSection>
 
         {revealSeed && (
           <RevealedSeedCard serverSeed={revealSeed.serverSeed} onDismiss={dismissRevealedSeed} />
@@ -724,35 +725,6 @@ function PickButton({
         {hotkey}
       </kbd>
     </button>
-  );
-}
-
-function SidePanel({
-  title,
-  subtitle,
-  right,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={card + " p-5"}>
-      <div className="flex items-baseline justify-between mb-3 gap-3">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <h3 className="text-sm font-semibold truncate">{title}</h3>
-          {subtitle && (
-            <span className="text-[10px] uppercase tracking-[0.12em] text-white/40 shrink-0">
-              {subtitle}
-            </span>
-          )}
-        </div>
-        {right}
-      </div>
-      {children}
-    </section>
   );
 }
 

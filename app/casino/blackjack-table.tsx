@@ -28,6 +28,7 @@ import {
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   ErrorBanner,
+  AsideSection,
   FairnessStrip,
   LegacyThreeColLayout,
   RevealedSeedCard,
@@ -276,7 +277,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
 
       {/* Right column: side panels */}
       <aside className="space-y-4">
-        <SidePanel title="House rules" right={
+        <AsideSection title="House rules" right={
           <button
             type="button"
             onClick={() => setShowRules(true)}
@@ -293,9 +294,9 @@ export default function BlackjackTable({ chainId, token }: Props) {
             <li>· {config.allowSurrender ? "Late surrender enabled" : "No surrender"}</li>
             <li>· Up to {config.maxHands} hands from splits</li>
           </ul>
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel
+        <AsideSection
           title="Strategy advisor"
           right={
             <button
@@ -331,9 +332,9 @@ export default function BlackjackTable({ chainId, token }: Props) {
               No advice available for this state.
             </div>
           )}
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Hot keys" subtitle="play faster">
+        <AsideSection title="Hot keys" subtitle="play faster">
           <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-[11px]">
             <KeyHint k="H" label="Hit" />
             <KeyHint k="S" label="Stand" />
@@ -344,9 +345,9 @@ export default function BlackjackTable({ chainId, token }: Props) {
             <KeyHint k="Enter" label="Deal / new hand" />
             <KeyHint k="Esc" label="Close modal" />
           </div>
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Hand history" subtitle={`${history.length} settled`}>
+        <AsideSection title="Hand history" subtitle={`${history.length} settled`}>
           {history.length === 0 && (
             <div className="text-[12px] text-white/40">No hands yet. Place a bet to play.</div>
           )}
@@ -360,7 +361,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
               />
             ))}
           </div>
-        </SidePanel>
+        </AsideSection>
 
         {revealSeed && (
           <RevealedSeedCard
@@ -789,35 +790,6 @@ function CardChip({
       <span className="text-base leading-none">{card.rank}</span>
       <span className="text-lg leading-none mt-0.5">{card.suit}</span>
     </div>
-  );
-}
-
-function SidePanel({
-  title,
-  subtitle,
-  right,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={card + " p-5"}>
-      <div className="flex items-baseline justify-between mb-3 gap-3">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <h3 className="text-sm font-semibold truncate">{title}</h3>
-          {subtitle && (
-            <span className="text-[10px] uppercase tracking-[0.12em] text-white/40 shrink-0">
-              {subtitle}
-            </span>
-          )}
-        </div>
-        {right}
-      </div>
-      {children}
-    </section>
   );
 }
 

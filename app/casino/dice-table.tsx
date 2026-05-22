@@ -27,6 +27,7 @@ import {
   FairnessStrip,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
+  AsideSection,
   LegacyThreeColLayout,
   RevealedSeedCard,
   TableBalanceHeader,
@@ -500,7 +501,7 @@ export default function DiceTable({ chainId, token }: Props) {
 
       {/* Right column */}
       <aside className="space-y-4">
-        <SidePanel
+        <AsideSection
           title="Auto-bet"
           right={
             autoRunning ? (
@@ -546,18 +547,18 @@ export default function DiceTable({ chainId, token }: Props) {
               Configure flat-bet, martingale, or any custom loss-multiplier with stop-loss / stop-profit guards.
             </div>
           )}
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Hot keys" subtitle="roll faster">
+        <AsideSection title="Hot keys" subtitle="roll faster">
           <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-[11px]">
             <KeyHint k="Enter" label="Roll" />
             <KeyHint k="U / O" label="Under / Over" />
             <KeyHint k="M" label="Classic ↔ Limbo" />
             <KeyHint k="Esc" label="Close modal" />
           </div>
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Recent rolls" subtitle={`${history.length}`}>
+        <AsideSection title="Recent rolls" subtitle={`${history.length}`}>
           {history.length === 0 && (
             <div className="text-[12px] text-white/40">No rolls yet.</div>
           )}
@@ -589,7 +590,7 @@ export default function DiceTable({ chainId, token }: Props) {
               );
             })}
           </div>
-        </SidePanel>
+        </AsideSection>
 
         {revealSeed && (
           <RevealedSeedCard serverSeed={revealSeed.serverSeed} onDismiss={dismissRevealedSeed} />
@@ -753,21 +754,6 @@ function NumberLine({
         {mode === "limbo" ? "limbo (roll over)" : `roll ${direction}`}
       </div>
     </div>
-  );
-}
-
-function SidePanel({ title, subtitle, right, children }: { title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className={card + " p-5"}>
-      <div className="flex items-baseline justify-between mb-3 gap-3">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <h3 className="text-sm font-semibold truncate">{title}</h3>
-          {subtitle && <span className="text-[10px] uppercase tracking-[0.12em] text-white/40 shrink-0">{subtitle}</span>}
-        </div>
-        {right}
-      </div>
-      {children}
-    </section>
   );
 }
 

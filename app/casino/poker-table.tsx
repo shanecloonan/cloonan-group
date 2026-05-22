@@ -23,7 +23,14 @@ import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
 import { PokerOvalTable } from "./poker-table-visual";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
-import { BalanceSummary, ErrorBanner, fmtMoney, humanToUnits, WideTableShell } from "./table-kit";
+import {
+  BalanceSummary,
+  ErrorBanner,
+  fmtMoney,
+  humanToUnits,
+  RevealedSeedCard,
+  WideTableShell,
+} from "./table-kit";
 
 interface Props {
   chainId: ChainId;
@@ -321,6 +328,14 @@ export default function PokerTable({ chainId, token }: Props) {
               config: { bigBlind: verifyTarget.state.config.bigBlind },
             })
           }
+        />
+      )}
+
+      {lastRevealedSeed && (
+        <RevealedSeedCard
+          serverSeed={lastRevealedSeed.serverSeed}
+          publishedHash={lastRevealedSeed.hash}
+          onDismiss={dismissRevealedSeed}
         />
       )}
 

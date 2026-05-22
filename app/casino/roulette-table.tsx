@@ -40,6 +40,7 @@ import {
   FairnessStrip,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
+  AsideSection,
   LegacyThreeColLayout,
   RevealedSeedCard,
   SettlementBanner,
@@ -413,7 +414,7 @@ export default function RouletteTable({ chainId, token }: Props) {
 
       {/* Right column: panels */}
       <aside className="space-y-4">
-        <SidePanel title="Active placements" subtitle={Object.keys(placementsByKey).length === 0 ? "none yet" : `${Object.keys(placementsByKey).length}`}>
+        <AsideSection title="Active placements" subtitle={Object.keys(placementsByKey).length === 0 ? "none yet" : `${Object.keys(placementsByKey).length}`}>
           {Object.keys(placementsByKey).length === 0 ? (
             <div className="text-[12px] text-white/40">Click any cell on the table to add a chip.</div>
           ) : (
@@ -436,9 +437,9 @@ export default function RouletteTable({ chainId, token }: Props) {
               ))}
             </div>
           )}
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Hot keys" subtitle="play faster">
+        <AsideSection title="Hot keys" subtitle="play faster">
           <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-[11px]">
             <KeyHint k="Enter" label="Spin" />
             <KeyHint k="C" label="Clear bets" />
@@ -448,9 +449,9 @@ export default function RouletteTable({ chainId, token }: Props) {
           <div className="mt-3 text-[11px] text-white/50">
             European rules · {ROULETTE_RTP_PERCENT.toFixed(2)}% RTP · house edge 2.70%
           </div>
-        </SidePanel>
+        </AsideSection>
 
-        <SidePanel title="Recent spins" subtitle={`${history.length}`}>
+        <AsideSection title="Recent spins" subtitle={`${history.length}`}>
           {history.length === 0 && <div className="text-[12px] text-white/40">No spins yet.</div>}
           <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
             {history.map((h) => {
@@ -478,7 +479,7 @@ export default function RouletteTable({ chainId, token }: Props) {
               );
             })}
           </div>
-        </SidePanel>
+        </AsideSection>
 
         {revealSeed && (
           <RevealedSeedCard serverSeed={revealSeed.serverSeed} onDismiss={dismissRevealedSeed} />
@@ -1238,23 +1239,6 @@ function colorClass(n: number): string {
   return RED_POCKETS.has(n)
     ? "bg-rose-600 text-rose-50 border-rose-400/40"
     : "bg-slate-900 text-slate-100 border-slate-600/40";
-}
-
-function SidePanel({
-  title, subtitle, right, children,
-}: { title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className={card + " p-5"}>
-      <div className="flex items-baseline justify-between mb-3 gap-3">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <h3 className="text-sm font-semibold truncate">{title}</h3>
-          {subtitle && <span className="text-[10px] uppercase tracking-[0.12em] text-white/40 shrink-0">{subtitle}</span>}
-        </div>
-        {right}
-      </div>
-      {children}
-    </section>
-  );
 }
 
 function KeyHint({ k, label }: { k: string; label: string }) {

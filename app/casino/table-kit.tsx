@@ -612,6 +612,34 @@ export function ActionStack({ children }: { children: ReactNode }) {
   return <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2">{children}</div>;
 }
 
+/** Sidebar panel for legacy 3-column / slots asides (history, hotkeys, etc.). */
+export function AsideSection({
+  title,
+  subtitle,
+  right,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  right?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className={card + " p-5"}>
+      <div className="flex items-baseline justify-between mb-3 gap-3">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <h3 className="text-sm font-semibold truncate">{title}</h3>
+          {subtitle ? (
+            <span className="text-[10px] uppercase tracking-[0.12em] text-white/40 shrink-0">{subtitle}</span>
+          ) : null}
+        </div>
+        {right}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function TableAside({
   balance,
   token,
@@ -628,7 +656,7 @@ export function TableAside({
   /** Hide when play-money chip strip already shows balance. */
   showBalance?: boolean;
 }) {
-  const { playMoney } = useCasino();
+  const { playMoney, lastRevealedSeed, dismissRevealedSeed } = useCasino();
   const showBal = showBalance && !playMoney.enabled;
 
   return (
@@ -636,7 +664,7 @@ export function TableAside({
       {showBal && (
         <section className={card + " p-4"}>
           <div className={labelCls}>Balance</div>
-          <div className="text-lg font-mono text-emerald-300 tabular-nums">{fmtMoney(balance, token)}</div>
+          <div className="text-lg font-mono text-emerald-300 tabular-nums">{fmtMoney(balance, token, 2)}</div>
         </section>
       )}
       {hint && (
@@ -656,6 +684,13 @@ export function TableAside({
           </button>
         )}
       </section>
+      {lastRevealedSeed && (
+        <RevealedSeedCard
+          serverSeed={lastRevealedSeed.serverSeed}
+          publishedHash={lastRevealedSeed.hash}
+          onDismiss={dismissRevealedSeed}
+        />
+      )}
     </>
   );
 }

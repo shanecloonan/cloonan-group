@@ -45,6 +45,7 @@ import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
+  AsideSection,
   BalanceSummary,
   DevBankrollCard,
   ErrorBanner,
@@ -478,7 +479,7 @@ export default function SlotsTable({ chainId, token }: Props) {
 
       {/* ───── Side column ───── */}
       <aside className="space-y-6">
-        <SidePanel title="Recent spins">
+        <AsideSection title="Recent spins">
           {history.length === 0 ? (
             <div className="text-white/40 text-sm">No spins yet. Spin to start.</div>
           ) : (
@@ -493,7 +494,7 @@ export default function SlotsTable({ chainId, token }: Props) {
               ))}
             </div>
           )}
-        </SidePanel>
+        </AsideSection>
 
         <FairnessCard
           seedPair={seedPair}
@@ -894,15 +895,6 @@ function Paytable({ token, perLineUnits }: { token: TokenSpec; perLineUnits: big
 /* ===========================================================================
  *  Side panels & rows
  * ========================================================================= */
-
-function SidePanel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className={card + " p-5"}>
-      <h2 className="text-sm font-semibold mb-3">{title}</h2>
-      {children}
-    </div>
-  );
-}
 
 function RecentSpinRow({
   session,

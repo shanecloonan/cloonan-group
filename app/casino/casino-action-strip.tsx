@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useCasino } from "./casino-context";
 import { PlayMoneyChipStrip } from "./play-money-bar";
 import { btnGhost } from "./casino-ui";
+import { shortSeedHash } from "./table-kit";
 import type { ChainId } from "@/lib/casino";
 
 function formatBalance(units: bigint, decimals: number, symbol: string): string {
@@ -97,7 +98,7 @@ export function CasinoActionStrip() {
 
         <div className="flex flex-wrap items-center gap-2 text-[10px] text-white/45 min-w-0">
           <span className="font-mono truncate max-w-[min(42vw,220px)]" title={pair.serverSeedHash}>
-            Commit {pair.serverSeedHash.slice(0, 14)}…
+            Commit {shortSeedHash(pair.serverSeedHash, 14)}
           </span>
           <button
             type="button"
