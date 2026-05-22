@@ -26,14 +26,16 @@ export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
 /* ---- Layout ---- */
 
 export function TablePage({ children }: { children: ReactNode }) {
-  return <div className="mt-4 space-y-4 max-w-4xl mx-auto pb-24 lg:pb-4">{children}</div>;
+  return (
+    <div className="space-y-4 max-w-4xl mx-auto w-full pb-4 sm:pb-6">{children}</div>
+  );
 }
 
 export function TableGrid({ main, aside }: { main: ReactNode; aside: ReactNode }) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_200px] gap-4">
-      <section className={card + " p-4 sm:p-6 space-y-4"}>{main}</section>
-      <aside className="space-y-3">{aside}</aside>
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(100%,220px)] gap-4 lg:gap-5">
+      <section className={card + " p-4 sm:p-5 lg:p-6 space-y-4 min-w-0"}>{main}</section>
+      <aside className="space-y-3 lg:sticky lg:top-24 lg:self-start">{aside}</aside>
     </div>
   );
 }
@@ -48,8 +50,8 @@ export function TableHead({
   badge?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <h2 className="text-lg font-semibold text-white tracking-tight">{title}</h2>
+    <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+      <h2 className="text-base sm:text-lg font-semibold text-white tracking-tight">{title}</h2>
       <div className="flex items-center gap-2">
         {badge && (
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-400/35 text-amber-200/90 bg-amber-500/10">

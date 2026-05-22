@@ -4,15 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/casino", label: "Play", icon: "♠", match: (p: string) => p === "/casino" },
-  { href: "/casino/dashboard", label: "Hub", icon: "◈", match: (p: string) => p.startsWith("/casino/dashboard") },
+  { href: "/casino", label: "Games", icon: "▦", match: (p: string) => p === "/casino" },
+  { href: "/casino/dashboard", label: "Stats", icon: "◈", match: (p: string) => p.startsWith("/casino/dashboard") },
   {
     href: "/casino/history",
     label: "Bets",
     icon: "◎",
     match: (p: string) => p.startsWith("/casino/history") || p.startsWith("/casino/feed"),
   },
-  { href: "/casino/leaderboard", label: "Ranks", icon: "★", match: (p: string) => p.startsWith("/casino/leaderboard") },
+  { href: "/casino/leaderboard", label: "Top", icon: "★", match: (p: string) => p.startsWith("/casino/leaderboard") },
   { href: "/casino/wallet", label: "Vault", icon: "◇", match: (p: string) => p.startsWith("/casino/wallet") },
 ] as const;
 
