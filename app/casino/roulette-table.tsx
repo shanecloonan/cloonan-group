@@ -35,7 +35,14 @@ import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { useLongPress } from "./use-long-press";
 import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, SettlementBanner, unitsToHuman } from "./table-kit";
+import {
+  fmtMoney as fmtMoneyKit,
+  humanToUnits,
+  LegacyThreeColLayout,
+  SettlementBanner,
+  TableBalanceHeader,
+  unitsToHuman,
+} from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -275,10 +282,15 @@ export default function RouletteTable({ chainId, token }: Props) {
   /* ----- Render ----- */
 
   return (
-    <div className="mt-6 sm:mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6 lg:pb-0 w-full max-w-6xl mx-auto">
+    <LegacyThreeColLayout>
       {/* Left column: betting table */}
       <section className={card + " p-6 lg:col-span-2 flex flex-col"}>
-        <Header chainId={chainId} token={token} balance={balance} onDeposit={onDepositPlay} />
+        <TableBalanceHeader
+          chainId={chainId}
+          token={token}
+          balance={balance}
+          onDeposit={onDepositPlay}
+        />
 
         {/* Wheel + recents */}
         <div className="flex items-center gap-4 mb-4 flex-wrap">
@@ -528,7 +540,7 @@ export default function RouletteTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </LegacyThreeColLayout>
   );
 }
 
@@ -1246,32 +1258,6 @@ function colorClass(n: number): string {
   return RED_POCKETS.has(n)
     ? "bg-rose-600 text-rose-50 border-rose-400/40"
     : "bg-slate-900 text-slate-100 border-slate-600/40";
-}
-
-function Header({ chainId, token, balance, onDeposit }: {
-  chainId: ChainId; token: TokenSpec;
-  balance: { available: bigint; locked: bigint };
-  onDeposit: () => void;
-}) {
-  const isDev = chainId === "dev-mock";
-  return (
-    <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-      <div>
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Playing on</div>
-        <div className="text-base font-semibold">{chainId} · <span className="text-emerald-300">{token.symbol}</span></div>
-      </div>
-      <div className="text-right">
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Available</div>
-        <div className="text-xl font-bold font-mono text-white">{fmtMoney(balance.available, token)}</div>
-        {balance.locked > 0n && <div className="text-[11px] text-white/40 font-mono">{fmtMoney(balance.locked, token)} locked</div>}
-        {isDev && (
-          <button type="button" onClick={onDeposit}
-            className="mt-1 text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer underline-offset-2 hover:underline"
-          >+ Add 10,000 play money</button>
-        )}
-      </div>
-    </div>
-  );
 }
 
 function SidePanel({

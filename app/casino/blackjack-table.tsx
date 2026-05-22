@@ -27,6 +27,7 @@ import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
   fmtMoney as fmtMoneyKit,
   humanToUnits,
+  ErrorBanner,
   LegacyThreeColLayout,
   TableBalanceHeader,
   unitsToHuman,
@@ -263,8 +264,8 @@ export default function BlackjackTable({ chainId, token }: Props) {
         )}
 
         {error && (
-          <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-200">
-            {error}
+          <div className="mt-4">
+            <ErrorBanner message={error} />
           </div>
         )}
 
