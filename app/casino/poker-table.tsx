@@ -23,7 +23,7 @@ import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
 import { PokerOvalTable } from "./poker-table-visual";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
-import { ErrorBanner, fmtMoney, humanToUnits, WideTableShell } from "./table-kit";
+import { BalanceSummary, ErrorBanner, fmtMoney, humanToUnits, WideTableShell } from "./table-kit";
 
 interface Props {
   chainId: ChainId;
@@ -204,17 +204,7 @@ export default function PokerTable({ chainId, token }: Props) {
               : "Host or join a shared table — realtime sync for signed-in players"}
           </p>
         </div>
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Available</div>
-          <div className="text-xl font-bold font-mono text-white tabular-nums">
-            {fmtMoney(balance.available, token, 2)}
-          </div>
-          {balance.locked > 0n && (
-            <div className="text-[11px] text-white/40 font-mono tabular-nums">
-              {fmtMoney(balance.locked, token, 2)} locked
-            </div>
-          )}
-        </div>
+        <BalanceSummary balance={balance} token={token} />
       </section>
 
       {mode === "multi" ? (

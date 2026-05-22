@@ -50,6 +50,7 @@ import { btnDanger, btnGhost, btnPrimary, card, inputCls, labelCls } from "./cas
 import {
   ErrorBanner,
   FairnessCard,
+  RevealedSeedCard,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   InstantSideLayout,
@@ -613,24 +614,11 @@ export default function CrashTable({ chainId, token }: Props) {
         </FairnessCard>
 
         {lastRevealedSeed && (
-          <section className={card + " p-4 border-emerald-400/30 bg-emerald-500/[0.04]"}>
-            <div className="flex items-baseline justify-between mb-1.5">
-              <h3 className="font-semibold text-emerald-200 text-[13px]">Server seed revealed</h3>
-              <button
-                type="button"
-                className="text-[11px] text-white/40 hover:text-white/70 cursor-pointer"
-                onClick={dismissRevealedSeed}
-              >
-                Dismiss
-              </button>
-            </div>
-            <div className="text-[10px] text-white/60 font-mono break-all">
-              {lastRevealedSeed.serverSeed}
-            </div>
-            <div className="mt-1.5 text-[10px] text-white/40">
-              <code>sha256(seed) == {lastRevealedSeed.hash.slice(0, 18)}…</code>
-            </div>
-          </section>
+          <RevealedSeedCard
+            serverSeed={lastRevealedSeed.serverSeed}
+            publishedHash={lastRevealedSeed.hash}
+            onDismiss={dismissRevealedSeed}
+          />
         )}
       </div>
 

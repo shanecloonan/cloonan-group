@@ -44,7 +44,16 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-import { ErrorBanner, fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+import {
+  BalanceSummary,
+  ErrorBanner,
+  FairnessCard,
+  fmtMoney as fmtMoneyKit,
+  humanToUnits,
+  InstantSideLayout,
+  RevealedSeedCard,
+  unitsToHuman,
+} from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -332,7 +341,7 @@ export default function SlotsTable({ chainId, token }: Props) {
   /* =================== render =================== */
 
   return (
-    <div className="w-full max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4 sm:gap-6 pt-4 sm:pt-6 pb-6 lg:pb-0">
+    <InstantSideLayout sidebarAt="xl">
       {/* ───── Main column ───── */}
       <section className="space-y-6">
         {/* Header */}
@@ -345,14 +354,7 @@ export default function SlotsTable({ chainId, token }: Props) {
               5 reels · 20 paylines · wilds, scatters, free spins · target RTP ≈ 96%
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">
-              Balance
-            </div>
-            <div className="font-mono text-lg text-emerald-300">
-              {fmtMoney(balance.available, token)}
-            </div>
-          </div>
+          <BalanceSummary balance={balance} token={token} />
         </div>
 
         {/* Reel window */}
@@ -492,30 +494,16 @@ export default function SlotsTable({ chainId, token }: Props) {
           )}
         </SidePanel>
 
-        <SidePanel title="Provably fair">
-          <div className="space-y-2 text-[12px]">
-            <div className="flex justify-between gap-2">
-              <span className="text-white/50">Server seed hash</span>
-              <span className="font-mono text-white/80">
-                {seedPair.serverSeedHash.slice(0, 10)}…{seedPair.serverSeedHash.slice(-6)}
-              </span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-white/50">Client seed</span>
-              <span className="font-mono text-white/80">{seedPair.clientSeed}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-white/50">Nonce</span>
-              <span className="font-mono text-white/80">{seedPair.nonce}</span>
-            </div>
-          </div>
-          <button
-            className={btnGhost + " w-full mt-4 text-emerald-200"}
-            onClick={() => rotateSeed()}
-          >
-            Rotate seed (reveal current)
-          </button>
-        </SidePanel>
+        <FairnessCard
+          seedPair={seedPair}
+          onRotateSeed={() => rotateSeed()}
+          nonceMode="current"
+          truncateClientSeed={false}
+        >
+          Reel stops are drawn from{" "}
+          <code className="text-emerald-300">HMAC-SHA256(server_seed, client_seed:nonce)</code> with
+          rejection sampling. Rotate to reveal the prior server seed and verify any settled spin.
+        </FairnessCard>
 
         <SidePanel title="Dev bankroll">
           <div className="text-[12px] text-white/50 mb-3">
@@ -530,22 +518,16 @@ export default function SlotsTable({ chainId, token }: Props) {
         </SidePanel>
 
         {revealSeed && (
-          <SidePanel title="Revealed seed">
-            <div className="text-[12px] text-white/70 mb-2">
-              The previous server seed has been revealed. Use it on{" "}
-              <code className="text-emerald-300">/casino/verify</code> to audit
-              any settled hand from the prior rotation.
-            </div>
-            <div className="font-mono text-[11px] text-amber-200 break-all bg-amber-500/5 border border-amber-400/20 p-2 rounded">
-              {revealSeed.serverSeed}
-            </div>
-            <button
-              className={btnGhost + " w-full mt-3"}
-              onClick={dismissRevealedSeed}
-            >
-              Dismiss
-            </button>
-          </SidePanel>
+          <RevealedSeedCard
+            serverSeed={revealSeed.serverSeed}
+            onDismiss={dismissRevealedSeed}
+            hint={
+              <>
+                Paste this seed on <code className="text-emerald-300">/casino/verify</code> to audit
+                any spin from the prior rotation.
+              </>
+            }
+          />
         )}
       </aside>
 
@@ -588,7 +570,7 @@ export default function SlotsTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </InstantSideLayout>
   );
 }
 

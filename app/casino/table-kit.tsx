@@ -43,11 +43,43 @@ export function LegacyThreeColLayout({ children }: { children: ReactNode }) {
   );
 }
 
-/** Play area + sidebar (crash, plinko, mines, hilo). */
-export function InstantSideLayout({ children }: { children: ReactNode }) {
+/** Play area + sidebar (crash, plinko, mines, hilo, slots). */
+export function InstantSideLayout({
+  children,
+  sidebarAt = "lg",
+}: {
+  children: ReactNode;
+  sidebarAt?: "lg" | "xl";
+}) {
+  const cols =
+    sidebarAt === "xl"
+      ? "grid-cols-1 xl:grid-cols-[1fr,360px]"
+      : "grid-cols-1 lg:grid-cols-[1fr,360px]";
   return (
-    <div className="w-full max-w-6xl mx-auto pb-6 lg:pb-0 mt-4 sm:mt-6 grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-4 sm:gap-6">
+    <div className={`w-full max-w-6xl mx-auto pb-6 lg:pb-0 mt-4 sm:mt-6 grid ${cols} gap-4 sm:gap-6`}>
       {children}
+    </div>
+  );
+}
+
+export function BalanceSummary({
+  balance,
+  token,
+}: {
+  balance: { available: bigint; locked: bigint };
+  token: TokenSpec;
+}) {
+  return (
+    <div className="text-right">
+      <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Available</div>
+      <div className="text-xl font-bold font-mono text-white tabular-nums">
+        {fmtMoney(balance.available, token, 2)}
+      </div>
+      {balance.locked > 0n && (
+        <div className="text-[11px] text-white/40 font-mono tabular-nums">
+          {fmtMoney(balance.locked, token, 2)} locked
+        </div>
+      )}
     </div>
   );
 }
@@ -84,16 +116,8 @@ export function TableBalanceHeader({
           </button>
         )}
       </div>
-      <div className="text-right">
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Available</div>
-        <div className="text-xl font-bold font-mono text-white tabular-nums">
-          {fmtMoney(balance.available, token, 2)}
-        </div>
-        {balance.locked > 0n && (
-          <div className="text-[11px] text-white/40 font-mono tabular-nums">
-            {fmtMoney(balance.locked, token, 2)} locked
-          </div>
-        )}
+      <div className="flex flex-col items-end">
+        <BalanceSummary balance={balance} token={token} />
         {isDev && (
           <button
             type="button"
@@ -160,11 +184,22 @@ export function FairnessCard({
   seedPair,
   onRotateSeed,
   children,
+  nonceMode = "next",
+  truncateClientSeed = true,
 }: {
   seedPair: { serverSeedHash: string; clientSeed: string; nonce: number };
   onRotateSeed: () => void;
   children?: ReactNode;
+  /** `next` shows nonce+1 (pre-bet); `current` shows the active ledger nonce (slots). */
+  nonceMode?: "next" | "current";
+  truncateClientSeed?: boolean;
 }) {
+  const nonceLabel = nonceMode === "current" ? "Nonce" : "Next nonce";
+  const nonceValue = nonceMode === "current" ? seedPair.nonce : seedPair.nonce + 1;
+  const clientSeedText = truncateClientSeed
+    ? shortSeedHash(seedPair.clientSeed, 14)
+    : seedPair.clientSeed;
+
   return (
     <section className={card + " p-5"}>
       <div className="flex items-baseline justify-between mb-2">
@@ -180,18 +215,55 @@ export function FairnessCard({
       <div className="text-[11px] text-white/60 space-y-1.5 leading-relaxed">
         <div>
           <span className="text-white/40">Server seed hash:</span>{" "}
-          <span className="font-mono text-white/80">{shortSeedHash(seedPair.serverSeedHash, 14)}</span>
+          <span className="font-mono text-white/80 break-all">{shortSeedHash(seedPair.serverSeedHash, 14)}</span>
         </div>
         <div>
           <span className="text-white/40">Client seed:</span>{" "}
-          <span className="font-mono text-white/80">{shortSeedHash(seedPair.clientSeed, 14)}</span>
+          <span className={"font-mono text-white/80 " + (truncateClientSeed ? "" : "break-all")}>
+            {clientSeedText}
+          </span>
         </div>
         <div>
-          <span className="text-white/40">Next nonce:</span>{" "}
-          <span className="font-mono text-white/80">{seedPair.nonce + 1}</span>
+          <span className="text-white/40">{nonceLabel}:</span>{" "}
+          <span className="font-mono text-white/80">{nonceValue}</span>
         </div>
         {children ? <div className="mt-2 pt-2 border-t border-white/[0.06]">{children}</div> : null}
       </div>
+    </section>
+  );
+}
+
+/** Shown after seed rotation — paste into /casino/verify. */
+export function RevealedSeedCard({
+  serverSeed,
+  publishedHash,
+  onDismiss,
+  hint,
+}: {
+  serverSeed: string;
+  publishedHash?: string;
+  onDismiss: () => void;
+  hint?: ReactNode;
+}) {
+  return (
+    <section className={card + " p-4 border-emerald-400/30 bg-emerald-500/[0.04]"}>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <h3 className="font-semibold text-emerald-200 text-[13px]">Server seed revealed</h3>
+        <button
+          type="button"
+          className="text-[11px] text-white/40 hover:text-white/70 cursor-pointer"
+          onClick={onDismiss}
+        >
+          Dismiss
+        </button>
+      </div>
+      {hint ? <div className="text-[11px] text-white/55 leading-relaxed mb-2">{hint}</div> : null}
+      <div className="text-[10px] text-white/60 font-mono break-all">{serverSeed}</div>
+      {publishedHash ? (
+        <div className="mt-1.5 text-[10px] text-white/40">
+          <code>sha256(seed) == {shortSeedHash(publishedHash, 18)}</code>
+        </div>
+      ) : null}
     </section>
   );
 }
