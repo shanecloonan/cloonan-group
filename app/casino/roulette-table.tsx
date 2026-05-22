@@ -34,18 +34,10 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { useLongPress } from "./use-long-press";
+import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import { fmtMoney as fmtMoneyKit, humanToUnits, SettlementBanner, unitsToHuman } from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
-
-/* ---------------------------------------------------------------------------
- *  Style helpers (shared idioms)
- * ------------------------------------------------------------------------- */
-
-const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
-const labelCls = "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
-const inputCls = "w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
-const btnPrimary = "h-10 px-5 rounded-lg font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
 const LAST_CHIP_KEY = "mf_casino_roul_chip";
 
@@ -283,7 +275,7 @@ export default function RouletteTable({ chainId, token }: Props) {
   /* ----- Render ----- */
 
   return (
-    <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="mt-6 sm:mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6 lg:pb-0 w-full max-w-6xl mx-auto">
       {/* Left column: betting table */}
       <section className={card + " p-6 lg:col-span-2 flex flex-col"}>
         <Header chainId={chainId} token={token} balance={balance} onDeposit={onDepositPlay} />
@@ -384,8 +376,11 @@ export default function RouletteTable({ chainId, token }: Props) {
             >
               Clear · C
             </button>
-            <button type="button" disabled={spinning || totalStakeUnits <= 0n} onClick={spin}
-              className={btnPrimary}
+            <button
+              type="button"
+              disabled={spinning || totalStakeUnits <= 0n}
+              onClick={spin}
+              className={btnPrimary + " w-full sm:w-auto"}
             >
               {spinning ? "Spinning…" : "Spin · ⏎"}
             </button>

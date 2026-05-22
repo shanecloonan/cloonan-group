@@ -2,6 +2,7 @@
 
 import { cardLabel, type PokerState, type TokenSpec } from "@/lib/casino";
 import { pillGold } from "./casino-ui";
+import { fmtMoney } from "./table-kit";
 
 const SEAT_POS = [
   "bottom-2 left-1/2 -translate-x-1/2",
@@ -11,11 +12,6 @@ const SEAT_POS = [
   "top-6 left-[18%] sm:left-[22%]",
   "bottom-[22%] left-2 sm:left-4",
 ];
-
-function unitsToHuman(units: bigint, token: TokenSpec): string {
-  const denom = 10n ** BigInt(token.decimals);
-  return (Number(units) / Number(denom)).toLocaleString(undefined, { maximumFractionDigits: 1 });
-}
 
 export function PokerOvalTable({
   state,
@@ -37,7 +33,7 @@ export function PokerOvalTable({
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1">
         <span className={pillGold + " text-[9px]"}>{phaseLabel ?? state.phase}</span>
         <span className="font-mono text-sm text-amber-200/90">
-          Pot {potLabel ?? unitsToHuman(state.pot, token)} {token.symbol}
+          Pot {potLabel ?? fmtMoney(state.pot, token, 1)}
         </span>
       </div>
 
@@ -108,7 +104,7 @@ function SeatChip({
         {player.isHuman ? " · you" : ""}
       </div>
       <div className="text-[10px] font-mono text-emerald-300/95">
-        {unitsToHuman(player.stack, token)} {token.symbol}
+        {fmtMoney(player.stack, token, 1)}
       </div>
       {player.folded && <div className="text-[9px] text-rose-300/90">Folded</div>}
       {reveal && player.hole.length === 2 && (

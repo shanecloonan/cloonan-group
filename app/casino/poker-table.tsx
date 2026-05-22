@@ -23,26 +23,12 @@ import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
 import { PokerOvalTable } from "./poker-table-visual";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
+import { fmtMoney, humanToUnits } from "./table-kit";
 
 interface Props {
   chainId: ChainId;
   token: TokenSpec;
   adapter: ChainAdapter;
-}
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(units) / Number(denom);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  return BigInt(Math.floor(amount * Number(denom)));
-}
-
-function fmt(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${token.symbol}`;
 }
 
 export default function PokerTable({ chainId, token }: Props) {
@@ -220,7 +206,7 @@ export default function PokerTable({ chainId, token }: Props) {
         </div>
         <div className="text-right">
           <div className="text-[10px] uppercase tracking-wider text-white/40">Balance</div>
-          <div className="font-mono text-emerald-300">{fmt(balance.available, token)}</div>
+          <div className="font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
         </div>
       </section>
 
@@ -267,9 +253,9 @@ export default function PokerTable({ chainId, token }: Props) {
             <div className="rounded-xl bg-black/70 border border-white/10 backdrop-blur-md p-3 text-center">
               <p className="text-sm text-amber-100/90">{st.message}</p>
               <p className="text-xs text-white/40 mt-1">
-                Pot {fmt(st.pot, token)}
+                Pot {fmtMoney(st.pot, token)}
                 {st.phase !== "complete" && ` · ${st.phase}`}
-                {toCall > 0n && human && !human.folded && ` · Call ${fmt(toCall, token)}`}
+                {toCall > 0n && human && !human.folded && ` · Call ${fmtMoney(toCall, token)}`}
               </p>
             </div>
           </div>
@@ -294,11 +280,11 @@ export default function PokerTable({ chainId, token }: Props) {
         <section className={card + " p-5 space-y-3"}>
           <h3 className="text-lg font-semibold text-white">Hand complete</h3>
           <p className={"font-mono text-lg " + (session.result.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300")}>
-            {(session.result.pnlUnits >= 0n ? "+" : "") + fmt(session.result.pnlUnits, token)}
+            {(session.result.pnlUnits >= 0n ? "+" : "") + fmtMoney(session.result.pnlUnits, token)}
           </p>
           {st?.winners.map((w, i) => (
             <p key={i} className="text-sm text-white/60">
-              {st.players[w.seat].name}: {w.hand} · {fmt(w.amount, token)}
+              {st.players[w.seat].name}: {w.hand} · {fmtMoney(w.amount, token)}
             </p>
           ))}
           <div className="flex flex-wrap gap-2 pt-2">
