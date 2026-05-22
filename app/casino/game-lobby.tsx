@@ -15,7 +15,7 @@ import {
 } from "./game-catalog";
 import type { GameTab } from "./game-types";
 import { PlayMoneyPanel } from "./play-money-bar";
-import { fmtMoney } from "./table-kit";
+import { fmtMoney, fmtPnl } from "./table-kit";
 
 const CHAIN_TILES = [
   { id: "dev-mock" as ChainId, display: "Play money", tag: "Free" },
@@ -132,7 +132,7 @@ export function GameLobby({
             </p>
             <p className="mt-1 text-xs text-white/45">
               Lifetime {stats.totalPnlUnits >= 0n ? "+" : ""}
-              {fmtMoney(stats.totalPnlUnits, token, 2)}
+              {fmtPnl(stats.totalPnlUnits, token, 2)}
               {stats.sessionsPlayed > 0 ? ` · ${stats.sessionsPlayed} hands` : ""}
             </p>
           </div>
@@ -249,8 +249,7 @@ export function GameLobby({
               <li key={i} className="flex justify-between gap-2">
                 <span className="truncate text-white/55">{gameLabel(h.game)}</span>
                 <span className={h.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300"}>
-                  {h.pnlUnits >= 0n ? "+" : ""}
-                  {fmtMoney(h.pnlUnits, token)}
+                  {fmtPnl(h.pnlUnits, token)}
                 </span>
               </li>
             ))}

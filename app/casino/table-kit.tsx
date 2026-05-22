@@ -23,6 +23,14 @@ export function humanToUnits(amount: number, token: TokenSpec): bigint {
 /** Default play-money top-up on dev-mock (matches TableBalanceHeader copy). */
 export const DEV_PLAY_MONEY_HUMAN = 10_000;
 
+/** Unit amount for a standard dev play-money credit (default 10k human). */
+export function devPlayMoneyTopUpUnits(
+  token: TokenSpec,
+  amountHuman = DEV_PLAY_MONEY_HUMAN,
+): bigint {
+  return humanToUnits(amountHuman, token);
+}
+
 export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
   const sign = units < 0n ? "-" : "";
   const abs = units < 0n ? -units : units;
@@ -46,21 +54,73 @@ export function MetricStat({
   value: string;
   sub?: string;
   accent?: "emerald" | "rose";
-  variant?: "tile" | "inline";
+  variant?: "tile" | "inline" | "panel";
 }) {
   const accentCls =
     accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white";
   const valueCls =
-    variant === "tile" ? `mt-1 font-mono text-[14px] ${accentCls}` : `text-base font-bold font-mono mt-0.5 ${accentCls}`;
+    variant === "inline"
+      ? `text-base font-bold font-mono mt-0.5 ${accentCls}`
+      : variant === "panel"
+        ? `mt-1 font-mono text-sm font-semibold ${accentCls}`
+        : `mt-1 font-mono text-[14px] ${accentCls}`;
+  const labelCls =
+    variant === "panel"
+      ? "text-[10px] uppercase tracking-wider text-white/40"
+      : "text-[10px] uppercase tracking-[0.15em] text-white/40";
   const inner = (
     <>
-      <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">{label}</div>
+      <div className={labelCls}>{label}</div>
       <div className={valueCls}>{value}</div>
       {sub ? <div className="text-[10px] text-white/40 mt-0.5">{sub}</div> : null}
     </>
   );
   if (variant === "inline") return <div>{inner}</div>;
+  if (variant === "panel") {
+    return <div className="rounded-xl bg-black/30 border border-white/[0.06] p-3">{inner}</div>;
+  }
   return <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">{inner}</div>;
+}
+
+/** Clickable recent-round row in instant-game sidebars. */
+export function AsideHistoryButton({
+  onClick,
+  badge,
+  meta,
+  pnl,
+  token,
+}: {
+  onClick: () => void;
+  badge: string;
+  meta: string;
+  pnl: bigint;
+  token: TokenSpec;
+}) {
+  const won = pnl > 0n;
+  return (
+    <button
+      type="button"
+      className="w-full flex items-center justify-between gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-emerald-400/30 hover:bg-emerald-500/[0.04] transition-colors text-left cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span
+          className={
+            "shrink-0 h-6 px-2 rounded-md text-[10px] font-mono font-semibold flex items-center justify-center " +
+            (won
+              ? "bg-emerald-500/15 text-emerald-200 border border-emerald-400/30"
+              : "bg-rose-500/15 text-rose-200 border border-rose-400/30")
+          }
+        >
+          {badge}
+        </span>
+        <span className="text-[10px] text-white/40 truncate">{meta}</span>
+      </div>
+      <div className={"shrink-0 text-[12px] font-mono " + (won ? "text-emerald-300" : "text-rose-300")}>
+        {fmtPnl(pnl, token)}
+      </div>
+    </button>
+  );
 }
 
 /** Token view when only symbol and decimals are known (history rows, CSV). */

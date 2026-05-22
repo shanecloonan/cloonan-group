@@ -25,11 +25,12 @@ import { pickRevealedServerSeed, runBlackjackVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
-  fmtMoney as fmtMoneyKit,
+  fmtMoney,
   humanToUnits,
   ErrorBanner,
   AsideSection,
-  DEV_PLAY_MONEY_HUMAN,
+  devPlayMoneyTopUpUnits,
+  fmtPnl,
   FairnessStrip,
   KeyHint,
   LegacyThreeColLayout,
@@ -37,8 +38,6 @@ import {
   TableBalanceHeader,
   unitsToHuman,
 } from "./table-kit";
-
-const fmtMoney = (units: bigint, token: TokenSpec) => fmtMoneyKit(units, token, 2);
 
 const LAST_BET_KEY = "mf_casino_bj_last_bet";
 
@@ -171,7 +170,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
   }, [rotateSeed]);
 
   const onDepositPlay = useCallback(async () => {
-    await depositPlayMoney(humanToUnits(DEV_PLAY_MONEY_HUMAN, token));
+    await depositPlayMoney(devPlayMoneyTopUpUnits(token));
   }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();
@@ -827,8 +826,7 @@ function HistoryRow({
             (win ? "text-emerald-300" : push ? "text-white/60" : "text-rose-300")
           }
         >
-          {win ? "+" : ""}
-          {fmtMoney(r.pnlUnits, token)}
+          {fmtPnl(r.pnlUnits, token)}
         </div>
         <button
           type="button"

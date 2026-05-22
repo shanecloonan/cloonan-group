@@ -25,10 +25,10 @@ import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
   ErrorBanner,
   FairnessStrip,
-  fmtMoney as fmtMoneyKit,
+  fmtMoney,
   humanToUnits,
   AsideSection,
-  DEV_PLAY_MONEY_HUMAN,
+  devPlayMoneyTopUpUnits,
   KeyHint,
   LegacyThreeColLayout,
   NumberField,
@@ -37,8 +37,6 @@ import {
   TableBalanceHeader,
   unitsToHuman,
 } from "./table-kit";
-
-const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
 const LAST_BET = "mf_casino_dice_bet";
 const LAST_TARGET = "mf_casino_dice_target";
@@ -322,7 +320,7 @@ export default function DiceTable({ chainId, token }: Props) {
   /* ----- Deposit play money ----- */
 
   const onDepositPlay = useCallback(async () => {
-    await depositPlayMoney(humanToUnits(DEV_PLAY_MONEY_HUMAN, token));
+    await depositPlayMoney(devPlayMoneyTopUpUnits(token));
   }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();

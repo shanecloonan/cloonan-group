@@ -25,10 +25,10 @@ import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
   ErrorBanner,
   FairnessStrip,
-  fmtMoney as fmtMoneyKit,
+  fmtMoney,
   humanToUnits,
   AsideSection,
-  DEV_PLAY_MONEY_HUMAN,
+  devPlayMoneyTopUpUnits,
   KeyHint,
   LegacyThreeColLayout,
   NumberField,
@@ -37,8 +37,6 @@ import {
   TableBalanceHeader,
   unitsToHuman,
 } from "./table-kit";
-
-const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
 const LAST_BET_KEY = "mf_casino_cf_last_bet";
 const LAST_PICK_KEY = "mf_casino_cf_last_pick";
@@ -293,7 +291,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
   }, [animating, autoRunning, singleFlip, verifyTarget]);
 
   const onDepositPlay = useCallback(async () => {
-    await depositPlayMoney(humanToUnits(DEV_PLAY_MONEY_HUMAN, token));
+    await depositPlayMoney(devPlayMoneyTopUpUnits(token));
   }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();

@@ -38,10 +38,10 @@ import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
   ErrorBanner,
   FairnessStrip,
-  fmtMoney as fmtMoneyKit,
+  fmtMoney,
   humanToUnits,
   AsideSection,
-  DEV_PLAY_MONEY_HUMAN,
+  devPlayMoneyTopUpUnits,
   KeyHint,
   fmtPnl,
   LegacyThreeColLayout,
@@ -50,8 +50,6 @@ import {
   TableBalanceHeader,
   unitsToHuman,
 } from "./table-kit";
-
-const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
 const LAST_CHIP_KEY = "mf_casino_roul_chip";
 
@@ -279,7 +277,7 @@ export default function RouletteTable({ chainId, token }: Props) {
   }, [spin, spinning, verifyTarget, lastBet]);
 
   const onDepositPlay = useCallback(async () => {
-    await depositPlayMoney(humanToUnits(DEV_PLAY_MONEY_HUMAN, token));
+    await depositPlayMoney(devPlayMoneyTopUpUnits(token));
   }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();

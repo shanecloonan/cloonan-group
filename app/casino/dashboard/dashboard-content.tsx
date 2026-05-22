@@ -26,7 +26,7 @@ import {
 } from "@/lib/casino/leaderboard";
 import { HistoryVerifyLink } from "../history-verify-link";
 import { buildVerifyLink } from "../share-link";
-import { fmtMoney, fmtPnl, tokenFromParts } from "../table-kit";
+import { fmtMoney, fmtPnl, MetricStat, tokenFromParts } from "../table-kit";
 
 const DASHBOARD_TOKEN = tokenFromParts("DEV", 6);
 
@@ -194,13 +194,18 @@ export default function DashboardContent() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <MiniStat label="Sessions" value={String(stats.count)} />
-            <MiniStat label="Win rate" value={stats.count ? `${((stats.wins / stats.count) * 100).toFixed(0)}%` : "—"} />
-            <MiniStat label="Wagered" value={fmtMoney(stats.wagered, DASHBOARD_TOKEN, 2)} />
-            <MiniStat
+            <MetricStat label="Sessions" value={String(stats.count)} variant="panel" />
+            <MetricStat
+              label="Win rate"
+              value={stats.count ? `${((stats.wins / stats.count) * 100).toFixed(0)}%` : "—"}
+              variant="panel"
+            />
+            <MetricStat label="Wagered" value={fmtMoney(stats.wagered, DASHBOARD_TOKEN, 2)} variant="panel" />
+            <MetricStat
               label="Net PnL"
               value={fmtPnl(stats.pnl, DASHBOARD_TOKEN, 2)}
               accent={stats.pnl >= 0n ? "emerald" : "rose"}
+              variant="panel"
             />
           </div>
 
@@ -310,29 +315,5 @@ export default function DashboardContent() {
         </aside>
       </div>
     </CasinoShell>
-  );
-}
-
-function MiniStat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: "emerald" | "rose";
-}) {
-  return (
-    <div className="rounded-xl bg-black/30 border border-white/[0.06] p-3">
-      <div className="text-[10px] uppercase tracking-wider text-white/40">{label}</div>
-      <div
-        className={
-          "mt-1 font-mono text-sm font-semibold " +
-          (accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white")
-        }
-      >
-        {value}
-      </div>
-    </div>
   );
 }

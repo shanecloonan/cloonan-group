@@ -50,14 +50,13 @@ import {
   DevBankrollCard,
   ErrorBanner,
   FairnessCard,
-  fmtMoney as fmtMoneyKit,
+  fmtMoney,
+  fmtPnl,
   humanToUnits,
   InstantSideLayout,
   RevealedSeedCard,
   unitsToHuman,
 } from "./table-kit";
-
-const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
 const LAST_BET_KEY = "mf_casino_slots_bet";
 
@@ -917,8 +916,7 @@ function RecentSpinRow({
           }
         />
         <span className="font-mono text-white/80">
-          {pnl >= 0n ? "+" : ""}
-          {fmtMoney(pnl, token)}
+          {fmtPnl(pnl, token)}
         </span>
         {fs > 0 && (
           <span className="text-[10px] text-amber-300 uppercase tracking-wide">

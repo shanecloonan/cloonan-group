@@ -48,20 +48,19 @@ import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
+  AsideHistoryButton,
   DevQuickTopUpBar,
   ErrorBanner,
   MetricStat,
-  fmtPnl,
   FairnessCard,
   RevealedSeedCard,
-  fmtMoney as fmtMoneyKit,
+  fmtMoney,
+  fmtPnl,
   humanToUnits,
   InstantSideLayout,
   SettlementBanner,
   unitsToHuman,
 } from "./table-kit";
-
-const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
 /* ---------------------------------------------------------------------------
  *  Local-storage keys
@@ -579,11 +578,13 @@ export default function CrashTable({ chainId, token }: Props) {
           ) : (
             <div className="space-y-1.5 max-h-[420px] overflow-y-auto">
               {history.map((h, i) => (
-                <RecentRoundRow
+                <AsideHistoryButton
                   key={h.session.id + i}
-                  row={h}
+                  onClick={() => setVerifyTarget(h.session)}
+                  badge={`${h.bustAt.toFixed(2)}×`}
+                  meta={h.won ? `cashed @ ${h.exitMultiplier?.toFixed(2)}×` : "bust"}
+                  pnl={h.session.result?.pnlUnits ?? 0n}
                   token={token}
-                  onVerify={() => setVerifyTarget(h.session)}
                 />
               ))}
             </div>
@@ -854,45 +855,6 @@ function CurveCanvas({
 /* ===========================================================================
  *  Small UI primitives
  * ========================================================================= */
-
-function RecentRoundRow({
-  row,
-  token,
-  onVerify,
-}: {
-  row: RoundLog;
-  token: TokenSpec;
-  onVerify: () => void;
-}) {
-  const pnl = row.session.result?.pnlUnits ?? 0n;
-  const won = row.won;
-  return (
-    <button
-      type="button"
-      className="w-full flex items-center justify-between gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-emerald-400/30 hover:bg-emerald-500/[0.04] transition-colors text-left cursor-pointer"
-      onClick={onVerify}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className={
-            "w-12 h-6 rounded-md text-[10px] font-mono font-semibold flex items-center justify-center " +
-            (won
-              ? "bg-emerald-500/15 text-emerald-200 border border-emerald-400/30"
-              : "bg-rose-500/15 text-rose-200 border border-rose-400/30")
-          }
-        >
-          {row.bustAt.toFixed(2)}×
-        </span>
-        <span className="text-[10px] text-white/40">
-          {won ? `cashed @ ${row.exitMultiplier?.toFixed(2)}×` : "bust"}
-        </span>
-      </div>
-      <div className={"text-[12px] font-mono " + (won ? "text-emerald-300" : "text-rose-300")}>
-        {fmtPnl(pnl, token)}
-      </div>
-    </button>
-  );
-}
 
 function AutoPanel({
   cfg,

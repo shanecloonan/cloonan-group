@@ -40,20 +40,18 @@ import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnGold, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
+  AsideHistoryButton,
   DevQuickTopUpBar,
   ErrorBanner,
-  MetricStat,
-  fmtPnl,
   FairnessCard,
+  MetricStat,
   RevealedSeedCard,
-  fmtMoney as fmtMoneyKit,
+  fmtMoney,
   humanToUnits,
   InstantSideLayout,
   SettlementBanner,
   unitsToHuman,
 } from "./table-kit";
-
-const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
 const LS_BET = "mf_casino_mines_bet";
 const LS_MINES = "mf_casino_mines_count";
@@ -598,38 +596,15 @@ export default function MinesTable({ chainId, token }: Props) {
             <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
               {history.map((s) => {
                 const st = s.state as MinesState;
-                const won = (s.result?.pnlUnits ?? 0n) > 0n;
                 return (
-                  <button
+                  <AsideHistoryButton
                     key={s.id}
-                    type="button"
-                    className="w-full flex items-center justify-between gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-emerald-400/30 hover:bg-emerald-500/[0.04] transition-colors text-left cursor-pointer"
                     onClick={() => setVerifyTarget(s)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={
-                          "h-6 px-2 rounded-md text-[10px] font-mono font-semibold flex items-center justify-center " +
-                          (won
-                            ? "bg-emerald-500/15 text-emerald-200 border border-emerald-400/30"
-                            : "bg-rose-500/15 text-rose-200 border border-rose-400/30")
-                        }
-                      >
-                        {st.multiplier.toFixed(2)}×
-                      </span>
-                      <span className="text-[10px] text-white/40">
-                        {st.picks} pick{st.picks === 1 ? "" : "s"} · {st.config.mines} mines
-                      </span>
-                    </div>
-                    <div
-                      className={
-                        "text-[12px] font-mono " +
-                        (won ? "text-emerald-300" : "text-rose-300")
-                      }
-                    >
-                      {fmtPnl(s.result?.pnlUnits ?? 0n, token)}
-                    </div>
-                  </button>
+                    badge={`${st.multiplier.toFixed(2)}×`}
+                    meta={`${st.picks} pick${st.picks === 1 ? "" : "s"} · ${st.config.mines} mines`}
+                    pnl={s.result?.pnlUnits ?? 0n}
+                    token={token}
+                  />
                 );
               })}
             </div>
