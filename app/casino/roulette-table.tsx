@@ -41,6 +41,8 @@ import {
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   AsideSection,
+  DEV_PLAY_MONEY_HUMAN,
+  KeyHint,
   LegacyThreeColLayout,
   RevealedSeedCard,
   SettlementBanner,
@@ -276,7 +278,7 @@ export default function RouletteTable({ chainId, token }: Props) {
   }, [spin, spinning, verifyTarget, lastBet]);
 
   const onDepositPlay = useCallback(async () => {
-    await depositPlayMoney(humanToUnits(10_000, token));
+    await depositPlayMoney(humanToUnits(DEV_PLAY_MONEY_HUMAN, token));
   }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();
@@ -1241,12 +1243,4 @@ function colorClass(n: number): string {
     : "bg-slate-900 text-slate-100 border-slate-600/40";
 }
 
-function KeyHint({ k, label }: { k: string; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.12] text-white/60 bg-white/[0.04]">{k}</kbd>
-      <span className="text-white/60">{label}</span>
-    </div>
-  );
-}
 

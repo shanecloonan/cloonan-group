@@ -29,7 +29,9 @@ import {
   humanToUnits,
   ErrorBanner,
   AsideSection,
+  DEV_PLAY_MONEY_HUMAN,
   FairnessStrip,
+  KeyHint,
   LegacyThreeColLayout,
   RevealedSeedCard,
   TableBalanceHeader,
@@ -169,7 +171,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
   }, [rotateSeed]);
 
   const onDepositPlay = useCallback(async () => {
-    await depositPlayMoney(humanToUnits(10_000, token));
+    await depositPlayMoney(humanToUnits(DEV_PLAY_MONEY_HUMAN, token));
   }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();
@@ -789,17 +791,6 @@ function CardChip({
     >
       <span className="text-base leading-none">{card.rank}</span>
       <span className="text-lg leading-none mt-0.5">{card.suit}</span>
-    </div>
-  );
-}
-
-function KeyHint({ k, label }: { k: string; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.12] text-white/60 bg-white/[0.04]">
-        {k}
-      </kbd>
-      <span className="text-white/60">{label}</span>
     </div>
   );
 }

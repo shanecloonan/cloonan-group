@@ -5,18 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useCasino } from "./casino-context";
 import { PlayMoneyChipStrip } from "./play-money-bar";
 import { btnGhost } from "./casino-ui";
-import { shortSeedHash } from "./table-kit";
+import { fmtMoney, RevealedSeedBanner, shortSeedHash } from "./table-kit";
 import type { ChainId } from "@/lib/casino";
-
-function formatBalance(units: bigint, decimals: number, symbol: string): string {
-  const denom = 10n ** BigInt(decimals);
-  const sign = units < 0n ? "-" : "";
-  const abs = units < 0n ? -units : units;
-  const w = abs / denom;
-  const f = (abs % denom).toString().padStart(decimals, "0");
-  const n = Number(`${w}.${f}`);
-  return `${sign}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${symbol}`;
-}
 
 /** Compact bar above tables: chips (play money) or vault balance + seed controls. */
 export function CasinoActionStrip() {
@@ -67,11 +57,11 @@ export function CasinoActionStrip() {
           <span className="text-xs text-white/50 shrink-0">
             Balance{" "}
             <span className="font-mono text-emerald-300/90 font-semibold tabular-nums">
-              {formatBalance(balance.available, token.decimals, token.symbol)}
+              {fmtMoney(balance.available, token, 2)}
             </span>
             {balance.locked > 0n && (
               <span className="text-white/35 ml-1.5">
-                ({formatBalance(balance.locked, token.decimals, token.symbol)} locked)
+                ({fmtMoney(balance.locked, token, 2)} locked)
               </span>
             )}
           </span>
@@ -114,17 +104,7 @@ export function CasinoActionStrip() {
       </div>
 
       {lastRevealedSeed && (
-        <div className="px-4 sm:px-6 lg:px-8 pb-2.5 flex flex-wrap items-center gap-2 text-[10px]">
-          <span className="text-white/40 uppercase tracking-wider">Revealed seed</span>
-          <code className="font-mono text-emerald-200/90 break-all">{lastRevealedSeed.serverSeed}</code>
-          <button
-            type="button"
-            onClick={dismissRevealedSeed}
-            className="text-white/35 hover:text-white/60 cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
+        <RevealedSeedBanner serverSeed={lastRevealedSeed.serverSeed} onDismiss={dismissRevealedSeed} />
       )}
 
       {!persistent && (

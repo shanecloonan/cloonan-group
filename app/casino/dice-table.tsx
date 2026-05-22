@@ -28,6 +28,8 @@ import {
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   AsideSection,
+  DEV_PLAY_MONEY_HUMAN,
+  KeyHint,
   LegacyThreeColLayout,
   RevealedSeedCard,
   TableBalanceHeader,
@@ -318,7 +320,7 @@ export default function DiceTable({ chainId, token }: Props) {
   /* ----- Deposit play money ----- */
 
   const onDepositPlay = useCallback(async () => {
-    await depositPlayMoney(humanToUnits(10_000, token));
+    await depositPlayMoney(humanToUnits(DEV_PLAY_MONEY_HUMAN, token));
   }, [depositPlayMoney, token]);
 
   const seedPair = getSeedPair();
@@ -753,15 +755,6 @@ function NumberLine({
       <div className="absolute top-1 right-2 text-[9px] uppercase tracking-[0.12em] text-white/40">
         {mode === "limbo" ? "limbo (roll over)" : `roll ${direction}`}
       </div>
-    </div>
-  );
-}
-
-function KeyHint({ k, label }: { k: string; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.12] text-white/60 bg-white/[0.04]">{k}</kbd>
-      <span className="text-white/60">{label}</span>
     </div>
   );
 }

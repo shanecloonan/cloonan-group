@@ -25,6 +25,7 @@ import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold 
 import { persistSettledSession } from "@/lib/casino";
 import {
   BalanceSummary,
+  DEV_PLAY_MONEY_HUMAN,
   ErrorBanner,
   fmtMoney,
   humanToUnits,
@@ -245,7 +246,7 @@ export default function PokerTable({ chainId, token }: Props) {
               Take a seat
             </button>
             {chainId === "dev-mock" && (
-              <button type="button" className={btnGhost} onClick={() => depositPlayMoney(humanToUnits(10000, token))}>
+              <button type="button" className={btnGhost} onClick={() => depositPlayMoney(humanToUnits(DEV_PLAY_MONEY_HUMAN, token))}>
                 +10k play money
               </button>
             )}

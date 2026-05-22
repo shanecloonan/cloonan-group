@@ -20,6 +20,9 @@ export function humanToUnits(amount: number, token: TokenSpec): bigint {
   return whole * denom + frac;
 }
 
+/** Default play-money top-up on dev-mock (matches TableBalanceHeader copy). */
+export const DEV_PLAY_MONEY_HUMAN = 10_000;
+
 export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
   const sign = units < 0n ? "-" : "";
   const abs = units < 0n ? -units : units;
@@ -124,7 +127,7 @@ export function TableBalanceHeader({
             onClick={onDeposit}
             className="mt-1 text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer underline-offset-2 hover:underline"
           >
-            + Add 10,000 play money
+            + Add {DEV_PLAY_MONEY_HUMAN.toLocaleString()} play money
           </button>
         )}
       </div>
@@ -230,6 +233,41 @@ export function FairnessCard({
         {children ? <div className="mt-2 pt-2 border-t border-white/[0.06]">{children}</div> : null}
       </div>
     </section>
+  );
+}
+
+/** Compact revealed-seed row for CasinoActionStrip. */
+export function RevealedSeedBanner({
+  serverSeed,
+  onDismiss,
+}: {
+  serverSeed: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="px-4 sm:px-6 lg:px-8 pb-2.5 flex flex-wrap items-center gap-2 text-[10px] border-t border-white/[0.06]">
+      <span className="text-white/40 uppercase tracking-wider shrink-0">Revealed seed</span>
+      <code className="font-mono text-emerald-200/90 break-all min-w-0">{serverSeed}</code>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="text-white/35 hover:text-white/60 cursor-pointer shrink-0"
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
+/** Keyboard hint row for terminal-game side panels. */
+export function KeyHint({ k, label }: { k: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.12] text-white/60 bg-white/[0.04]">
+        {k}
+      </kbd>
+      <span className="text-white/60">{label}</span>
+    </div>
   );
 }
 
