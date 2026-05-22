@@ -46,19 +46,10 @@ import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
-import { btnGhost, btnPrimary, btnDanger } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+import { btnDanger, btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
+import { fmtMoney as fmtMoneyKit, humanToUnits, SettlementBanner, unitsToHuman } from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
-
-/* ---------------------------------------------------------------------------
- *  Style vocab
- * ------------------------------------------------------------------------- */
-
-const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
-const labelCls = "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
-const inputCls =
-  "w-full h-10 px-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
 
 /* ---------------------------------------------------------------------------
  *  Local-storage keys
@@ -436,7 +427,7 @@ export default function CrashTable({ chainId, token }: Props) {
    * =========================================================================== */
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6 pb-4 lg:pb-0">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6 pb-6 lg:pb-0 w-full max-w-6xl mx-auto">
       {/* ───── Main column ───── */}
       <div className="space-y-5">
         {/* Curve canvas */}
@@ -523,6 +514,14 @@ export default function CrashTable({ chainId, token }: Props) {
             />
             <Stat label="House edge" value="≈1%" sub={`floor formula`} />
           </div>
+
+          {phase === "settled" && lastResult && (
+            <SettlementBanner
+              headline={`${lastResult.won ? "Cashed" : "Busted"} at ${lastResult.exit.toFixed(2)}×`}
+              pnl={lastResult.pnlUnits}
+              token={token}
+            />
+          )}
 
           {error && (
             <div className="mt-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[12px] text-rose-200">

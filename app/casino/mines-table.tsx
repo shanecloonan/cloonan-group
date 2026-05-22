@@ -38,21 +38,10 @@ import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
-import { btnGhost, btnGold, btnPrimary } from "./casino-ui";
+import { btnDanger, btnGhost, btnGold, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import { fmtMoney as fmtMoneyKit, humanToUnits, SettlementBanner, unitsToHuman } from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
-
-/* ---------------------------------------------------------------------------
- *  Style vocab (matches plinko / crash)
- * ------------------------------------------------------------------------- */
-
-const card = "rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm";
-const labelCls = "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
-const inputCls =
-  "w-full h-10 px-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
-const btnDanger =
-  "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-sm bg-gradient-to-r from-rose-500 to-orange-500 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
 const LS_BET = "mf_casino_mines_bet";
 const LS_MINES = "mf_casino_mines_count";
