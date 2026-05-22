@@ -7,7 +7,6 @@ import {
   casinoWarRtpLabel,
   newSessionId,
   persistSettledSession,
-  type Card,
   type CasinoWarAction,
   type CasinoWarState,
   type ChainAdapter,
@@ -18,24 +17,21 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnDanger, btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
+import { btnDanger, btnPrimary } from "./casino-ui";
+import {
+  ActionStack,
+  ErrorBanner,
+  fmtMoney,
+  HandPanel,
+  humanToUnits,
+  RulesHint,
+  SettlementBanner,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const LAST_BET_KEY = "mf_casino_war_bet";
 
@@ -43,25 +39,6 @@ interface Props {
   chainId: ChainId;
   token: TokenSpec;
   adapter: ChainAdapter;
-}
-
-function CardTile({ c, title, sub }: { c: Card; title: string; sub?: string }) {
-  const red = c.suit === "♥" || c.suit === "♦";
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 flex flex-col items-center gap-1">
-      <span className="text-[10px] uppercase tracking-wider text-white/45">{title}</span>
-      <div
-        className={
-          "w-14 h-20 rounded-lg border border-white/15 flex flex-col items-center justify-center font-mono " +
-          (red ? "text-rose-300" : "text-white")
-        }
-      >
-        <span className="text-xl font-bold">{c.rank}</span>
-        <span className="text-lg">{c.suit}</span>
-      </div>
-      {sub && <span className="text-[10px] text-white/50">{sub}</span>}
-    </div>
-  );
 }
 
 export default function CasinoWarTable({ chainId, token }: Props) {
@@ -121,6 +98,9 @@ export default function CasinoWarTable({ chainId, token }: Props) {
       setError("Finish the current hand first");
       return;
     }
+    if (session?.status === "settled") {
+      setSession(null);
+    }
     const stake = humanToUnits(betAmount, token);
     if (stake <= 0n) {
       setError("Bet must be > 0");
@@ -150,7 +130,7 @@ export default function CasinoWarTable({ chainId, token }: Props) {
     } finally {
       setBusy(false);
     }
-  }, [balance.available, betAmount, chainId, driver, finishRound, inRound, token, userId]);
+  }, [balance.available, betAmount, chainId, driver, finishRound, inRound, session?.status, token, userId]);
 
   const onWar = useCallback(async () => {
     if (!session || session.state.phase !== "tie_choice") return;
@@ -192,146 +172,91 @@ export default function CasinoWarTable({ chainId, token }: Props) {
     }
   }, [driver, finishRound, session]);
 
-  const clearHand = () => {
-    setSession(null);
-    setVerifyTarget(null);
-  };
-
   const seedPair = getSeedPair();
   const settled = session?.status === "settled" && !!session.result;
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-5"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Casino War</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
-              RTP {casinoWarRtpLabel()}
-            </span>
-          </div>
-
-          {st && (
-            <div className="flex justify-center gap-6 sm:gap-10 flex-wrap">
-              <CardTile c={st.playerCard} title="You" />
-              <CardTile c={st.dealerCard} title="Dealer" />
-            </div>
-          )}
-
-          {st?.warPlayerCard && st.warDealerCard && (
-            <div className="space-y-2">
-              <p className="text-center text-[10px] uppercase tracking-wider text-white/40">War cards</p>
-              <div className="flex justify-center gap-6">
-                <CardTile c={st.warPlayerCard} title="You" sub="war" />
-                <CardTile c={st.warDealerCard} title="Dealer" sub="war" />
-              </div>
-            </div>
-          )}
-
-          {!st && (
-            <p className="text-sm text-white/45 text-center py-4">
-              Ace high · tie = war (match bet) or surrender half
-            </p>
-          )}
-
-          {needsTieChoice && (
-            <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 space-y-3">
-              <p className="text-sm text-amber-100 text-center font-medium">
-                Tie on {cardLabel(st.playerCard)} — go to war or surrender?
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void onWar()}
-                  className={btnPrimary + " w-full"}
-                >
-                  War (+{fmtMoney(session!.stake, token)})
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void onSurrender()}
-                  className={btnDanger + " w-full"}
-                >
-                  Surrender (half back)
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!needsTieChoice && (
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-              <div className="flex-1 min-w-0">
-                <label className={labelCls}>Bet ({token.symbol})</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  className={inputCls}
-                  value={betAmount}
-                  onChange={(e) => setBetAmount(Number(e.target.value))}
-                  disabled={busy || inRound}
-                />
-              </div>
-              {!inRound ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void deal()}
-                  className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
-                >
-                  {busy ? "Dealing…" : "Deal"}
-                </button>
-              ) : null}
-            </div>
-          )}
-
-          {settled && session?.result && (
-            <>
-              <p
-                className={
-                  "text-center text-sm font-mono " +
-                  (session.result.pnlUnits > 0n
-                    ? "text-emerald-300"
-                    : session.result.pnlUnits < 0n
-                      ? "text-rose-300"
-                      : "text-white/60")
-                }
-              >
-                {session.result.pnlUnits > 0n ? "+" : ""}
-                {fmtMoney(session.result.pnlUnits, token)}
-              </p>
-              <button type="button" onClick={clearHand} className={btnGhost + " w-full sm:w-auto mx-auto block"}>
-                New hand
-              </button>
-            </>
-          )}
-
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-        </section>
-
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnSecondary + " w-full !text-xs"}>
-              Rotate seed
-            </button>
-            {settled && session && (
-              <button
-                type="button"
-                onClick={() => setVerifyTarget(session)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
-              >
-                Verify →
-              </button>
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead title="Casino War" rtp={casinoWarRtpLabel()} />
+            {st ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-md mx-auto w-full">
+                  <HandPanel label="You" cards={[st.playerCard]} tone="player" />
+                  <HandPanel label="Dealer" cards={[st.dealerCard]} tone="dealer" />
+                </div>
+                {st.warPlayerCard && st.warDealerCard && (
+                  <div className="space-y-2">
+                    <p className="text-center text-[10px] uppercase tracking-wider text-white/40">War cards</p>
+                    <div className="grid grid-cols-2 gap-3 max-w-md mx-auto w-full">
+                      <HandPanel label="You" cards={[st.warPlayerCard]} tone="player" score="war" />
+                      <HandPanel label="Dealer" cards={[st.warDealerCard]} tone="dealer" score="war" />
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <RulesHint>Ace high · tie = war (match bet) or surrender half.</RulesHint>
             )}
-          </section>
-        </aside>
-      </div>
+            {needsTieChoice && (
+              <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 space-y-3">
+                <p className="text-sm text-amber-100 text-center font-medium">
+                  Tie on {cardLabel(st.playerCard)} — go to war or surrender?
+                </p>
+                <ActionStack>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onWar()}
+                    className={btnPrimary + " w-full"}
+                  >
+                    War (+{fmtMoney(session!.stake, token)})
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onSurrender()}
+                    className={btnDanger + " w-full"}
+                  >
+                    Surrender (half back)
+                  </button>
+                </ActionStack>
+              </div>
+            )}
+            {!needsTieChoice && (
+              <StakeRow
+                label={`Bet (${token.symbol})`}
+                betAmount={betAmount}
+                onBetAmount={setBetAmount}
+                token={token}
+                disabled={busy || (inRound && !settled)}
+                actionLabel={busy ? "Dealing…" : settled ? "Deal again" : "Deal"}
+                onAction={() => void deal()}
+                actionBusy={busy}
+                hideAction={inRound && !settled}
+              />
+            )}
+            {settled && session?.result && (
+              <SettlementBanner
+                headline={st?.resolution ?? "Hand complete"}
+                pnl={session.result.pnlUnits}
+                token={token}
+              />
+            )}
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={settled && session ? () => setVerifyTarget(session) : undefined}
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -364,6 +289,6 @@ export default function CasinoWarTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }

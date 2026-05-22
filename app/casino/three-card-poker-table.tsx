@@ -8,7 +8,6 @@ import {
   threeCardHandLabel,
   threeCardPokerGame,
   threeCardPokerRtpLabel,
-  type Card,
   type ChainAdapter,
   type ChainId,
   type Session,
@@ -19,24 +18,21 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnDanger, btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
+import { btnDanger, btnPrimary } from "./casino-ui";
+import {
+  ActionStack,
+  ErrorBanner,
+  fmtMoney,
+  HandPanel,
+  humanToUnits,
+  RulesHint,
+  SettlementBanner,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const LAST_BET_KEY = "mf_casino_3cp_bet";
 
@@ -44,21 +40,6 @@ interface Props {
   chainId: ChainId;
   token: TokenSpec;
   adapter: ChainAdapter;
-}
-
-function MiniCard({ c }: { c: Card }) {
-  const red = c.suit === "♥" || c.suit === "♦";
-  return (
-    <div
-      className={
-        "w-11 h-15 sm:w-12 sm:h-16 rounded-lg border border-white/15 flex flex-col items-center justify-center font-mono shrink-0 " +
-        (red ? "text-rose-300 bg-rose-950/30" : "text-white bg-white/[0.06]")
-      }
-    >
-      <span className="text-sm font-bold">{c.rank}</span>
-      <span className="text-xs">{c.suit}</span>
-    </div>
-  );
 }
 
 export default function ThreeCardPokerTable({ chainId, token }: Props) {
@@ -179,158 +160,87 @@ export default function ThreeCardPokerTable({ chainId, token }: Props) {
   const showDealer = st && !inTurn;
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-4"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Three Card Poker</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
-              RTP {threeCardPokerRtpLabel()}
-            </span>
-          </div>
-
-          {st && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-                <div className={labelCls + " !text-emerald-200/70"}>Your hand</div>
-                <div className="flex gap-1.5 justify-center py-2">
-                  {st.playerCards.map((c, i) => (
-                    <MiniCard key={i} c={c} />
-                  ))}
-                </div>
-                {st.playerScore && (
-                  <p className="text-center text-xs text-emerald-200/80 font-medium">
-                    {threeCardHandLabel(st.playerScore)}
-                  </p>
-                )}
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                <div className={labelCls}>Dealer</div>
-                <div className="flex gap-1.5 justify-center py-2">
-                  {inTurn
-                    ? [0, 1, 2].map((i) => (
-                        <div
-                          key={i}
-                          className="w-11 h-15 sm:w-12 sm:h-16 rounded-lg border border-white/15 bg-white/[0.04] flex items-center justify-center text-white/30 text-lg"
-                        >
-                          ?
-                        </div>
-                      ))
-                    : st.dealerCards.map((c, i) => <MiniCard key={i} c={c} />)}
-                </div>
-                {showDealer && st.dealerScore && (
-                  <p className="text-center text-xs text-white/55">
-                    {threeCardHandLabel(st.dealerScore)}
-                    {st.dealerQualified === false ? " · no qualify" : ""}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {!st && (
-            <p className="text-sm text-white/45 text-center py-4">
-              Ante plus Play (1× ante). Dealer needs Queen-Six to qualify. Fold loses ante only.
-            </p>
-          )}
-
-          {inTurn && (
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void act({ type: "play" })}
-                className={btnPrimary + " w-full"}
-              >
-                Play (+{fmtMoney(session!.stake, token)})
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void act({ type: "fold" })}
-                className={btnDanger + " w-full"}
-              >
-                Fold
-              </button>
-            </div>
-          )}
-
-          {!inTurn && (
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-              <div className="flex-1 min-w-0">
-                <label className={labelCls}>Ante ({token.symbol})</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  className={inputCls}
-                  value={betAmount}
-                  onChange={(e) => setBetAmount(Number(e.target.value))}
-                  disabled={busy || inTurn}
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead title="Three Card Poker" rtp={threeCardPokerRtpLabel()} />
+            {st ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <HandPanel
+                  label="Your hand"
+                  cards={st.playerCards}
+                  score={st.playerScore ? threeCardHandLabel(st.playerScore) : undefined}
+                  tone="player"
+                />
+                <HandPanel
+                  label="Dealer"
+                  cards={st.dealerCards}
+                  hiddenCount={inTurn ? 3 : 0}
+                  score={
+                    showDealer && st.dealerScore
+                      ? threeCardHandLabel(st.dealerScore) +
+                        (st.dealerQualified === false ? " · no qualify" : "")
+                      : undefined
+                  }
+                  tone="dealer"
                 />
               </div>
-              {!st && (
+            ) : (
+              <RulesHint>
+                Ante plus Play (1× ante). Dealer needs Queen-Six to qualify. Fold loses ante only.
+              </RulesHint>
+            )}
+            {inTurn && (
+              <ActionStack>
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void deal()}
-                  className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
+                  onClick={() => void act({ type: "play" })}
+                  className={btnPrimary + " w-full"}
                 >
-                  {busy ? "Dealing…" : "Deal"}
+                  Play (+{fmtMoney(session!.stake, token)})
                 </button>
-              )}
-            </div>
-          )}
-
-          {settled && session?.result && (
-            <>
-              <p
-                className={
-                  "text-center text-sm font-mono " +
-                  (session.result.pnlUnits > 0n
-                    ? "text-emerald-300"
-                    : session.result.pnlUnits < 0n
-                      ? "text-rose-300"
-                      : "text-white/60")
-                }
-              >
-                {session.result.pnlUnits > 0n ? "+" : ""}
-                {fmtMoney(session.result.pnlUnits, token)}
-              </p>
-              <button
-                type="button"
-                onClick={() => setSession(null)}
-                className={btnGhost + " w-full sm:w-auto mx-auto block"}
-              >
-                New hand
-              </button>
-            </>
-          )}
-
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-        </section>
-
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnSecondary + " w-full !text-xs"}>
-              Rotate seed
-            </button>
-            {settled && session && (
-              <button
-                type="button"
-                onClick={() => setVerifyTarget(session)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
-              >
-                Verify →
-              </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void act({ type: "fold" })}
+                  className={btnDanger + " w-full"}
+                >
+                  Fold
+                </button>
+              </ActionStack>
             )}
-          </section>
-        </aside>
-      </div>
+            <StakeRow
+              label={`Ante (${token.symbol})`}
+              betAmount={betAmount}
+              onBetAmount={setBetAmount}
+              token={token}
+              disabled={busy || inTurn}
+              actionLabel={busy ? "Dealing…" : settled ? "Deal again" : "Deal"}
+              onAction={() => void deal()}
+              actionBusy={busy}
+              hideAction={inTurn || (!!st && !settled)}
+            />
+            {settled && session?.result && (
+              <SettlementBanner
+                headline={st?.outcome ?? "Hand complete"}
+                pnl={session.result.pnlUnits}
+                token={token}
+              />
+            )}
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={settled && session ? () => setVerifyTarget(session) : undefined}
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -363,6 +273,6 @@ export default function ThreeCardPokerTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }
