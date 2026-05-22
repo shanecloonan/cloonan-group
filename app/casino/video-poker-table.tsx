@@ -18,7 +18,19 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnPrimary, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
+import { btnPrimary, btnSecondary, card, labelCls } from "./casino-ui";
+import {
+  ActionStack,
+  ErrorBanner,
+  humanToUnits,
+  RulesHint,
+  SettlementBanner,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const PAY_TABLE: { hand: string; pay: string }[] = [
   { hand: "Royal flush", pay: "800×" },
@@ -31,23 +43,6 @@ const PAY_TABLE: { hand: string; pay: string }[] = [
   { hand: "Two pair", pay: "2×" },
   { hand: "Jacks or better", pay: "2×" },
 ];
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
 
 const LAST_BET_KEY = "mf_casino_vp_last_bet";
 
@@ -94,6 +89,7 @@ export default function VideoPokerTable({ chainId, token }: Props) {
   const deal = useCallback(async () => {
     setError(null);
     setSession(null);
+    setVerifyTarget(null);
     const stake = humanToUnits(betAmount, token);
     if (stake <= 0n) {
       setError("Bet must be > 0");
@@ -148,10 +144,6 @@ export default function VideoPokerTable({ chainId, token }: Props) {
         getSeedPair(),
       );
       await refreshBalance();
-      setTimeout(() => {
-        setSession(null);
-        setVerifyTarget(null);
-      }, 2200);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -172,17 +164,14 @@ export default function VideoPokerTable({ chainId, token }: Props) {
   const cards = session?.state.cards ?? [];
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-5"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Jacks or Better</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">RTP {rtpLabel()}</span>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 min-h-[100px]">
-            {(dealing || settled) && cards.length === 5
-              ? cards.map((c, i) => (
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead title="Jacks or Better" rtp={rtpLabel()} />
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 min-h-[100px]">
+              {(dealing || settled) && cards.length === 5 ? (
+                cards.map((c, i) => (
                   <button
                     key={`${c.index}-${i}`}
                     type="button"
@@ -203,58 +192,24 @@ export default function VideoPokerTable({ chainId, token }: Props) {
                     )}
                   </button>
                 ))
-              : (
-                <p className="text-sm text-white/45 py-6">Deal to receive five cards.</p>
+              ) : (
+                <RulesHint>Deal to receive five cards — tap to hold, then draw.</RulesHint>
               )}
-          </div>
-
-          {settled && session?.result && (
-            <p
-              className={
-                "text-center text-sm font-mono " +
-                (session.result.pnlUnits > 0n
-                  ? "text-emerald-300"
-                  : session.result.pnlUnits < 0n
-                    ? "text-rose-300"
-                    : "text-white/60")
-              }
-            >
-              {session.state.handLabel} ·{" "}
-              {session.result.pnlUnits > 0n ? "+" : ""}
-              {fmtMoney(session.result.pnlUnits, token)}
-            </p>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={labelCls}>Bet ({token.symbol})</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={inputCls}
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                disabled={busy || dealing}
-              />
             </div>
-            {!session && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void deal()}
-                className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
-              >
-                Deal
-              </button>
+            {settled && session?.result && (
+              <SettlementBanner
+                headline={session.state.handLabel ?? "Hand complete"}
+                pnl={session.result.pnlUnits}
+                token={token}
+              />
             )}
             {dealing && (
-              <>
+              <ActionStack>
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => setHold(suggestHold(cards))}
-                  className={btnSecondary + " w-full sm:w-auto"}
+                  className={btnSecondary + " w-full"}
                 >
                   Suggest hold
                 </button>
@@ -262,45 +217,48 @@ export default function VideoPokerTable({ chainId, token }: Props) {
                   type="button"
                   disabled={busy}
                   onClick={() => void draw()}
-                  className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
+                  className={btnPrimary + " w-full"}
                 >
                   Draw
                 </button>
-              </>
+              </ActionStack>
             )}
-          </div>
-
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-          {dealing && (
-            <p className="text-[11px] text-white/40 text-center">Tap cards to hold, then Draw.</p>
-          )}
-        </section>
-
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Pay table (per 1× stake)</div>
-            <ul className="mt-2 space-y-1 text-[11px] text-white/55">
-              {PAY_TABLE.map((row) => (
-                <li key={row.hand} className="flex justify-between gap-2">
-                  <span>{row.hand}</span>
-                  <span className="font-mono text-white/75">{row.pay}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-            <button
-              type="button"
-              onClick={() => rotateSeed()}
-              className={btnSecondary + " mt-3 w-full !text-[10px]"}
-            >
-              Rotate seed
-            </button>
-          </section>
-        </aside>
-      </div>
+            <StakeRow
+              label={`Bet (${token.symbol})`}
+              betAmount={betAmount}
+              onBetAmount={setBetAmount}
+              token={token}
+              disabled={busy || dealing}
+              actionLabel={busy ? "…" : settled ? "Deal again" : "Deal"}
+              onAction={() => void deal()}
+              actionBusy={busy}
+              hideAction={dealing}
+            />
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <>
+            <section className={card + " p-4"}>
+              <div className={labelCls}>Pay table (per 1× stake)</div>
+              <ul className="mt-2 space-y-1 text-[11px] text-white/55">
+                {PAY_TABLE.map((row) => (
+                  <li key={row.hand} className="flex justify-between gap-2">
+                    <span>{row.hand}</span>
+                    <span className="font-mono text-white/75">{row.pay}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <TableAside
+              balance={balance.available}
+              token={token}
+              onRotateSeed={() => rotateSeed()}
+              onVerify={settled && session ? () => setVerifyTarget(session) : undefined}
+            />
+          </>
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -332,6 +290,6 @@ export default function VideoPokerTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }
