@@ -27,7 +27,7 @@ export function GamePlayHeader({
         {GAME_LABELS[gameId]}
       </h2>
       {!playMoney.enabled && (
-        <span className="hidden sm:inline text-xs font-mono text-emerald-300/90 tabular-nums shrink-0">
+        <span className="text-[10px] sm:text-xs font-mono text-emerald-300/90 tabular-nums shrink-0 max-w-[6rem] sm:max-w-none truncate text-right">
           {fmtMoney(balance.available, token, 2)}
         </span>
       )}

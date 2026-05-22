@@ -42,7 +42,13 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, InstantSideLayout, unitsToHuman } from "./table-kit";
+import {
+  ErrorBanner,
+  fmtMoney as fmtMoneyKit,
+  humanToUnits,
+  InstantSideLayout,
+  unitsToHuman,
+} from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -397,8 +403,8 @@ export default function PlinkoTable({ chainId, token }: Props) {
           </div>
 
           {error && (
-            <div className="mt-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[12px] text-rose-200">
-              {error}
+            <div className="mt-3">
+              <ErrorBanner message={error} />
             </div>
           )}
 

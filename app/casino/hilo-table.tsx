@@ -37,6 +37,7 @@ import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnGold, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
+  ErrorBanner,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   InstantSideLayout,
@@ -507,8 +508,8 @@ export default function HiloTable({ chainId, token }: Props) {
           </div>
 
           {error && (
-            <div className="mt-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[12px] text-rose-200">
-              {error}
+            <div className="mt-3">
+              <ErrorBanner message={error} />
             </div>
           )}
 

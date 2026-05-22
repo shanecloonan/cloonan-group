@@ -44,7 +44,7 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+import { ErrorBanner, fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -467,11 +467,7 @@ export default function SlotsTable({ chainId, token }: Props) {
           />
         )}
 
-        {error && (
-          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
-            {error}
-          </div>
-        )}
+        {error && <ErrorBanner message={error} />}
 
         {/* Paytable + paylines */}
         <Paytable token={token} perLineUnits={humanToUnits(perLineHuman, token)} />

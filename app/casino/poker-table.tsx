@@ -23,7 +23,7 @@ import { PokerMultiplayerPanel } from "./poker-multiplayer-panel";
 import { PokerOvalTable } from "./poker-table-visual";
 import { btnGhost, btnPrimary, btnSecondary, card, inputCls, labelCls, pillGold } from "./casino-ui";
 import { persistSettledSession } from "@/lib/casino";
-import { fmtMoney, humanToUnits } from "./table-kit";
+import { ErrorBanner, fmtMoney, humanToUnits } from "./table-kit";
 
 interface Props {
   chainId: ChainId;
@@ -327,9 +327,7 @@ export default function PokerTable({ chainId, token }: Props) {
         />
       )}
 
-      {error && (
-        <p className="text-sm text-rose-300 border border-rose-500/30 rounded-lg px-4 py-2 bg-rose-500/10">{error}</p>
-      )}
+      {error && <ErrorBanner message={error} />}
     </div>
   );
 }

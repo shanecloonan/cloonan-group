@@ -23,6 +23,7 @@ import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
+  ErrorBanner,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   LegacyThreeColLayout,
@@ -402,8 +403,8 @@ export default function CoinflipTable({ chainId, token }: Props) {
           </div>
 
           {error && (
-            <div className="mt-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200 max-w-sm">
-              {error}
+            <div className="mt-4 max-w-sm">
+              <ErrorBanner message={error} />
             </div>
           )}
         </div>

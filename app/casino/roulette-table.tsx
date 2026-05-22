@@ -36,6 +36,7 @@ import { ShareLinkRow } from "./share-link";
 import { useLongPress } from "./use-long-press";
 import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
+  ErrorBanner,
   fmtMoney as fmtMoneyKit,
   humanToUnits,
   LegacyThreeColLayout,
@@ -400,8 +401,8 @@ export default function RouletteTable({ chainId, token }: Props) {
         </div>
 
         {error && (
-          <div className="mt-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
-            {error}
+          <div className="mt-3">
+            <ErrorBanner message={error} />
           </div>
         )}
 
