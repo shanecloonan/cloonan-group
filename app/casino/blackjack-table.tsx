@@ -24,7 +24,13 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runBlackjackVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+import {
+  fmtMoney as fmtMoneyKit,
+  humanToUnits,
+  LegacyThreeColLayout,
+  TableBalanceHeader,
+  unitsToHuman,
+} from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec) => fmtMoneyKit(units, token, 2);
 
@@ -223,10 +229,10 @@ export default function BlackjackTable({ chainId, token }: Props) {
   }, [session, legalSet, busy, applyAction, deal, verifyTarget, showRules]);
 
   return (
-    <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <LegacyThreeColLayout>
       {/* Left column: table */}
       <section className={card + " p-6 lg:col-span-2 min-h-[560px] flex flex-col"}>
-        <Header
+        <TableBalanceHeader
           chainId={chainId}
           token={token}
           balance={balance}
@@ -444,70 +450,13 @@ export default function BlackjackTable({ chainId, token }: Props) {
           inSession={!!session && session.status === "open"}
         />
       )}
-    </div>
+    </LegacyThreeColLayout>
   );
 }
 
 /* ===========================================================================
  *  Subcomponents
  * ========================================================================= */
-
-function Header({
-  chainId,
-  token,
-  balance,
-  onDeposit,
-  onShowRules,
-}: {
-  chainId: ChainId;
-  token: TokenSpec;
-  balance: { available: bigint; locked: bigint };
-  onDeposit: () => void;
-  onShowRules: () => void;
-}) {
-  const isDev = chainId === "dev-mock";
-  return (
-    <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-      <div>
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">
-          Playing on
-        </div>
-        <div className="text-base font-semibold">
-          {chainId} · <span className="text-emerald-300">{token.symbol}</span>
-        </div>
-        <button
-          type="button"
-          onClick={onShowRules}
-          className="mt-1 text-[10px] uppercase tracking-[0.12em] text-white/40 hover:text-white/70 cursor-pointer"
-        >
-          ⚙ Table rules
-        </button>
-      </div>
-      <div className="text-right">
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">
-          Available
-        </div>
-        <div className="text-xl font-bold font-mono text-white">
-          {fmtMoney(balance.available, token)}
-        </div>
-        {balance.locked > 0n && (
-          <div className="text-[11px] text-white/40 font-mono">
-            {fmtMoney(balance.locked, token)} locked
-          </div>
-        )}
-        {isDev && (
-          <button
-            type="button"
-            onClick={onDeposit}
-            className="mt-1 text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer underline-offset-2 hover:underline"
-          >
-            + Add 10,000 play money
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function DealForm({
   betAmount,

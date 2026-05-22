@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { Card, TokenSpec } from "@/lib/casino";
+import type { Card, ChainId, TokenSpec } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { btnGhost, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
 
@@ -31,6 +31,80 @@ export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
 export function TablePage({ children }: { children: ReactNode }) {
   return (
     <div className="space-y-4 max-w-4xl mx-auto w-full pb-4 sm:pb-6">{children}</div>
+  );
+}
+
+/** Wide shell for legacy 3-column tables (blackjack, coinflip, dice). */
+export function LegacyThreeColLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-full max-w-6xl mx-auto pb-6 lg:pb-0 mt-4 sm:mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      {children}
+    </div>
+  );
+}
+
+/** Play area + sidebar (crash, plinko, mines, hilo). */
+export function InstantSideLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-full max-w-6xl mx-auto pb-6 lg:pb-0 mt-4 sm:mt-6 grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-4 sm:gap-6">
+      {children}
+    </div>
+  );
+}
+
+/** Chain, balance, and optional dev play-money top bar on terminal tables. */
+export function TableBalanceHeader({
+  chainId,
+  token,
+  balance,
+  onDeposit,
+  onShowRules,
+}: {
+  chainId: ChainId;
+  token: TokenSpec;
+  balance: { available: bigint; locked: bigint };
+  onDeposit: () => void;
+  onShowRules?: () => void;
+}) {
+  const isDev = chainId === "dev-mock";
+  return (
+    <div className="flex items-center justify-between flex-wrap gap-3 mb-4 sm:mb-5">
+      <div>
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Playing on</div>
+        <div className="text-base font-semibold">
+          {chainId} · <span className="text-emerald-300">{token.symbol}</span>
+        </div>
+        {onShowRules && (
+          <button
+            type="button"
+            onClick={onShowRules}
+            className="mt-1 text-[10px] uppercase tracking-[0.12em] text-white/40 hover:text-white/70 cursor-pointer"
+          >
+            Table rules
+          </button>
+        )}
+      </div>
+      <div className="text-right">
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Available</div>
+        <div className="text-xl font-bold font-mono text-white tabular-nums">
+          {fmtMoney(balance.available, token, 2)}
+        </div>
+        {balance.locked > 0n && (
+          <div className="text-[11px] text-white/40 font-mono tabular-nums">
+            {fmtMoney(balance.locked, token, 2)} locked
+          </div>
+        )}
+        {isDev && (
+          <button
+            type="button"
+            onClick={onDeposit}
+            className="mt-1 text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer underline-offset-2 hover:underline"
+          >
+            + Add 10,000 play money
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

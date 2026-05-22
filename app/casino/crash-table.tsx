@@ -47,7 +47,13 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, SettlementBanner, unitsToHuman } from "./table-kit";
+import {
+  fmtMoney as fmtMoneyKit,
+  humanToUnits,
+  InstantSideLayout,
+  SettlementBanner,
+  unitsToHuman,
+} from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -427,7 +433,7 @@ export default function CrashTable({ chainId, token }: Props) {
    * =========================================================================== */
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6 pb-6 lg:pb-0 w-full max-w-6xl mx-auto">
+    <InstantSideLayout>
       {/* ───── Main column ───── */}
       <div className="space-y-5">
         {/* Curve canvas */}
@@ -685,7 +691,7 @@ export default function CrashTable({ chainId, token }: Props) {
           }}
         />
       )}
-    </div>
+    </InstantSideLayout>
   );
 }
 

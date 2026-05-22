@@ -42,7 +42,7 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+import { fmtMoney as fmtMoneyKit, humanToUnits, InstantSideLayout, unitsToHuman } from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -287,7 +287,7 @@ export default function PlinkoTable({ chainId, token }: Props) {
   const hashShort = seedPair.serverSeedHash.slice(0, 14) + "…";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6">
+    <InstantSideLayout>
       <div className="space-y-5">
         {/* Plinko board */}
         <PlinkoBoard
@@ -599,7 +599,7 @@ export default function PlinkoTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </InstantSideLayout>
   );
 }
 

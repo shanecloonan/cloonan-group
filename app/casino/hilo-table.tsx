@@ -36,7 +36,13 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnGold, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, SettlementBanner, unitsToHuman } from "./table-kit";
+import {
+  fmtMoney as fmtMoneyKit,
+  humanToUnits,
+  InstantSideLayout,
+  SettlementBanner,
+  unitsToHuman,
+} from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -379,7 +385,7 @@ export default function HiloTable({ chainId, token }: Props) {
   const lostState = terminal && liveState?.phase === "lost";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6">
+    <InstantSideLayout>
       <div className="space-y-5">
         {/* HiLo card display */}
         <HiloDisplay
@@ -752,7 +758,7 @@ export default function HiloTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </InstantSideLayout>
   );
 }
 

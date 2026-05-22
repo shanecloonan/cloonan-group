@@ -332,7 +332,7 @@ export default function SlotsTable({ chainId, token }: Props) {
   /* =================== render =================== */
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 pt-4 sm:pt-8 pb-4 lg:pb-0">
+    <div className="w-full max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4 sm:gap-6 pt-4 sm:pt-6 pb-6 lg:pb-0">
       {/* ───── Main column ───── */}
       <section className="space-y-6">
         {/* Header */}
