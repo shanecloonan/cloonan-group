@@ -44,6 +44,9 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnPrimary } from "./casino-ui";
+import { fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+
+const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
 /* ---------------------------------------------------------------------------
  *  Shared style vocab
@@ -55,31 +58,6 @@ const labelCls =
   "block text-white/40 text-[10px] font-medium uppercase tracking-[0.15em] mb-1.5";
 const inputCls =
   "w-full h-10 px-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
-/* ---------------------------------------------------------------------------
- *  Money helpers
- * ------------------------------------------------------------------------- */
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = units / denom;
-  const frac = units % denom;
-  return Number(`${whole}.${frac.toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec, digits = 2): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })} ${token.symbol}`;
-}
 
 const LAST_BET_KEY = "mf_casino_slots_bet";
 

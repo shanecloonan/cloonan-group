@@ -39,6 +39,9 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnGold, btnPrimary } from "./casino-ui";
+import { fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+
+const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
 /* ---------------------------------------------------------------------------
  *  Style vocab (matches plinko / crash)
@@ -50,30 +53,6 @@ const inputCls =
   "w-full h-10 px-3 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder:text-white/30 outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/30 transition-all";
 const btnDanger =
   "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-sm bg-gradient-to-r from-rose-500 to-orange-500 text-white hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
-
-/* ---------------------------------------------------------------------------
- *  Money helpers
- * ------------------------------------------------------------------------- */
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = units / denom;
-  const frac = units % denom;
-  return Number(`${whole}.${frac.toString().padStart(token.decimals, "0")}`);
-}
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-function fmtMoney(units: bigint, token: TokenSpec, digits = 2): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })} ${token.symbol}`;
-}
 
 const LS_BET = "mf_casino_mines_bet";
 const LS_MINES = "mf_casino_mines_count";
