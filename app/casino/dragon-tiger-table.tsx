@@ -7,7 +7,6 @@ import {
   dragonTigerRtpLabel,
   newSessionId,
   persistSettledSession,
-  type Card,
   type ChainAdapter,
   type ChainId,
   type DragonTigerAction,
@@ -19,24 +18,18 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnPrimary, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
+import {
+  ErrorBanner,
+  humanToUnits,
+  HandPanel,
+  RulesHint,
+  SettlementBanner,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const LAST_BET_KEY = "mf_casino_dt_bet";
 const LAST_SPOT_KEY = "mf_casino_dt_spot";
@@ -51,32 +44,6 @@ interface Props {
   chainId: ChainId;
   token: TokenSpec;
   adapter: ChainAdapter;
-}
-
-function CardFace({ c, title, highlight }: { c: Card; title: string; highlight: boolean }) {
-  const red = c.suit === "♥" || c.suit === "♦";
-  return (
-    <div
-      className={
-        "rounded-2xl border-2 p-4 flex flex-col items-center gap-2 transition-all " +
-        (highlight
-          ? "border-emerald-400/60 bg-emerald-500/10 shadow-[0_0_24px_rgba(16,185,129,0.2)]"
-          : "border-white/10 bg-white/[0.04]")
-      }
-    >
-      <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">{title}</span>
-      <div
-        className={
-          "w-16 h-24 sm:w-20 sm:h-28 rounded-xl border border-white/15 bg-white/[0.08] flex flex-col items-center justify-center font-mono " +
-          (red ? "text-rose-300" : "text-white")
-        }
-      >
-        <span className="text-2xl sm:text-3xl font-bold">{c.rank}</span>
-        <span className="text-xl sm:text-2xl">{c.suit}</span>
-      </div>
-      <span className="text-xs text-white/50">{cardLabel(c)}</span>
-    </div>
-  );
 }
 
 export default function DragonTigerTable({ chainId, token }: Props) {
@@ -115,6 +82,7 @@ export default function DragonTigerTable({ chainId, token }: Props) {
 
   const deal = useCallback(async () => {
     setError(null);
+    setLastSession(null);
     const stake = humanToUnits(betAmount, token);
     if (stake <= 0n) {
       setError("Bet must be > 0");
@@ -159,124 +127,82 @@ export default function DragonTigerTable({ chainId, token }: Props) {
   const st = lastSession?.state;
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-5"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Dragon Tiger</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
-              RTP {dragonTigerRtpLabel(spot)}
-            </span>
-          </div>
-
-          {st ? (
-            <div className="grid grid-cols-2 gap-3 sm:gap-6 max-w-md mx-auto">
-              <CardFace
-                c={st.dragonCard}
-                title="Dragon"
-                highlight={st.winner === "dragon"}
-              />
-              <CardFace
-                c={st.tigerCard}
-                title="Tiger"
-                highlight={st.winner === "tiger"}
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-white/45 text-center py-6">
-              Highest card wins — Ace low, King high. Tie returns half on Dragon/Tiger bets.
-            </p>
-          )}
-
-          {st?.winner === "tie" && (
-            <p className="text-center text-sm text-violet-200/90 font-medium">
-              Tie — both {st.dragonRank}
-            </p>
-          )}
-
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {SPOTS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                disabled={dealing}
-                onClick={() => setSpot(s.id)}
-                className={
-                  "min-h-[72px] touch-manipulation rounded-xl border p-3 text-left transition-all cursor-pointer disabled:opacity-50 bg-gradient-to-br " +
-                  s.accent +
-                  " " +
-                  (spot === s.id ? "ring-2 ring-amber-400/50" : "opacity-90 hover:opacity-100")
-                }
-              >
-                <div className="text-sm font-semibold text-white">{s.label}</div>
-                <div className="text-[10px] text-white/55 mt-0.5">{s.hint}</div>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={labelCls}>Bet ({token.symbol})</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={inputCls}
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                disabled={dealing}
-              />
-            </div>
-            <button
-              type="button"
-              disabled={dealing}
-              onClick={() => void deal()}
-              className={btnPrimary + " w-full sm:w-auto sm:min-w-[140px]"}
-            >
-              {dealing ? "Dealing…" : "Deal"}
-            </button>
-          </div>
-
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-
-          {lastSession?.result && (
-            <p
-              className={
-                "text-center text-sm font-mono " +
-                (lastSession.result.pnlUnits > 0n
-                  ? "text-emerald-300"
-                  : lastSession.result.pnlUnits < 0n
-                    ? "text-rose-300"
-                    : "text-white/60")
-              }
-            >
-              {lastSession.result.pnlUnits > 0n ? "+" : ""}
-              {fmtMoney(lastSession.result.pnlUnits, token)}
-            </p>
-          )}
-        </section>
-
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnSecondary + " w-full !text-xs"}>
-              Rotate seed
-            </button>
-            {lastSession && (
-              <button
-                type="button"
-                onClick={() => setVerifyTarget(lastSession)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
-              >
-                Verify last hand →
-              </button>
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead title="Dragon Tiger" rtp={dragonTigerRtpLabel(spot)} />
+            {st ? (
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-md mx-auto w-full">
+                <HandPanel
+                  label="Dragon"
+                  cards={[st.dragonCard]}
+                  score={cardLabel(st.dragonCard)}
+                  tone={st.winner === "dragon" ? "player" : "dealer"}
+                />
+                <HandPanel
+                  label="Tiger"
+                  cards={[st.tigerCard]}
+                  score={cardLabel(st.tigerCard)}
+                  tone={st.winner === "tiger" ? "player" : "dealer"}
+                />
+              </div>
+            ) : (
+              <RulesHint>Highest card wins — Ace low, King high. Tie returns half on Dragon/Tiger bets.</RulesHint>
             )}
-          </section>
-        </aside>
-      </div>
+            {st?.winner === "tie" && (
+              <p className="text-center text-sm text-violet-200/90 font-medium">
+                Tie — both {st.dragonRank}
+              </p>
+            )}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              {SPOTS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={dealing}
+                  onClick={() => setSpot(s.id)}
+                  className={
+                    "min-h-[72px] touch-manipulation rounded-xl border p-3 text-left transition-all cursor-pointer disabled:opacity-50 bg-gradient-to-br " +
+                    s.accent +
+                    " " +
+                    (spot === s.id ? "ring-2 ring-amber-400/50" : "opacity-90 hover:opacity-100")
+                  }
+                >
+                  <div className="text-sm font-semibold text-white">{s.label}</div>
+                  <div className="text-[10px] text-white/55 mt-0.5">{s.hint}</div>
+                </button>
+              ))}
+            </div>
+            {lastSession?.result && st && (
+              <SettlementBanner
+                headline={`${st.winner} · you bet ${st.betSpot}`}
+                pnl={lastSession.result.pnlUnits}
+                token={token}
+              />
+            )}
+            <StakeRow
+              label={`Bet (${token.symbol})`}
+              betAmount={betAmount}
+              onBetAmount={setBetAmount}
+              token={token}
+              disabled={dealing}
+              actionLabel={dealing ? "Dealing…" : lastSession ? "Deal again" : "Deal"}
+              onAction={() => void deal()}
+              actionBusy={dealing}
+            />
+            {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={lastSession ? () => setVerifyTarget(lastSession) : undefined}
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -319,6 +245,6 @@ export default function DragonTigerTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }

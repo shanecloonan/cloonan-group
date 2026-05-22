@@ -20,24 +20,20 @@ import {
 import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
-import { btnGhost, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
-
-function unitsToHuman(units: bigint, token: TokenSpec): number {
-  const denom = 10n ** BigInt(token.decimals);
-  return Number(`${units / denom}.${(units % denom).toString().padStart(token.decimals, "0")}`);
-}
-
-function humanToUnits(amount: number, token: TokenSpec): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) return 0n;
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = BigInt(Math.floor(amount));
-  const frac = BigInt(Math.round((amount - Math.floor(amount)) * Number(denom)));
-  return whole * denom + frac;
-}
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token.symbol}`;
-}
+import { labelCls } from "./casino-ui";
+import {
+  ChoiceButton,
+  ErrorBanner,
+  humanToUnits,
+  PlayingCard,
+  RulesHint,
+  SettlementBanner,
+  StakeRow,
+  TableAside,
+  TableGrid,
+  TableHead,
+  TablePage,
+} from "./table-kit";
 
 const LAST_BET_KEY = "mf_casino_ab_bet";
 const LAST_SIDE_KEY = "mf_casino_ab_side";
@@ -118,6 +114,7 @@ export default function AndarBaharTable({ chainId, token }: Props) {
 
   const play = useCallback(async () => {
     setError(null);
+    setLastSession(null);
     const stake = humanToUnits(betAmount, token);
     if (stake <= 0n) {
       setError("Bet must be > 0");
@@ -162,25 +159,18 @@ export default function AndarBaharTable({ chainId, token }: Props) {
   const seedPair = getSeedPair();
 
   return (
-    <div className="mt-4 space-y-4 max-w-4xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-4">
-        <section className={card + " p-4 sm:p-6 space-y-4"}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-white">Andar Bahar</h2>
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
-              RTP {andarBaharRtpLabel(side)}
-            </span>
-          </div>
+    <TablePage>
+      <TableGrid
+        main={
+          <>
+            <TableHead title="Andar Bahar" rtp={andarBaharRtpLabel(side)} />
 
           {st ? (
             <>
               <div className="flex justify-center">
-                <div className="rounded-xl border-2 border-amber-400/40 bg-amber-500/10 px-4 py-3 text-center">
-                  <div className={labelCls + " !mb-1"}>Joker</div>
-                  <div className="text-2xl font-mono font-bold text-amber-100">
-                    {st.jokerCard.rank}
-                    {st.jokerCard.suit}
-                  </div>
+                <div className="rounded-xl border-2 border-amber-400/40 bg-amber-500/10 px-4 py-3 flex flex-col items-center gap-2">
+                  <div className={labelCls + " !mb-0"}>Joker</div>
+                  <PlayingCard c={st.jokerCard} large />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -207,111 +197,52 @@ export default function AndarBaharTable({ chainId, token }: Props) {
               </div>
             </>
           ) : (
-            <p className="text-sm text-white/45 text-center py-4">
-              Pick a side. Cards alternate from Bahar until a card matches the joker rank.
-            </p>
+            <RulesHint>Pick a side. Cards alternate from Bahar until a card matches the joker rank.</RulesHint>
           )}
 
-          {!st && (
-            <div className="grid grid-cols-2 gap-2">
-              {(["andar", "bahar"] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setSide(s)}
-                  className={
-                    "touch-manipulation min-h-14 rounded-xl border-2 p-3 text-left transition-all cursor-pointer " +
-                    (side === s
-                      ? "border-amber-400 bg-amber-500/15"
-                      : "border-white/10 bg-white/[0.04] hover:border-white/25")
-                  }
-                >
-                  <div className="text-sm font-semibold capitalize">{s}</div>
-                  <div className="text-[10px] text-white/50">
-                    {s === "andar" ? `${andarBaharPayReturn("andar")}×` : `${andarBaharPayReturn("bahar")}×`}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {st && (
-            <p
-              className={
-                "text-center text-sm font-mono " +
-                (lastSession!.result!.pnlUnits > 0n
-                  ? "text-emerald-300"
-                  : lastSession!.result!.pnlUnits < 0n
-                    ? "text-rose-300"
-                    : "text-white/60")
-              }
-            >
-              {st.winner} wins · you bet {st.betSide} ·{" "}
-              {lastSession!.result!.pnlUnits > 0n ? "+" : ""}
-              {fmtMoney(lastSession!.result!.pnlUnits, token)}
-            </p>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={labelCls}>Bet ({token.symbol})</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={inputCls}
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                disabled={busy || !!st}
-              />
-            </div>
-            {!st ? (
-              <button
-                type="button"
+          <div className="grid grid-cols-2 gap-2">
+            {(["andar", "bahar"] as const).map((s) => (
+              <ChoiceButton
+                key={s}
+                active={side === s}
                 disabled={busy}
-                onClick={() => void play()}
-                className={btnPrimary + " w-full sm:w-auto sm:min-w-[120px]"}
-              >
-                {busy ? "Dealing…" : "Deal"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setLastSession(null);
-                  setVerifyTarget(null);
-                }}
-                className={btnGhost + " w-full sm:w-auto"}
-              >
-                New round
-              </button>
-            )}
+                onClick={() => setSide(s)}
+                label={s.charAt(0).toUpperCase() + s.slice(1)}
+                hint={s === "andar" ? `${andarBaharPayReturn("andar")}×` : `${andarBaharPayReturn("bahar")}×`}
+              />
+            ))}
           </div>
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-        </section>
 
-        <aside className="space-y-3">
-          <section className={card + " p-4"}>
-            <div className={labelCls}>Balance</div>
-            <div className="text-lg font-mono text-emerald-300">{fmtMoney(balance.available, token)}</div>
-          </section>
-          <section className={card + " p-4"}>
-            <button type="button" onClick={() => rotateSeed()} className={btnGhost + " w-full !text-xs"}>
-              Rotate seed
-            </button>
-            {st && (
-              <button
-                type="button"
-                onClick={() => setVerifyTarget(lastSession)}
-                className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer"
-              >
-                Verify →
-              </button>
-            )}
-          </section>
-        </aside>
-      </div>
+          {st && lastSession?.result && (
+            <SettlementBanner
+              headline={`${st.winner} wins · you bet ${st.betSide}`}
+              pnl={lastSession.result.pnlUnits}
+              token={token}
+            />
+          )}
+
+          <StakeRow
+            label={`Bet (${token.symbol})`}
+            betAmount={betAmount}
+            onBetAmount={setBetAmount}
+            token={token}
+            disabled={busy}
+            actionLabel={busy ? "Dealing…" : lastSession ? "Deal again" : "Deal"}
+            onAction={() => void play()}
+            actionBusy={busy}
+          />
+          {error && <ErrorBanner message={error} />}
+          </>
+        }
+        aside={
+          <TableAside
+            balance={balance.available}
+            token={token}
+            onRotateSeed={() => rotateSeed()}
+            onVerify={lastSession ? () => setVerifyTarget(lastSession) : undefined}
+          />
+        }
+      />
 
       {verifyTarget && (
         <CasinoVerifyModal
@@ -345,6 +276,6 @@ export default function AndarBaharTable({ chainId, token }: Props) {
           }
         />
       )}
-    </div>
+    </TablePage>
   );
 }

@@ -135,7 +135,6 @@ export default function VideoPokerTable({ chainId, token }: Props) {
       } as VideoPokerAction);
       next = await driver.settleSession(videoPokerGame, next);
       setSession(next);
-      setVerifyTarget(next);
       pushHistory({
         game: "video-poker",
         stakeUnits: next.result!.totalStakedUnits,
