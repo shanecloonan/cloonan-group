@@ -35,7 +35,7 @@ import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
-import { fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+import { fmtMoney as fmtMoneyKit, humanToUnits, SettlementBanner, unitsToHuman } from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -219,7 +219,6 @@ export default function HiloTable({ chainId, token }: Props) {
             getSeedPair(),
           );
           await refreshBalance();
-          setTimeout(() => setSession(null), 1600);
         }
       } catch (e) {
         setError((e as Error).message);
@@ -255,7 +254,6 @@ export default function HiloTable({ chainId, token }: Props) {
         getSeedPair(),
       );
       await refreshBalance();
-      setTimeout(() => setSession(null), 1600);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -370,7 +368,12 @@ export default function HiloTable({ chainId, token }: Props) {
           e.preventDefault();
           void cashout();
         }
-      } else if (!session && !busy && !autoRunning && (k === " " || k === "enter")) {
+      } else if (
+        !busy &&
+        !autoRunning &&
+        (k === " " || k === "enter") &&
+        (!session || hiloGame.isTerminal(session.state))
+      ) {
         e.preventDefault();
         void deal();
       } else if (k === "escape" && autoRunning) {
@@ -401,6 +404,18 @@ export default function HiloTable({ chainId, token }: Props) {
           terminal={terminal}
           lost={lostState}
         />
+
+        {terminal && session?.result && (
+          <SettlementBanner
+            headline={
+              liveState?.phase === "cashed_out"
+                ? `Cashed at ${liveState.multiplier.toFixed(2)}×`
+                : "Round over"
+            }
+            pnl={session.result.pnlUnits}
+            token={token}
+          />
+        )}
 
         {/* Guess buttons */}
         {currentRank !== null && livePreview && (

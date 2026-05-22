@@ -347,9 +347,9 @@ export default function SlotsTable({ chainId, token }: Props) {
       {/* ───── Main column ───── */}
       <section className="space-y-6">
         {/* Header */}
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="font-heading text-4xl font-semibold tracking-tight">
+            <h1 className="font-heading text-2xl sm:text-4xl font-semibold tracking-tight">
               Slots<span className="text-emerald-400">.</span>
             </h1>
             <p className="text-white/50 text-sm mt-1">
@@ -402,7 +402,7 @@ export default function SlotsTable({ chainId, token }: Props) {
         </div>
 
         {/* Bet controls */}
-        <div className={card + " p-5 flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_auto_auto_auto] sm:items-end"}>
+        <div className={card + " p-4 sm:p-5 flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_auto_auto_auto] sm:items-end"}>
           <div>
             <label className={labelCls}>Total bet ({numLines} lines)</label>
             <div className="flex gap-2">
@@ -439,7 +439,7 @@ export default function SlotsTable({ chainId, token }: Props) {
           </div>
 
           <button
-            className={btnPrimary + " w-full sm:w-auto sm:min-w-[150px]"}
+            className={btnPrimary + " min-h-12 touch-manipulation w-full sm:w-auto sm:min-w-[150px]"}
             disabled={animating || autoRunning || balance.available <= 0n}
             onClick={() => void spinOnce()}
           >
@@ -447,7 +447,7 @@ export default function SlotsTable({ chainId, token }: Props) {
           </button>
 
           <button
-            className={btnGhost + " w-full sm:w-auto"}
+            className={btnGhost + " min-h-12 touch-manipulation w-full sm:w-auto"}
             disabled={animating}
             onClick={() => setAutoOpen((o) => !o)}
           >
@@ -455,7 +455,7 @@ export default function SlotsTable({ chainId, token }: Props) {
           </button>
 
           <button
-            className={btnGhost}
+            className={btnGhost + " min-h-12 touch-manipulation w-full sm:w-auto"}
             disabled={!lastSession}
             onClick={() => setVerifyTarget(lastSession)}
           >

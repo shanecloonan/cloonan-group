@@ -5,17 +5,9 @@ import type { VerifyResult } from "@/lib/casino/verify";
 import type { Session, TokenSpec } from "@/lib/casino";
 import { ShareLinkRow } from "./share-link";
 import { inputCls, labelCls } from "./casino-ui";
+import { fmtMoney } from "./table-kit";
 
 export type VerifyRunResult<State> = VerifyResult<State> | { error: string };
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  const denom = 10n ** BigInt(token.decimals);
-  const whole = units / denom;
-  const frac = units % denom;
-  const fracStr = frac.toString().padStart(token.decimals, "0").replace(/0+$/, "");
-  const n = fracStr ? `${whole}.${fracStr}` : whole.toString();
-  return `${Number(n).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${token.symbol}`;
-}
 
 /** Shared provably-fair replay modal for settled sessions. */
 export function CasinoVerifyModal<State>({

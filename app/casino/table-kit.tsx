@@ -21,7 +21,9 @@ export function humanToUnits(amount: number, token: TokenSpec): bigint {
 }
 
 export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
-  return `${unitsToHuman(units, token).toLocaleString(undefined, { maximumFractionDigits: maxFrac })} ${token.symbol}`;
+  const sign = units < 0n ? "-" : "";
+  const abs = units < 0n ? -units : units;
+  return `${sign}${unitsToHuman(abs, token).toLocaleString(undefined, { maximumFractionDigits: maxFrac })} ${token.symbol}`;
 }
 
 /* ---- Layout ---- */

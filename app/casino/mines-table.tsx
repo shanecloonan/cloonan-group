@@ -39,7 +39,7 @@ import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnGhost, btnGold, btnPrimary } from "./casino-ui";
-import { fmtMoney as fmtMoneyKit, humanToUnits, unitsToHuman } from "./table-kit";
+import { fmtMoney as fmtMoneyKit, humanToUnits, SettlementBanner, unitsToHuman } from "./table-kit";
 
 const fmtMoney = (units: bigint, token: TokenSpec, digits = 2) => fmtMoneyKit(units, token, digits);
 
@@ -218,8 +218,6 @@ export default function MinesTable({ chainId, token }: Props) {
             getSeedPair(),
           );
           await refreshBalance();
-          // Brief boom dwell, then clear the active session
-          setTimeout(() => setSession(null), 1400);
         }
       } catch (e) {
         setError((e as Error).message);
@@ -255,7 +253,6 @@ export default function MinesTable({ chainId, token }: Props) {
         getSeedPair(),
       );
       await refreshBalance();
-      setTimeout(() => setSession(null), 1400);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -369,7 +366,12 @@ export default function MinesTable({ chainId, token }: Props) {
       if (k === "c" && session && session.state.picks > 0 && !busy) {
         e.preventDefault();
         void cashout();
-      } else if ((k === " " || k === "enter") && !session && !busy && !autoRunning) {
+      } else if (
+        (k === " " || k === "enter") &&
+        !busy &&
+        !autoRunning &&
+        (!session || minesGame.isTerminal(session.state))
+      ) {
         e.preventDefault();
         void deal();
       } else if (k === "escape" && autoRunning) {
@@ -402,6 +404,18 @@ export default function MinesTable({ chainId, token }: Props) {
           onPick={(tile) => void pick(tile)}
           busy={busy || autoRunning}
         />
+
+        {terminal && session?.result && (
+          <SettlementBanner
+            headline={
+              session.state.phase === "exploded"
+                ? `Hit a mine at ${session.state.multiplier.toFixed(2)}×`
+                : `Cashed at ${session.state.multiplier.toFixed(2)}×`
+            }
+            pnl={session.result.pnlUnits}
+            token={token}
+          />
+        )}
 
         {/* Bet panel */}
         <section className={card + " p-5"}>

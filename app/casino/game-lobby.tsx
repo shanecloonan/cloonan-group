@@ -15,6 +15,7 @@ import {
 } from "./game-catalog";
 import type { GameTab } from "./game-types";
 import { PlayMoneyPanel } from "./play-money-bar";
+import { fmtMoney } from "./table-kit";
 
 const CHAIN_TILES = [
   { id: "dev-mock" as ChainId, display: "Play money", tag: "Free" },
@@ -29,15 +30,6 @@ const PRIMARY_LINKS = [
   { href: "/casino/history", label: "Activity" },
   { href: "/casino/wallet", label: "Vault" },
 ] as const;
-
-function fmtMoney(units: bigint, token: TokenSpec): string {
-  const denom = 10n ** BigInt(token.decimals);
-  const sign = units < 0n ? "-" : "";
-  const abs = units < 0n ? -units : units;
-  const w = abs / denom;
-  const f = (abs % denom).toString().padStart(token.decimals, "0");
-  return `${sign}${Number(`${w}.${f}`).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${token.symbol}`;
-}
 
 function gameLabel(id: string): string {
   return id in GAME_LABELS ? GAME_LABELS[id as keyof typeof GAME_LABELS] : id;
@@ -136,11 +128,11 @@ export function GameLobby({
           <div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-semibold">Balance</p>
             <p className="mt-1 text-2xl sm:text-3xl font-mono font-bold text-emerald-300 tabular-nums">
-              {fmtMoney(balance.available, token)}
+              {fmtMoney(balance.available, token, 2)}
             </p>
             <p className="mt-1 text-xs text-white/45">
               Lifetime {stats.totalPnlUnits >= 0n ? "+" : ""}
-              {fmtMoney(stats.totalPnlUnits, token)}
+              {fmtMoney(stats.totalPnlUnits, token, 2)}
               {stats.sessionsPlayed > 0 ? ` · ${stats.sessionsPlayed} hands` : ""}
             </p>
           </div>
