@@ -172,7 +172,7 @@ export default function DashboardContent() {
     <CasinoShell
       badge="Private suite"
       title="Player dashboard"
-      subtitle="Your command center — filter every session, track edge and PnL, control public visibility, and watch the global bet stream."
+      subtitle="Your sessions, filters, and the live bet feed."
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <section className={card + " p-5 lg:col-span-2 space-y-4"}>

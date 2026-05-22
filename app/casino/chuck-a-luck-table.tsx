@@ -22,8 +22,9 @@ import {
   DiceRow,
   ErrorBanner,
   humanToUnits,
-  PnlBanner,
+  PickGrid,
   RulesHint,
+  SettlementBanner,
   StakeRow,
   TableAside,
   TableGrid,
@@ -126,24 +127,7 @@ export default function ChuckALuckTable({ chainId, token }: Props) {
         main={
           <>
             <TableHead title="Chuck-a-Luck" rtp={chuckALuckRtpLabel()} />
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  disabled={locked}
-                  onClick={() => setPick(n)}
-                  className={
-                    "min-h-12 touch-manipulation rounded-xl font-bold text-lg border transition-all cursor-pointer " +
-                    (pick === n
-                      ? "border-amber-400/60 bg-amber-500/25 text-amber-50 shadow-[0_0_16px_rgba(245,158,11,0.15)]"
-                      : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/25 active:scale-[0.98]")
-                  }
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
+            <PickGrid values={[1, 2, 3, 4, 5, 6]} selected={pick} onSelect={setPick} disabled={locked} />
             <RulesHint>Pick a face, then roll three dice. Payouts: 1 hit even money, 2 hits 2:1, 3 hits 11:1.</RulesHint>
 
             {st && (
@@ -157,7 +141,17 @@ export default function ChuckALuckTable({ chainId, token }: Props) {
                     ? `${st.matchCount} match${st.matchCount === 1 ? "" : "es"} · pays ${chuckALuckPayHint(st.matchCount)}`
                     : "No matches"}
                 </p>
-                {lastSession?.result && <PnlBanner pnl={lastSession.result.pnlUnits} token={token} />}
+                {lastSession?.result && st && (
+                  <SettlementBanner
+                    headline={
+                      st.matchCount > 0
+                        ? `${st.matchCount} match${st.matchCount === 1 ? "" : "es"} · ${chuckALuckPayHint(st.matchCount)}`
+                        : "No matches"
+                    }
+                    pnl={lastSession.result.pnlUnits}
+                    token={token}
+                  />
+                )}
               </div>
             )}
 

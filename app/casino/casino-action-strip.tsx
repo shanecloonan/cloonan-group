@@ -17,7 +17,7 @@ function formatBalance(units: bigint, decimals: number, symbol: string): string 
   return `${sign}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${symbol}`;
 }
 
-/** Under game tabs: play-money chips, or vault balance + fairness controls. */
+/** Compact bar above tables: chips (play money) or vault balance + seed controls. */
 export function CasinoActionStrip() {
   const {
     playMoney,
@@ -31,8 +31,6 @@ export function CasinoActionStrip() {
     lastRevealedSeed,
     dismissRevealedSeed,
   } = useCasino();
-
-  if (playMoney.enabled) return <PlayMoneyChipStrip />;
 
   const [busy, setBusy] = useState(false);
   const pair = getSeedPair();
@@ -55,17 +53,19 @@ export function CasinoActionStrip() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [refreshBalance]);
 
+  if (playMoney.enabled) return <PlayMoneyChipStrip />;
+
   if (!isVaultChain) return null;
 
   const walletHref = `/casino/wallet?chain=${encodeURIComponent(chainId)}`;
 
   return (
-    <div className="-mx-4 sm:-mx-8 border-b border-white/[0.06] bg-white/[0.02]">
-      <div className="px-4 sm:px-8 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 mb-4 border-y border-white/[0.06] bg-white/[0.02]">
+      <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
           <span className="text-xs text-white/50 shrink-0">
             Balance{" "}
-            <span className="font-mono text-emerald-300/90 font-semibold">
+            <span className="font-mono text-emerald-300/90 font-semibold tabular-nums">
               {formatBalance(balance.available, token.decimals, token.symbol)}
             </span>
             {balance.locked > 0n && (
@@ -113,7 +113,7 @@ export function CasinoActionStrip() {
       </div>
 
       {lastRevealedSeed && (
-        <div className="px-4 sm:px-8 pb-2.5 flex flex-wrap items-center gap-2 text-[10px]">
+        <div className="px-4 sm:px-6 lg:px-8 pb-2.5 flex flex-wrap items-center gap-2 text-[10px]">
           <span className="text-white/40 uppercase tracking-wider">Revealed seed</span>
           <code className="font-mono text-emerald-200/90 break-all">{lastRevealedSeed.serverSeed}</code>
           <button
@@ -127,12 +127,12 @@ export function CasinoActionStrip() {
       )}
 
       {!persistent && (
-        <p className="px-4 sm:px-8 pb-2.5 text-[10px] text-amber-200/85">
-          Playing as guest on {chainId.replaceAll("-", " ")} — balances stay local until you{" "}
+        <p className="px-4 sm:px-6 lg:px-8 pb-2.5 text-[10px] text-amber-200/85">
+          Guest on {chainId.replaceAll("-", " ")} —{" "}
           <Link href="/auth" className="underline text-amber-300">
             sign in
-          </Link>
-          . Deposits credit your account after on-chain confirmation.
+          </Link>{" "}
+          to sync balance.
         </p>
       )}
     </div>
@@ -144,14 +144,13 @@ export function VaultChainLobbyBanner({ chainId }: { chainId: ChainId }) {
   if (chainId === "dev-mock" || persistent) return null;
 
   return (
-    <div className="mt-4 p-4 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] text-sm text-amber-100/90">
-      <strong className="text-amber-200">Sign in</strong> to sync casino balance and session history on this chain.{" "}
-      <Link href="/auth" className="text-amber-300 hover:underline">
+    <div className="mt-3 p-3 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] text-sm text-amber-100/90">
+      <Link href="/auth" className="text-amber-300 hover:underline font-medium">
         Sign in
-      </Link>
-      {" · "}
+      </Link>{" "}
+      to sync balance on this chain.{" "}
       <Link href={`/casino/wallet?chain=${encodeURIComponent(chainId)}`} className="text-amber-300 hover:underline">
-        Open wallet
+        Wallet →
       </Link>
     </div>
   );

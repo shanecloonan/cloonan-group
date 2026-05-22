@@ -22,10 +22,9 @@ import {
   ErrorBanner,
   fmtMoney,
   humanToUnits,
-  NewHandButton,
   PhaseChip,
-  PnlBanner,
   RulesHint,
+  SettlementBanner,
   StakeRow,
   TableAside,
   TableGrid,
@@ -171,7 +170,9 @@ export default function CrapsTable({ chainId, token }: Props) {
                     ))}
                   </div>
                 )}
-                {lastSession?.result && <PnlBanner pnl={lastSession.result.pnlUnits} token={token} />}
+                {lastSession?.result && phase && (
+                  <SettlementBanner headline={phase.text} pnl={lastSession.result.pnlUnits} token={token} />
+                )}
               </div>
             )}
 

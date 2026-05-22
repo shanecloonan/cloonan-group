@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { Card, TokenSpec } from "@/lib/casino";
+import { useCasino } from "./casino-context";
 import { btnGhost, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
 
 /* ---- Money ---- */
@@ -346,19 +347,27 @@ export function TableAside({
   onRotateSeed,
   onVerify,
   hint,
+  showBalance = true,
 }: {
   balance: bigint;
   token: TokenSpec;
   onRotateSeed: () => void;
   onVerify?: () => void;
   hint?: string;
+  /** Hide when play-money chip strip already shows balance. */
+  showBalance?: boolean;
 }) {
+  const { playMoney } = useCasino();
+  const showBal = showBalance && !playMoney.enabled;
+
   return (
     <>
-      <section className={card + " p-4"}>
-        <div className={labelCls}>Balance</div>
-        <div className="text-lg font-mono text-emerald-300 tabular-nums">{fmtMoney(balance, token)}</div>
-      </section>
+      {showBal && (
+        <section className={card + " p-4"}>
+          <div className={labelCls}>Balance</div>
+          <div className="text-lg font-mono text-emerald-300 tabular-nums">{fmtMoney(balance, token)}</div>
+        </section>
+      )}
       {hint && (
         <section className={card + " p-4 text-[11px] text-white/45 leading-relaxed"}>{hint}</section>
       )}
@@ -390,4 +399,62 @@ export function NewHandButton({ onClick }: { onClick: () => void }) {
 
 export function ErrorBanner({ message }: { message: string }) {
   return <p className="text-sm text-rose-300 text-center">{message}</p>;
+}
+
+/** Win/loss summary for one-shot (dice/craps/keno) rounds. */
+export function SettlementBanner({
+  headline,
+  pnl,
+  token,
+}: {
+  headline: string;
+  pnl: bigint;
+  token: TokenSpec;
+}) {
+  const tone =
+    pnl > 0n
+      ? "border-emerald-400/30 bg-emerald-500/10"
+      : pnl < 0n
+        ? "border-rose-400/30 bg-rose-500/10"
+        : "border-white/10 bg-white/[0.03]";
+  return (
+    <div className={"rounded-xl border p-4 space-y-2 text-center " + tone}>
+      <p className="text-sm font-medium text-white/85">{headline}</p>
+      <PnlBanner pnl={pnl} token={token} />
+    </div>
+  );
+}
+
+/** Numeric pick grid (chuck-a-luck, sic-bo faces, etc.). */
+export function PickGrid({
+  values,
+  selected,
+  onSelect,
+  disabled,
+}: {
+  values: number[];
+  selected: number;
+  onSelect: (n: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+      {values.map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={disabled}
+          onClick={() => onSelect(n)}
+          className={
+            "min-h-12 touch-manipulation rounded-xl font-bold text-lg border transition-all cursor-pointer " +
+            (selected === n
+              ? "border-amber-400/60 bg-amber-500/25 text-amber-50 shadow-[0_0_16px_rgba(245,158,11,0.15)]"
+              : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/25 active:scale-[0.98] disabled:opacity-40")
+          }
+        >
+          {n}
+        </button>
+      ))}
+    </div>
+  );
 }

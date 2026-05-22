@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -135,11 +136,31 @@ const CHAIN_TILES: ChainTile[] = [
  *  Page
  * ========================================================================= */
 
-export default function CasinoContent() {
+function syncGameUrl(tab: GameTab) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (tab === "lobby" || tab === "fairness") url.searchParams.delete("game");
+  else if (isPlayableGame(tab)) url.searchParams.set("game", tab);
+  const q = url.searchParams.toString();
+  window.history.replaceState(null, "", q ? `${url.pathname}?${q}` : url.pathname);
+}
+
+function CasinoContentInner() {
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<GameTab>("lobby");
   const [chainId, setChainId] = useState<ChainId>("dev-mock");
   const [token, setToken] = useState<TokenSpec>(DEV_TOKEN);
   const [vaultLiveChains, setVaultLiveChains] = useState<ReadonlySet<string>>(() => new Set());
+
+  const goTab = useCallback((next: GameTab) => {
+    setTab(next);
+    syncGameUrl(next);
+  }, []);
+
+  useEffect(() => {
+    const g = searchParams.get("game");
+    if (g && isPlayableGame(g)) setTab(g);
+  }, [searchParams]);
 
   useEffect(() => {
     fetch("/api/casino/vault-status")
@@ -180,15 +201,15 @@ export default function CasinoContent() {
             vaultLiveChains={vaultLiveChains}
             onSelectChain={selectChain}
             onSelectToken={setToken}
-            onOpenGame={(g) => setTab(g)}
-            onOpenFairness={() => setTab("fairness")}
+            onOpenGame={(g) => goTab(g)}
+            onOpenFairness={() => goTab("fairness")}
           />
         )}
         {tab === "fairness" && (
           <div className="space-y-4">
             <button
               type="button"
-              onClick={() => setTab("lobby")}
+              onClick={() => goTab("lobby")}
               className={btnGhost + " !h-10 !min-h-10 !px-3 text-sm"}
             >
               ← Games
@@ -198,7 +219,7 @@ export default function CasinoContent() {
         )}
         {inGame && (
           <>
-            <GamePlayHeader gameId={tab as CasinoGameId} onBack={() => setTab("lobby")} />
+            <GamePlayHeader gameId={tab as CasinoGameId} onBack={() => goTab("lobby")} />
             <CasinoActionStrip />
           {tab === "blackjack" && (
             <BlackjackTable chainId={chainId} token={token} adapter={adapter} />
@@ -291,13 +312,21 @@ export default function CasinoContent() {
   );
 }
 
+export default function CasinoContent() {
+  return (
+    <Suspense fallback={<div className="min-h-[40vh] flex items-center justify-center text-white/40 text-sm">Loading…</div>}>
+      <CasinoContentInner />
+    </Suspense>
+  );
+}
+
 function FairnessPanel() {
   return (
     <div className="mt-8 space-y-6">
       <section className={card + " p-6"}>
         <h2 className="text-xl font-semibold mb-2">How the RNG works</h2>
         <p className="text-white/60 leading-relaxed text-sm">
-          We use a commit-reveal HMAC-SHA256 scheme â€” the same protocol Stake,
+          We use a commit-reveal HMAC-SHA256 scheme — the same protocol Stake,
           BC.Game, and Crash.com use. Before any hand is dealt the server picks
           a random <span className="text-emerald-300">server seed</span> and
           publishes its SHA-256 hash. The player supplies (or accepts a default)
@@ -317,9 +346,9 @@ card_index = unbiased_mod(stream, 52 - cards_drawn)`}
       <section className={card + " p-6"}>
         <h2 className="text-xl font-semibold mb-2">Verification flow</h2>
         <ol className="text-sm text-white/70 space-y-2 list-decimal list-inside">
-          <li>Open Blackjack â€” note the <code className="text-emerald-300">server_seed_hash</code> in the table footer.</li>
+          <li>Open any table — note the <code className="text-emerald-300">server_seed_hash</code> before you bet.</li>
           <li>Play any number of hands. Each settled hand stores the full action log.</li>
-          <li>Rotate your client seed any time â†’ we publish the original server seed and the verification page goes live for every past hand.</li>
+          <li>Rotate your client seed any time — we publish the server seed and every past hand becomes verifiable.</li>
           <li>Re-hash the revealed seed, compare to the originally published hash. Then replay any hand by re-deriving the byte stream.</li>
         </ol>
       </section>
