@@ -31,6 +31,7 @@ import {
   DEV_PLAY_MONEY_HUMAN,
   KeyHint,
   LegacyThreeColLayout,
+  NumberField,
   RevealedSeedCard,
   TableBalanceHeader,
   unitsToHuman,
@@ -758,15 +759,3 @@ function NumberLine({
     </div>
   );
 }
-
-function NumberField({ label, value, onChange, min, max, step, disabled }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; disabled?: boolean }) {
-  return (
-    <div>
-      <label className={labelCls}>{label}</label>
-      <input type="number" min={min} max={max} step={step} disabled={disabled}
-        className={inputCls + " disabled:opacity-50"}
-        value={value} onChange={(e) => onChange(Number(e.target.value))} />
-    </div>
-  );
-}
-

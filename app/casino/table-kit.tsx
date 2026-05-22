@@ -29,6 +29,77 @@ export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
   return `${sign}${unitsToHuman(abs, token).toLocaleString(undefined, { maximumFractionDigits: maxFrac })} ${token.symbol}`;
 }
 
+/** Token view when only symbol and decimals are known (history rows, CSV). */
+export function tokenFromParts(symbol: string, decimals: number): TokenSpec {
+  return { symbol, display: symbol, decimals, address: "", isNative: false };
+}
+
+export const DEV_QUICK_TOPUP_AMOUNTS = [100, 1000, 10_000] as const;
+
+export function NumberField({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        disabled={disabled}
+        className={inputCls + " disabled:opacity-50"}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </div>
+  );
+}
+
+/** Dev-mock play area: preset play-money credits (crash, plinko, mines, hilo). */
+export function DevQuickTopUpBar({
+  token,
+  onTopUp,
+}: {
+  token: TokenSpec;
+  onTopUp: (units: bigint) => void | Promise<void>;
+}) {
+  const denom = 10n ** BigInt(token.decimals);
+  return (
+    <section className={card + " p-4 flex items-center justify-between gap-3 flex-wrap"}>
+      <div className="text-[12px] text-white/60">
+        Play-money mode. Need chips? Quick-credit your bankroll:
+      </div>
+      <div className="flex gap-2">
+        {DEV_QUICK_TOPUP_AMOUNTS.map((amt) => (
+          <button
+            key={amt}
+            type="button"
+            className={btnGhost}
+            onClick={() => void onTopUp(BigInt(amt) * denom)}
+          >
+            + {amt.toLocaleString()} {token.symbol}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /* ---- Layout ---- */
 
 export function TablePage({ children }: { children: ReactNode }) {

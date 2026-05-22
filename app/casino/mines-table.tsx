@@ -40,6 +40,7 @@ import { pickRevealedServerSeed, runSessionVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
 import { btnDanger, btnGhost, btnGold, btnPrimary, card, inputCls, labelCls } from "./casino-ui";
 import {
+  DevQuickTopUpBar,
   ErrorBanner,
   FairnessCard,
   RevealedSeedCard,
@@ -540,25 +541,7 @@ export default function MinesTable({ chainId, token }: Props) {
 
         {/* Bankroll quick-credit */}
         {!persistent && (
-          <section className={card + " p-4 flex items-center justify-between gap-3 flex-wrap"}>
-            <div className="text-[12px] text-white/60">
-              Play-money mode. Need chips? Quick-credit your bankroll:
-            </div>
-            <div className="flex gap-2">
-              {[100, 1000, 10_000].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  className={btnGhost}
-                  onClick={async () => {
-                    await depositPlayMoney(BigInt(amt) * 10n ** BigInt(token.decimals));
-                  }}
-                >
-                  + {amt.toLocaleString()} {token.symbol}
-                </button>
-              ))}
-            </div>
-          </section>
+          <DevQuickTopUpBar token={token} onTopUp={(units) => depositPlayMoney(units)} />
         )}
       </div>
 

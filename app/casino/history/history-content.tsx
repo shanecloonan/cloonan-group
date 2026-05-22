@@ -27,6 +27,9 @@ import { buildVerifyLink } from "../share-link";
 import { CasinoFilterPill } from "../casino-filter-pill";
 import { CasinoShell } from "../casino-shell";
 import { ALL_GAMES, GAME_LABELS, card, pillGold, type CasinoGameId } from "../casino-ui";
+import { fmtMoney, tokenFromParts } from "../table-kit";
+
+const DEV_HISTORY_TOKEN = tokenFromParts("DEV", 6);
 
 /* ---------------------------------------------------------------------------
  *  Types
@@ -320,8 +323,9 @@ export default function HistoryContent() {
   const exportCsv = () => {
     const header = "at,game,stake,multiplier,pnl,token\n";
     const lines = filtered.map((r) => {
-      const stake = fmt(r.stakeUnits, r.tokenDecimals, false);
-      const pnl = fmt(r.pnlUnits, r.tokenDecimals, true);
+      const rowToken = tokenFromParts(r.tokenSymbol, r.tokenDecimals);
+      const stake = fmtMoney(r.stakeUnits, rowToken, 2);
+      const pnl = fmtMoney(r.pnlUnits, rowToken, 2);
       return `${r.at},${r.game},${stake},${r.multiplier.toFixed(4)},${pnl},${r.tokenSymbol}`;
     });
     const blob = new Blob([header + lines.join("\n")], { type: "text/csv" });
@@ -369,8 +373,12 @@ export default function HistoryContent() {
             <Stat label="Sessions" value={stats.count.toLocaleString()} />
             <Stat label="Wins" value={`${stats.wins} · ${stats.count > 0 ? ((stats.wins / stats.count) * 100).toFixed(1) : "0"}%`} accent="emerald" />
             <Stat label="Losses" value={`${stats.losses}`} accent="rose" />
-            <Stat label="Wagered" value={fmt(stats.totalWagered, 6, false)} sub="DEV" />
-            <Stat label="Net PnL" value={(stats.totalPnl >= 0n ? "+" : "") + fmt(stats.totalPnl, 6, false)} accent={stats.totalPnl >= 0n ? "emerald" : "rose"} sub="DEV" />
+            <Stat label="Wagered" value={fmtMoney(stats.totalWagered, DEV_HISTORY_TOKEN, 2)} />
+            <Stat
+              label="Net PnL"
+              value={(stats.totalPnl >= 0n ? "+" : "") + fmtMoney(stats.totalPnl, DEV_HISTORY_TOKEN, 2)}
+              accent={stats.totalPnl >= 0n ? "emerald" : "rose"}
+            />
             <Stat label="Best multiplier" value={stats.bestMultiplier.toFixed(2) + "×"} />
           </div>
         </section>
@@ -459,7 +467,7 @@ export default function HistoryContent() {
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono text-white/80 text-[12px]">
-                        {fmt(r.stakeUnits, r.tokenDecimals, false)} {r.tokenSymbol}
+                        {fmtMoney(r.stakeUnits, tokenFromParts(r.tokenSymbol, r.tokenDecimals), 2)}
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono text-white/70 text-[12px]">
                         {r.multiplier.toFixed(2)}×
@@ -471,7 +479,7 @@ export default function HistoryContent() {
                         }
                       >
                         {won ? "+" : ""}
-                        {fmt(r.pnlUnits, r.tokenDecimals, true)} {r.tokenSymbol}
+                        {fmtMoney(r.pnlUnits, tokenFromParts(r.tokenSymbol, r.tokenDecimals), 2)}
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         {r.origin === "local" ? (
@@ -609,17 +617,6 @@ function toggle(
     setKey(k);
     setDir(k === "at" ? "desc" : "desc");
   }
-}
-
-function fmt(units: bigint, decimals: number, signed: boolean): string {
-  const denom = 10n ** BigInt(decimals);
-  const sign = units < 0n ? "-" : "";
-  const abs = units < 0n ? -units : units;
-  const w = abs / denom;
-  const f = (abs % denom).toString().padStart(decimals, "0");
-  const num = Number(`${w}.${f}`);
-  void signed;
-  return `${sign}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatTime(iso: string): string {
