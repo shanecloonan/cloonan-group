@@ -41,6 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Rust core lives in github.com/shanecloonan/permawrite
+# Rust core lives in github.com/shanecloonan/permawrite (clone alongside this repo)
+/permawrite/
 **/*.rs.bk
 Cargo.lock.bak
