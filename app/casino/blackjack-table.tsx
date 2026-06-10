@@ -20,6 +20,7 @@ import {
   type TokenSpec,
 } from "@/lib/casino";
 import { useCasino } from "./casino-context";
+import { BfcScreen, EntreeScreen } from "./legacy-screens";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runBlackjackVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
@@ -89,6 +90,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
   const [busy, setBusy] = useState(false);
   const [verifyTarget, setVerifyTarget] = useState<Session<BlackjackAction, BlackjackState> | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [legacyScreen, setLegacyScreen] = useState<null | "bfc" | "entree">(null);
   const revealSeed = lastRevealedSeed;
 
   /* ----- Actions ----- */
@@ -264,6 +266,8 @@ export default function BlackjackTable({ chainId, token }: Props) {
             onClear={clearTable}
             onVerify={() => setVerifyTarget(session)}
             busy={busy}
+            onOpenBfc={() => setLegacyScreen("bfc")}
+            onOpenEntree={() => setLegacyScreen("entree")}
           />
         )}
 
@@ -424,6 +428,9 @@ export default function BlackjackTable({ chainId, token }: Props) {
           inSession={!!session && session.status === "open"}
         />
       )}
+
+      {legacyScreen === "bfc" && <BfcScreen onClose={() => setLegacyScreen(null)} />}
+      {legacyScreen === "entree" && <EntreeScreen onClose={() => setLegacyScreen(null)} />}
     </LegacyThreeColLayout>
   );
 }
@@ -518,6 +525,8 @@ function Felt({
   onClear,
   onVerify,
   busy,
+  onOpenBfc,
+  onOpenEntree,
 }: {
   session: Session<BlackjackAction, BlackjackState>;
   token: TokenSpec;
@@ -527,6 +536,8 @@ function Felt({
   onClear: () => void;
   onVerify: () => void;
   busy: boolean;
+  onOpenBfc: () => void;
+  onOpenEntree: () => void;
 }) {
   const state = session.state;
   const dealerVisibleCards = state.dealerRevealed ? state.dealer : [state.dealer[1]];
@@ -613,6 +624,8 @@ function Felt({
 
       {/* Action row */}
       <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
+        <LegacyButton label="BFC" onClick={onOpenBfc} />
+        <LegacyButton label="entrée" onClick={onOpenEntree} />
         {state.phase === "insurance_offered" ? (
           <>
             <button
@@ -645,6 +658,19 @@ function Felt({
         )}
       </div>
     </div>
+  );
+}
+
+function LegacyButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Open ${label}`}
+      className="h-8 px-2.5 rounded-md text-[11px] font-semibold tracking-wide border border-white/[0.1] bg-white/[0.03] text-white/55 hover:text-white hover:bg-white/[0.08] hover:border-white/20 active:scale-95 transition-all cursor-pointer"
+    >
+      {label}
+    </button>
   );
 }
 
