@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Local AI
+GenericName=Local AI Chat
+Comment=Chat with a free local AI model (Ollama + Open WebUI)
+Exec=/home/ubuntu/bin/local-ai-launch.sh
+Icon=/home/ubuntu/.local/share/icons/ollama.png
+Terminal=false
+Categories=Utility;Network;Chat;
+StartupNotify=true
+Keywords=ai;ollama;chat;local;llm;
