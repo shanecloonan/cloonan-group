@@ -40,12 +40,21 @@ curl -fsSL -o "$ICONS_DIR/ollama.png" \
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 install -m 755 "$SCRIPT_DIR/local-ai-launch.sh" "$BIN_DIR/local-ai-launch.sh"
-sed "s|/home/ubuntu|$HOME_DIR|g" "$SCRIPT_DIR/local-ai.desktop" > "$DESKTOP_DIR/Local AI.desktop"
+sed "s|/home/ubuntu|$HOME_DIR|g" "$SCRIPT_DIR/local-ai.desktop" > "$DESKTOP_DIR/local-ai.desktop"
 sed "s|/home/ubuntu|$HOME_DIR|g" "$SCRIPT_DIR/local-ai.desktop" > "$APPS_DIR/local-ai.desktop"
 sed "s|/home/ubuntu|$HOME_DIR|g" "$SCRIPT_DIR/ollama-serve.desktop" > "$AUTOSTART_DIR/ollama-serve.desktop"
 
-chmod +x "$DESKTOP_DIR/Local AI.desktop"
+chmod +x "$DESKTOP_DIR/local-ai.desktop"
+sudo cp "$ICONS_DIR/ollama.png" /usr/share/pixmaps/local-ai.png 2>/dev/null \
+  || cp "$ICONS_DIR/ollama.png" "$ICONS_DIR/local-ai.png"
 update-desktop-database "$APPS_DIR" 2>/dev/null || true
+
+# Enable desktop icons (XFCE hides them by default).
+if command -v xfconf-query >/dev/null 2>&1; then
+  xfconf-query -c xfce4-desktop -p /desktop-icons/style -s 2 2>/dev/null || true
+  xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons -s true 2>/dev/null || true
+  DISPLAY="${DISPLAY:-:1}" xfdesktop --reload 2>/dev/null || true
+fi
 
 echo ">>> Starting Ollama..."
 if ! curl -fsS http://127.0.0.1:11434/ >/dev/null 2>&1; then
@@ -61,4 +70,6 @@ fi
 echo ">>> Pulling model: $MODEL"
 ollama pull "$MODEL"
 
-echo ">>> Done. Double-click 'Local AI' on your desktop to start chatting."
+bash "$SCRIPT_DIR/install-panel-launcher.sh"
+
+echo ">>> Done. Look for the llama icon on the bottom bar, or 'Local AI' on your desktop."
