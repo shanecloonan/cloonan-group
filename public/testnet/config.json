@@ -1,0 +1,24 @@
+{
+  "product": "Permawrite",
+  "network_id": "public-devnet-v1",
+  "genesis_id": "454fa5d4a9bd6f59e35cf9ea7e68c096c9a271a92b2ec5931184e7f34a42a005",
+  "upstream_repo": "https://github.com/shanecloonan/permawrite",
+  "genesis_path": "mfn-node/testdata/public_devnet_v1.json",
+  "manifest_path": "mfn-node/testdata/public_devnet_v1.manifest.json",
+  "checkpoint_log_path": "mfn-node/testdata/public_devnet_v1.checkpoints.jsonl",
+  "slot_duration_ms": 30000,
+  "validator_committee_size": 3,
+  "boot_peers": [
+    "5.161.201.73:19001",
+    "5.161.201.73:19002",
+    "5.161.201.73:19003"
+  ],
+  "links": {
+    "invite": "https://github.com/shanecloonan/permawrite/blob/main/docs/TESTNET_INVITE.md",
+    "join": "https://github.com/shanecloonan/permawrite/blob/main/docs/JOIN_TESTNET.md",
+    "checkpoints": "https://github.com/shanecloonan/permawrite/blob/main/docs/CHECKPOINT_LOG.md",
+    "issues": "https://github.com/shanecloonan/permawrite/issues",
+    "operators": "https://github.com/shanecloonan/permawrite/blob/main/scripts/public-devnet-v1/OPERATORS.md",
+    "rpc_proxy": "https://github.com/shanecloonan/permawrite/blob/main/demo/proxy/rpc-proxy.mjs"
+  }
+}

@@ -11,6 +11,7 @@ const BASE_NAV = [
   { label: "Contracts", href: "/contracts" },
   { label: "Brands", href: "/brands" },
   { label: "Casino", href: "/casino" },
+  { label: "Testnet", href: "/testnet" },
   { label: "About", href: "/about" },
 ];
 
