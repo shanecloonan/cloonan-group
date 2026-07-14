@@ -14,6 +14,7 @@ export type ChainBlockView = {
   id: string;
   slot?: number;
   whenMs: number | null;
+  txCount?: number;
 };
 
 type Props = {
@@ -56,6 +57,7 @@ export default function BlockChainGraphic({
           tipSeenAtMs,
           slotMs,
         }),
+        txCount: h.tx_count,
       });
     }
     rows.sort((a, b) => a.height - b.height);
@@ -322,8 +324,13 @@ export default function BlockChainGraphic({
                       <p className="relative mt-1 text-[10px] tabular-nums text-[var(--pw-muted)] sm:mt-1.5 sm:text-[11px]">
                         {formatDateTime(b.whenMs)}
                       </p>
+                      <p className="relative mt-0.5 text-[10px] tabular-nums text-[var(--pw-muted)]">
+                        {b.txCount != null
+                          ? `${b.txCount} tx${b.txCount === 1 ? "" : "s"}`
+                          : "… txs"}
+                      </p>
                       <p
-                        className="relative mt-0.5 truncate font-mono text-[9px] text-[var(--pw-faint)] sm:mt-1 sm:text-[10px]"
+                        className="relative mt-0.5 truncate font-mono text-[9px] text-[var(--pw-faint)] sm:text-[10px]"
                         title={b.id}
                       >
                         {truncateId(b.id, 6, 4)}
@@ -406,6 +413,12 @@ export default function BlockChainGraphic({
           {selectedBlock.slot != null && (
             <p className="mt-1 text-[11px] text-[var(--pw-faint)]">
               Slot {selectedBlock.slot}
+            </p>
+          )}
+          {selectedBlock.txCount != null && (
+            <p className="mt-1 text-[11px] text-[var(--pw-faint)]">
+              {selectedBlock.txCount} transaction
+              {selectedBlock.txCount === 1 ? "" : "s"}
             </p>
           )}
         </div>

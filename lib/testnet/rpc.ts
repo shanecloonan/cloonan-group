@@ -66,6 +66,9 @@ export async function rpcCall<T>(
   return parsed.result;
 }
 
+/** Cache tx counts by height — `get_block_txs` payloads are large; heights are immutable. */
+const txCountCache = new Map<number, number>();
+
 export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) {
   const [status, tip] = await Promise.all([
     rpcCall<MfndStatus>(proxyUrl, "get_status", {}, signal),
@@ -88,6 +91,7 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
         signal,
       );
       headers = normalizeHeaders(raw);
+      headers = await attachTxCounts(proxyUrl, headers, signal);
     } catch {
       // optional — ignore
     }
@@ -106,6 +110,45 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
   }
 
   return { status, tip, headers, uploads };
+}
+
+async function attachTxCounts(
+  proxyUrl: string,
+  headers: BlockHeaderSummary[],
+  signal?: AbortSignal,
+): Promise<BlockHeaderSummary[]> {
+  const missing = headers.filter(
+    (h) => h.height != null && !txCountCache.has(h.height),
+  );
+  await Promise.all(
+    missing.map(async (h) => {
+      const height = h.height!;
+      try {
+        const raw = await rpcCall<{ txs?: unknown[] }>(
+          proxyUrl,
+          "get_block_txs",
+          { height },
+          signal,
+        );
+        const n = Array.isArray(raw?.txs) ? raw.txs.length : 0;
+        txCountCache.set(height, n);
+      } catch {
+        // leave uncached — retry next poll
+      }
+    }),
+  );
+
+  // Bound cache growth (keep recent heights).
+  if (txCountCache.size > 64) {
+    const keys = [...txCountCache.keys()].sort((a, b) => a - b);
+    for (const k of keys.slice(0, keys.length - 48)) txCountCache.delete(k);
+  }
+
+  return headers.map((h) =>
+    h.height != null && txCountCache.has(h.height)
+      ? { ...h, tx_count: txCountCache.get(h.height) }
+      : h,
+  );
 }
 
 function normalizeHeaders(raw: unknown): BlockHeaderSummary[] {
@@ -136,6 +179,7 @@ function asHeader(item: unknown): BlockHeaderSummary | null {
     slot: num(o.slot) ?? decoded?.slot,
     timestamp: num(o.timestamp) ?? decoded?.timestamp,
     header_hex: headerHex,
+    tx_count: num(o.tx_count ?? o.num_txs ?? o.transaction_count),
   };
 }
 
