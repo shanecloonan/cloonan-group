@@ -195,18 +195,12 @@ export default function TestnetApp() {
             <h1 className="pw-fade-delay mt-3 font-[family-name:var(--font-pw-display)] text-[clamp(2.5rem,9vw,4.25rem)] font-semibold leading-[0.95] tracking-tight text-[var(--pw-ink)]">
               Permawrite
             </h1>
-            <div className="pw-fade-delay-2 mt-6 flex flex-wrap gap-3 sm:mt-7">
+            <div className="pw-fade-delay-2 mt-6 sm:mt-7">
               <a
-                href="#join"
-                className="inline-flex h-11 items-center rounded-md bg-[var(--pw-accent)] px-5 text-sm font-semibold text-[#0a1210] transition-opacity hover:opacity-90"
+                href="#wallet"
+                className="inline-flex h-12 items-center rounded-md bg-[var(--pw-accent)] px-7 text-sm font-semibold tracking-wide text-[#0a1210] transition-opacity hover:opacity-90"
               >
-                Join
-              </a>
-              <a
-                href="#live"
-                className="inline-flex h-11 items-center rounded-md border border-[var(--pw-line)] bg-[var(--pw-surface)] px-5 text-sm font-semibold text-[var(--pw-ink)] transition-colors hover:border-[var(--pw-accent)]/40"
-              >
-                View live tip
+                Generate wallet
               </a>
             </div>
             <p className="pw-fade-delay-2 mt-5 text-[11px] tracking-wide text-[var(--pw-faint)]">
@@ -221,6 +215,19 @@ export default function TestnetApp() {
         </header>
 
         <div className="space-y-16 sm:space-y-20">
+          <section id="wallet" className="scroll-mt-8 space-y-4">
+            <div className="space-y-1.5">
+              <h2 className="font-[family-name:var(--font-pw-display)] text-2xl sm:text-3xl tracking-tight">
+                Testnet wallet
+              </h2>
+              <p className="text-sm text-[var(--pw-muted)] max-w-2xl">
+                Generate a keypair in your browser, fund it from the faucet, then
+                scan and send. Seed stays on this device.
+              </p>
+            </div>
+            <WalletGenerator rpcProxyUrl={config.rpc_proxy_url} />
+          </section>
+
           {/* B) Live stats detail (shared poll with hero chain) */}
           <LiveStats config={config} live={live} variant="section" />
 
@@ -329,31 +336,22 @@ export default function TestnetApp() {
 
             <Role title="Role 2 — Wallet user" subtitle="Browser or CLI">
               <p className="text-sm text-[var(--pw-muted)] mb-3">
-                Use the in-page wallet (faucet, balance, send) or the CLI against
-                a local observer. Keep the seed / wallet JSON private forever —
-                never commit it.
+                Prefer the{" "}
+                <a
+                  href="#wallet"
+                  className="text-[var(--pw-accent)] underline-offset-2 hover:underline"
+                >
+                  testnet wallet
+                </a>{" "}
+                at the top for faucet / balance / send. Or use the CLI against a
+                local observer — keep the seed / wallet JSON private forever.
               </p>
-              <div className="mb-4">
-                <WalletGenerator rpcProxyUrl={config.rpc_proxy_url} />
-              </div>
               <CodeBlock
                 code={wallet.newWallet}
                 copyKey="wal-new"
                 copiedKey={copiedKey}
                 onCopy={copy}
               />
-              <p className="mt-3 text-sm text-[var(--pw-muted)]">
-                Fund via operator faucet (test-only) — ask in{" "}
-                <a
-                  href={config.links.issues}
-                  className="text-[var(--pw-accent)] underline-offset-2 hover:underline"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  GitHub issues
-                </a>
-                .
-              </p>
               <div className="mt-3 space-y-3">
                 <CodeBlock
                   code={wallet.balance}
