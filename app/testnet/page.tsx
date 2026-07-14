@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     absolute: "Permawrite Public Testnet",
   },
   description:
-    "Join the Permawrite experimental public testnet — observer setup, boot peers, and lite live tip when an RPC proxy is configured.",
+    "Permawrite experimental public testnet — join steps, boot peers, and live tip from the public mesh.",
   robots: { index: true, follow: true },
 };
 
