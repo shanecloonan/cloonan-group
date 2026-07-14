@@ -1,0 +1,17 @@
+{
+  "name": "mfn-wasm",
+  "type": "module",
+  "description": "Permawrite — WebAssembly bindings for wallet and storage primitives (browser wallets, demos).",
+  "version": "0.1.0",
+  "license": "MIT OR Apache-2.0",
+  "files": [
+    "mfn_wasm_bg.wasm",
+    "mfn_wasm.js",
+    "mfn_wasm.d.ts"
+  ],
+  "main": "mfn_wasm.js",
+  "types": "mfn_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

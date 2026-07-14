@@ -327,15 +327,14 @@ export default function TestnetApp() {
               </p>
             </Role>
 
-            <Role title="Role 2 — Wallet user" subtitle="Local RPC only">
+            <Role title="Role 2 — Wallet user" subtitle="Browser or CLI">
               <p className="text-sm text-[var(--pw-muted)] mb-3">
-                Generate a keypair here, or use the CLI. Point{" "}
-                <code className="text-[12px]">mfn-cli</code> at your local
-                observer RPC. Keep the seed / wallet JSON private forever —
+                Use the in-page wallet (faucet, balance, send) or the CLI against
+                a local observer. Keep the seed / wallet JSON private forever —
                 never commit it.
               </p>
               <div className="mb-4">
-                <WalletGenerator />
+                <WalletGenerator rpcProxyUrl={config.rpc_proxy_url} />
               </div>
               <CodeBlock
                 code={wallet.newWallet}

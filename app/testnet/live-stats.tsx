@@ -120,10 +120,7 @@ export default function LiveStats({
 
   return (
     <section className="scroll-mt-8 space-y-5">
-      <SectionHead
-        title="Network pulse"
-        lead="Tip, peers, and permanence activity from the public mesh."
-      />
+      <SectionHead title="Network pulse" />
 
       {stale && !live.error && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-100/90">
@@ -305,13 +302,15 @@ export default function LiveStats({
   );
 }
 
-function SectionHead({ title, lead }: { title: string; lead: string }) {
+function SectionHead({ title, lead }: { title: string; lead?: string }) {
   return (
     <div className="mb-1 space-y-1.5">
       <h2 className="font-[family-name:var(--font-pw-display)] text-2xl tracking-tight text-[var(--pw-ink)] sm:text-3xl">
         {title}
       </h2>
-      <p className="max-w-2xl text-sm text-[var(--pw-muted)]">{lead}</p>
+      {lead ? (
+        <p className="max-w-2xl text-sm text-[var(--pw-muted)]">{lead}</p>
+      ) : null}
     </div>
   );
 }

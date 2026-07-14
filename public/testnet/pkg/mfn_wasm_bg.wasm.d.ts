@@ -1,0 +1,34 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const blockIdFromHeaderHex: (a: number, b: number) => [number, number, number, number];
+export const buildStorageProof: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => [number, number, number, number];
+export const buildStorageUpload: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const buildTransferJson: (a: number, b: number) => [number, number, number, number];
+export const checkpointLogCrossCheck: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const checkpointLogVerify: (a: number, b: number) => [number, number, number, number];
+export const claimPubkeyFromSeedHex: (a: number, b: number) => [number, number, number, number];
+export const decoyPoolPreviewJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const lightChainApplyEvolution: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const lightChainBootstrapCheckpoint: (a: number, b: number) => [number, number, number, number];
+export const lightChainCheckpointSummary: (a: number, b: number) => [number, number, number, number];
+export const lightChainVerifyHeader: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const lightChainWeakSubjectivity: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const lightFollowQuorum: (a: number, b: number) => [number, number, number, number];
+export const scanBlockHex: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const scanBlockTxsHex: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+export const scanTransactionHex: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+export const storageChunkHex: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const storageUploadPreview: (a: number, b: number, c: number) => [number, number, number, number];
+export const uploadMinFee: (a: number, b: number, c: number) => [number, number, number, number];
+export const verifyHeaderHex: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const verifyStorageProof: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+export const walletAddressFromSeedHex: (a: number, b: number) => [number, number, number, number];
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __wbindgen_exn_store: (a: number) => void;
+export const __externref_table_alloc: () => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_start: () => void;

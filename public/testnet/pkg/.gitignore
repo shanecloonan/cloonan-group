@@ -1,0 +1,8 @@
+# Keep packaged wasm in git for /testnet wallet (no CI wasm-pack step yet).
+*
+!mfn_wasm.js
+!mfn_wasm.d.ts
+!mfn_wasm_bg.wasm
+!mfn_wasm_bg.wasm.d.ts
+!package.json
+!.gitignore

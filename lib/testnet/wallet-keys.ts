@@ -88,6 +88,37 @@ export function encodeWalletAddress(
   return `${ADDRESS_PREFIX}${bytesToHex(wire)}`;
 }
 
+export function decodeWalletAddress(address: string): {
+  viewPubHex: string;
+  spendPubHex: string;
+} {
+  const raw = address.trim();
+  if (!raw.startsWith(ADDRESS_PREFIX)) {
+    throw new Error(`address must start with ${ADDRESS_PREFIX}`);
+  }
+  const encoded = raw.slice(ADDRESS_PREFIX.length);
+  if (encoded.length !== 136) {
+    throw new Error("address payload length mismatch");
+  }
+  const wire = hexToBytes(encoded);
+  const payload = wire.slice(0, 64);
+  const sum = wire.slice(64);
+  const expect = addressChecksum(payload);
+  if (
+    sum.length !== 4 ||
+    expect[0] !== sum[0] ||
+    expect[1] !== sum[1] ||
+    expect[2] !== sum[2] ||
+    expect[3] !== sum[3]
+  ) {
+    throw new Error("address checksum mismatch");
+  }
+  return {
+    viewPubHex: bytesToHex(payload.slice(0, 32)),
+    spendPubHex: bytesToHex(payload.slice(32)),
+  };
+}
+
 export function walletFromSeed(seed: Uint8Array): GeneratedWallet {
   if (seed.length !== 32) {
     throw new Error("seed must be 32 bytes");
