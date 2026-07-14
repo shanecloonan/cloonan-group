@@ -2,6 +2,7 @@
 
 import type { TestnetConfig } from "@/lib/testnet/types";
 import BlockChainGraphic from "./block-chain";
+import ChainAge from "./chain-age";
 import { formatTime, truncateId } from "./ui";
 import type { LiveSnapshotState } from "./use-live-snapshot";
 
@@ -42,6 +43,7 @@ export default function LiveStats({
             tipHeight={tipHeight}
             tipSeenAtMs={live.tipChangedAt}
             slotMs={config.slot_duration_ms}
+            genesisTimestamp={config.genesis_timestamp}
             observedBlockIntervalMs={live.observedBlockIntervalMs}
             loading={live.loading}
             fill
@@ -98,6 +100,7 @@ export default function LiveStats({
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ChainAge genesisTimestamp={config.genesis_timestamp} />
         <Stat
           label="Tip height"
           value={live.loading && tipHeight == null ? "…" : tipHeight ?? "—"}

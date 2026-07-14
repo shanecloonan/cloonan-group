@@ -109,6 +109,31 @@ export function formatDateTime(tsMs: number | null | undefined) {
   });
 }
 
+/** UTC timestamp for genesis reference lines. */
+export function formatGenesisUtc(unixSec: number) {
+  if (!Number.isFinite(unixSec)) return "—";
+  return (
+    new Date(unixSec * 1000).toISOString().replace(".000Z", "Z")
+  );
+}
+
+/** Live chain-age duration (d/h/m/s). */
+export function formatChainAge(ageMs: number) {
+  if (!Number.isFinite(ageMs) || ageMs < 0) ageMs = 0;
+  const totalSec = Math.floor(ageMs / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  if (days > 0) {
+    return `${days}d ${hours}h ${mins}m ${secs}s`;
+  }
+  if (hours > 0) {
+    return `${hours}h ${mins}m ${secs}s`;
+  }
+  return `${mins}m ${secs}s`;
+}
+
 /**
  * Prefer a fresh protocol timestamp; otherwise estimate from tip wall time
  * and slot spacing (toy genesis headers often use epoch-style timestamps).

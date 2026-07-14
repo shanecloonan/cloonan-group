@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BlockHeaderSummary } from "@/lib/testnet/types";
+import ChainAge from "./chain-age";
 import {
   formatDateTime,
   formatTime,
@@ -23,6 +24,8 @@ type Props = {
   tipHeight: number | null;
   tipSeenAtMs: number | null;
   slotMs: number;
+  /** Genesis unix seconds — drives the live chain-age counter. */
+  genesisTimestamp?: number;
   /** Median wall-clock gap between tip advances (produce + gossip + poll). */
   observedBlockIntervalMs?: number | null;
   loading?: boolean;
@@ -37,6 +40,7 @@ export default function BlockChainGraphic({
   tipHeight,
   tipSeenAtMs,
   slotMs,
+  genesisTimestamp,
   observedBlockIntervalMs = null,
   loading,
   fill = false,
@@ -177,13 +181,16 @@ export default function BlockChainGraphic({
       <div
         className={`flex shrink-0 items-end justify-between gap-3 ${fill ? "mb-2 sm:mb-3" : "mb-3"}`}
       >
-        <div>
+        <div className="min-w-0">
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
             Live chain
           </h3>
+          {genesisTimestamp != null && (
+            <ChainAge genesisTimestamp={genesisTimestamp} compact />
+          )}
         </div>
         {tip != null && (
-          <div className="text-right">
+          <div className="shrink-0 text-right">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--pw-faint)]">
               Tip
             </p>
