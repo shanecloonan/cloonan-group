@@ -399,7 +399,7 @@ export default function TestnetApp() {
             <p className="text-sm leading-relaxed text-[var(--pw-muted)]">
               Ring signatures and stealth addresses mean this is not a transparent
               ledger. Do not expect Ethereum-style account balances. This page
-              shows tip, headers, mempool, uploads/claims, and node health —
+              shows tip, recent blocks, mempool, uploads/claims, and node health —
               not a full explorer.
             </p>
           </section>

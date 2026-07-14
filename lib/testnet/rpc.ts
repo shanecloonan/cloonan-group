@@ -128,10 +128,57 @@ function normalizeHeaders(raw: unknown): BlockHeaderSummary[] {
 function asHeader(item: unknown): BlockHeaderSummary | null {
   if (!item || typeof item !== "object") return null;
   const o = item as Record<string, unknown>;
+  const headerHex = str(o.header_hex);
+  const decoded = headerHex ? decodeHeaderMeta(headerHex) : null;
   return {
-    height: num(o.height ?? o.block_height),
+    height: num(o.height ?? o.block_height) ?? decoded?.height,
     id: str(o.id ?? o.tip_id ?? o.block_id ?? o.hash),
+    slot: num(o.slot) ?? decoded?.slot,
+    timestamp: num(o.timestamp) ?? decoded?.timestamp,
+    header_hex: headerHex,
   };
+}
+
+/** Decode height / slot / unix timestamp from MFBN `header_hex` (leading fields). */
+function decodeHeaderMeta(
+  hex: string,
+): { height: number; slot: number; timestamp: number } | null {
+  const raw = hex.replace(/\s+/g, "").toLowerCase();
+  if (raw.length < 2 + 64 + 8 + 8 + 16 || raw.length % 2 !== 0) return null;
+  try {
+    const bytes = new Uint8Array(raw.length / 2);
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = parseInt(raw.slice(i * 2, i * 2 + 2), 16);
+    }
+    let off = 0;
+    // version varint (LEB128)
+    while (off < bytes.length && bytes[off] & 0x80) off++;
+    off++; // final version byte
+    off += 32; // prev_hash
+    if (off + 16 > bytes.length) return null;
+    const height = readU32Be(bytes, off);
+    off += 4;
+    const slot = readU32Be(bytes, off);
+    off += 4;
+    const timestamp = readU64Be(bytes, off);
+    return { height, slot, timestamp };
+  } catch {
+    return null;
+  }
+}
+
+function readU32Be(b: Uint8Array, off: number): number {
+  return (
+    ((b[off]! << 24) | (b[off + 1]! << 16) | (b[off + 2]! << 8) | b[off + 3]!) >>>
+    0
+  );
+}
+
+function readU64Be(b: Uint8Array, off: number): number {
+  // Safe for unix-second timestamps (well under 2^53).
+  let n = 0;
+  for (let i = 0; i < 8; i++) n = n * 256 + b[off + i]!;
+  return n;
 }
 
 function normalizeUploads(raw: unknown): RecentUpload[] {

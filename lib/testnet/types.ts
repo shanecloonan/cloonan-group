@@ -75,6 +75,11 @@ export type BlockHeaderSummary = {
   id?: string;
   tip_id?: string;
   block_id?: string;
+  /** Header slot number when decoded from `header_hex`. */
+  slot?: number;
+  /** Protocol wall-clock from header (unix seconds). May be genesis-epoch toy time. */
+  timestamp?: number;
+  header_hex?: string;
 };
 
 export type RecentUpload = {

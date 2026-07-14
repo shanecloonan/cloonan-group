@@ -96,3 +96,43 @@ export function formatTime(ts: number | null) {
     second: "2-digit",
   });
 }
+
+/** Compact local date+time for recent-block rows. */
+export function formatDateTime(tsMs: number | null | undefined) {
+  if (tsMs == null || !Number.isFinite(tsMs)) return "—";
+  return new Date(tsMs).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+/**
+ * Prefer a fresh protocol timestamp; otherwise estimate from tip wall time
+ * and slot spacing (toy genesis headers often use epoch-style timestamps).
+ */
+export function resolveBlockTimeMs(opts: {
+  protocolTsSec?: number;
+  height?: number;
+  tipHeight: number | null;
+  tipSeenAtMs: number | null;
+  slotMs: number;
+}): number | null {
+  const { protocolTsSec, height, tipHeight, tipSeenAtMs, slotMs } = opts;
+  if (protocolTsSec != null && Number.isFinite(protocolTsSec)) {
+    const ms = protocolTsSec * 1000;
+    if (Math.abs(Date.now() - ms) < 7 * 24 * 60 * 60 * 1000) return ms;
+  }
+  if (
+    height != null &&
+    tipHeight != null &&
+    tipSeenAtMs != null &&
+    tipHeight >= height &&
+    slotMs > 0
+  ) {
+    return tipSeenAtMs - (tipHeight - height) * slotMs;
+  }
+  return null;
+}

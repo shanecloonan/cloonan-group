@@ -9,7 +9,12 @@ import type {
   TestnetConfig,
 } from "@/lib/testnet/types";
 import { fetchLiveSnapshot, getRpcProxyUrl } from "@/lib/testnet/rpc";
-import { formatTime, truncateId } from "./ui";
+import {
+  formatDateTime,
+  formatTime,
+  resolveBlockTimeMs,
+  truncateId,
+} from "./ui";
 
 const POLL_MS = 8_000;
 const STALE_MS = 2 * 60_000;
@@ -39,6 +44,7 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
     error: null,
     loading: Boolean(proxyUrl),
   });
+  const [openBlock, setOpenBlock] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -125,9 +131,6 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
     chain?.tip_id ?? live.tip?.tip_id ?? live.tip?.id ?? null;
   const tipHeight =
     chain?.tip_height ?? live.tip?.tip_height ?? live.tip?.height ?? null;
-  const genesis =
-    chain?.genesis_id ?? live.tip?.genesis_id ?? null;
-  const genesisOk = genesis ? genesis === config.genesis_id : null;
   const stale =
     live.tipChangedAt != null && Date.now() - live.tipChangedAt > STALE_MS;
 
@@ -137,21 +140,6 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
         title="Live tip"
         lead="Lite explorer — tip, peers, and permanence activity. No address balances."
       />
-
-      {genesisOk === false && (
-        <div
-          role="alert"
-          className="rounded-lg border border-red-500/50 bg-red-950/40 px-4 py-3 text-sm text-red-200"
-        >
-          Genesis mismatch: node reports{" "}
-          <span className="font-mono text-[12px] break-all">{genesis}</span>
-          {" "}but this page is pinned to{" "}
-          <span className="font-mono text-[12px] break-all">
-            {config.genesis_id}
-          </span>
-          . Do not treat heights as this network.
-        </div>
-      )}
 
       {stale && !live.error && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-100/90">
@@ -177,19 +165,6 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
           value={live.loading && !tipId ? "…" : truncateId(tipId)}
           title={tipId ?? undefined}
           mono
-        />
-        <Stat
-          label="Genesis"
-          value={
-            genesisOk == null
-              ? live.loading
-                ? "…"
-                : "—"
-              : genesisOk
-                ? "Match ✓"
-                : "Mismatch ✗"
-          }
-          accent={genesisOk === true ? "ok" : genesisOk === false ? "bad" : undefined}
         />
         <Stat
           label="Validators"
@@ -224,28 +199,66 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
       {live.headers.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
-            Recent headers
+            Recent blocks
           </h3>
           <ul className="divide-y divide-[var(--pw-line)] border border-[var(--pw-line)] rounded-lg overflow-hidden">
             {live.headers
               .slice()
               .reverse()
-              .map((h, i) => (
-                <li
-                  key={`${h.height}-${h.id}-${i}`}
-                  className="flex items-center justify-between gap-3 bg-[var(--pw-surface)]/40 px-4 py-2.5 text-sm"
-                >
-                  <span className="font-mono text-[var(--pw-ink)]">
-                    #{h.height ?? "?"}
-                  </span>
-                  <span
-                    className="truncate font-mono text-[12px] text-[var(--pw-muted)]"
-                    title={h.id}
-                  >
-                    {truncateId(h.id)}
-                  </span>
-                </li>
-              ))}
+              .map((h, i) => {
+                const id = h.id ?? h.block_id ?? "";
+                const key = `${h.height}-${id}-${i}`;
+                const open = openBlock === key;
+                const whenMs = resolveBlockTimeMs({
+                  protocolTsSec: h.timestamp,
+                  height: h.height,
+                  tipHeight,
+                  tipSeenAtMs: live.tipChangedAt,
+                  slotMs: config.slot_duration_ms,
+                });
+                return (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenBlock(open ? null : key)}
+                      className="flex w-full items-center gap-3 bg-[var(--pw-surface)]/40 px-4 py-2.5 text-left text-sm transition-colors hover:bg-[var(--pw-surface)]/70 cursor-pointer"
+                      aria-expanded={open}
+                    >
+                      <span className="shrink-0 font-mono text-[var(--pw-ink)]">
+                        #{h.height ?? "?"}
+                      </span>
+                      <span
+                        className="min-w-0 flex-1 truncate font-mono text-[12px] text-[var(--pw-muted)]"
+                        title={id}
+                      >
+                        {truncateId(id)}
+                      </span>
+                      <span className="shrink-0 text-[11px] text-[var(--pw-faint)] tabular-nums">
+                        {formatDateTime(whenMs)}
+                      </span>
+                      <span
+                        className="shrink-0 text-[10px] text-[var(--pw-faint)]"
+                        aria-hidden
+                      >
+                        {open ? "▾" : "▸"}
+                      </span>
+                    </button>
+                    {open && (
+                      <div className="space-y-1.5 border-t border-[var(--pw-line)] bg-[var(--pw-code)]/40 px-4 py-3 text-[12px] text-[var(--pw-muted)]">
+                        <Row label="Time" value={formatDateTime(whenMs)} />
+                        <Row
+                          label="Block id"
+                          value={id || "—"}
+                          mono
+                        />
+                        {h.slot != null && (
+                          <Row label="Slot" value={String(h.slot)} mono />
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
           </ul>
         </div>
       )}
@@ -282,6 +295,29 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
   );
 }
 
+function Row({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+      <span className="shrink-0 w-20 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--pw-faint)]">
+        {label}
+      </span>
+      <span
+        className={`break-all text-[var(--pw-ink)] ${mono ? "font-mono text-[11px]" : ""}`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function SectionHead({ title, lead }: { title: string; lead: string }) {
   return (
     <div className="space-y-1.5 mb-1">
@@ -298,27 +334,19 @@ function Stat({
   value,
   mono,
   title,
-  accent,
 }: {
   label: string;
   value: string | number;
   mono?: boolean;
   title?: string;
-  accent?: "ok" | "bad";
 }) {
-  const accentCls =
-    accent === "ok"
-      ? "text-emerald-300"
-      : accent === "bad"
-        ? "text-red-300"
-        : "text-[var(--pw-ink)]";
   return (
     <div className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/60 px-4 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--pw-faint)]">
         {label}
       </p>
       <p
-        className={`mt-1.5 text-lg sm:text-xl ${mono ? "font-mono text-[15px] sm:text-base" : "font-semibold"} ${accentCls} truncate`}
+        className={`mt-1.5 text-lg sm:text-xl ${mono ? "font-mono text-[15px] sm:text-base" : "font-semibold"} text-[var(--pw-ink)] truncate`}
         title={title}
       >
         {value}
