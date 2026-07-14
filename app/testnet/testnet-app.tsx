@@ -185,8 +185,8 @@ export default function TestnetApp() {
       />
 
       <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 pb-24">
-        {/* A) Hero — brand top, live chain fills remaining viewport (no empty deadspace) */}
-        <header className="flex min-h-[100dvh] flex-col pt-10 pb-5 sm:pt-14 sm:pb-8">
+        {/* A) Hero — content-sized on mobile; desktop still fills first viewport */}
+        <header className="flex flex-col pt-10 pb-8 sm:min-h-[100dvh] sm:pt-14 sm:pb-10">
           <div className="shrink-0">
             <p className="pw-fade text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--pw-accent)]">
               Experimental public testnet
@@ -214,12 +214,12 @@ export default function TestnetApp() {
             </p>
           </div>
 
-          <div className="pw-fade-delay-2 mt-4 flex flex-col sm:mt-8 sm:min-h-0 sm:flex-1">
+          <div className="pw-fade-delay-2 mt-4 flex flex-col sm:mt-8 sm:min-h-0 sm:flex-1 sm:justify-end">
             <LiveStats config={config} live={live} variant="hero" />
           </div>
         </header>
 
-        <div className="space-y-20">
+        <div className="space-y-16 sm:space-y-20">
           {/* B) Live stats detail (shared poll with hero chain) */}
           <LiveStats config={config} live={live} variant="section" />
 
