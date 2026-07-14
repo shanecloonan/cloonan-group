@@ -110,6 +110,31 @@ export default function LiveStats({
           mono
         />
         <Stat
+          label="Total transactions"
+          value={
+            live.txTotals?.totalTxCount != null
+              ? live.txTotals.totalTxCount.toLocaleString()
+              : live.loading
+                ? "…"
+                : "—"
+          }
+          title={
+            live.txTotals
+              ? live.txTotals.complete
+                ? `Sum of txs in blocks 1–${live.txTotals.tipHeight}`
+                : `Scanning… ${live.txTotals.coveredHeights}/${live.txTotals.tipHeight} blocks`
+              : undefined
+          }
+          mono
+          hint={
+            live.txTotals && !live.txTotals.complete
+              ? `${live.txTotals.coveredHeights}/${live.txTotals.tipHeight} blocks`
+              : live.txTotals?.complete
+                ? "all blocks"
+                : undefined
+          }
+        />
+        <Stat
           label="Validators"
           value={
             chain?.validator_count ??
@@ -137,6 +162,11 @@ export default function LiveStats({
       <p className="text-[11px] tracking-wide text-[var(--pw-faint)]">
         Last refreshed {formatTime(live.refreshedAt)}
         {live.proxyUrl ? " · via observer proxy" : ""}
+        {live.txTotals?.complete
+          ? " · full-chain tx sum"
+          : live.txTotals
+            ? " · tx total still backfilling"
+            : ""}
       </p>
 
       {live.uploads.length > 0 && (
@@ -187,11 +217,13 @@ function Stat({
   value,
   mono,
   title,
+  hint,
 }: {
   label: string;
   value: string | number;
   mono?: boolean;
   title?: string;
+  hint?: string;
 }) {
   return (
     <div className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/60 px-4 py-3.5">
@@ -204,6 +236,11 @@ function Stat({
       >
         {value}
       </p>
+      {hint && (
+        <p className="mt-1 text-[10px] tabular-nums text-[var(--pw-faint)]">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

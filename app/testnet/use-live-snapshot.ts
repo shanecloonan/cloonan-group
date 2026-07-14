@@ -8,7 +8,11 @@ import type {
   RecentUpload,
   TestnetConfig,
 } from "@/lib/testnet/types";
-import { fetchLiveSnapshot, getRpcProxyUrl } from "@/lib/testnet/rpc";
+import {
+  fetchLiveSnapshot,
+  getRpcProxyUrl,
+  type TxCountTotals,
+} from "@/lib/testnet/rpc";
 
 /** Fast enough to catch 30s slots without looking laggy at tip updates. */
 const POLL_MS = 2_500;
@@ -20,6 +24,8 @@ export type LiveSnapshotState = {
   tip: MfndTip | null;
   headers: BlockHeaderSummary[];
   uploads: RecentUpload[];
+  /** Running sum of per-block tx counts (backfills across polls). */
+  txTotals: TxCountTotals | null;
   refreshedAt: number | null;
   tipChangedAt: number | null;
   lastTipHeight: number | null;
@@ -45,6 +51,7 @@ export function useLiveSnapshot(config: TestnetConfig): LiveSnapshotState {
     tip: null,
     headers: [],
     uploads: [],
+    txTotals: null,
     refreshedAt: null,
     tipChangedAt: null,
     lastTipHeight: null,
@@ -94,6 +101,7 @@ export function useLiveSnapshot(config: TestnetConfig): LiveSnapshotState {
             tip: snap.tip,
             headers: snap.headers,
             uploads: snap.uploads,
+            txTotals: snap.txTotals ?? prev.txTotals,
             refreshedAt: now,
             tipChangedAt: tipMoved
               ? now

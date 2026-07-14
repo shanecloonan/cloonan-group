@@ -66,8 +66,20 @@ export async function rpcCall<T>(
   return parsed.result;
 }
 
-/** Cache tx counts by height — `get_block_txs` payloads are large; heights are immutable. */
+/** Cache tx counts by height — payloads are large; heights are immutable. */
 const txCountCache = new Map<number, number>();
+/** How many historical heights to fetch per live poll while backfilling a total. */
+const TX_COUNT_BACKFILL_BUDGET = 16;
+
+export type TxCountTotals = {
+  /** Sum of cached per-block tx counts for heights 1..=tip. */
+  totalTxCount: number | null;
+  /** Distinct heights with a cached count in 1..=tip. */
+  coveredHeights: number;
+  tipHeight: number;
+  /** True once every height from 1..=tip is cached. */
+  complete: boolean;
+};
 
 export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) {
   const [status, tip] = await Promise.all([
@@ -77,11 +89,12 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
 
   let headers: BlockHeaderSummary[] = [];
   let uploads: RecentUpload[] = [];
+  let txTotals: TxCountTotals | null = null;
 
   const tipHeight =
     status.chain?.tip_height ?? tip?.tip_height ?? tip?.height ?? null;
 
-  if (tipHeight != null && tipHeight >= 0) {
+  if (tipHeight != null && tipHeight >= 1) {
     try {
       const from = Math.max(1, tipHeight - 5);
       const raw = await rpcCall<unknown>(
@@ -91,7 +104,19 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
         signal,
       );
       headers = normalizeHeaders(raw);
-      headers = await attachTxCounts(proxyUrl, headers, signal);
+      // Prefer tip window first, then backfill older heights toward a full-chain sum.
+      await fetchMissingTxCounts(
+        proxyUrl,
+        headers.map((h) => h.height).filter((h): h is number => h != null),
+        signal,
+      );
+      headers = headers.map((h) =>
+        h.height != null && txCountCache.has(h.height)
+          ? { ...h, tx_count: txCountCache.get(h.height) }
+          : h,
+      );
+      await backfillTxCounts(proxyUrl, tipHeight, signal);
+      txTotals = summarizeTxCounts(tipHeight);
     } catch {
       // optional — ignore
     }
@@ -109,20 +134,19 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
     // optional — ignore
   }
 
-  return { status, tip, headers, uploads };
+  return { status, tip, headers, uploads, txTotals };
 }
 
-async function attachTxCounts(
+async function fetchMissingTxCounts(
   proxyUrl: string,
-  headers: BlockHeaderSummary[],
+  heights: number[],
   signal?: AbortSignal,
-): Promise<BlockHeaderSummary[]> {
-  const missing = headers.filter(
-    (h) => h.height != null && !txCountCache.has(h.height),
+): Promise<void> {
+  const missing = [...new Set(heights)].filter(
+    (h) => h >= 1 && !txCountCache.has(h),
   );
   await Promise.all(
-    missing.map(async (h) => {
-      const height = h.height!;
+    missing.map(async (height) => {
       try {
         const raw = await rpcCall<{ txs?: unknown[] }>(
           proxyUrl,
@@ -130,25 +154,44 @@ async function attachTxCounts(
           { height },
           signal,
         );
-        const n = Array.isArray(raw?.txs) ? raw.txs.length : 0;
-        txCountCache.set(height, n);
+        txCountCache.set(height, Array.isArray(raw?.txs) ? raw.txs.length : 0);
       } catch {
         // leave uncached — retry next poll
       }
     }),
   );
+}
 
-  // Bound cache growth (keep recent heights).
-  if (txCountCache.size > 64) {
-    const keys = [...txCountCache.keys()].sort((a, b) => a - b);
-    for (const k of keys.slice(0, keys.length - 48)) txCountCache.delete(k);
+/** Fill gaps from tip downward so new blocks stay current while history catches up. */
+async function backfillTxCounts(
+  proxyUrl: string,
+  tipHeight: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  const missing: number[] = [];
+  for (let h = tipHeight; h >= 1 && missing.length < TX_COUNT_BACKFILL_BUDGET; h--) {
+    if (!txCountCache.has(h)) missing.push(h);
   }
+  if (missing.length === 0) return;
+  await fetchMissingTxCounts(proxyUrl, missing, signal);
+}
 
-  return headers.map((h) =>
-    h.height != null && txCountCache.has(h.height)
-      ? { ...h, tx_count: txCountCache.get(h.height) }
-      : h,
-  );
+function summarizeTxCounts(tipHeight: number): TxCountTotals {
+  let total = 0;
+  let covered = 0;
+  for (let h = 1; h <= tipHeight; h++) {
+    const n = txCountCache.get(h);
+    if (n != null) {
+      total += n;
+      covered++;
+    }
+  }
+  return {
+    totalTxCount: covered > 0 ? total : null,
+    coveredHeights: covered,
+    tipHeight,
+    complete: covered === tipHeight,
+  };
 }
 
 function normalizeHeaders(raw: unknown): BlockHeaderSummary[] {
