@@ -42,6 +42,7 @@ export default function LiveStats({
             tipHeight={tipHeight}
             tipSeenAtMs={live.tipChangedAt}
             slotMs={config.slot_duration_ms}
+            observedBlockIntervalMs={live.observedBlockIntervalMs}
             loading={live.loading}
             fill
             compact

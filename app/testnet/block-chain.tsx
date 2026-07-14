@@ -21,6 +21,8 @@ type Props = {
   tipHeight: number | null;
   tipSeenAtMs: number | null;
   slotMs: number;
+  /** Median wall-clock gap between tip advances (produce + gossip + poll). */
+  observedBlockIntervalMs?: number | null;
   loading?: boolean;
   /** Stretch into remaining hero viewport (mobile + desktop). */
   fill?: boolean;
@@ -33,6 +35,7 @@ export default function BlockChainGraphic({
   tipHeight,
   tipSeenAtMs,
   slotMs,
+  observedBlockIntervalMs = null,
   loading,
   fill = false,
   compact = false,
@@ -66,7 +69,14 @@ export default function BlockChainGraphic({
   const revealedRef = useRef<Set<number>>(new Set());
   const [selected, setSelected] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const scrollerRef = useRef<HTMLOListElement | null>(null);
+  const tipTailRef = useRef<HTMLLIElement | null>(null);
   const heightKey = blocks.map((b) => b.height).join(",");
+  // Prefer measured tip cadence when we have samples; else configured 30s slot.
+  const cadenceMs =
+    observedBlockIntervalMs != null && observedBlockIntervalMs > 0
+      ? observedBlockIntervalMs
+      : slotMs;
 
   useEffect(() => {
     if (!heightKey) return;
@@ -91,19 +101,51 @@ export default function BlockChainGraphic({
   }, [heightKey]);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
   }, []);
 
+  // Keep tip + building ghost pinned at the right edge of the viewport.
+  useEffect(() => {
+    const el = tipTailRef.current;
+    const scroller = scrollerRef.current;
+    if (!el || !scroller) return;
+    const id = requestAnimationFrame(() => {
+      scroller.scrollLeft = Math.max(
+        0,
+        scroller.scrollWidth - scroller.clientWidth,
+      );
+      el.scrollIntoView({
+        behavior: "smooth",
+        inline: "end",
+        block: "nearest",
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [tipHeight, heightKey, revealed.size]);
+
   const tip = tipHeight ?? blocks[blocks.length - 1]?.height ?? null;
-  const nextEtaMs =
-    tipSeenAtMs != null && slotMs > 0
-      ? Math.max(0, tipSeenAtMs + slotMs - now)
-      : null;
+  const elapsedMs =
+    tipSeenAtMs != null ? Math.max(0, now - tipSeenAtMs) : null;
+  const remainingMs =
+    elapsedMs != null && cadenceMs > 0 ? cadenceMs - elapsedMs : null;
+  const overdueMs =
+    remainingMs != null && remainingMs < 0 ? -remainingMs : 0;
+  const inSlotWindow = remainingMs != null && remainingMs > 0;
+  // Progress fills across observed/configured cadence; holds at 100% while awaiting tip.
   const buildingProgress =
-    tipSeenAtMs != null && slotMs > 0
-      ? Math.min(1, Math.max(0, (now - tipSeenAtMs) / slotMs))
+    elapsedMs != null && cadenceMs > 0
+      ? Math.min(1, elapsedMs / cadenceMs)
       : 0;
+
+  const etaLabel =
+    remainingMs == null
+      ? "…"
+      : inSlotWindow
+        ? `~${Math.max(1, Math.ceil(remainingMs / 1000))}s`
+        : overdueMs < 1500
+          ? "sealing…"
+          : `+${Math.floor(overdueMs / 1000)}s awaiting tip`;
 
   const selectedBlock =
     selected != null ? blocks.find((b) => b.height === selected) : null;
@@ -136,7 +178,11 @@ export default function BlockChainGraphic({
             Live chain
           </h3>
           <p className="mt-0.5 text-[11px] text-[var(--pw-faint)] sm:text-[12px]">
-            New blocks link in as the tip advances
+            {slotMs / 1000}s slots
+            {observedBlockIntervalMs != null
+              ? ` · ~${Math.round(observedBlockIntervalMs / 1000)}s seen`
+              : ""}{" "}
+            · tip pinned
           </p>
         </div>
         {tip != null && (
@@ -177,7 +223,10 @@ export default function BlockChainGraphic({
         />
 
         <div className="relative z-[1] w-full">
-          <ol className="flex items-center gap-0 overflow-x-auto pb-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <ol
+            ref={scrollerRef}
+            className="flex items-center gap-0 overflow-x-auto pb-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             {blocks.map((b, i) => {
               const isTip = tip != null && b.height === tip;
               const show = revealed.has(b.height);
@@ -285,7 +334,7 @@ export default function BlockChainGraphic({
               );
             })}
 
-            <li className="flex shrink-0 items-center">
+            <li ref={tipTailRef} className="flex shrink-0 items-center">
               <div
                 className="relative mx-0.5 h-px w-7 shrink-0 sm:mx-1 sm:w-10 md:w-14"
                 aria-hidden
@@ -293,14 +342,20 @@ export default function BlockChainGraphic({
                 <span
                   className="absolute inset-0 origin-left bg-[repeating-linear-gradient(90deg,rgba(196,163,90,0.45)_0_4px,transparent_4px_8px)]"
                   style={{
-                    transform: `scaleX(${0.2 + buildingProgress * 0.8})`,
+                    transform: `scaleX(${0.25 + buildingProgress * 0.75})`,
                     transformOrigin: "left center",
-                    transition: "transform 0.4s linear",
+                    transition: "transform 0.25s linear",
                   }}
                 />
               </div>
               <div className="relative w-[7.25rem] sm:w-[9.5rem] md:w-[10.5rem]">
-                <div className="rounded-xl border border-dashed border-[var(--pw-accent)]/30 bg-[rgba(12,22,18,0.45)] px-2.5 py-2.5 sm:px-3.5 sm:py-3">
+                <div
+                  className={`rounded-xl border border-dashed px-2.5 py-2.5 sm:px-3.5 sm:py-3 ${
+                    inSlotWindow
+                      ? "border-[var(--pw-accent)]/30 bg-[rgba(12,22,18,0.45)]"
+                      : "border-[var(--pw-accent)]/50 bg-[var(--pw-accent-soft)]/40"
+                  }`}
+                >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-mono text-base font-semibold tracking-tight text-[var(--pw-faint)] sm:text-lg">
                       #{tip != null ? tip + 1 : "…"}
@@ -311,21 +366,19 @@ export default function BlockChainGraphic({
                     />
                   </div>
                   <p className="mt-1 text-[10px] text-[var(--pw-faint)] sm:mt-1.5 sm:text-[11px]">
-                    Building…
+                    {inSlotWindow ? "Building…" : "Awaiting tip…"}
                   </p>
                   <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--pw-line)] sm:mt-2">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-[var(--pw-accent)]/40 to-[var(--pw-accent)]"
                       style={{
                         width: `${Math.round(buildingProgress * 100)}%`,
-                        transition: "width 0.4s linear",
+                        transition: "width 0.25s linear",
                       }}
                     />
                   </div>
                   <p className="mt-1 text-[9px] tabular-nums text-[var(--pw-faint)] sm:mt-1.5 sm:text-[10px]">
-                    {nextEtaMs != null
-                      ? `~${Math.ceil(nextEtaMs / 1000)}s`
-                      : "…"}
+                    {etaLabel}
                   </p>
                 </div>
               </div>

@@ -10,7 +10,9 @@ import type {
 } from "@/lib/testnet/types";
 import { fetchLiveSnapshot, getRpcProxyUrl } from "@/lib/testnet/rpc";
 
-const POLL_MS = 8_000;
+/** Fast enough to catch 30s slots without looking laggy at tip updates. */
+const POLL_MS = 2_500;
+const MAX_INTERVAL_SAMPLES = 8;
 
 export type LiveSnapshotState = {
   proxyUrl: string | null;
@@ -21,9 +23,20 @@ export type LiveSnapshotState = {
   refreshedAt: number | null;
   tipChangedAt: number | null;
   lastTipHeight: number | null;
+  /** Wall-clock gaps between tip advances (includes gossip + poll lag). */
+  tipIntervalSamplesMs: number[];
+  /** Median of samples, or null until we have two tip advances. */
+  observedBlockIntervalMs: number | null;
   error: string | null;
   loading: boolean;
 };
+
+function median(xs: number[]): number | null {
+  if (xs.length === 0) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 === 0 ? Math.round((s[mid - 1]! + s[mid]!) / 2) : s[mid]!;
+}
 
 export function useLiveSnapshot(config: TestnetConfig): LiveSnapshotState {
   const proxyUrl = getRpcProxyUrl(config.rpc_proxy_url);
@@ -35,6 +48,8 @@ export function useLiveSnapshot(config: TestnetConfig): LiveSnapshotState {
     refreshedAt: null,
     tipChangedAt: null,
     lastTipHeight: null,
+    tipIntervalSamplesMs: [],
+    observedBlockIntervalMs: null,
     error: null,
     loading: Boolean(proxyUrl),
   });
@@ -57,18 +72,35 @@ export function useLiveSnapshot(config: TestnetConfig): LiveSnapshotState {
           snap.tip?.tip_height ??
           snap.tip?.height ??
           null;
+        const now = Date.now();
         setLive((prev) => {
           const tipMoved = height != null && height !== prev.lastTipHeight;
+          let samples = prev.tipIntervalSamplesMs;
+          if (
+            tipMoved &&
+            prev.tipChangedAt != null &&
+            prev.lastTipHeight != null &&
+            height != null &&
+            height === prev.lastTipHeight + 1
+          ) {
+            const gap = now - prev.tipChangedAt;
+            // Ignore pathological gaps (tab sleep / long stall).
+            if (gap >= 8_000 && gap <= 120_000) {
+              samples = [...samples, gap].slice(-MAX_INTERVAL_SAMPLES);
+            }
+          }
           return {
             status: snap.status,
             tip: snap.tip,
             headers: snap.headers,
             uploads: snap.uploads,
-            refreshedAt: Date.now(),
+            refreshedAt: now,
             tipChangedAt: tipMoved
-              ? Date.now()
-              : prev.tipChangedAt ?? (height != null ? Date.now() : null),
+              ? now
+              : prev.tipChangedAt ?? (height != null ? now : null),
             lastTipHeight: height ?? prev.lastTipHeight,
+            tipIntervalSamplesMs: samples,
+            observedBlockIntervalMs: median(samples),
             error: null,
             loading: false,
           };
