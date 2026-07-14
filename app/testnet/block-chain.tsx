@@ -321,12 +321,10 @@ export default function BlockChainGraphic({
                       </p>
                       <p className="relative mt-0.5 text-[10px] tabular-nums text-[var(--pw-muted)]">
                         {b.userTxCount != null
-                          ? b.userTxCount === 0
-                            ? "coinbase only"
-                            : `${b.userTxCount} user tx${b.userTxCount === 1 ? "" : "s"}`
+                          ? `${b.userTxCount} transaction${b.userTxCount === 1 ? "" : "s"}`
                           : b.txCount != null
-                            ? `${b.txCount} tx${b.txCount === 1 ? "" : "s"}`
-                            : "… txs"}
+                            ? `${b.txCount} transaction${b.txCount === 1 ? "" : "s"}`
+                            : "… transactions"}
                       </p>
                       <p
                         className="relative mt-0.5 truncate font-mono text-[9px] text-[var(--pw-faint)] sm:text-[10px]"
