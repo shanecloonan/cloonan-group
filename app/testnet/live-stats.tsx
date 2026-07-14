@@ -79,10 +79,14 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
         if (cancelled || (err instanceof DOMException && err.name === "AbortError")) {
           return;
         }
+        const msg = err instanceof Error ? err.message : "RPC unreachable";
         setLive((prev) => ({
           ...prev,
           loading: false,
-          error: err instanceof Error ? err.message : "RPC unreachable",
+          error:
+            msg === "Failed to fetch" || msg === "Load failed"
+              ? `${msg} (blocked HTTP from HTTPS? use /api/testnet/rpc)`
+              : msg,
         }));
       }
     };

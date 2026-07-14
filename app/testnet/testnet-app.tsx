@@ -41,7 +41,7 @@ const FALLBACK: TestnetConfig = {
     "5.161.201.73:19002",
     "5.161.201.73:19003",
   ],
-  rpc_proxy_url: "http://5.161.201.73:8787/rpc",
+  rpc_proxy_url: "/api/testnet/rpc",
   links: {
     invite:
       "https://github.com/shanecloonan/permawrite/blob/main/docs/TESTNET_INVITE.md",
