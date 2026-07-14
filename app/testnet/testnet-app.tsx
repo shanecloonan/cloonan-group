@@ -6,6 +6,7 @@ import type { TestnetConfig } from "@/lib/testnet/types";
 import { observerCommands, walletCommands } from "@/lib/testnet/commands";
 import LiveStats from "./live-stats";
 import { useLiveSnapshot } from "./use-live-snapshot";
+import WalletGenerator from "./wallet-generator";
 import { CodeBlock, CopyButton, useCopyFeedback } from "./ui";
 
 const display = Literata({
@@ -328,10 +329,14 @@ export default function TestnetApp() {
 
             <Role title="Role 2 — Wallet user" subtitle="Local RPC only">
               <p className="text-sm text-[var(--pw-muted)] mb-3">
-                Point the CLI at your local observer RPC. Keep{" "}
-                <code className="text-[12px]">alice.json</code> private forever —
+                Generate a keypair here, or use the CLI. Point{" "}
+                <code className="text-[12px]">mfn-cli</code> at your local
+                observer RPC. Keep the seed / wallet JSON private forever —
                 never commit it.
               </p>
+              <div className="mb-4">
+                <WalletGenerator />
+              </div>
               <CodeBlock
                 code={wallet.newWallet}
                 copyKey="wal-new"

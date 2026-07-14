@@ -1,9 +1,15 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import type { TestnetConfig } from "@/lib/testnet/types";
 import BlockChainGraphic from "./block-chain";
 import ChainAge from "./chain-age";
-import { formatTime, truncateId } from "./ui";
+import {
+  formatDateTime,
+  formatTime,
+  resolveBlockTimeMs,
+  truncateId,
+} from "./ui";
 import type { LiveSnapshotState } from "./use-live-snapshot";
 
 const STALE_MS = 2 * 60_000;
@@ -25,6 +31,37 @@ export default function LiveStats({
     chain?.tip_height ?? live.tip?.tip_height ?? live.tip?.height ?? null;
   const stale =
     live.tipChangedAt != null && Date.now() - live.tipChangedAt > STALE_MS;
+  const [expandedHeight, setExpandedHeight] = useState<number | null>(null);
+
+  const recentBlocks = useMemo(() => {
+    const rows = live.headers
+      .map((h) => {
+        const height = h.height;
+        if (height == null) return null;
+        return {
+          height,
+          id: h.id ?? h.block_id ?? "",
+          slot: h.slot,
+          whenMs: resolveBlockTimeMs({
+            protocolTsSec: h.timestamp,
+            height,
+            tipHeight,
+            tipSeenAtMs: live.tipChangedAt,
+            slotMs: config.slot_duration_ms,
+          }),
+          userTxCount: h.user_tx_count,
+          txCount: h.tx_count,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r != null);
+    rows.sort((a, b) => b.height - a.height);
+    return rows;
+  }, [
+    live.headers,
+    tipHeight,
+    live.tipChangedAt,
+    config.slot_duration_ms,
+  ]);
 
   if (variant === "hero") {
     if (!live.proxyUrl) {
@@ -46,7 +83,6 @@ export default function LiveStats({
             tipHeight={tipHeight}
             tipSeenAtMs={live.tipChangedAt}
             slotMs={config.slot_duration_ms}
-            launchTimestamp={config.launch_timestamp}
             observedBlockIntervalMs={live.observedBlockIntervalMs}
             loading={live.loading}
             fill
@@ -174,6 +210,68 @@ export default function LiveStats({
             ? " · user-tx total still backfilling"
             : ""}
       </p>
+
+      {recentBlocks.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
+            Recent blocks
+          </h3>
+          <ul className="divide-y divide-[var(--pw-line)] overflow-hidden rounded-lg border border-[var(--pw-line)]">
+            {recentBlocks.map((b) => {
+              const open = expandedHeight === b.height;
+              return (
+                <li key={b.height}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedHeight(open ? null : b.height)
+                    }
+                    className="flex w-full items-center justify-between gap-3 bg-[var(--pw-surface)]/40 px-4 py-2.5 text-left text-sm transition-colors hover:bg-[var(--pw-surface)]/70"
+                    aria-expanded={open}
+                  >
+                    <span className="shrink-0 font-mono text-[var(--pw-accent)]">
+                      #{b.height}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-[var(--pw-ink)]">
+                      {truncateId(b.id)}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-[11px] text-[var(--pw-muted)]">
+                      {formatDateTime(b.whenMs)}
+                    </span>
+                  </button>
+                  {open && (
+                    <div className="space-y-1 border-t border-[var(--pw-line)] bg-[var(--pw-code)]/40 px-4 py-3 text-[11px] text-[var(--pw-muted)]">
+                      <p className="break-all font-mono text-[var(--pw-ink)]">
+                        {b.id || "—"}
+                      </p>
+                      <p className="tabular-nums text-[var(--pw-faint)]">
+                        {formatDateTime(b.whenMs)}
+                        {b.whenMs != null
+                          ? ` · ${formatTime(b.whenMs)}`
+                          : ""}
+                        {b.slot != null ? ` · slot ${b.slot}` : ""}
+                      </p>
+                      {(b.userTxCount != null || b.txCount != null) && (
+                        <p className="text-[var(--pw-faint)]">
+                          {b.userTxCount != null
+                            ? `${b.userTxCount} user tx${b.userTxCount === 1 ? "" : "s"}`
+                            : null}
+                          {b.userTxCount != null && b.txCount != null
+                            ? " · "
+                            : ""}
+                          {b.txCount != null
+                            ? `${b.txCount} total incl. coinbase`
+                            : null}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {live.uploads.length > 0 && (
         <div className="space-y-2">

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BlockHeaderSummary } from "@/lib/testnet/types";
-import ChainAge from "./chain-age";
 import {
   formatDateTime,
   formatTime,
@@ -24,8 +23,6 @@ type Props = {
   tipHeight: number | null;
   tipSeenAtMs: number | null;
   slotMs: number;
-  /** Public mesh launch unix seconds — drives the live chain-age counter. */
-  launchTimestamp?: number;
   /** Median wall-clock gap between tip advances (produce + gossip + poll). */
   observedBlockIntervalMs?: number | null;
   loading?: boolean;
@@ -40,7 +37,6 @@ export default function BlockChainGraphic({
   tipHeight,
   tipSeenAtMs,
   slotMs,
-  launchTimestamp,
   observedBlockIntervalMs = null,
   loading,
   fill = false,
@@ -187,9 +183,6 @@ export default function BlockChainGraphic({
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
             Live chain
           </h3>
-          {launchTimestamp != null && (
-            <ChainAge launchTimestamp={launchTimestamp} compact />
-          )}
         </div>
         {tip != null && (
           <div className="shrink-0 text-right">
