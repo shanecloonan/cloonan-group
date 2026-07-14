@@ -9,12 +9,8 @@ import type {
   TestnetConfig,
 } from "@/lib/testnet/types";
 import { fetchLiveSnapshot, getRpcProxyUrl } from "@/lib/testnet/rpc";
-import {
-  formatDateTime,
-  formatTime,
-  resolveBlockTimeMs,
-  truncateId,
-} from "./ui";
+import BlockChainGraphic from "./block-chain";
+import { formatTime, truncateId } from "./ui";
 
 const POLL_MS = 8_000;
 const STALE_MS = 2 * 60_000;
@@ -44,7 +40,6 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
     error: null,
     loading: Boolean(proxyUrl),
   });
-  const [openBlock, setOpenBlock] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -196,71 +191,14 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
         {proxyUrl ? " · via observer proxy" : ""}
       </p>
 
-      {live.headers.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
-            Recent blocks
-          </h3>
-          <ul className="divide-y divide-[var(--pw-line)] border border-[var(--pw-line)] rounded-lg overflow-hidden">
-            {live.headers
-              .slice()
-              .reverse()
-              .map((h, i) => {
-                const id = h.id ?? h.block_id ?? "";
-                const key = `${h.height}-${id}-${i}`;
-                const open = openBlock === key;
-                const whenMs = resolveBlockTimeMs({
-                  protocolTsSec: h.timestamp,
-                  height: h.height,
-                  tipHeight,
-                  tipSeenAtMs: live.tipChangedAt,
-                  slotMs: config.slot_duration_ms,
-                });
-                return (
-                  <li key={key}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenBlock(open ? null : key)}
-                      className="flex w-full items-center gap-3 bg-[var(--pw-surface)]/40 px-4 py-2.5 text-left text-sm transition-colors hover:bg-[var(--pw-surface)]/70 cursor-pointer"
-                      aria-expanded={open}
-                    >
-                      <span className="shrink-0 font-mono text-[var(--pw-ink)]">
-                        #{h.height ?? "?"}
-                      </span>
-                      <span
-                        className="min-w-0 flex-1 truncate font-mono text-[12px] text-[var(--pw-muted)]"
-                        title={id}
-                      >
-                        {truncateId(id)}
-                      </span>
-                      <span className="shrink-0 text-[11px] text-[var(--pw-faint)] tabular-nums">
-                        {formatDateTime(whenMs)}
-                      </span>
-                      <span
-                        className="shrink-0 text-[10px] text-[var(--pw-faint)]"
-                        aria-hidden
-                      >
-                        {open ? "▾" : "▸"}
-                      </span>
-                    </button>
-                    {open && (
-                      <div className="space-y-1.5 border-t border-[var(--pw-line)] bg-[var(--pw-code)]/40 px-4 py-3 text-[12px] text-[var(--pw-muted)]">
-                        <Row label="Time" value={formatDateTime(whenMs)} />
-                        <Row
-                          label="Block id"
-                          value={id || "—"}
-                          mono
-                        />
-                        {h.slot != null && (
-                          <Row label="Slot" value={String(h.slot)} mono />
-                        )}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-          </ul>
-        </div>
+      {(live.headers.length > 0 || live.loading) && (
+        <BlockChainGraphic
+          headers={live.headers}
+          tipHeight={tipHeight}
+          tipSeenAtMs={live.tipChangedAt}
+          slotMs={config.slot_duration_ms}
+          loading={live.loading}
+        />
       )}
 
       {live.uploads.length > 0 && (
@@ -292,29 +230,6 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
         </div>
       )}
     </section>
-  );
-}
-
-function Row({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-      <span className="shrink-0 w-20 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--pw-faint)]">
-        {label}
-      </span>
-      <span
-        className={`break-all text-[var(--pw-ink)] ${mono ? "font-mono text-[11px]" : ""}`}
-      >
-        {value}
-      </span>
-    </div>
   );
 }
 

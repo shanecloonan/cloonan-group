@@ -80,11 +80,11 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
 
   if (tipHeight != null && tipHeight >= 0) {
     try {
-      const from = Math.max(0, tipHeight - 4);
+      const from = Math.max(1, tipHeight - 5);
       const raw = await rpcCall<unknown>(
         proxyUrl,
         "get_block_headers",
-        { from_height: from, to_height: tipHeight, limit: 5 },
+        { from_height: from, to_height: tipHeight, limit: 6 },
         signal,
       );
       headers = normalizeHeaders(raw);

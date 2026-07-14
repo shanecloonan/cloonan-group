@@ -117,6 +117,18 @@ export default function TestnetApp() {
             opacity: 0.85;
           }
         }
+        @keyframes pwTipSheen {
+          0%,
+          100% {
+            opacity: 0.35;
+          }
+          50% {
+            opacity: 0.7;
+          }
+        }
+        .pw-tip-sheen {
+          animation: pwTipSheen 3.2s ease-in-out infinite;
+        }
         @keyframes pwDrift {
           0% {
             transform: translate3d(0, 0, 0);
