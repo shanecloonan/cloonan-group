@@ -32,26 +32,24 @@ export default function BlockChainGraphic({
   loading,
 }: Props) {
   const blocks = useMemo(() => {
-    const rows: ChainBlockView[] = headers
-      .map((h) => {
-        const height = h.height;
-        if (height == null) return null;
-        const id = h.id ?? h.block_id ?? "";
-        return {
+    const rows: ChainBlockView[] = [];
+    for (const h of headers) {
+      const height = h.height;
+      if (height == null) continue;
+      rows.push({
+        height,
+        id: h.id ?? h.block_id ?? "",
+        slot: h.slot,
+        whenMs: resolveBlockTimeMs({
+          protocolTsSec: h.timestamp,
           height,
-          id,
-          slot: h.slot,
-          whenMs: resolveBlockTimeMs({
-            protocolTsSec: h.timestamp,
-            height,
-            tipHeight,
-            tipSeenAtMs,
-            slotMs,
-          }),
-        };
-      })
-      .filter((b): b is ChainBlockView => b != null)
-      .sort((a, b) => a.height - b.height);
+          tipHeight,
+          tipSeenAtMs,
+          slotMs,
+        }),
+      });
+    }
+    rows.sort((a, b) => a.height - b.height);
 
     // Deduplicate by height (keep last).
     const byH = new Map<number, ChainBlockView>();
