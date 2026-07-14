@@ -24,8 +24,8 @@ type Props = {
   tipHeight: number | null;
   tipSeenAtMs: number | null;
   slotMs: number;
-  /** Genesis unix seconds — drives the live chain-age counter. */
-  genesisTimestamp?: number;
+  /** Public mesh launch unix seconds — drives the live chain-age counter. */
+  launchTimestamp?: number;
   /** Median wall-clock gap between tip advances (produce + gossip + poll). */
   observedBlockIntervalMs?: number | null;
   loading?: boolean;
@@ -40,7 +40,7 @@ export default function BlockChainGraphic({
   tipHeight,
   tipSeenAtMs,
   slotMs,
-  genesisTimestamp,
+  launchTimestamp,
   observedBlockIntervalMs = null,
   loading,
   fill = false,
@@ -185,8 +185,8 @@ export default function BlockChainGraphic({
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
             Live chain
           </h3>
-          {genesisTimestamp != null && (
-            <ChainAge genesisTimestamp={genesisTimestamp} compact />
+          {launchTimestamp != null && (
+            <ChainAge launchTimestamp={launchTimestamp} compact />
           )}
         </div>
         {tip != null && (

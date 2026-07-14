@@ -31,7 +31,8 @@ const FALLBACK: TestnetConfig = {
   network_id: "public-devnet-v1",
   genesis_id:
     "454fa5d4a9bd6f59e35cf9ea7e68c096c9a271a92b2ec5931184e7f34a42a005",
-  genesis_timestamp: 1704067200,
+  /** VPS internet soak go-live 2026-07-14T03:01:02Z (not genesis JSON epoch). */
+  launch_timestamp: 1783998062,
   upstream_repo: "https://github.com/shanecloonan/permawrite",
   genesis_path: "mfn-node/testdata/public_devnet_v1.json",
   manifest_path: "mfn-node/testdata/public_devnet_v1.manifest.json",

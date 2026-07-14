@@ -43,7 +43,7 @@ export default function LiveStats({
             tipHeight={tipHeight}
             tipSeenAtMs={live.tipChangedAt}
             slotMs={config.slot_duration_ms}
-            genesisTimestamp={config.genesis_timestamp}
+            launchTimestamp={config.launch_timestamp}
             observedBlockIntervalMs={live.observedBlockIntervalMs}
             loading={live.loading}
             fill
@@ -100,7 +100,7 @@ export default function LiveStats({
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <ChainAge genesisTimestamp={config.genesis_timestamp} />
+        <ChainAge launchTimestamp={config.launch_timestamp} />
         <Stat
           label="Tip height"
           value={live.loading && tipHeight == null ? "…" : tipHeight ?? "—"}

@@ -2,8 +2,11 @@ export type TestnetConfig = {
   product: string;
   network_id: string;
   genesis_id: string;
-  /** Genesis `timestamp` field (unix seconds) from the pinned genesis JSON. */
-  genesis_timestamp: number;
+  /**
+   * Wall-clock unix seconds when this public mesh went live (not the toy
+   * genesis JSON `timestamp`, which is a protocol epoch like 2024-01-01).
+   */
+  launch_timestamp: number;
   upstream_repo: string;
   genesis_path: string;
   manifest_path: string;
