@@ -5,6 +5,7 @@ import { Literata, IBM_Plex_Mono, Source_Sans_3 } from "next/font/google";
 import type { TestnetConfig } from "@/lib/testnet/types";
 import { observerCommands, walletCommands } from "@/lib/testnet/commands";
 import LiveStats from "./live-stats";
+import { useLiveSnapshot } from "./use-live-snapshot";
 import { CodeBlock, CopyButton, useCopyFeedback } from "./ui";
 
 const display = Literata({
@@ -59,6 +60,7 @@ const FALLBACK: TestnetConfig = {
 export default function TestnetApp() {
   const [config, setConfig] = useState<TestnetConfig>(FALLBACK);
   const { copiedKey, copy } = useCopyFeedback();
+  const live = useLiveSnapshot(config);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,41 +183,47 @@ export default function TestnetApp() {
       />
 
       <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 pb-24">
-        {/* A) Hero */}
-        <header className="flex min-h-screen flex-col justify-center py-16 sm:py-20">
-          <p className="pw-fade text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--pw-accent)]">
-            Experimental public testnet
-          </p>
-          <h1 className="pw-fade-delay mt-4 font-[family-name:var(--font-pw-display)] text-[clamp(2.75rem,10vw,4.75rem)] font-semibold leading-[0.95] tracking-tight text-[var(--pw-ink)]">
-            Permawrite
-          </h1>
-          <p className="pw-fade-delay-2 mt-5 max-w-md text-base sm:text-lg leading-relaxed text-[var(--pw-muted)]">
-            Pre-audit, test-only value. Connect as an observer, follow the tip,
-            keep secrets off the wire.
-          </p>
-          <div className="pw-fade-delay-2 mt-9 flex flex-wrap gap-3">
-            <a
-              href="#join"
-              className="inline-flex h-11 items-center rounded-md bg-[var(--pw-accent)] px-5 text-sm font-semibold text-[#0a1210] transition-opacity hover:opacity-90"
-            >
-              Join
-            </a>
-            <a
-              href="#live"
-              className="inline-flex h-11 items-center rounded-md border border-[var(--pw-line)] bg-[var(--pw-surface)] px-5 text-sm font-semibold text-[var(--pw-ink)] transition-colors hover:border-[var(--pw-accent)]/40"
-            >
-              View live tip
-            </a>
+        {/* A) Hero — brand top, live chain fills remaining viewport (no empty deadspace) */}
+        <header className="flex min-h-[100dvh] flex-col pt-10 pb-5 sm:pt-14 sm:pb-8">
+          <div className="shrink-0">
+            <p className="pw-fade text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--pw-accent)]">
+              Experimental public testnet
+            </p>
+            <h1 className="pw-fade-delay mt-3 font-[family-name:var(--font-pw-display)] text-[clamp(2.5rem,9vw,4.25rem)] font-semibold leading-[0.95] tracking-tight text-[var(--pw-ink)]">
+              Permawrite
+            </h1>
+            <p className="pw-fade-delay-2 mt-4 max-w-md text-base leading-relaxed text-[var(--pw-muted)] sm:text-lg">
+              Pre-audit, test-only value. Connect as an observer, follow the tip,
+              keep secrets off the wire.
+            </p>
+            <div className="pw-fade-delay-2 mt-6 flex flex-wrap gap-3 sm:mt-7">
+              <a
+                href="#join"
+                className="inline-flex h-11 items-center rounded-md bg-[var(--pw-accent)] px-5 text-sm font-semibold text-[#0a1210] transition-opacity hover:opacity-90"
+              >
+                Join
+              </a>
+              <a
+                href="#live"
+                className="inline-flex h-11 items-center rounded-md border border-[var(--pw-line)] bg-[var(--pw-surface)] px-5 text-sm font-semibold text-[var(--pw-ink)] transition-colors hover:border-[var(--pw-accent)]/40"
+              >
+                View live tip
+              </a>
+            </div>
+            <p className="pw-fade-delay-2 mt-5 text-[11px] tracking-wide text-[var(--pw-faint)]">
+              {config.network_id} · committee {config.validator_committee_size} ·
+              slot {config.slot_duration_ms / 1000}s
+            </p>
           </div>
-          <p className="pw-fade-delay-2 mt-10 text-[11px] tracking-wide text-[var(--pw-faint)]">
-            {config.network_id} · committee {config.validator_committee_size} ·
-            slot {config.slot_duration_ms / 1000}s
-          </p>
+
+          <div className="pw-fade-delay-2 mt-6 flex min-h-0 flex-1 flex-col sm:mt-8">
+            <LiveStats config={config} live={live} variant="hero" />
+          </div>
         </header>
 
         <div className="space-y-20">
-          {/* B) Live stats */}
-          <LiveStats config={config} />
+          {/* B) Live stats detail (shared poll with hero chain) */}
+          <LiveStats config={config} live={live} variant="section" />
 
           {/* Network pins */}
           <section className="space-y-4">

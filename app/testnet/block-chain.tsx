@@ -22,6 +22,10 @@ type Props = {
   tipSeenAtMs: number | null;
   slotMs: number;
   loading?: boolean;
+  /** Stretch into remaining hero viewport (mobile + desktop). */
+  fill?: boolean;
+  /** Hide selected-block detail panel (hero stays tight). */
+  compact?: boolean;
 };
 
 export default function BlockChainGraphic({
@@ -30,6 +34,8 @@ export default function BlockChainGraphic({
   tipSeenAtMs,
   slotMs,
   loading,
+  fill = false,
+  compact = false,
 }: Props) {
   const blocks = useMemo(() => {
     const rows: ChainBlockView[] = [];
@@ -51,7 +57,6 @@ export default function BlockChainGraphic({
     }
     rows.sort((a, b) => a.height - b.height);
 
-    // Deduplicate by height (keep last).
     const byH = new Map<number, ChainBlockView>();
     for (const b of rows) byH.set(b.height, b);
     return [...byH.values()].sort((a, b) => a.height - b.height);
@@ -63,7 +68,6 @@ export default function BlockChainGraphic({
   const [now, setNow] = useState(() => Date.now());
   const heightKey = blocks.map((b) => b.height).join(",");
 
-  // Stagger initial reveal, then append each new tip block.
   useEffect(() => {
     if (!heightKey) return;
     const heights = heightKey.split(",").map(Number).filter(Number.isFinite);
@@ -77,7 +81,7 @@ export default function BlockChainGraphic({
         revealedRef.current = new Set(revealedRef.current).add(h);
         setRevealed(new Set(revealedRef.current));
         setSelected(h);
-      }, i * 160),
+      }, i * 140),
     );
 
     return () => {
@@ -106,7 +110,13 @@ export default function BlockChainGraphic({
 
   if (loading && blocks.length === 0) {
     return (
-      <div className="pw-chain rounded-2xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/50 px-4 py-10 text-center text-sm text-[var(--pw-muted)]">
+      <div
+        className={`pw-chain rounded-2xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/50 px-4 text-center text-sm text-[var(--pw-muted)] ${
+          fill
+            ? "flex h-full min-h-[11rem] flex-1 items-center justify-center"
+            : "py-10"
+        }`}
+      >
         Syncing chain…
       </div>
     );
@@ -115,14 +125,18 @@ export default function BlockChainGraphic({
   if (blocks.length === 0) return null;
 
   return (
-    <div className="pw-chain space-y-3">
-      <div className="flex items-end justify-between gap-3">
+    <div
+      className={`pw-chain flex flex-col ${fill ? "h-full min-h-0 flex-1" : "space-y-3"}`}
+    >
+      <div
+        className={`flex shrink-0 items-end justify-between gap-3 ${fill ? "mb-2 sm:mb-3" : "mb-3"}`}
+      >
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
             Live chain
           </h3>
-          <p className="mt-1 text-[12px] text-[var(--pw-faint)]">
-            Blocks link forward as the tip advances · ~{slotMs / 1000}s slots
+          <p className="mt-0.5 text-[11px] text-[var(--pw-faint)] sm:text-[12px]">
+            New blocks link in as the tip advances
           </p>
         </div>
         {tip != null && (
@@ -135,14 +149,19 @@ export default function BlockChainGraphic({
         )}
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-[var(--pw-line)] bg-gradient-to-br from-[rgba(16,28,24,0.95)] via-[rgba(10,18,16,0.92)] to-[rgba(8,14,12,0.98)] px-3 py-5 sm:px-5 sm:py-6">
-        {/* Ambient depth */}
+      <div
+        className={`relative min-h-0 overflow-hidden rounded-2xl border border-[var(--pw-line)] bg-gradient-to-br from-[rgba(16,28,24,0.95)] via-[rgba(10,18,16,0.92)] to-[rgba(8,14,12,0.98)] ${
+          fill
+            ? "flex flex-1 flex-col justify-center px-3 py-4 sm:px-5 sm:py-5"
+            : "px-3 py-5 sm:px-5 sm:py-6"
+        }`}
+      >
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-70"
           style={{
             background:
-              "radial-gradient(ellipse 55% 80% at 85% 40%, rgba(196,163,90,0.1), transparent 65%), radial-gradient(ellipse 40% 60% at 10% 80%, rgba(80,140,110,0.08), transparent 60%)",
+              "radial-gradient(ellipse 55% 80% at 85% 40%, rgba(196,163,90,0.12), transparent 65%), radial-gradient(ellipse 40% 60% at 10% 80%, rgba(80,140,110,0.08), transparent 60%)",
           }}
         />
         <div
@@ -157,9 +176,8 @@ export default function BlockChainGraphic({
           }}
         />
 
-        {/* Mobile: vertical. Desktop: horizontal scroll chain. */}
-        <div className="relative z-[1]">
-          <ol className="flex flex-col gap-0 sm:flex-row sm:items-stretch sm:gap-0 sm:overflow-x-auto sm:pb-1 sm:snap-x sm:snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="relative z-[1] w-full">
+          <ol className="flex items-center gap-0 overflow-x-auto pb-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {blocks.map((b, i) => {
               const isTip = tip != null && b.height === tip;
               const show = revealed.has(b.height);
@@ -180,31 +198,11 @@ export default function BlockChainGraphic({
               return (
                 <li
                   key={b.height}
-                  className="flex flex-col sm:flex-row sm:items-center sm:snap-center"
+                  className="flex shrink-0 items-center snap-center"
                 >
-                  {/* Vertical connector (mobile) */}
                   {i > 0 && (
                     <div
-                      className="relative mx-auto flex h-10 w-px flex-col items-center sm:hidden"
-                      aria-hidden
-                    >
-                      <span
-                        className={`absolute inset-0 origin-top bg-gradient-to-b from-[var(--pw-accent)]/70 to-[var(--pw-accent)]/25 transition-transform duration-500 ease-out ${
-                          linkShow ? "scale-y-100" : "scale-y-0"
-                        }`}
-                      />
-                      {intervalSec != null && linkShow && (
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-[var(--pw-line)] bg-[var(--pw-bg)]/80 px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-[var(--pw-accent)]">
-                          {intervalSec}s
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Horizontal connector (desktop) */}
-                  {i > 0 && (
-                    <div
-                      className="relative mx-1 hidden h-px w-10 shrink-0 sm:block md:w-14"
+                      className="relative mx-0.5 h-px w-7 shrink-0 sm:mx-1 sm:w-10 md:w-14"
                       aria-hidden
                     >
                       <span
@@ -218,7 +216,7 @@ export default function BlockChainGraphic({
                         }`}
                       />
                       {intervalSec != null && linkShow && (
-                        <span className="absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap text-[9px] font-medium tabular-nums text-[var(--pw-accent)]/90">
+                        <span className="absolute left-1/2 top-2.5 -translate-x-1/2 whitespace-nowrap text-[9px] font-medium tabular-nums text-[var(--pw-accent)]/90">
                           {intervalSec}s
                         </span>
                       )}
@@ -230,16 +228,15 @@ export default function BlockChainGraphic({
                     onClick={() =>
                       setSelected(selected === b.height ? null : b.height)
                     }
-                    className={`group relative mx-auto w-full max-w-[16rem] sm:mx-0 sm:w-[9.5rem] md:w-[10.5rem] text-left transition-all duration-500 ease-out ${
+                    className={`group relative w-[7.25rem] text-left transition-all duration-500 ease-out sm:w-[9.5rem] md:w-[10.5rem] ${
                       show
                         ? "opacity-100 translate-y-0 scale-100"
-                        : "opacity-0 translate-y-3 scale-95 pointer-events-none"
+                        : "pointer-events-none translate-y-3 scale-95 opacity-0"
                     }`}
-                    style={{ transitionDelay: show ? "0ms" : "0ms" }}
                     aria-pressed={selected === b.height}
                   >
                     <div
-                      className={`relative overflow-hidden rounded-xl border px-3.5 py-3 backdrop-blur-sm transition-colors ${
+                      className={`relative overflow-hidden rounded-xl border px-2.5 py-2.5 backdrop-blur-sm transition-colors sm:px-3.5 sm:py-3 ${
                         isTip
                           ? "border-[var(--pw-accent)]/55 bg-[var(--pw-accent-soft)] shadow-[0_0_28px_rgba(196,163,90,0.18)]"
                           : selected === b.height
@@ -257,9 +254,9 @@ export default function BlockChainGraphic({
                           }}
                         />
                       )}
-                      <div className="relative flex items-start justify-between gap-2">
+                      <div className="relative flex items-start justify-between gap-1">
                         <span
-                          className={`font-mono text-lg font-semibold tracking-tight ${
+                          className={`font-mono text-base font-semibold tracking-tight sm:text-lg ${
                             isTip
                               ? "text-[var(--pw-accent)]"
                               : "text-[var(--pw-ink)]"
@@ -273,11 +270,11 @@ export default function BlockChainGraphic({
                           </span>
                         )}
                       </div>
-                      <p className="relative mt-1.5 text-[11px] tabular-nums text-[var(--pw-muted)]">
+                      <p className="relative mt-1 text-[10px] tabular-nums text-[var(--pw-muted)] sm:mt-1.5 sm:text-[11px]">
                         {formatDateTime(b.whenMs)}
                       </p>
                       <p
-                        className="relative mt-1 truncate font-mono text-[10px] text-[var(--pw-faint)]"
+                        className="relative mt-0.5 truncate font-mono text-[9px] text-[var(--pw-faint)] sm:mt-1 sm:text-[10px]"
                         title={b.id}
                       >
                         {truncateId(b.id, 6, 4)}
@@ -288,19 +285,9 @@ export default function BlockChainGraphic({
               );
             })}
 
-            {/* Next block building ghost */}
-            <li className="flex flex-col sm:flex-row sm:items-center">
+            <li className="flex shrink-0 items-center">
               <div
-                className="relative mx-auto flex h-10 w-px flex-col items-center sm:hidden"
-                aria-hidden
-              >
-                <span
-                  className="absolute inset-0 bg-[repeating-linear-gradient(to_bottom,rgba(196,163,90,0.45)_0_4px,transparent_4px_8px)]"
-                  style={{ opacity: 0.35 + buildingProgress * 0.55 }}
-                />
-              </div>
-              <div
-                className="relative mx-1 hidden h-px w-10 shrink-0 sm:block md:w-14"
+                className="relative mx-0.5 h-px w-7 shrink-0 sm:mx-1 sm:w-10 md:w-14"
                 aria-hidden
               >
                 <span
@@ -312,10 +299,10 @@ export default function BlockChainGraphic({
                   }}
                 />
               </div>
-              <div className="relative mx-auto w-full max-w-[16rem] sm:mx-0 sm:w-[9.5rem] md:w-[10.5rem]">
-                <div className="rounded-xl border border-dashed border-[var(--pw-accent)]/30 bg-[rgba(12,22,18,0.45)] px-3.5 py-3">
+              <div className="relative w-[7.25rem] sm:w-[9.5rem] md:w-[10.5rem]">
+                <div className="rounded-xl border border-dashed border-[var(--pw-accent)]/30 bg-[rgba(12,22,18,0.45)] px-2.5 py-2.5 sm:px-3.5 sm:py-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-lg font-semibold tracking-tight text-[var(--pw-faint)]">
+                    <span className="font-mono text-base font-semibold tracking-tight text-[var(--pw-faint)] sm:text-lg">
                       #{tip != null ? tip + 1 : "…"}
                     </span>
                     <span
@@ -323,10 +310,10 @@ export default function BlockChainGraphic({
                       style={{ animation: "pwPulse 1.4s ease-in-out infinite" }}
                     />
                   </div>
-                  <p className="mt-1.5 text-[11px] text-[var(--pw-faint)]">
+                  <p className="mt-1 text-[10px] text-[var(--pw-faint)] sm:mt-1.5 sm:text-[11px]">
                     Building…
                   </p>
-                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--pw-line)]">
+                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--pw-line)] sm:mt-2">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-[var(--pw-accent)]/40 to-[var(--pw-accent)]"
                       style={{
@@ -335,10 +322,10 @@ export default function BlockChainGraphic({
                       }}
                     />
                   </div>
-                  <p className="mt-1.5 text-[10px] tabular-nums text-[var(--pw-faint)]">
+                  <p className="mt-1 text-[9px] tabular-nums text-[var(--pw-faint)] sm:mt-1.5 sm:text-[10px]">
                     {nextEtaMs != null
-                      ? `~${Math.ceil(nextEtaMs / 1000)}s to next slot`
-                      : "awaiting tip"}
+                      ? `~${Math.ceil(nextEtaMs / 1000)}s`
+                      : "…"}
                   </p>
                 </div>
               </div>
@@ -347,8 +334,8 @@ export default function BlockChainGraphic({
         </div>
       </div>
 
-      {selectedBlock && (
-        <div className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/50 px-4 py-3 text-[12px] text-[var(--pw-muted)]">
+      {!compact && selectedBlock && (
+        <div className="mt-3 shrink-0 rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/50 px-4 py-3 text-[12px] text-[var(--pw-muted)]">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="font-mono text-sm text-[var(--pw-ink)]">
               Block #{selectedBlock.height}
@@ -370,7 +357,6 @@ export default function BlockChainGraphic({
           )}
         </div>
       )}
-
     </div>
   );
 }

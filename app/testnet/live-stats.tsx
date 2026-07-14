@@ -1,109 +1,64 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type {
-  BlockHeaderSummary,
-  MfndStatus,
-  MfndTip,
-  RecentUpload,
-  TestnetConfig,
-} from "@/lib/testnet/types";
-import { fetchLiveSnapshot, getRpcProxyUrl } from "@/lib/testnet/rpc";
+import type { TestnetConfig } from "@/lib/testnet/types";
 import BlockChainGraphic from "./block-chain";
 import { formatTime, truncateId } from "./ui";
+import type { LiveSnapshotState } from "./use-live-snapshot";
 
-const POLL_MS = 8_000;
 const STALE_MS = 2 * 60_000;
 
-type LiveState = {
-  status: MfndStatus | null;
-  tip: MfndTip | null;
-  headers: BlockHeaderSummary[];
-  uploads: RecentUpload[];
-  refreshedAt: number | null;
-  tipChangedAt: number | null;
-  lastTipHeight: number | null;
-  error: string | null;
-  loading: boolean;
-};
+export default function LiveStats({
+  config,
+  live,
+  variant = "section",
+}: {
+  config: TestnetConfig;
+  live: LiveSnapshotState;
+  /** Hero fills first-viewport dead space; section is the detail block below. */
+  variant?: "hero" | "section";
+}) {
+  const chain = live.status?.chain;
+  const tipId =
+    chain?.tip_id ?? live.tip?.tip_id ?? live.tip?.id ?? null;
+  const tipHeight =
+    chain?.tip_height ?? live.tip?.tip_height ?? live.tip?.height ?? null;
+  const stale =
+    live.tipChangedAt != null && Date.now() - live.tipChangedAt > STALE_MS;
 
-export default function LiveStats({ config }: { config: TestnetConfig }) {
-  const proxyUrl = getRpcProxyUrl(config.rpc_proxy_url);
-  const [live, setLive] = useState<LiveState>({
-    status: null,
-    tip: null,
-    headers: [],
-    uploads: [],
-    refreshedAt: null,
-    tipChangedAt: null,
-    lastTipHeight: null,
-    error: null,
-    loading: Boolean(proxyUrl),
-  });
-  const abortRef = useRef<AbortController | null>(null);
+  if (variant === "hero") {
+    if (!live.proxyUrl) {
+      return (
+        <div className="flex h-full min-h-[12rem] flex-1 items-center justify-center rounded-2xl border border-dashed border-[var(--pw-line)] bg-[var(--pw-surface)]/40 px-4 text-center text-sm text-[var(--pw-muted)]">
+          Live chain offline — observer proxy not configured.
+        </div>
+      );
+    }
 
-  useEffect(() => {
-    if (!proxyUrl) return;
-
-    let cancelled = false;
-
-    const tick = async () => {
-      abortRef.current?.abort();
-      const ac = new AbortController();
-      abortRef.current = ac;
-      try {
-        const snap = await fetchLiveSnapshot(proxyUrl, ac.signal);
-        if (cancelled) return;
-        const height =
-          snap.status.chain?.tip_height ??
-          snap.tip?.tip_height ??
-          snap.tip?.height ??
-          null;
-        setLive((prev) => {
-          const tipMoved =
-            height != null && height !== prev.lastTipHeight;
-          return {
-            status: snap.status,
-            tip: snap.tip,
-            headers: snap.headers,
-            uploads: snap.uploads,
-            refreshedAt: Date.now(),
-            tipChangedAt: tipMoved
-              ? Date.now()
-              : prev.tipChangedAt ?? (height != null ? Date.now() : null),
-            lastTipHeight: height ?? prev.lastTipHeight,
-            error: null,
-            loading: false,
-          };
-        });
-      } catch (err) {
-        if (cancelled || (err instanceof DOMException && err.name === "AbortError")) {
-          return;
-        }
-        const msg = err instanceof Error ? err.message : "RPC unreachable";
-        setLive((prev) => ({
-          ...prev,
-          loading: false,
-          error:
-            msg === "Failed to fetch" || msg === "Load failed"
-              ? `${msg} (blocked HTTP from HTTPS? use /api/testnet/rpc)`
-              : msg,
-        }));
-      }
-    };
-
-    void tick();
-    const id = setInterval(() => void tick(), POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-      abortRef.current?.abort();
-    };
-  }, [proxyUrl]);
-
-  if (!proxyUrl) {
     return (
-      <section id="live" className="scroll-mt-8">
+      <div id="live" className="flex h-full min-h-0 w-full flex-1 flex-col pt-2">
+        {(live.headers.length > 0 || live.loading) && (
+          <BlockChainGraphic
+            headers={live.headers}
+            tipHeight={tipHeight}
+            tipSeenAtMs={live.tipChangedAt}
+            slotMs={config.slot_duration_ms}
+            loading={live.loading}
+            fill
+            compact
+          />
+        )}
+        {live.error && (
+          <p className="mt-2 shrink-0 text-[11px] text-red-300/90">
+            {live.error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (!live.proxyUrl) {
+    return (
+      <section className="scroll-mt-8">
         <SectionHead
           title="Live tip"
           lead="Observer proxy not configured — join steps below still work offline."
@@ -121,19 +76,11 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
     );
   }
 
-  const chain = live.status?.chain;
-  const tipId =
-    chain?.tip_id ?? live.tip?.tip_id ?? live.tip?.id ?? null;
-  const tipHeight =
-    chain?.tip_height ?? live.tip?.tip_height ?? live.tip?.height ?? null;
-  const stale =
-    live.tipChangedAt != null && Date.now() - live.tipChangedAt > STALE_MS;
-
   return (
-    <section id="live" className="scroll-mt-8 space-y-5">
+    <section className="scroll-mt-8 space-y-5">
       <SectionHead
-        title="Live tip"
-        lead="Lite explorer — tip, peers, and permanence activity. No address balances."
+        title="Network pulse"
+        lead="Tip, peers, and permanence activity from the public mesh."
       />
 
       {stale && !live.error && (
@@ -188,18 +135,8 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
 
       <p className="text-[11px] tracking-wide text-[var(--pw-faint)]">
         Last refreshed {formatTime(live.refreshedAt)}
-        {proxyUrl ? " · via observer proxy" : ""}
+        {live.proxyUrl ? " · via observer proxy" : ""}
       </p>
-
-      {(live.headers.length > 0 || live.loading) && (
-        <BlockChainGraphic
-          headers={live.headers}
-          tipHeight={tipHeight}
-          tipSeenAtMs={live.tipChangedAt}
-          slotMs={config.slot_duration_ms}
-          loading={live.loading}
-        />
-      )}
 
       {live.uploads.length > 0 && (
         <div className="space-y-2">
@@ -235,11 +172,11 @@ export default function LiveStats({ config }: { config: TestnetConfig }) {
 
 function SectionHead({ title, lead }: { title: string; lead: string }) {
   return (
-    <div className="space-y-1.5 mb-1">
-      <h2 className="font-[family-name:var(--font-pw-display)] text-2xl sm:text-3xl text-[var(--pw-ink)] tracking-tight">
+    <div className="mb-1 space-y-1.5">
+      <h2 className="font-[family-name:var(--font-pw-display)] text-2xl tracking-tight text-[var(--pw-ink)] sm:text-3xl">
         {title}
       </h2>
-      <p className="text-sm text-[var(--pw-muted)] max-w-2xl">{lead}</p>
+      <p className="max-w-2xl text-sm text-[var(--pw-muted)]">{lead}</p>
     </div>
   );
 }
@@ -261,7 +198,7 @@ function Stat({
         {label}
       </p>
       <p
-        className={`mt-1.5 text-lg sm:text-xl ${mono ? "font-mono text-[15px] sm:text-base" : "font-semibold"} text-[var(--pw-ink)] truncate`}
+        className={`mt-1.5 truncate text-lg sm:text-xl ${mono ? "font-mono text-[15px] sm:text-base" : "font-semibold"} text-[var(--pw-ink)]`}
         title={title}
       >
         {value}
