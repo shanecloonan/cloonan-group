@@ -192,10 +192,6 @@ export default function TestnetApp() {
             <h1 className="pw-fade-delay mt-3 font-[family-name:var(--font-pw-display)] text-[clamp(2.5rem,9vw,4.25rem)] font-semibold leading-[0.95] tracking-tight text-[var(--pw-ink)]">
               Permawrite
             </h1>
-            <p className="pw-fade-delay-2 mt-4 max-w-md text-base leading-relaxed text-[var(--pw-muted)] sm:text-lg">
-              Pre-audit, test-only value. Connect as an observer, follow the tip,
-              keep secrets off the wire.
-            </p>
             <div className="pw-fade-delay-2 mt-6 flex flex-wrap gap-3 sm:mt-7">
               <a
                 href="#join"
