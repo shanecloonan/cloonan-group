@@ -7,11 +7,15 @@ import type {
   RecentUpload,
 } from "./types";
 
-/** Browser-exposed proxy URL. Unset ⇒ live stats stay offline. */
-export function getRpcProxyUrl(): string | null {
+/**
+ * Browser-exposed proxy URL.
+ * Precedence: env override → config.json rpc_proxy_url → offline.
+ */
+export function getRpcProxyUrl(configUrl?: string | null): string | null {
   const raw =
     process.env.NEXT_PUBLIC_MFND_RPC_PROXY_URL?.trim() ||
     process.env.NEXT_PUBLIC_VITE_MFND_RPC_PROXY_URL?.trim() ||
+    configUrl?.trim() ||
     "";
   return raw || null;
 }

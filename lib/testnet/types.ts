@@ -9,6 +9,8 @@ export type TestnetConfig = {
   slot_duration_ms: number;
   validator_committee_size: number;
   boot_peers: string[];
+  /** Live stats HTTP→TCP JSON-RPC proxy (POST /rpc). */
+  rpc_proxy_url?: string | null;
   links: {
     invite: string;
     join: string;

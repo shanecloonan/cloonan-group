@@ -27,7 +27,7 @@ type LiveState = {
 };
 
 export default function LiveStats({ config }: { config: TestnetConfig }) {
-  const proxyUrl = getRpcProxyUrl();
+  const proxyUrl = getRpcProxyUrl(config.rpc_proxy_url);
   const [live, setLive] = useState<LiveState>({
     status: null,
     tip: null,

@@ -41,6 +41,7 @@ const FALLBACK: TestnetConfig = {
     "5.161.201.73:19002",
     "5.161.201.73:19003",
   ],
+  rpc_proxy_url: "http://5.161.201.73:8787/rpc",
   links: {
     invite:
       "https://github.com/shanecloonan/permawrite/blob/main/docs/TESTNET_INVITE.md",
@@ -51,7 +52,7 @@ const FALLBACK: TestnetConfig = {
     operators:
       "https://github.com/shanecloonan/permawrite/blob/main/scripts/public-devnet-v1/OPERATORS.md",
     rpc_proxy:
-      "https://github.com/shanecloonan/permawrite/blob/main/demo/proxy/rpc-proxy.mjs",
+      "https://github.com/shanecloonan/permawrite/blob/main/scripts/public-devnet-v1/observer-rpc-proxy.mjs",
   },
 };
 
