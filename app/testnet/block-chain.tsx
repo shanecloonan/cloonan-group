@@ -181,13 +181,6 @@ export default function BlockChainGraphic({
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
             Live chain
           </h3>
-          <p className="mt-0.5 text-[11px] text-[var(--pw-faint)] sm:text-[12px]">
-            {slotMs / 1000}s slots
-            {observedBlockIntervalMs != null
-              ? ` · ~${Math.round(observedBlockIntervalMs / 1000)}s seen`
-              : ""}{" "}
-            · tip pinned
-          </p>
         </div>
         {tip != null && (
           <div className="text-right">
