@@ -15,6 +15,7 @@ export type ChainBlockView = {
   slot?: number;
   whenMs: number | null;
   txCount?: number;
+  userTxCount?: number;
 };
 
 type Props = {
@@ -58,6 +59,7 @@ export default function BlockChainGraphic({
           slotMs,
         }),
         txCount: h.tx_count,
+        userTxCount: h.user_tx_count,
       });
     }
     rows.sort((a, b) => a.height - b.height);
@@ -325,9 +327,13 @@ export default function BlockChainGraphic({
                         {formatDateTime(b.whenMs)}
                       </p>
                       <p className="relative mt-0.5 text-[10px] tabular-nums text-[var(--pw-muted)]">
-                        {b.txCount != null
-                          ? `${b.txCount} tx${b.txCount === 1 ? "" : "s"}`
-                          : "… txs"}
+                        {b.userTxCount != null
+                          ? b.userTxCount === 0
+                            ? "coinbase only"
+                            : `${b.userTxCount} user tx${b.userTxCount === 1 ? "" : "s"}`
+                          : b.txCount != null
+                            ? `${b.txCount} tx${b.txCount === 1 ? "" : "s"}`
+                            : "… txs"}
                       </p>
                       <p
                         className="relative mt-0.5 truncate font-mono text-[9px] text-[var(--pw-faint)] sm:text-[10px]"
@@ -415,10 +421,13 @@ export default function BlockChainGraphic({
               Slot {selectedBlock.slot}
             </p>
           )}
-          {selectedBlock.txCount != null && (
+          {selectedBlock.userTxCount != null && (
             <p className="mt-1 text-[11px] text-[var(--pw-faint)]">
-              {selectedBlock.txCount} transaction
-              {selectedBlock.txCount === 1 ? "" : "s"}
+              {selectedBlock.userTxCount} user transaction
+              {selectedBlock.userTxCount === 1 ? "" : "s"}
+              {selectedBlock.txCount != null
+                ? ` · ${selectedBlock.txCount} total incl. coinbase`
+                : ""}
             </p>
           )}
         </div>

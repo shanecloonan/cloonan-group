@@ -110,7 +110,7 @@ export default function LiveStats({
           mono
         />
         <Stat
-          label="Total transactions"
+          label="User transactions"
           value={
             live.txTotals?.totalTxCount != null
               ? live.txTotals.totalTxCount.toLocaleString()
@@ -121,7 +121,7 @@ export default function LiveStats({
           title={
             live.txTotals
               ? live.txTotals.complete
-                ? `Sum of txs in blocks 1–${live.txTotals.tipHeight}`
+                ? `Non-coinbase txs in blocks 1–${live.txTotals.tipHeight}`
                 : `Scanning… ${live.txTotals.coveredHeights}/${live.txTotals.tipHeight} blocks`
               : undefined
           }
@@ -130,7 +130,7 @@ export default function LiveStats({
             live.txTotals && !live.txTotals.complete
               ? `${live.txTotals.coveredHeights}/${live.txTotals.tipHeight} blocks`
               : live.txTotals?.complete
-                ? "all blocks"
+                ? "excl. coinbase"
                 : undefined
           }
         />
@@ -163,9 +163,9 @@ export default function LiveStats({
         Last refreshed {formatTime(live.refreshedAt)}
         {live.proxyUrl ? " · via observer proxy" : ""}
         {live.txTotals?.complete
-          ? " · full-chain tx sum"
+          ? " · user txs excl. coinbase"
           : live.txTotals
-            ? " · tx total still backfilling"
+            ? " · user-tx total still backfilling"
             : ""}
       </p>
 

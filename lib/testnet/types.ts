@@ -80,8 +80,10 @@ export type BlockHeaderSummary = {
   /** Protocol wall-clock from header (unix seconds). May be genesis-epoch toy time. */
   timestamp?: number;
   header_hex?: string;
-  /** Transaction count from `get_block_txs` (includes coinbase when present). */
+  /** All txs in the block body (includes coinbase when present). */
   tx_count?: number;
+  /** Non-coinbase txs only (empty-input txs are coinbase-shaped). */
+  user_tx_count?: number;
 };
 
 export type RecentUpload = {

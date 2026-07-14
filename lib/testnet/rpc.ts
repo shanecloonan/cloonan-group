@@ -66,13 +66,18 @@ export async function rpcCall<T>(
   return parsed.result;
 }
 
+type BlockTxCounts = { all: number; user: number };
+
 /** Cache tx counts by height — payloads are large; heights are immutable. */
-const txCountCache = new Map<number, number>();
+const txCountCache = new Map<number, BlockTxCounts>();
 /** How many historical heights to fetch per live poll while backfilling a total. */
 const TX_COUNT_BACKFILL_BUDGET = 16;
 
 export type TxCountTotals = {
-  /** Sum of cached per-block tx counts for heights 1..=tip. */
+  /**
+   * Sum of non-coinbase txs in blocks 1..=tip.
+   * Coinbase (empty-input) txs are excluded — otherwise the total ≈ tip height.
+   */
   totalTxCount: number | null;
   /** Distinct heights with a cached count in 1..=tip. */
   coveredHeights: number;
@@ -110,11 +115,13 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
         headers.map((h) => h.height).filter((h): h is number => h != null),
         signal,
       );
-      headers = headers.map((h) =>
-        h.height != null && txCountCache.has(h.height)
-          ? { ...h, tx_count: txCountCache.get(h.height) }
-          : h,
-      );
+      headers = headers.map((h) => {
+        if (h.height == null) return h;
+        const c = txCountCache.get(h.height);
+        return c
+          ? { ...h, tx_count: c.all, user_tx_count: c.user }
+          : h;
+      });
       await backfillTxCounts(proxyUrl, tipHeight, signal);
       txTotals = summarizeTxCounts(tipHeight);
     } catch {
@@ -154,7 +161,11 @@ async function fetchMissingTxCounts(
           { height },
           signal,
         );
-        txCountCache.set(height, Array.isArray(raw?.txs) ? raw.txs.length : 0);
+        const txs = Array.isArray(raw?.txs) ? raw.txs : [];
+        txCountCache.set(height, {
+          all: txs.length,
+          user: countUserTxs(txs),
+        });
       } catch {
         // leave uncached — retry next poll
       }
@@ -182,7 +193,7 @@ function summarizeTxCounts(tipHeight: number): TxCountTotals {
   for (let h = 1; h <= tipHeight; h++) {
     const n = txCountCache.get(h);
     if (n != null) {
-      total += n;
+      total += n.user;
       covered++;
     }
   }
@@ -192,6 +203,69 @@ function summarizeTxCounts(tipHeight: number): TxCountTotals {
     tipHeight,
     complete: covered === tipHeight,
   };
+}
+
+/** Non-coinbase = tx with at least one ring input (coinbase is empty-input / index 0). */
+function countUserTxs(txs: unknown[]): number {
+  let user = 0;
+  for (const item of txs) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as { tx_hex?: unknown; tx_index?: unknown };
+    if (typeof o.tx_hex === "string") {
+      if (!isCoinbaseTxHex(o.tx_hex)) user++;
+      continue;
+    }
+    // Fallback: only treat index 0 as coinbase when hex is unavailable.
+    if (typeof o.tx_index === "number" && o.tx_index !== 0) user++;
+  }
+  return user;
+}
+
+/**
+ * MFBN tx wire: version varint · 32-byte r_pub · u64 fee · blob(extra) · varint(inputs).
+ * Coinbase-shaped iff inputs length is 0.
+ */
+function isCoinbaseTxHex(hex: string): boolean {
+  const raw = hex.replace(/\s+/g, "").toLowerCase();
+  if (raw.length < 2 + 64 + 16 || raw.length % 2 !== 0) return false;
+  try {
+    const bytes = new Uint8Array(raw.length / 2);
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = parseInt(raw.slice(i * 2, i * 2 + 2), 16);
+    }
+    let off = 0;
+    while (off < bytes.length && bytes[off]! & 0x80) off++;
+    off++; // version
+    off += 32; // r_pub
+    off += 8; // fee
+    if (off >= bytes.length) return false;
+    const extraLen = readLeb128(bytes, off);
+    if (extraLen == null) return false;
+    off = extraLen.next;
+    off += extraLen.value;
+    const inputs = readLeb128(bytes, off);
+    return inputs != null && inputs.value === 0;
+  } catch {
+    return false;
+  }
+}
+
+function readLeb128(
+  bytes: Uint8Array,
+  off: number,
+): { value: number; next: number } | null {
+  let value = 0;
+  let shift = 0;
+  let i = off;
+  while (i < bytes.length) {
+    const b = bytes[i]!;
+    value |= (b & 0x7f) << shift;
+    i++;
+    if ((b & 0x80) === 0) return { value, next: i };
+    shift += 7;
+    if (shift > 35) return null;
+  }
+  return null;
 }
 
 function normalizeHeaders(raw: unknown): BlockHeaderSummary[] {
