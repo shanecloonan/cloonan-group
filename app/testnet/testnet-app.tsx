@@ -214,7 +214,7 @@ export default function TestnetApp() {
             </p>
           </div>
 
-          <div className="pw-fade-delay-2 mt-6 flex min-h-0 flex-1 flex-col sm:mt-8">
+          <div className="pw-fade-delay-2 mt-4 flex flex-col sm:mt-8 sm:min-h-0 sm:flex-1">
             <LiveStats config={config} live={live} variant="hero" />
           </div>
         </header>
