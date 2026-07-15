@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import type { TestnetConfig } from "@/lib/testnet/types";
 import BlockChainGraphic from "./block-chain";
 import ChainAge from "./chain-age";
+import ChainVerifiability from "./chain-verifiability";
+import PrivacyPulse from "./privacy-pulse";
 import {
   formatDateTime,
   formatTime,
@@ -273,21 +275,32 @@ export default function LiveStats({
       {live.uploads.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pw-muted)]">
-            Recent uploads
+            Recent permanence anchors
           </h3>
           <ul className="divide-y divide-[var(--pw-line)] border border-[var(--pw-line)] rounded-lg overflow-hidden">
             {live.uploads.map((u, i) => {
-              const id = String(u.tx_id ?? u.id ?? "");
+              const id = String(u.commitment_hash ?? u.tx_id ?? u.id ?? "");
+              const size =
+                typeof u.size_bytes === "number"
+                  ? formatBytes(u.size_bytes)
+                  : null;
+              const repl =
+                typeof u.replication === "number" ? `×${u.replication}` : null;
               return (
                 <li
                   key={`${id}-${i}`}
                   className="flex items-center justify-between gap-3 bg-[var(--pw-surface)]/40 px-4 py-2.5 text-sm"
                 >
-                  <span className="text-[var(--pw-muted)]">
-                    {u.height != null ? `h${u.height}` : "upload"}
+                  <span className="shrink-0 text-[var(--pw-muted)]">
+                    {u.last_proven_height != null
+                      ? `proven h${u.last_proven_height}`
+                      : "anchor"}
+                  </span>
+                  <span className="min-w-0 flex-1 text-center text-[11px] text-[var(--pw-faint)]">
+                    {[size, repl].filter(Boolean).join(" · ") || "commitment"}
                   </span>
                   <span
-                    className="truncate font-mono text-[12px] text-[var(--pw-ink)]"
+                    className="truncate font-mono text-[12px] text-[var(--pw-ink)] max-w-[45%]"
                     title={id}
                   >
                     {truncateId(id) || (u.summary as string) || "—"}
@@ -296,22 +309,31 @@ export default function LiveStats({
               );
             })}
           </ul>
+          {live.storagePulse?.totalAnchors != null && (
+            <p className="text-[10px] text-[var(--pw-faint)]">
+              {live.storagePulse.totalAnchors.toLocaleString()} storage anchors
+              on-chain · hashes only, no plaintext payload
+            </p>
+          )}
         </div>
       )}
-    </section>
-  );
-}
 
-function SectionHead({ title, lead }: { title: string; lead?: string }) {
-  return (
-    <div className="mb-1 space-y-1.5">
-      <h2 className="font-[family-name:var(--font-pw-display)] text-2xl tracking-tight text-[var(--pw-ink)] sm:text-3xl">
-        {title}
-      </h2>
-      {lead ? (
-        <p className="max-w-2xl text-sm text-[var(--pw-muted)]">{lead}</p>
-      ) : null}
-    </div>
+      <PrivacyPulse
+        chainParams={live.chainParams}
+        privacySample={live.privacySample}
+        loading={live.loading}
+      />
+
+      <ChainVerifiability
+        chainParams={live.chainParams}
+        checkpoint={live.checkpoint}
+        fraudContests={live.fraudContests}
+        storagePulse={live.storagePulse}
+        mempoolPulse={live.mempoolPulse}
+        p2pDiversity={live.status?.p2p?.distinct_ipv4_prefix16 ?? null}
+        loading={live.loading}
+      />
+    </section>
   );
 }
 
@@ -346,4 +368,23 @@ function Stat({
       )}
     </div>
   );
+}
+
+function SectionHead({ title, lead }: { title: string; lead?: string }) {
+  return (
+    <div className="mb-1 space-y-1.5">
+      <h2 className="font-[family-name:var(--font-pw-display)] text-2xl tracking-tight text-[var(--pw-ink)] sm:text-3xl">
+        {title}
+      </h2>
+      {lead ? (
+        <p className="max-w-2xl text-sm text-[var(--pw-muted)]">{lead}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KiB`;
+  return `${(n / (1024 * 1024)).toFixed(2)} MiB`;
 }

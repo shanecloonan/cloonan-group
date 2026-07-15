@@ -96,5 +96,72 @@ export type RecentUpload = {
   tx_id?: string;
   id?: string;
   summary?: string;
+  commitment_hash?: string;
+  data_root?: string;
+  size_bytes?: number;
+  chunk_size?: number;
+  num_chunks?: number;
+  replication?: number;
+  last_proven_height?: number;
   [key: string]: unknown;
+};
+
+export type ChainParams = {
+  tip_height?: number | null;
+  genesis_id?: string;
+  treasury_base_units?: string;
+  mfn_decimals?: number;
+  mfn_base?: number;
+  emission?: {
+    initial_reward?: number;
+    halving_period?: number;
+    tail_emission?: number;
+    storage_proof_reward?: number;
+    fee_to_treasury_bps?: number;
+    subsidy_to_treasury_bps?: number;
+  };
+  endowment?: {
+    cost_per_byte_year_ppb?: number;
+    min_replication?: number;
+    max_replication?: number;
+    require_endowment_opening?: number;
+    require_endowment_range_proof?: number;
+    operator_salted_challenges?: number;
+    require_registered_operators?: number;
+  };
+  bonding?: {
+    min_validator_stake?: number;
+    slots_per_epoch?: number;
+  };
+  consensus?: {
+    expected_proposers_per_slot?: number;
+    quorum_stake_bps?: number;
+  };
+};
+
+export type LightCheckpointSummary = {
+  genesis_id?: string;
+  tip_height?: number;
+  tip_block_id?: string;
+  validator_count?: number;
+  validator_set_root?: string;
+  checkpoint_digest?: string;
+  anchor_peers?: string[];
+};
+
+export type FraudContestSnapshot = {
+  configured?: boolean;
+  contest_count?: number;
+};
+
+export type StoragePulse = {
+  totalAnchors: number | null;
+  recentCount: number;
+  totalBytesBucketed: number | null;
+  avgReplication: number | null;
+};
+
+export type MempoolPulse = {
+  poolLen: number;
+  pendingUserTxs: number | null;
 };

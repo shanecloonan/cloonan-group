@@ -185,7 +185,7 @@ export default function TestnetApp() {
         }}
       />
 
-      <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 pb-24">
+      <div className="relative z-10 mx-auto max-w-4xl px-5 sm:px-8 pb-24">
         {/* A) Hero — content-sized on mobile; desktop still fills first viewport */}
         <header className="flex flex-col pt-10 pb-8 sm:min-h-[100dvh] sm:pt-14 sm:pb-10">
           <div className="shrink-0">
@@ -414,14 +414,21 @@ export default function TestnetApp() {
           {/* Privacy note */}
           <section className="space-y-3 rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/40 px-5 py-6">
             <h2 className="font-[family-name:var(--font-pw-display)] text-xl tracking-tight">
-              Privacy chain — lite explorer only
+              Privacy absolutism — lite explorer
             </h2>
             <p className="text-sm leading-relaxed text-[var(--pw-muted)]">
-              Ring signatures and stealth addresses mean this is not a transparent
-              ledger. Do not expect Ethereum-style account balances. This page
-              shows tip, recent blocks, mempool, uploads/claims, and node health —
-              not a full explorer.
+              Ring signatures, stealth outputs, and encrypted amounts mean this is
+              not a transparent ledger. This page shows chain-wide pulse only:
+              tip cadence, aggregate tx shapes, treasury, permanence anchors, and
+              checkpoint digests. It never surfaces balances by address, ring
+              indices, or decrypted amounts.
             </p>
+            <ul className="grid gap-2 text-[12px] text-[var(--pw-faint)] sm:grid-cols-2">
+              <li>✓ Ring-size histograms from tx wire shape</li>
+              <li>✓ MFER / MFEO policy flags from chain params</li>
+              <li>✓ Storage commitment hashes & bucket sizes</li>
+              <li>✗ No account graph · no amount transparency</li>
+            </ul>
           </section>
 
           {/* E) Links */}

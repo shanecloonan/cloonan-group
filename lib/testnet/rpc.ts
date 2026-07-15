@@ -1,11 +1,22 @@
 import type {
   BlockHeaderSummary,
+  ChainParams,
+  FraudContestSnapshot,
   JsonRpcRequest,
   JsonRpcResponse,
+  LightCheckpointSummary,
+  MempoolPulse,
   MfndStatus,
   MfndTip,
   RecentUpload,
+  StoragePulse,
 } from "./types";
+import {
+  aggregatePrivacySamples,
+  parseTxPrivacyMeta,
+  type PrivacySampleAggregate,
+  type TxPrivacyMeta,
+} from "./tx-meta";
 
 /**
  * Browser-exposed proxy URL.
@@ -70,8 +81,12 @@ type BlockTxCounts = { all: number; user: number };
 
 /** Cache tx counts by height — payloads are large; heights are immutable. */
 const txCountCache = new Map<number, BlockTxCounts>();
+/** Privacy-safe shape cache keyed by height. */
+const txMetaCache = new Map<number, TxPrivacyMeta[]>();
 /** How many historical heights to fetch per live poll while backfilling a total. */
 const TX_COUNT_BACKFILL_BUDGET = 16;
+/** Max mempool txs to sample for ring-shape stats per poll. */
+const MEMPOOL_SAMPLE_BUDGET = 6;
 
 export type TxCountTotals = {
   /**
@@ -86,15 +101,59 @@ export type TxCountTotals = {
   complete: boolean;
 };
 
-export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) {
-  const [status, tip] = await Promise.all([
-    rpcCall<MfndStatus>(proxyUrl, "get_status", {}, signal),
-    rpcCall<MfndTip>(proxyUrl, "get_tip", {}, signal).catch(() => null),
-  ]);
+export type LiveSnapshot = {
+  status: MfndStatus;
+  tip: MfndTip | null;
+  headers: BlockHeaderSummary[];
+  uploads: RecentUpload[];
+  txTotals: TxCountTotals | null;
+  chainParams: ChainParams | null;
+  checkpoint: LightCheckpointSummary | null;
+  fraudContests: FraudContestSnapshot | null;
+  storagePulse: StoragePulse | null;
+  mempoolPulse: MempoolPulse | null;
+  privacySample: PrivacySampleAggregate | null;
+};
+
+export async function fetchLiveSnapshot(
+  proxyUrl: string,
+  signal?: AbortSignal,
+): Promise<LiveSnapshot> {
+  const [status, tip, chainParams, checkpoint, fraudContests, mempoolRaw] =
+    await Promise.all([
+      rpcCall<MfndStatus>(proxyUrl, "get_status", {}, signal),
+      rpcCall<MfndTip>(proxyUrl, "get_tip", {}, signal).catch(() => null),
+      rpcCall<ChainParams>(proxyUrl, "get_chain_params", {}, signal).catch(
+        () => null,
+      ),
+      rpcCall<{ summary?: LightCheckpointSummary }>(
+        proxyUrl,
+        "get_light_snapshot",
+        {},
+        signal,
+      )
+        .then((r) => r?.summary ?? null)
+        .catch(() => null),
+      rpcCall<FraudContestSnapshot>(
+        proxyUrl,
+        "list_fraud_contests",
+        {},
+        signal,
+      ).catch(() => null),
+      rpcCall<{ mempool_len?: number; tx_ids?: string[] }>(
+        proxyUrl,
+        "get_mempool",
+        {},
+        signal,
+      ).catch(() => null),
+    ]);
 
   let headers: BlockHeaderSummary[] = [];
   let uploads: RecentUpload[] = [];
   let txTotals: TxCountTotals | null = null;
+  let storagePulse: StoragePulse | null = null;
+  let mempoolPulse: MempoolPulse | null = null;
+  let privacySample: PrivacySampleAggregate | null = null;
 
   const tipHeight =
     status.chain?.tip_height ?? tip?.tip_height ?? tip?.height ?? null;
@@ -109,7 +168,6 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
         signal,
       );
       headers = normalizeHeaders(raw);
-      // Prefer tip window first, then backfill older heights toward a full-chain sum.
       await fetchMissingTxCounts(
         proxyUrl,
         headers.map((h) => h.height).filter((h): h is number => h != null),
@@ -124,24 +182,44 @@ export async function fetchLiveSnapshot(proxyUrl: string, signal?: AbortSignal) 
       });
       await backfillTxCounts(proxyUrl, tipHeight, signal);
       txTotals = summarizeTxCounts(tipHeight);
+      privacySample = aggregatePrivacySamples(collectCachedPrivacyMetas());
     } catch {
       // optional — ignore
     }
   }
 
   try {
-    const raw = await rpcCall<unknown>(
-      proxyUrl,
-      "list_recent_uploads",
-      { limit: 8 },
-      signal,
-    );
+    const raw = await rpcCall<{
+      uploads?: RecentUpload[];
+      total?: number;
+    }>(proxyUrl, "list_recent_uploads", { limit: 12 }, signal);
     uploads = normalizeUploads(raw);
+    storagePulse = summarizeStoragePulse(uploads, raw?.total);
   } catch {
     // optional — ignore
   }
 
-  return { status, tip, headers, uploads, txTotals };
+  if (mempoolRaw) {
+    mempoolPulse = await summarizeMempoolPulse(proxyUrl, mempoolRaw, signal);
+    if (privacySample && mempoolPulse.pendingUserTxs != null) {
+      // Mempool samples merged into privacy aggregate on next block fetch;
+      // keep block-derived sample as primary source.
+    }
+  }
+
+  return {
+    status,
+    tip,
+    headers,
+    uploads,
+    txTotals,
+    chainParams,
+    checkpoint,
+    fraudContests,
+    storagePulse,
+    mempoolPulse,
+    privacySample,
+  };
 }
 
 async function fetchMissingTxCounts(
@@ -162,6 +240,15 @@ async function fetchMissingTxCounts(
           signal,
         );
         const txs = Array.isArray(raw?.txs) ? raw.txs : [];
+        const metas: TxPrivacyMeta[] = [];
+        for (const item of txs) {
+          if (!item || typeof item !== "object") continue;
+          const o = item as { tx_hex?: unknown };
+          if (typeof o.tx_hex !== "string") continue;
+          const meta = parseTxPrivacyMeta(o.tx_hex);
+          if (meta && !meta.isCoinbase) metas.push(meta);
+        }
+        txMetaCache.set(height, metas);
         txCountCache.set(height, {
           all: txs.length,
           user: countUserTxs(txs),
@@ -171,6 +258,68 @@ async function fetchMissingTxCounts(
       }
     }),
   );
+}
+
+function collectCachedPrivacyMetas(): TxPrivacyMeta[] {
+  const out: TxPrivacyMeta[] = [];
+  for (const metas of txMetaCache.values()) out.push(...metas);
+  return out;
+}
+
+async function summarizeMempoolPulse(
+  proxyUrl: string,
+  raw: { mempool_len?: number; tx_ids?: string[] },
+  signal?: AbortSignal,
+): Promise<MempoolPulse> {
+  const poolLen = raw.mempool_len ?? raw.tx_ids?.length ?? 0;
+  const ids = Array.isArray(raw.tx_ids) ? raw.tx_ids.slice(0, MEMPOOL_SAMPLE_BUDGET) : [];
+  if (ids.length === 0) {
+    return { poolLen, pendingUserTxs: poolLen > 0 ? null : 0 };
+  }
+  let pending = 0;
+  await Promise.all(
+    ids.map(async (txId) => {
+      try {
+        const ent = await rpcCall<{ tx_hex?: string }>(
+          proxyUrl,
+          "get_mempool_tx",
+          { tx_id: txId },
+          signal,
+        );
+        if (typeof ent?.tx_hex !== "string") return;
+        const meta = parseTxPrivacyMeta(ent.tx_hex);
+        if (meta && !meta.isCoinbase) pending++;
+      } catch {
+        // skip
+      }
+    }),
+  );
+  return {
+    poolLen,
+    pendingUserTxs: pending > 0 ? pending : poolLen === 0 ? 0 : null,
+  };
+}
+
+function summarizeStoragePulse(
+  uploads: RecentUpload[],
+  total?: number,
+): StoragePulse {
+  let bytes = 0;
+  let replSum = 0;
+  let replN = 0;
+  for (const u of uploads) {
+    if (typeof u.size_bytes === "number") bytes += u.size_bytes;
+    if (typeof u.replication === "number") {
+      replSum += u.replication;
+      replN++;
+    }
+  }
+  return {
+    totalAnchors: typeof total === "number" ? total : null,
+    recentCount: uploads.length,
+    totalBytesBucketed: uploads.length > 0 ? bytes : null,
+    avgReplication: replN > 0 ? Math.round((replSum / replN) * 10) / 10 : null,
+  };
 }
 
 /** Fill gaps from tip downward so new blocks stay current while history catches up. */

@@ -3,9 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import type {
   BlockHeaderSummary,
+  ChainParams,
+  FraudContestSnapshot,
+  LightCheckpointSummary,
+  MempoolPulse,
   MfndStatus,
   MfndTip,
   RecentUpload,
+  StoragePulse,
   TestnetConfig,
 } from "@/lib/testnet/types";
 import {
@@ -13,6 +18,7 @@ import {
   getRpcProxyUrl,
   type TxCountTotals,
 } from "@/lib/testnet/rpc";
+import type { PrivacySampleAggregate } from "@/lib/testnet/tx-meta";
 
 /** Fast enough to catch 30s slots without looking laggy at tip updates. */
 const POLL_MS = 2_500;
@@ -26,6 +32,12 @@ export type LiveSnapshotState = {
   uploads: RecentUpload[];
   /** Running sum of per-block tx counts (backfills across polls). */
   txTotals: TxCountTotals | null;
+  chainParams: ChainParams | null;
+  checkpoint: LightCheckpointSummary | null;
+  fraudContests: FraudContestSnapshot | null;
+  storagePulse: StoragePulse | null;
+  mempoolPulse: MempoolPulse | null;
+  privacySample: PrivacySampleAggregate | null;
   refreshedAt: number | null;
   tipChangedAt: number | null;
   lastTipHeight: number | null;
@@ -52,6 +64,12 @@ export function useLiveSnapshot(config: TestnetConfig): LiveSnapshotState {
     headers: [],
     uploads: [],
     txTotals: null,
+    chainParams: null,
+    checkpoint: null,
+    fraudContests: null,
+    storagePulse: null,
+    mempoolPulse: null,
+    privacySample: null,
     refreshedAt: null,
     tipChangedAt: null,
     lastTipHeight: null,
@@ -102,6 +120,12 @@ export function useLiveSnapshot(config: TestnetConfig): LiveSnapshotState {
             headers: snap.headers,
             uploads: snap.uploads,
             txTotals: snap.txTotals ?? prev.txTotals,
+            chainParams: snap.chainParams ?? prev.chainParams,
+            checkpoint: snap.checkpoint ?? prev.checkpoint,
+            fraudContests: snap.fraudContests ?? prev.fraudContests,
+            storagePulse: snap.storagePulse ?? prev.storagePulse,
+            mempoolPulse: snap.mempoolPulse ?? prev.mempoolPulse,
+            privacySample: snap.privacySample ?? prev.privacySample,
             refreshedAt: now,
             tipChangedAt: tipMoved
               ? now
