@@ -121,7 +121,7 @@ export default function LiveStats({
   }
 
   return (
-    <section className="scroll-mt-8 space-y-5">
+    <section className="scroll-mt-8 space-y-8 md:space-y-10">
       <SectionHead title="Network pulse" />
 
       {stale && !live.error && (
@@ -137,7 +137,7 @@ export default function LiveStats({
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">
         <ChainAge launchTimestamp={config.launch_timestamp} />
         <Stat
           label="Tip height"
@@ -225,16 +225,16 @@ export default function LiveStats({
                     onClick={() =>
                       setExpandedHeight(open ? null : b.height)
                     }
-                    className="flex w-full items-center justify-between gap-3 bg-[var(--pw-surface)]/40 px-4 py-2.5 text-left text-sm transition-colors hover:bg-[var(--pw-surface)]/70"
+                    className="grid w-full grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 bg-[var(--pw-surface)]/40 px-3 py-3 text-left text-sm transition-colors hover:bg-[var(--pw-surface)]/70 sm:flex sm:items-center sm:justify-between sm:gap-3 sm:px-4 sm:py-2.5"
                     aria-expanded={open}
                   >
                     <span className="shrink-0 font-mono text-[var(--pw-accent)]">
                       #{b.height}
                     </span>
-                    <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-[var(--pw-ink)]">
+                    <span className="min-w-0 truncate font-mono text-[11px] text-[var(--pw-ink)] sm:flex-1 sm:text-[12px]">
                       {truncateId(b.id)}
                     </span>
-                    <span className="shrink-0 tabular-nums text-[11px] text-[var(--pw-muted)]">
+                    <span className="col-span-2 shrink-0 tabular-nums text-[10px] text-[var(--pw-muted)] sm:col-auto sm:text-[11px]">
                       {formatDateTime(b.whenMs)}
                     </span>
                   </button>
@@ -289,21 +289,23 @@ export default function LiveStats({
               return (
                 <li
                   key={`${id}-${i}`}
-                  className="flex items-center justify-between gap-3 bg-[var(--pw-surface)]/40 px-4 py-2.5 text-sm"
+                  className="flex flex-col gap-1.5 bg-[var(--pw-surface)]/40 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4 sm:py-2.5"
                 >
-                  <span className="shrink-0 text-[var(--pw-muted)]">
-                    {u.last_proven_height != null
-                      ? `proven h${u.last_proven_height}`
-                      : "anchor"}
-                  </span>
-                  <span className="min-w-0 flex-1 text-center text-[11px] text-[var(--pw-faint)]">
-                    {[size, repl].filter(Boolean).join(" · ") || "commitment"}
-                  </span>
+                  <div className="flex min-w-0 items-center justify-between gap-2 sm:contents">
+                    <span className="shrink-0 text-xs text-[var(--pw-muted)] sm:text-sm">
+                      {u.last_proven_height != null
+                        ? `proven h${u.last_proven_height}`
+                        : "anchor"}
+                    </span>
+                    <span className="shrink-0 text-[10px] text-[var(--pw-faint)] sm:order-3 sm:text-[11px]">
+                      {[size, repl].filter(Boolean).join(" · ") || "commitment"}
+                    </span>
+                  </div>
                   <span
-                    className="truncate font-mono text-[12px] text-[var(--pw-ink)] max-w-[45%]"
+                    className="min-w-0 break-all font-mono text-[11px] text-[var(--pw-ink)] sm:max-w-[55%] sm:truncate sm:text-[12px]"
                     title={id}
                   >
-                    {truncateId(id) || (u.summary as string) || "—"}
+                    {truncateId(id, 8, 6) || (u.summary as string) || "—"}
                   </span>
                 </li>
               );
@@ -318,21 +320,25 @@ export default function LiveStats({
         </div>
       )}
 
-      <PrivacyPulse
-        chainParams={live.chainParams}
-        privacySample={live.privacySample}
-        loading={live.loading}
-      />
+      <div className="space-y-8 border-t border-[var(--pw-line)] pt-8 md:space-y-10 md:pt-10">
+        <PrivacyPulse
+          chainParams={live.chainParams}
+          privacySample={live.privacySample}
+          loading={live.loading}
+        />
+      </div>
 
-      <ChainVerifiability
-        chainParams={live.chainParams}
-        checkpoint={live.checkpoint}
-        fraudContests={live.fraudContests}
-        storagePulse={live.storagePulse}
-        mempoolPulse={live.mempoolPulse}
-        p2pDiversity={live.status?.p2p?.distinct_ipv4_prefix16 ?? null}
-        loading={live.loading}
-      />
+      <div className="space-y-8 border-t border-[var(--pw-line)] pt-8 md:space-y-10 md:pt-10">
+        <ChainVerifiability
+          chainParams={live.chainParams}
+          checkpoint={live.checkpoint}
+          fraudContests={live.fraudContests}
+          storagePulse={live.storagePulse}
+          mempoolPulse={live.mempoolPulse}
+          p2pDiversity={live.status?.p2p?.distinct_ipv4_prefix16 ?? null}
+          loading={live.loading}
+        />
+      </div>
     </section>
   );
 }
@@ -351,12 +357,12 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/60 px-4 py-3.5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--pw-faint)]">
+    <div className="min-w-0 rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/60 px-3 py-3 sm:px-4 sm:py-3.5">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--pw-faint)] sm:text-[10px] sm:tracking-[0.16em]">
         {label}
       </p>
       <p
-        className={`mt-1.5 truncate text-lg sm:text-xl ${mono ? "font-mono text-[15px] sm:text-base" : "font-semibold"} text-[var(--pw-ink)]`}
+        className={`mt-1 min-w-0 truncate text-base sm:mt-1.5 sm:text-lg ${mono ? "font-mono text-[13px] sm:text-[15px]" : "font-semibold"} text-[var(--pw-ink)]`}
         title={title}
       >
         {value}

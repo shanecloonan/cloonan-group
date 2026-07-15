@@ -44,7 +44,7 @@ export default function ChainVerifiability({
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 xl:grid-cols-3">
         <Tile
           label="Treasury"
           value={loading && !chainParams ? "…" : treasury ?? "—"}
@@ -135,11 +135,11 @@ export default function ChainVerifiability({
       </div>
 
       {checkpoint && (
-        <div className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/50 px-4 py-4">
+        <div className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/50 px-4 py-4 sm:px-5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--pw-faint)]">
             Light-client checkpoint (tip)
           </p>
-          <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+          <dl className="mt-3 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
             <CheckpointRow
               label="Checkpoint digest"
               value={truncateId(checkpoint.checkpoint_digest, 8, 8)}
@@ -187,11 +187,14 @@ function Tile({
   hint?: string;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/60 px-4 py-3.5">
+    <div className="min-w-0 rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/60 px-4 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--pw-faint)]">
         {label}
       </p>
-      <p className="mt-1.5 font-mono text-lg text-[var(--pw-ink)] sm:text-xl">
+      <p
+        className="mt-1.5 min-w-0 break-words font-mono text-base leading-snug text-[var(--pw-ink)] sm:text-lg xl:text-xl"
+        title={value}
+      >
         {value}
       </p>
       {hint && (
@@ -218,7 +221,7 @@ function CheckpointRow({
         {label}
       </dt>
       <dd
-        className="mt-0.5 font-mono text-[12px] text-[var(--pw-ink)]"
+        className="mt-0.5 break-all font-mono text-[11px] text-[var(--pw-ink)] sm:text-[12px]"
         title={full}
       >
         {value}

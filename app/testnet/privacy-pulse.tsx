@@ -55,15 +55,16 @@ export default function PrivacyPulse({
         <h2 className="font-[family-name:var(--font-pw-display)] text-2xl tracking-tight text-[var(--pw-ink)] sm:text-3xl">
           Privacy pulse
         </h2>
-        <p className="max-w-2xl text-sm text-[var(--pw-muted)]">
+        <p className="max-w-2xl text-sm leading-relaxed text-[var(--pw-muted)]">
           Aggregate chain posture only — no addresses, amounts, or ring indices.
-          Every dot below is a decoy candidate; the real spend is indistinguishable.
+          Every dot below is a decoy candidate; the real spend is
+          indistinguishable.
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6">
         {/* Ring visualizer */}
-        <div className="relative overflow-hidden rounded-2xl border border-[var(--pw-line)] bg-gradient-to-br from-[rgba(16,28,24,0.95)] to-[rgba(8,14,12,0.98)] px-5 py-6">
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--pw-line)] bg-gradient-to-br from-[rgba(16,28,24,0.95)] to-[rgba(8,14,12,0.98)] px-4 py-5 sm:px-5 sm:py-6">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-60"
@@ -81,7 +82,7 @@ export default function PrivacyPulse({
             </p>
 
             <div
-              className="relative mt-6 h-44 w-44 sm:h-52 sm:w-52"
+              className="relative mx-auto mt-5 h-40 w-40 max-w-[70vw] aspect-square sm:mt-6 sm:h-48 sm:w-48"
               role="img"
               aria-label={`Animated ring of ${PRODUCTION_PRIVACY_POLICY.ringSize} indistinguishable members`}
             >
@@ -116,7 +117,7 @@ export default function PrivacyPulse({
               </span>
             </div>
 
-            <dl className="mt-5 grid w-full grid-cols-3 gap-2 text-center">
+            <dl className="mt-5 grid w-full max-w-sm grid-cols-3 gap-2 text-center sm:max-w-none">
               <MiniStat
                 label="Avg ring"
                 value={
@@ -152,24 +153,24 @@ export default function PrivacyPulse({
         </div>
 
         {/* Policy shields + live toggles */}
-        <div className="space-y-3">
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+        <div className="flex min-w-0 flex-col gap-3">
+          <ul className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 xl:grid-cols-1">
             {PRIVACY_SHIELDS.map((shield) => (
               <li
                 key={shield.id}
-                className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/55 px-4 py-3"
+                className="rounded-xl border border-[var(--pw-line)] bg-[var(--pw-surface)]/55 px-3 py-2.5 sm:px-4 sm:py-3"
               >
                 <p className="text-xs font-semibold text-[var(--pw-ink)]">
                   {shield.label}
                 </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-[var(--pw-muted)]">
+                <p className="mt-1 text-[11px] leading-relaxed text-[var(--pw-muted)] sm:text-[12px]">
                   {shield.detail}
                 </p>
               </li>
             ))}
           </ul>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 xl:grid-cols-1">
             <PolicyBadge
               label="MFER range proofs"
               on={mferOn}
@@ -213,7 +214,7 @@ export default function PrivacyPulse({
                   className="bg-sky-600/60"
                 />
               </div>
-              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[var(--pw-muted)]">
+              <ul className="mt-2 grid grid-cols-1 gap-1.5 text-[10px] text-[var(--pw-muted)] min-[400px]:grid-cols-3 min-[400px]:gap-x-3">
                 <li>
                   <span className="inline-block h-2 w-2 rounded-sm bg-emerald-600/70 mr-1" />
                   Transfers {privacySample.transfers}
@@ -237,11 +238,13 @@ export default function PrivacyPulse({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-[var(--pw-line)]/80 bg-[var(--pw-surface)]/40 px-2 py-2">
-      <dt className="text-[9px] uppercase tracking-[0.12em] text-[var(--pw-faint)]">
+    <div className="min-w-0 rounded-lg border border-[var(--pw-line)]/80 bg-[var(--pw-surface)]/40 px-1.5 py-2 sm:px-2">
+      <dt className="truncate text-[8px] uppercase tracking-[0.1em] text-[var(--pw-faint)] sm:text-[9px] sm:tracking-[0.12em]">
         {label}
       </dt>
-      <dd className="mt-0.5 font-mono text-sm text-[var(--pw-ink)]">{value}</dd>
+      <dd className="mt-0.5 font-mono text-sm text-[var(--pw-ink)] sm:text-base">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -265,14 +268,16 @@ function PolicyBadge({
       : "border-[var(--pw-line)] text-[var(--pw-muted)]";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${tone}`}
+      className={`inline-flex w-full min-w-0 flex-col gap-1 rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] sm:w-auto sm:flex-row sm:items-center sm:gap-1.5 sm:rounded-full sm:py-1 sm:tracking-[0.1em] ${tone}`}
     >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${on ? "bg-emerald-400" : "bg-[var(--pw-faint)]"}`}
-        aria-hidden
-      />
-      {label}
-      <span className="font-normal normal-case tracking-normal opacity-80">
+      <span className="inline-flex items-center gap-1.5">
+        <span
+          className={`h-1.5 w-1.5 shrink-0 rounded-full ${on ? "bg-emerald-400" : "bg-[var(--pw-faint)]"}`}
+          aria-hidden
+        />
+        <span className="leading-tight">{label}</span>
+      </span>
+      <span className="font-normal normal-case tracking-normal opacity-80 sm:ml-0">
         {hint ?? state}
       </span>
     </span>

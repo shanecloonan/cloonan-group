@@ -276,7 +276,7 @@ export default function BlockChainGraphic({
                     onClick={() =>
                       setSelected(selected === b.height ? null : b.height)
                     }
-                    className={`group relative w-[8.75rem] text-left transition-all duration-500 ease-out sm:w-[9.5rem] md:w-[10.5rem] ${
+                    className={`group relative w-[7.75rem] text-left transition-all duration-500 ease-out sm:w-[9.5rem] md:w-[10.5rem] ${
                       show
                         ? "opacity-100 translate-y-0 scale-100"
                         : "pointer-events-none translate-y-3 scale-95 opacity-0"
@@ -318,10 +318,10 @@ export default function BlockChainGraphic({
                           </span>
                         )}
                       </div>
-                      <p className="relative mt-1.5 text-[11px] tabular-nums text-[var(--pw-muted)]">
+                      <p className="relative mt-1.5 text-[10px] tabular-nums text-[var(--pw-muted)] sm:text-[11px]">
                         {formatDateTime(b.whenMs)}
                       </p>
-                      <p className="relative mt-0.5 text-[11px] tabular-nums text-[var(--pw-muted)]">
+                      <p className="relative mt-0.5 text-[10px] tabular-nums text-[var(--pw-muted)] sm:text-[11px]">
                         {b.userTxCount != null
                           ? `${b.userTxCount} transaction${b.userTxCount === 1 ? "" : "s"}`
                           : b.txCount != null
@@ -354,7 +354,7 @@ export default function BlockChainGraphic({
                   }}
                 />
               </div>
-              <div className="relative w-[8.75rem] sm:w-[9.5rem] md:w-[10.5rem]">
+              <div className="relative w-[7.75rem] sm:w-[9.5rem] md:w-[10.5rem]">
                 <div
                   className={`rounded-xl border border-dashed px-3 py-3 sm:px-3.5 ${
                     inSlotWindow

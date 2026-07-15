@@ -185,7 +185,7 @@ export default function TestnetApp() {
         }}
       />
 
-      <div className="relative z-10 mx-auto max-w-4xl px-5 sm:px-8 pb-24">
+      <div className="relative z-10 mx-auto w-full max-w-4xl overflow-x-clip px-4 sm:px-8 pb-20 sm:pb-24">
         {/* A) Hero — content-sized on mobile; desktop still fills first viewport */}
         <header className="flex flex-col pt-10 pb-8 sm:min-h-[100dvh] sm:pt-14 sm:pb-10">
           <div className="shrink-0">
@@ -198,7 +198,7 @@ export default function TestnetApp() {
             <div className="pw-fade-delay-2 mt-6 sm:mt-7">
               <a
                 href="#wallet"
-                className="inline-flex h-12 items-center rounded-md bg-[var(--pw-accent)] px-7 text-sm font-semibold tracking-wide text-[#0a1210] transition-opacity hover:opacity-90"
+                className="inline-flex h-12 w-full items-center justify-center rounded-md bg-[var(--pw-accent)] px-7 text-sm font-semibold tracking-wide text-[#0a1210] transition-opacity hover:opacity-90 sm:w-auto"
               >
                 Generate wallet
               </a>
@@ -424,10 +424,22 @@ export default function TestnetApp() {
               indices, or decrypted amounts.
             </p>
             <ul className="grid gap-2 text-[12px] text-[var(--pw-faint)] sm:grid-cols-2">
-              <li>✓ Ring-size histograms from tx wire shape</li>
-              <li>✓ MFER / MFEO policy flags from chain params</li>
-              <li>✓ Storage commitment hashes & bucket sizes</li>
-              <li>✗ No account graph · no amount transparency</li>
+              <li className="flex gap-2">
+                <span className="shrink-0 text-emerald-400/80">✓</span>
+                Ring-size histograms from tx wire shape
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 text-emerald-400/80">✓</span>
+                MFER / MFEO policy flags from chain params
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 text-emerald-400/80">✓</span>
+                Storage commitment hashes &amp; bucket sizes
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 text-red-400/80">✗</span>
+                No account graph · no amount transparency
+              </li>
             </ul>
           </section>
 
