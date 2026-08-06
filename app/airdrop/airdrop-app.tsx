@@ -59,6 +59,40 @@ function now() {
   return new Date().toLocaleTimeString();
 }
 
+/** Wait for a mined receipt via a reliable RPC (MetaMask's provider often never resolves wait()). */
+async function waitForMined(
+  rpc: ethers.providers.Provider,
+  txHash: string,
+  timeoutMs = 180_000,
+): Promise<ethers.providers.TransactionReceipt> {
+  const receipt = await Promise.race([
+    rpc.waitForTransaction(txHash, 1),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+  ]);
+  if (!receipt) throw new Error("Timed out waiting for transaction confirmation");
+  if (receipt.status === 0) throw new Error("Transaction reverted on-chain");
+  return receipt;
+}
+
+/** Poll allowance until RPC nodes see the post-approve state. */
+async function waitForAllowance(
+  token: ethers.Contract,
+  owner: string,
+  spender: string,
+  needed: ethers.BigNumber,
+  attempts = 12,
+): Promise<ethers.BigNumber> {
+  let last = ethers.BigNumber.from(0);
+  for (let i = 0; i < attempts; i++) {
+    last = await token.allowance(owner, spender);
+    if (last.gte(needed)) return last;
+    await new Promise((r) => setTimeout(r, 1000 + i * 250));
+  }
+  throw new Error(
+    `Allowance not updated after approve (have ${last.toString()}, need ${needed.toString()}). Try Send Airdrop again.`,
+  );
+}
+
 /* ================================================================== */
 /*  Design tokens                                                      */
 /* ================================================================== */
@@ -164,10 +198,13 @@ export default function AirdropApp() {
     if (!amounts.every((a) => parseFloat(a) > 0)) { addLog("All amounts must be > 0", "error"); return; }
 
     setBusy(true);
+    setActiveTab("log");
     try {
       const signer = await getSigner();
       const signerAddr = selectedEthWallet.address;
       const token = new ethers.Contract(tokenAddress, erc20Abi, signer);
+      // Read-only token bound to Infura — used so post-approve polls don't depend on MetaMask RPC.
+      const tokenReader = new ethers.Contract(tokenAddress, erc20Abi, provider);
       const decimals = await token.decimals();
       const amountsWei = amounts.map((a) => ethers.utils.parseUnits(a, decimals));
       const totalWei = amountsWei.reduce((s, a) => s.add(a), ethers.BigNumber.from(0));
@@ -180,16 +217,27 @@ export default function AirdropApp() {
 
       if (balance.lt(totalWithFee)) {
         addLog("Insufficient token balance (including fees)", "error");
-        setBusy(false);
         return;
       }
 
-      const allowance = await token.allowance(signerAddr, CONTRACT_ADDRESS);
+      let allowance = await tokenReader.allowance(signerAddr, CONTRACT_ADDRESS);
       if (allowance.lt(totalWithFee)) {
-        addLog("Approving tokens...", "pending");
+        // USDT-style tokens revert when changing a non-zero allowance — reset first.
+        if (!allowance.isZero()) {
+          addLog("Resetting existing allowance to 0...", "pending");
+          const resetTx = await token.approve(CONTRACT_ADDRESS, 0);
+          await waitForMined(provider, resetTx.hash);
+          addLog("Allowance reset confirmed", "success");
+        }
+
+        addLog("Approving tokens — confirm in wallet...", "pending");
         const approveTx = await token.approve(CONTRACT_ADDRESS, totalWithBuffer);
-        await approveTx.wait();
-        addLog("Approval confirmed", "success");
+        addLog(`Approve submitted: ${shorten(approveTx.hash)} — waiting for confirmation...`, "pending");
+        await waitForMined(provider, approveTx.hash);
+        addLog("Approval confirmed on-chain", "success");
+
+        allowance = await waitForAllowance(tokenReader, signerAddr, CONTRACT_ADDRESS, totalWithFee);
+        addLog(`Allowance ready: ${ethers.utils.formatUnits(allowance, decimals)}`, "info");
       }
 
       const contract = new ethers.Contract(CONTRACT_ADDRESS, airdropAbi, signer);
@@ -197,14 +245,21 @@ export default function AirdropApp() {
       try {
         const estimate = await contract.estimateGas.airdropTokens(tokenAddress, addrs, amountsWei);
         gasLimit = estimate.mul(120).div(100);
-      } catch {
+      } catch (estErr: unknown) {
+        const est = estErr as { reason?: string; message?: string };
+        const reason = est.reason || est.message || "unknown";
+        // Allowance is confirmed — a revert here is a real failure, not a race. Don't send a doomed tx.
+        if (/allowance|transfer|revert|execution/i.test(reason)) {
+          throw new Error(`Airdrop would fail: ${reason}`);
+        }
+        addLog(`Gas estimate unavailable (${reason}); using fallback limit`, "info");
         gasLimit = ethers.BigNumber.from(estimatedGas);
       }
-      addLog(`Sending airdrop to ${addrs.length} recipients (gas limit: ${gasLimit.toString()})...`, "pending");
 
+      addLog(`Confirm airdrop in wallet — ${addrs.length} recipients (gas limit: ${gasLimit.toString()})...`, "pending");
       const tx = await contract.airdropTokens(tokenAddress, addrs, amountsWei, { gasLimit });
       addLog(`Tx submitted: ${shorten(tx.hash)}`, "pending");
-      const receipt = await tx.wait();
+      const receipt = await waitForMined(provider, tx.hash);
       addLog(`Airdrop successful! Gas used: ${receipt.gasUsed.toString()}`, "success");
       if (user) logTransaction({ userId: user.id, walletAddress: signerAddr, txHash: receipt.transactionHash, dapp: "airdrop", action: "airdrop", amount: `${addrs.length} recipients`, gasUsed: receipt.gasUsed.toString(), contractAddress: CONTRACT_ADDRESS, tokenAddress: tokenAddress });
 
@@ -222,15 +277,19 @@ export default function AirdropApp() {
         return updated;
       });
     } catch (e: unknown) {
-      const err = e as { code?: string; reason?: string; message?: string };
+      const err = e as { code?: number | string; reason?: string; message?: string; data?: { message?: string } };
       let msg = err.message || "Unknown error";
-      if (err.code === "ACTION_REJECTED") msg = "Transaction rejected by wallet";
+      if (err.code === "ACTION_REJECTED" || err.code === 4001) msg = "Transaction rejected by wallet";
       else if (err.reason) msg = `Reverted: ${err.reason}`;
+      else if (err.data?.message) msg = err.data.message;
+      // Trim ethers' verbose dumps
+      if (msg.length > 280) msg = msg.slice(0, 280) + "…";
       addLog(msg, "error");
+      setActiveTab("log");
     } finally {
       setBusy(false);
     }
-  }, [selectedEthWallet, tokenAddress, recipientList, getAmounts, getSigner, estimatedGas, addLog]);
+  }, [selectedEthWallet, tokenAddress, recipientList, getAmounts, getSigner, estimatedGas, addLog, provider, user]);
 
   /* ---- master contacts ---- */
   const addToMaster = useCallback(() => {
