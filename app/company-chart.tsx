@@ -4,28 +4,42 @@ import { useRef, useCallback, useState } from "react";
 import { toPng } from "html-to-image";
 import { Download, Loader2 } from "lucide-react";
 
-const SUBSIDIARIES = [
-  {
-    name: "Antler Gear",
-    url: "https://antlergear.com",
-    role: "Hunting Gear",
-    desc: "Premium bowhunting equipment.",
-    accent: "text-gold",
-    border: "border-gold/40",
-    bg: "bg-gold/5",
-    tag: "bg-gold/15 text-gold",
-  },
-  {
-    name: "File Display",
-    url: "https://filedisplay.com",
-    role: "Enterprise Software",
-    desc: "Internal tooling SaaS platform.",
-    accent: "text-emerald-400",
-    border: "border-emerald-400/40",
-    bg: "bg-emerald-400/5",
-    tag: "bg-emerald-400/15 text-emerald-400",
-  },
+function siteLabel(name: string) {
+  return `${name.replace(/\s+/g, "")}.com`;
+}
+
+function siteUrl(name: string) {
+  return `https://${name.replace(/\s+/g, "").toLowerCase()}.com`;
+}
+
+const ACCENTS = [
+  { accent: "text-gold", border: "border-gold/40", bg: "bg-gold/5", tag: "bg-gold/15 text-gold" },
+  { accent: "text-emerald-400", border: "border-emerald-400/40", bg: "bg-emerald-400/5", tag: "bg-emerald-400/15 text-emerald-400" },
+  { accent: "text-sky-400", border: "border-sky-400/40", bg: "bg-sky-400/5", tag: "bg-sky-400/15 text-sky-400" },
+  { accent: "text-violet-400", border: "border-violet-400/40", bg: "bg-violet-400/5", tag: "bg-violet-400/15 text-violet-400" },
+  { accent: "text-amber-300", border: "border-amber-300/40", bg: "bg-amber-300/5", tag: "bg-amber-300/15 text-amber-300" },
+  { accent: "text-cyan-300", border: "border-cyan-300/40", bg: "bg-cyan-300/5", tag: "bg-cyan-300/15 text-cyan-300" },
+  { accent: "text-rose-300", border: "border-rose-300/40", bg: "bg-rose-300/5", tag: "bg-rose-300/15 text-rose-300" },
 ];
+
+const SUBSIDIARIES = [
+  { name: "Antler Gear", desc: "Premium bowhunting equipment." },
+  { name: "File Display", desc: "Internal tooling SaaS platform." },
+  { name: "Glycell" },
+  { name: "Cheaper Brand" },
+  { name: "Acre Division" },
+  { name: "Joint Pacific" },
+  { name: "DTV Sports" },
+  { name: "Wynport" },
+  { name: "Invention Record" },
+  { name: "Deltamorph" },
+  { name: "Permawrite" },
+].map((s, i) => ({
+  ...s,
+  ...ACCENTS[i % ACCENTS.length],
+  url: siteUrl(s.name),
+  site: siteLabel(s.name),
+}));
 
 function FlowConnector() {
   return (
@@ -131,7 +145,7 @@ export default function CompanyChart() {
       <div className="px-5 sm:px-8 pb-16 sm:pb-20 overflow-visible">
         <div
           ref={chartRef}
-          className="max-w-4xl mx-auto py-2 px-2 overflow-visible"
+          className="max-w-6xl mx-auto py-2 px-2 overflow-visible"
         >
           {/* Level 1: MoneyFund */}
           <div className="flex flex-col items-center">
@@ -147,6 +161,9 @@ export default function CompanyChart() {
               <h3 className="font-heading text-xl sm:text-3xl font-bold uppercase tracking-wide text-amber-400 mb-2">
                 Money Fund
               </h3>
+              <span className="inline-block text-[10px] sm:text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 mb-2">
+                MoneyFund.com
+              </span>
               <p className="text-brand-400 text-[11px] sm:text-xs leading-relaxed">
                 Protects capital and converts subsidiary profits into Arweave, MONEY, and other high-upside assets. Top-level entity and ultimate
                 beneficial owner.
@@ -168,6 +185,9 @@ export default function CompanyChart() {
               <h3 className="font-heading text-xl sm:text-3xl font-bold uppercase tracking-wide text-brand-200 mb-2">
                 Parent Holding
               </h3>
+              <span className="inline-block text-[10px] sm:text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-brand-400/15 text-brand-200 mb-2">
+                ParentHolding.com
+              </span>
               <p className="text-brand-400 text-[11px] sm:text-xs leading-relaxed">
                 Profit-distribution nexus that receives
                 cashflow from subsidiaries and channels it upstream to the vault.
@@ -178,42 +198,39 @@ export default function CompanyChart() {
             <FlowConnector />
           </div>
 
-          {/* Branch lines (desktop) */}
-          <div className="hidden sm:block relative mx-auto max-w-xl">
-            <div className="absolute top-0 left-[25%] right-[25%] h-px bg-brand-700" />
-            <div className="flex justify-between px-[25%]">
-              {SUBSIDIARIES.map((s) => (
-                <div key={s.name} className="w-px h-3 bg-brand-700" />
-              ))}
-            </div>
+          {/* Branch line across the first row of subsidiaries */}
+          <div className="hidden sm:block relative mx-auto max-w-6xl h-3">
+            <div className="absolute top-0 left-[16.666%] right-[16.666%] lg:left-[12.5%] lg:right-[12.5%] h-px bg-brand-700" />
           </div>
 
           {/* Level 3: Subsidiaries */}
-          <div className="grid grid-cols-2 gap-2 lg:gap-2.5 max-w-xl mx-auto mt-1.5 sm:mt-0">
+          <div className="flex flex-wrap justify-center gap-2 max-w-6xl mx-auto mt-1.5 sm:mt-0">
             {SUBSIDIARIES.map((s) => (
               <a
                 key={s.name}
                 href={s.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`relative border ${s.border} ${s.bg} rounded-sm p-2.5 sm:p-4 text-center flex flex-col transition-all hover:brightness-125 hover:scale-[1.02]`}
+                className={`relative border ${s.border} ${s.bg} rounded-sm p-2.5 sm:p-4 text-center flex flex-col w-[calc(50%-0.25rem)] sm:w-[calc(33.333%-0.34rem)] lg:w-[calc(25%-0.375rem)] transition-all hover:brightness-125 hover:scale-[1.02]`}
               >
                 <p className="text-[8px] sm:text-[9px] tracking-[0.15em] uppercase font-semibold text-brand-600 mb-1 sm:mb-1.5">
                   Subsidiary
                 </p>
                 <h4
-                  className={`font-heading text-sm sm:text-xl font-bold uppercase tracking-wide ${s.accent} mb-1 sm:mb-1.5`}
+                  className={`font-heading text-sm sm:text-lg font-bold uppercase tracking-wide ${s.accent} mb-1 sm:mb-1.5`}
                 >
                   {s.name}
                 </h4>
                 <span
-                  className={`inline-block self-center text-[8px] sm:text-[9px] tracking-[0.1em] sm:tracking-[0.12em] uppercase font-semibold px-2 py-0.5 rounded-full ${s.tag} mb-1.5 sm:mb-2`}
+                  className={`block max-w-full self-center text-[8px] sm:text-[11px] font-semibold leading-snug px-2 py-0.5 rounded-full ${s.tag} mb-1.5 sm:mb-2 break-words`}
                 >
-                  {s.role}
+                  {s.site}
                 </span>
-                <p className="text-brand-500 text-[9px] sm:text-[11px] leading-relaxed">
-                  {s.desc}
-                </p>
+                {s.desc ? (
+                  <p className="text-brand-500 text-[9px] sm:text-[11px] leading-relaxed">
+                    {s.desc}
+                  </p>
+                ) : null}
               </a>
             ))}
           </div>
