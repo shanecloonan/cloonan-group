@@ -6,7 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 
 const SUBSIDIARIES = [
   {
-    name: "AntlerGear",
+    name: "Antler Gear",
     url: "https://antlergear.com",
     role: "Hunting Gear",
     desc: "Premium bowhunting equipment.",
@@ -16,7 +16,7 @@ const SUBSIDIARIES = [
     tag: "bg-gold/15 text-gold",
   },
   {
-    name: "FileDisplay",
+    name: "File Display",
     url: "https://filedisplay.com",
     role: "Enterprise Software",
     desc: "Internal tooling SaaS platform.",
@@ -145,7 +145,7 @@ export default function CompanyChart() {
                 Grandparent Vault
               </p>
               <h3 className="font-heading text-xl sm:text-3xl font-bold uppercase tracking-wide text-amber-400 mb-2">
-                MoneyFund
+                Money Fund
               </h3>
               <p className="text-brand-400 text-[11px] sm:text-xs leading-relaxed">
                 Protects capital and converts subsidiary profits into Arweave, MONEY, and other high-upside assets. Top-level entity and ultimate
@@ -166,7 +166,7 @@ export default function CompanyChart() {
                 Parent Nexus
               </p>
               <h3 className="font-heading text-xl sm:text-3xl font-bold uppercase tracking-wide text-brand-200 mb-2">
-                ParentHolding
+                Parent Holding
               </h3>
               <p className="text-brand-400 text-[11px] sm:text-xs leading-relaxed">
                 Profit-distribution nexus that receives
