@@ -128,14 +128,6 @@ export default function Home() {
         <p className="text-base sm:text-lg md:text-lg lg:text-xl font-light tracking-[0.05em] text-brand-400 max-w-2xl leading-relaxed">
           The World&rsquo;s Biggest Hedge Fun
         </p>
-
-        <div className="flex items-center gap-4 mt-5">
-          <span className="h-px w-10 md:w-12 bg-gold/40" />
-          <span className="text-[11px] sm:text-[12px] md:text-[12px] tracking-[0.3em] uppercase font-semibold text-gold/70">
-            Est. 1996
-          </span>
-          <span className="h-px w-10 md:w-12 bg-gold/40" />
-        </div>
       </div>
     </div>
   );
