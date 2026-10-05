@@ -16,26 +16,6 @@ const SUBSIDIARIES = [
     tag: "bg-gold/15 text-gold",
   },
   {
-    name: "Deltamorph",
-    url: "https://deltamorph.com",
-    role: "Genomic Research",
-    desc: "Genetic discovery lab.",
-    accent: "text-sky-400",
-    border: "border-sky-400/40",
-    bg: "bg-sky-400/5",
-    tag: "bg-sky-400/15 text-sky-400",
-  },
-  {
-    name: "ChipFab",
-    url: "https://chipfab.com",
-    role: "Fabrication Infrastructure",
-    desc: "Semiconductor research.",
-    accent: "text-violet-400",
-    border: "border-violet-400/40",
-    bg: "bg-violet-400/5",
-    tag: "bg-violet-400/15 text-violet-400",
-  },
-  {
     name: "FileDisplay",
     url: "https://filedisplay.com",
     role: "Enterprise Software",
@@ -175,7 +155,7 @@ export default function CompanyChart() {
 
             <FlowConnector />
 
-            {/* Level 2: DeltaMorph */}
+            {/* Level 2: ParentHolding */}
             <a
               href="https://parentholding.com"
               target="_blank"
@@ -199,9 +179,9 @@ export default function CompanyChart() {
           </div>
 
           {/* Branch lines (desktop) */}
-          <div className="hidden sm:block relative mx-auto max-w-3xl">
-            <div className="absolute top-0 left-[12.5%] right-[12.5%] h-px bg-brand-700" />
-            <div className="flex justify-between px-[12.5%]">
+          <div className="hidden sm:block relative mx-auto max-w-xl">
+            <div className="absolute top-0 left-[25%] right-[25%] h-px bg-brand-700" />
+            <div className="flex justify-between px-[25%]">
               {SUBSIDIARIES.map((s) => (
                 <div key={s.name} className="w-px h-3 bg-brand-700" />
               ))}
@@ -209,7 +189,7 @@ export default function CompanyChart() {
           </div>
 
           {/* Level 3: Subsidiaries */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-2.5 max-w-3xl mx-auto mt-1.5 sm:mt-0">
+          <div className="grid grid-cols-2 gap-2 lg:gap-2.5 max-w-xl mx-auto mt-1.5 sm:mt-0">
             {SUBSIDIARIES.map((s) => (
               <a
                 key={s.name}
