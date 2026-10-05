@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 
 /* ================================================================== */
 /*  NETWORK / MONEYFUND L1 WHITEPAPER PAGE                             */
-/*  Source: The MoneyFund Network Whitepaper v6.1 (Shane Cloonan)      */
+/*  Source: The MoneyFund Network Whitepaper v6.1                       */
 /*          + MoneyFund Architecture Illustration v6.2                 */
 /* ================================================================== */
 
@@ -1363,7 +1363,7 @@ export default function WhitepaperContent() {
             </p>
             <div className="mx-auto mt-4 w-24 h-[2px] rounded-full bg-gradient-to-r from-cyan-500/40 via-purple-500/40 to-amber-500/40" />
             <p className="text-[10px] text-white/30 tracking-[0.2em] uppercase">
-              Shane Cloonan · May 2026
+              Shane · May 2026
             </p>
           </div>
 
@@ -1863,8 +1863,7 @@ export default function WhitepaperContent() {
               The MoneyFund Network
             </p>
             <p className="text-[10px] text-white/20">
-              Whitepaper v6.1 · Architecture Illustration v6.2 · Shane Cloonan ·
-              May 2026
+              Whitepaper v6.1 · Architecture Illustration v6.2 · Shane · May 2026
             </p>
           </div>
         </section>
