@@ -14,11 +14,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://moneyfund.com"),
   title: {
     default: "MoneyFund",
     template: "%s | MoneyFund",
   },
   description: "MoneyFund — The World's Biggest Hedge Fun.",
+  openGraph: {
+    siteName: "MoneyFund",
+    type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "MoneyFund — The World's Biggest Hedge Fun",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({
