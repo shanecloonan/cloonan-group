@@ -36,7 +36,7 @@ const SUBSIDIARIES = [
   { name: "Permawrite", desc: "Permanent Database Blockchain." },
   { name: "Chip Fab", desc: "Semiconductor Research." },
   { name: "Vix Ventures", desc: "Venture Capital Partners." },
-  { name: "Fudstock", desc: "FUD dissemination platform." },
+  { name: "Stock FUD", desc: "FUD dissemination platform." },
 ].map((s, i) => ({
   ...s,
   ...ACCENTS[i % ACCENTS.length],
