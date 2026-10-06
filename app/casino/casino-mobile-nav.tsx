@@ -26,7 +26,7 @@ function CasinoMobileNavInner() {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-amber-500/15 bg-[#04050a]/96 backdrop-blur-2xl pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_40px_rgba(0,0,0,0.5)]"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-[#c6a15b]/25 bg-[#070806]/96 backdrop-blur-2xl pb-[env(safe-area-inset-bottom)] shadow-[0_-16px_40px_rgba(0,0,0,0.55)]"
       aria-label="Casino navigation"
     >
       <div className="flex justify-around items-stretch h-[3.25rem] max-w-lg mx-auto px-1">
@@ -38,16 +38,12 @@ function CasinoMobileNavInner() {
               href={t.href}
               className={
                 "relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-all " +
-                (active ? "text-amber-300" : "text-white/40")
+                (active ? "text-[#e8d5a3]" : "text-[#f6f1e7]/35")
               }
             >
-              <span className={"text-base leading-none " + (active ? "drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]" : "")}>
-                {t.icon}
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-[0.14em]">{t.label}</span>
-              {active && (
-                <span className="absolute bottom-1 w-8 h-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-600" />
-              )}
+              <span className="text-[13px] leading-none">{t.icon}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-[0.16em]">{t.label}</span>
+              {active && <span className="absolute bottom-1 w-6 h-px bg-[#e8d5a3]" />}
             </Link>
           );
         })}

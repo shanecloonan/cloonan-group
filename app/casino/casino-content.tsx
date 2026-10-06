@@ -57,6 +57,7 @@ const ChuckALuckTable = dynamic(() => import("./chuck-a-luck-table"), { ssr: fal
 const UltimateTexasHoldemTable = dynamic(() => import("./ultimate-texas-holdem-table"), { ssr: false });
 const CrapsTable = dynamic(() => import("./craps-table"), { ssr: false });
 const TeenPattiTable = dynamic(() => import("./teen-patti-table"), { ssr: false });
+const TrenteEtQuaranteTable = dynamic(() => import("./trente-et-quarante-table"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Chain catalog — which chain is the user playing on?
@@ -81,7 +82,7 @@ const CHAIN_TILES: ChainTile[] = [
     status: "live",
     phase: "Phase 0",
     blurb: "Free chips, random guest name, no sign-up. Instant refills via the chip bar.",
-    bestFor: "Learning the game Â· UI development Â· zero-stakes fun",
+    bestFor: "Learning the game · UI development · zero-stakes fun",
     tokens: [DEV_TOKEN],
   },
   {
@@ -91,7 +92,7 @@ const CHAIN_TILES: ChainTile[] = [
     status: "queued",
     phase: "Phase 1",
     blurb: "ETH vault on Sepolia for deposit/withdraw and settlement smoke tests before mainnet rails go live.",
-    bestFor: "Vault E2E Â· operator QA Â· test ETH only",
+    bestFor: "Vault E2E · operator QA · test ETH only",
     tokens: [USDC_SEPOLIA, ETH_NATIVE],
   },
   {
@@ -100,8 +101,8 @@ const CHAIN_TILES: ChainTile[] = [
     tag: "ETH",
     status: "queued",
     phase: "Phase 2",
-    blurb: "USDC on Base â€” 2 sec finality, ~$0.01 fees. Withdraws settle via EIP-712 sigs from the operator.",
-    bestFor: "Large bets Â· audit trail Â· trustless settlement",
+    blurb: "USDC on Base — 2 sec finality, ~$0.01 fees. Withdraws settle via EIP-712 sigs from the operator.",
+    bestFor: "Large bets · audit trail · trustless settlement",
     tokens: [ETH_NATIVE, USDC_BASE],
   },
   {
@@ -110,8 +111,8 @@ const CHAIN_TILES: ChainTile[] = [
     tag: "ETH",
     status: "queued",
     phase: "Phase 2.1",
-    blurb: "Same vault contract, mainnet liquidity. Higher gas â†’ high-stakes only.",
-    bestFor: "Whales Â· maximum security Â· regulated treasuries",
+    blurb: "Same vault contract, mainnet liquidity. Higher gas, so it suits high stakes.",
+    bestFor: "Whales · maximum security · regulated treasuries",
     tokens: [ETH_NATIVE, USDC_ETHEREUM_MAINNET],
   },
   {
@@ -120,8 +121,8 @@ const CHAIN_TILES: ChainTile[] = [
     tag: "SOL",
     status: "queued",
     phase: "Phase 3",
-    blurb: "Anchor PDA vault. ~400ms slots, sub-cent fees â†’ every roll on-chain is viable.",
-    bestFor: "Micro-bets Â· slot pulls Â· crash Â· fast game loops",
+    blurb: "Anchor PDA vault. ~400ms slots, sub-cent fees, so every roll on-chain is viable.",
+    bestFor: "Micro-bets · slot pulls · crash · fast game loops",
     tokens: [SOL_NATIVE, USDC_SOLANA],
   },
 ];
@@ -206,7 +207,7 @@ function CasinoContentInner() {
               onClick={() => goTab("lobby")}
               className={btnGhost + " !h-10 !min-h-10 !px-3 text-sm"}
             >
-              ← Games
+              Floor
             </button>
             <FairnessPanel />
           </div>
@@ -298,6 +299,9 @@ function CasinoContentInner() {
           )}
           {tab === "teen-patti" && (
             <TeenPattiTable chainId={chainId} token={token} adapter={adapter} />
+          )}
+          {tab === "trente-et-quarante" && (
+            <TrenteEtQuaranteTable chainId={chainId} token={token} adapter={adapter} />
           )}
           </>
         )}

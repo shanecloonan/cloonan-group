@@ -6,7 +6,7 @@ const CasinoContent = dynamic(() => import("./casino-content"));
 export const metadata: Metadata = {
   title: "Casino | MoneyFund",
   description:
-    "MoneyFund Casino — ten provably-fair games, live leaderboards, on-chain vault, and multiplayer poker.",
+    "MoneyFund Salon — provably fair tables, a private vault, and the Monte Carlo floor.",
 };
 
 export default function CasinoPage() {

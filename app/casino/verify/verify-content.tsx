@@ -60,6 +60,7 @@ import {
   formatCrapsRoll,
   teenPattiGame,
   formatTeenPattiHand,
+  trenteEtQuaranteGame,
   describeScore,
   minesGame,
   plinkoGame,
@@ -116,6 +117,8 @@ import {
   type CrapsState,
   type TeenPattiAction,
   type TeenPattiState,
+  type TrenteEtQuaranteAction,
+  type TrenteEtQuaranteState,
   type MinesAction,
   type MinesState,
   type PlinkoAction,
@@ -270,6 +273,11 @@ const SUPPORTED_GAMES: { id: GameId; label: string; hint: string }[] = [
     label: "Teen Patti",
     hint: "Six card draws plus fold/play; Teen Patti 3-card ranks replay.",
   },
+  {
+    id: "trente-et-quarante",
+    label: "Trente et Quarante",
+    hint: "Two rows dealt to 31; closer total, couleur, and refait replay from the shoe.",
+  },
 ];
 
 type AnyAction =
@@ -300,7 +308,8 @@ type AnyAction =
   | ChuckALuckAction
   | UltimateTexasHoldemAction
   | CrapsAction
-  | TeenPattiAction;
+  | TeenPattiAction
+  | TrenteEtQuaranteAction;
 type AnyState =
   | BaccaratState
   | BlackjackState
@@ -329,7 +338,8 @@ type AnyState =
   | ChuckALuckState
   | UltimateTexasHoldemState
   | CrapsState
-  | TeenPattiState;
+  | TeenPattiState
+  | TrenteEtQuaranteState;
 
 /* ---------------------------------------------------------------------------
  *  Helpers
@@ -675,7 +685,8 @@ function pickGame(id: string):
         | typeof chuckALuckGame
         | typeof ultimateTexasHoldemGame
         | typeof crapsGame
-        | typeof teenPattiGame;
+        | typeof teenPattiGame
+        | typeof trenteEtQuaranteGame;
       renderState: (s: unknown) => { label: string; value: string }[];
     }
   | null {
@@ -1099,6 +1110,20 @@ function pickGame(id: string):
       },
     };
   }
+  if (id === "trente-et-quarante") {
+    return {
+      module: trenteEtQuaranteGame,
+      renderState: (raw: unknown) => {
+        const s = raw as TrenteEtQuaranteState;
+        return [
+          { label: "Mise", value: s.betSpot },
+          { label: "Outcome", value: s.outcome },
+          { label: "Rouge", value: `${s.rouge.map(cardLabel).join(" ")} = ${s.rougeTotal}` },
+          { label: "Noir", value: `${s.noir.map(cardLabel).join(" ")} = ${s.noirTotal}` },
+        ];
+      },
+    };
+  }
   if (id === "teen-patti") {
     return {
       module: teenPattiGame,
@@ -1297,6 +1322,10 @@ function configFromSession(session: Session<AnyAction, AnyState>): Record<string
   if (session.gameId === "craps") {
     const cr = s as CrapsState;
     return { betType: cr.betType } as unknown as Record<string, unknown>;
+  }
+  if (session.gameId === "trente-et-quarante") {
+    const tq = s as TrenteEtQuaranteState;
+    return { betSpot: tq.betSpot, numDecks: tq.config.numDecks } as unknown as Record<string, unknown>;
   }
   if (session.gameId === "teen-patti") {
     const tp = s as TeenPattiState;

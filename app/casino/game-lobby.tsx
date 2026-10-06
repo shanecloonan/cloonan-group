@@ -58,17 +58,19 @@ function GameTileButton({ g, onOpen }: { g: (typeof GAME_CATALOG)[0]; onOpen: ()
       className={
         card +
         cardHover +
-        " p-3 sm:p-4 flex flex-col items-center text-center gap-2 min-h-[6.25rem] sm:min-h-[7rem] cursor-pointer active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+        " group px-3.5 py-3.5 sm:px-4 sm:py-4 flex flex-col items-start text-left gap-3 min-h-[6.5rem] cursor-pointer active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c6a15b]/50"
       }
     >
-      <span
-        className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-b from-amber-500/20 to-emerald-500/10 border border-amber-400/20 flex items-center justify-center text-2xl sm:text-3xl"
-        aria-hidden
-      >
-        {g.emoji}
+      <span className="flex w-full items-center justify-between gap-2">
+        <span className="text-[10px] tracking-[0.28em] uppercase text-[#c6a15b]" aria-hidden>
+          {g.mark}
+        </span>
+        <span className="text-[9px] tracking-[0.14em] uppercase text-[#f6f1e7]/35">{g.rtp}</span>
       </span>
-      <span className="text-[11px] sm:text-xs font-semibold text-white leading-tight line-clamp-2">{g.title}</span>
-      <span className="text-[9px] font-mono text-white/40">{g.rtp}</span>
+      <span className="font-heading text-[13px] sm:text-sm font-semibold tracking-wide text-[#f6f1e7] leading-tight">
+        {g.title}
+      </span>
+      <span className="mt-auto h-px w-8 bg-[#c6a15b]/40 group-hover:w-14 transition-all" aria-hidden />
     </button>
   );
 }
@@ -126,11 +128,11 @@ export function GameLobby({
       <section className={card + " p-4 sm:p-5"}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-semibold">Balance</p>
-            <p className="mt-1 text-2xl sm:text-3xl font-mono font-bold text-emerald-300 tabular-nums">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[#c6a15b] font-semibold">House account</p>
+            <p className="mt-2 text-3xl sm:text-4xl font-heading font-semibold text-[#f6f1e7] tabular-nums tracking-tight">
               {fmtMoney(balance.available, token, 2)}
             </p>
-            <p className="mt-1 text-xs text-white/45">
+            <p className="mt-1.5 text-xs text-[#f6f1e7]/45">
               Lifetime {stats.totalPnlUnits >= 0n ? "+" : ""}
               {fmtPnl(stats.totalPnlUnits, token, 2)}
               {stats.sessionsPlayed > 0 ? ` · ${stats.sessionsPlayed} hands` : ""}
@@ -146,7 +148,7 @@ export function GameLobby({
             <Link
               key={l.href}
               href={l.href}
-              className="text-xs font-medium px-3 py-2 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/65 hover:text-white hover:border-amber-400/30 transition-colors"
+              className="text-[10px] tracking-[0.16em] uppercase font-medium px-3 py-2 rounded-full border border-[#c6a15b]/20 text-[#f6f1e7]/60 hover:text-[#f6ecd4] hover:border-[#c6a15b]/45 transition-colors"
             >
               {l.label}
             </Link>
@@ -154,26 +156,26 @@ export function GameLobby({
           <button
             type="button"
             onClick={() => setMoreOpen((o) => !o)}
-            className="text-xs font-medium px-3 py-2 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/65 hover:text-white cursor-pointer"
+            className="text-[10px] tracking-[0.16em] uppercase font-medium px-3 py-2 rounded-full border border-[#c6a15b]/20 text-[#f6f1e7]/60 hover:text-[#f6ecd4] cursor-pointer"
           >
             More{moreOpen ? " ▲" : " ▼"}
           </button>
         </nav>
         {moreOpen && (
           <nav className="mt-2 flex flex-wrap gap-2">
-            <Link href="/casino/leaderboard" className="text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] text-white/55 hover:text-white">
+            <Link href="/casino/leaderboard" className="text-[10px] tracking-[0.14em] uppercase px-3 py-1.5 rounded-full border border-[#c6a15b]/15 text-[#f6f1e7]/50 hover:text-[#f6ecd4]">
               Rankings
             </Link>
-            <Link href="/casino/verify" className="text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] text-white/55 hover:text-white">
+            <Link href="/casino/verify" className="text-[10px] tracking-[0.14em] uppercase px-3 py-1.5 rounded-full border border-[#c6a15b]/15 text-[#f6f1e7]/50 hover:text-[#f6ecd4]">
               Verify
             </Link>
-            <Link href="/casino/docs" className="text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] text-white/55 hover:text-white">
+            <Link href="/casino/docs" className="text-[10px] tracking-[0.14em] uppercase px-3 py-1.5 rounded-full border border-[#c6a15b]/15 text-[#f6f1e7]/50 hover:text-[#f6ecd4]">
               Docs
             </Link>
             <button
               type="button"
               onClick={onOpenFairness}
-              className="text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] text-white/55 hover:text-white cursor-pointer"
+              className="text-[10px] tracking-[0.14em] uppercase px-3 py-1.5 rounded-full border border-[#c6a15b]/15 text-[#f6f1e7]/50 hover:text-[#f6ecd4] cursor-pointer"
             >
               Fairness
             </button>
@@ -185,7 +187,7 @@ export function GameLobby({
 
       <section>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-          <h2 className="text-sm font-semibold text-white/80 shrink-0">Choose a game</h2>
+          <h2 className="text-[11px] uppercase tracking-[0.28em] text-[#c6a15b] font-semibold shrink-0">The floor</h2>
           <input
             type="search"
             placeholder="Search games…"
@@ -203,10 +205,10 @@ export function GameLobby({
         {showSections
           ? byCategory.map(({ cat, games }) => (
               <div key={cat} className="mb-5 last:mb-0">
-                <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold mb-2">
+                <h3 className="text-[10px] uppercase tracking-[0.28em] text-[#f6f1e7]/40 font-semibold mb-3">
                   {CATEGORY_LABELS[cat]}
                 </h3>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {games.map((g) => (
                     <GameTileButton key={g.id} g={g} onOpen={() => onOpenGame(g.id as GameTab)} />
                   ))}
@@ -214,7 +216,7 @@ export function GameLobby({
               </div>
             ))
           : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {liveGames.map((g) => (
                 <GameTileButton key={g.id} g={g} onOpen={() => onOpenGame(g.id as GameTab)} />
               ))}
@@ -223,12 +225,12 @@ export function GameLobby({
 
         {GAME_CATALOG.some((g) => g.status === "soon") && !query && (
           <div className="mt-4 pt-4 border-t border-white/[0.06]">
-            <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/35 font-semibold mb-2">Coming soon</h3>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 opacity-40">
+            <h3 className="text-[10px] uppercase tracking-[0.28em] text-[#f6f1e7]/35 font-semibold mb-3">Reserved</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 opacity-50">
               {GAME_CATALOG.filter((g) => g.status === "soon").map((g) => (
-                <div key={g.id} className={card + " p-3 flex flex-col items-center gap-1 min-h-[5.5rem]"} aria-disabled>
-                  <span className="text-2xl">{g.emoji}</span>
-                  <span className="text-[10px] font-semibold text-white/70">{g.title}</span>
+                <div key={g.id} className={card + " px-3.5 py-3 flex flex-col gap-2 min-h-[5.5rem]"} aria-disabled>
+                  <span className="text-[10px] tracking-[0.28em] uppercase text-[#c6a15b]/70">{g.mark}</span>
+                  <span className="text-sm font-heading text-[#f6f1e7]/70">{g.title}</span>
                 </div>
               ))}
             </div>
@@ -240,8 +242,8 @@ export function GameLobby({
         <section className={card + " p-4"}>
           <div className="flex items-center justify-between gap-2 mb-2">
             <h3 className="text-sm font-semibold text-white/80">Recent</h3>
-            <Link href="/casino/history" className="text-xs text-amber-300/90 hover:text-amber-200">
-              See all →
+            <Link href="/casino/history" className="text-[10px] tracking-[0.16em] uppercase text-[#e8d5a3] hover:text-[#f6ecd4]">
+              See all
             </Link>
           </div>
           <ul className="space-y-1.5 text-xs font-mono">

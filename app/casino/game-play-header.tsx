@@ -15,15 +15,15 @@ export function GamePlayHeader({
   const { balance, token, playMoney } = useCasino();
 
   return (
-    <div className="flex items-center gap-2 sm:gap-3 py-2 sm:py-3 mb-2 sm:mb-4 border-b border-white/[0.06]">
+    <div className="flex items-center gap-2 sm:gap-3 py-2 sm:py-3 mb-2 sm:mb-4 border-b border-[#c6a15b]/15">
       <button
         type="button"
         onClick={onBack}
-        className={btnGhost + " shrink-0 !h-10 !min-h-10 !px-3 text-sm"}
+        className={btnGhost + " shrink-0 !h-10 !min-h-10 !px-3 text-[11px] tracking-[0.14em] uppercase"}
       >
-        ← Games
+        Floor
       </button>
-      <h2 className="flex-1 min-w-0 text-base sm:text-xl font-semibold text-white truncate">
+      <h2 className="flex-1 min-w-0 font-heading text-base sm:text-xl font-semibold tracking-[0.14em] uppercase text-[#f6f1e7] truncate">
         {GAME_LABELS[gameId]}
       </h2>
       {!playMoney.enabled && (

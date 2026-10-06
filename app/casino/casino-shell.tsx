@@ -30,18 +30,21 @@ function CasinoShellInner({
 
   return (
     <div className={casinoPage + " " + casinoShellBg}>
-      <header className="sticky top-0 z-40 border-b border-amber-500/10 bg-[#04050a]/92 backdrop-blur-2xl">
+      <header className="sticky top-0 z-40 border-b border-[#c6a15b]/20 bg-[#070806]/90 backdrop-blur-2xl">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-12 sm:h-14 gap-4">
-            <Link href="/casino" className="flex items-center gap-2 shrink-0 group">
+          <div className="flex items-center justify-between h-14 sm:h-16 gap-4">
+            <Link href="/casino" className="flex items-center gap-3 shrink-0 group">
               <span
-                className="hidden sm:flex h-7 w-7 rounded-lg bg-gradient-to-br from-amber-400 to-amber-700 items-center justify-center text-black font-bold text-xs"
+                className="hidden sm:flex h-8 w-8 rounded-full border border-[#e8d5a3]/50 items-center justify-center text-[#e8d5a3] text-[11px]"
                 aria-hidden
               >
                 ◆
               </span>
-              <span className="text-base sm:text-lg font-heading font-semibold tracking-tight">
-                Casino
+              <span className="flex flex-col leading-none">
+                <span className="text-[9px] tracking-[0.42em] uppercase text-[#c6a15b]/80">MoneyFund</span>
+                <span className="mt-1 text-[15px] sm:text-base font-heading font-semibold tracking-[0.22em] uppercase text-[#f6f1e7]">
+                  Salon
+                </span>
               </span>
             </Link>
 
@@ -53,10 +56,10 @@ function CasinoShellInner({
                     key={item.href}
                     href={item.href}
                     className={
-                      "px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors " +
+                      "px-3.5 py-1.5 rounded-full text-[11px] tracking-[0.16em] uppercase font-medium transition-colors " +
                       (active
-                        ? "text-amber-100 bg-amber-500/15 border border-amber-400/30"
-                        : "text-white/55 hover:text-white hover:bg-white/[0.05] border border-transparent")
+                        ? "text-[#f6ecd4] bg-[#c6a15b]/15 border border-[#c6a15b]/40"
+                        : "text-[#f6f1e7]/50 hover:text-[#f6f1e7] hover:bg-white/[0.04] border border-transparent")
                     }
                   >
                     {item.label}
@@ -65,7 +68,7 @@ function CasinoShellInner({
               })}
               <Link
                 href="/casino/wallet"
-                className="ml-1 px-3 py-1.5 rounded-full text-[12px] font-medium text-white/55 hover:text-amber-100 border border-white/[0.08] hover:border-amber-400/30"
+                className="ml-2 px-3.5 py-1.5 rounded-full text-[11px] tracking-[0.16em] uppercase font-medium text-[#e8d5a3]/80 hover:text-[#f6ecd4] border border-[#c6a15b]/25 hover:border-[#e8d5a3]/50"
               >
                 Vault
               </Link>
@@ -73,7 +76,7 @@ function CasinoShellInner({
 
             <Link
               href="/casino/wallet"
-              className="md:hidden text-xs font-medium text-amber-200/90 px-2.5 py-1.5 rounded-lg border border-amber-500/25"
+              className="md:hidden text-[10px] tracking-[0.18em] uppercase font-medium text-[#e8d5a3] px-2.5 py-1.5 rounded-full border border-[#c6a15b]/35"
             >
               Vault
             </Link>
@@ -82,15 +85,15 @@ function CasinoShellInner({
       </header>
 
       {(title || subtitle) && (
-        <div className="border-b border-white/[0.05] bg-gradient-to-b from-amber-500/[0.05] to-transparent">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="border-b border-[#c6a15b]/10 bg-gradient-to-b from-[#c6a15b]/[0.06] to-transparent">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-9">
             {badge && (
-              <span className="inline-block mb-2 text-[10px] uppercase tracking-[0.2em] text-amber-300/90 font-bold">
+              <span className="inline-block mb-2 text-[10px] uppercase tracking-[0.28em] text-[#c6a15b] font-semibold">
                 {badge}
               </span>
             )}
-            {title && <h1 className="font-heading text-2xl sm:text-3xl font-semibold text-white">{title}</h1>}
-            {subtitle && <p className="mt-2 max-w-2xl text-white/50 text-sm leading-relaxed">{subtitle}</p>}
+            {title && <h1 className="font-heading text-2xl sm:text-4xl font-semibold tracking-tight text-[#f6f1e7]">{title}</h1>}
+            {subtitle && <p className="mt-2 max-w-2xl text-[#f6f1e7]/50 text-sm leading-relaxed">{subtitle}</p>}
           </div>
         </div>
       )}

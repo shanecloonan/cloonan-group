@@ -23,7 +23,7 @@ import { useCasino } from "./casino-context";
 import { CasinoVerifyModal, VerifyField } from "./casino-verify-modal";
 import { pickRevealedServerSeed, runBlackjackVerify } from "./session-verify";
 import { ShareLinkRow } from "./share-link";
-import { btnPrimary, card, inputCls, labelCls } from "./casino-ui";
+import { btnGhost, btnPrimary, felt, inputCls, labelCls } from "./casino-ui";
 import {
   fmtMoney,
   humanToUnits,
@@ -236,7 +236,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
   return (
     <LegacyThreeColLayout>
       {/* Left column: table */}
-      <section className={card + " p-6 lg:col-span-2 min-h-[560px] flex flex-col"}>
+      <section className={felt + " p-6 lg:col-span-2 min-h-[560px] flex flex-col"}>
         <TableBalanceHeader
           chainId={chainId}
           token={token}
@@ -727,14 +727,14 @@ function Settlement({
         <button
           type="button"
           onClick={onClear}
-          className="h-10 px-6 rounded-lg font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer"
+          className={btnPrimary + " !h-10 !min-h-10"}
         >
           New hand · Enter
         </button>
         <button
           type="button"
           onClick={onVerify}
-          className="h-10 px-4 rounded-lg font-medium text-sm bg-white/[0.04] border border-white/[0.08] text-white/80 hover:text-white hover:bg-white/[0.08] active:scale-95 transition-all cursor-pointer"
+          className={btnGhost + " !h-10"}
         >
           Verify hand →
         </button>
@@ -771,10 +771,10 @@ function CardChip({
     return (
       <div
         ref={ref}
-        className="w-14 h-20 rounded-lg bg-gradient-to-br from-emerald-700 to-emerald-900 border border-emerald-500/40 flex items-center justify-center text-white/60 text-xs select-none transition-all duration-300 ease-out"
+        className="w-14 h-20 rounded-[0.4rem] bg-gradient-to-br from-[#143024] via-[#0c1c16] to-[#1a1208] border border-[#c6a15b]/45 flex items-center justify-center text-[#e8d5a3]/80 text-sm select-none shadow-[inset_0_0_0_1px_rgba(232,213,163,0.15)] transition-all duration-300 ease-out"
         style={{ transitionDelay: `${delay}ms` }}
       >
-        ⌑
+        ◆
       </div>
     );
   }
@@ -783,8 +783,8 @@ function CardChip({
     <div
       ref={ref}
       className={
-        "w-14 h-20 rounded-lg border bg-white/[0.96] text-black flex flex-col items-center justify-center font-bold select-none transition-all duration-300 ease-out shadow-md " +
-        (red ? "text-rose-600" : "text-stone-900")
+        "w-14 h-20 rounded-[0.4rem] border border-[#d7c7a1] bg-gradient-to-b from-[#fffaf1] to-[#f3e6cc] flex flex-col items-center justify-center font-heading font-bold select-none transition-all duration-300 ease-out shadow-[0_8px_16px_rgba(0,0,0,0.35)] " +
+        (red ? "text-[#9c2b2b]" : "text-[#1a1814]")
       }
       style={{ transitionDelay: `${delay}ms` }}
     >

@@ -8,29 +8,29 @@ import { cryptoRandomId } from "./rng";
 const STORAGE_KEY = "mf_casino_guest_v1";
 
 const ADJECTIVES = [
-  "Lucky",
-  "Golden",
+  "Ivory",
+  "Gilded",
   "Midnight",
   "Royal",
   "Velvet",
-  "Cosmic",
-  "Diamond",
-  "Neon",
-  "Silver",
-  "Wild",
+  "Private",
+  "Maison",
+  "Quiet",
+  "Lacquer",
+  "Champagne",
 ] as const;
 
 const NOUNS = [
-  "Ace",
-  "Whale",
-  "Shark",
-  "Dealer",
-  "HighRoller",
-  "Phantom",
-  "Jackpot",
-  "River",
-  "Bluff",
-  "Chip",
+  "Salon",
+  "Suite",
+  "Table",
+  "Reserve",
+  "Atelier",
+  "Marquis",
+  "Ledger",
+  "Croupier",
+  "Box",
+  "Chair",
 ] as const;
 
 export type GuestProfile = {

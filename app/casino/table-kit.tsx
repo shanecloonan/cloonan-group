@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { Card, ChainId, SeedPair, TokenSpec } from "@/lib/casino";
 import { useCasino } from "./casino-context";
-import { btnGhost, btnSecondary, card, inputCls, labelCls } from "./casino-ui";
+import { btnGhost, btnPrimary, btnSecondary, card, felt, inputCls, labelCls } from "./casino-ui";
 
 /* ---- Money ---- */
 
@@ -240,7 +240,7 @@ export function BalanceSummary({
   return (
     <div className="text-right">
       <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Available</div>
-      <div className="text-xl font-bold font-mono text-white tabular-nums">
+      <div className="text-xl font-heading font-semibold text-[#f6f1e7] tabular-nums">
         {fmtMoney(balance.available, token, 2)}
       </div>
       {balance.locked > 0n && (
@@ -271,8 +271,8 @@ export function TableBalanceHeader({
     <div className="flex items-center justify-between flex-wrap gap-3 mb-4 sm:mb-5">
       <div>
         <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Playing on</div>
-        <div className="text-base font-semibold">
-          {chainId} · <span className="text-emerald-300">{token.symbol}</span>
+        <div className="text-base font-semibold tracking-wide text-[#f6f1e7]">
+          {chainId} · <span className="text-[#e8d5a3]">{token.symbol}</span>
         </div>
         {onShowRules && (
           <button
@@ -290,7 +290,7 @@ export function TableBalanceHeader({
           <button
             type="button"
             onClick={onDeposit}
-            className="mt-1 text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer underline-offset-2 hover:underline"
+            className="mt-1 text-[11px] tracking-[0.08em] uppercase text-[#e8d5a3] hover:text-[#f6ecd4] cursor-pointer"
           >
             + Add {DEV_PLAY_MONEY_HUMAN.toLocaleString()} play money
           </button>
@@ -509,7 +509,7 @@ export function DevBankrollCard({
 export function TableGrid({ main, aside }: { main: ReactNode; aside: ReactNode }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(100%,220px)] gap-4 lg:gap-5">
-      <section className={card + " p-4 sm:p-5 lg:p-6 space-y-4 min-w-0"}>{main}</section>
+      <section className={felt + " p-4 sm:p-5 lg:p-6 space-y-4 min-w-0"}>{main}</section>
       <aside className="space-y-3 lg:sticky lg:top-24 lg:self-start">{aside}</aside>
     </div>
   );
@@ -526,10 +526,10 @@ export function TableHead({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-      <h2 className="text-base sm:text-lg font-semibold text-white tracking-tight">{title}</h2>
+      <h2 className="font-heading text-base sm:text-lg font-semibold tracking-[0.12em] uppercase text-[#f6f1e7]">{title}</h2>
       <div className="flex items-center gap-2">
         {badge && (
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-400/35 text-amber-200/90 bg-amber-500/10">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] px-2 py-0.5 rounded-full border border-[#c6a15b]/40 text-[#f6ecd4] bg-[#c6a15b]/10">
             {badge}
           </span>
         )}
@@ -548,10 +548,10 @@ export function RulesHint({ children }: { children: ReactNode }) {
 /* ---- Cards ---- */
 
 const panelTone = {
-  player: "border-emerald-500/25 bg-emerald-500/5",
-  dealer: "border-white/10 bg-white/[0.03]",
-  board: "border-amber-500/20 bg-amber-500/5",
-  accent: "border-orange-500/25 bg-orange-500/5",
+  player: "border-[#c6a15b]/28 bg-[#07140f]/80",
+  dealer: "border-[#f6f1e7]/10 bg-black/30",
+  board: "border-[#c6a15b]/22 bg-[#161208]/75",
+  accent: "border-[#8a3a32]/45 bg-[#1a0e0c]/75",
 } as const;
 
 export function PlayingCard({
@@ -569,10 +569,11 @@ export function PlayingCard({
       <div
         className={
           sz +
-          " rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/30 shrink-0 font-mono"
+          " rounded-[0.4rem] border border-[#c6a15b]/40 bg-gradient-to-br from-[#143024] via-[#0c1c16] to-[#1a1208] flex items-center justify-center text-[#e8d5a3]/70 shrink-0 shadow-[inset_0_0_0_1px_rgba(232,213,163,0.15)]"
         }
+        aria-hidden
       >
-        ?
+        ◆
       </div>
     );
   }
@@ -581,10 +582,8 @@ export function PlayingCard({
     <div
       className={
         sz +
-        " rounded-lg border flex flex-col items-center justify-center font-mono shrink-0 shadow-sm " +
-        (red
-          ? "border-rose-400/30 text-rose-200 bg-gradient-to-b from-rose-950/50 to-rose-950/20"
-          : "border-white/15 text-white bg-gradient-to-b from-white/[0.08] to-white/[0.02]")
+        " rounded-[0.4rem] border border-[#d7c7a1] flex flex-col items-center justify-center font-heading shrink-0 shadow-[0_6px_14px_rgba(0,0,0,0.35)] bg-gradient-to-b from-[#fffaf1] to-[#f3e6cc] " +
+        (red ? "text-[#9c2b2b]" : "text-[#1a1814]")
       }
     >
       <span className="text-sm sm:text-base font-bold leading-none">{c.rank}</span>
@@ -610,7 +609,7 @@ export function HandPanel({
 }) {
   return (
     <div className={"rounded-xl border p-3 sm:p-4 " + panelTone[tone]}>
-      <div className={labelCls + (tone === "player" ? " !text-emerald-200/70" : tone === "board" ? " !text-amber-200/70" : "")}>
+      <div className={labelCls + (tone === "player" ? " !text-[#e8d5a3]/80" : tone === "accent" ? " !text-[#e7b2aa]/80" : tone === "board" ? " !text-[#e8d5a3]/70" : "")}>
         {label}
       </div>
       <div className={"flex flex-wrap gap-1.5 py-2 " + (center ? "justify-center" : "")}>
@@ -639,10 +638,10 @@ export function DiceCube({
     <div
       className={
         sz +
-        " rounded-xl border-2 flex items-center justify-center font-mono font-bold shrink-0 transition-all " +
+        " rounded-xl border flex items-center justify-center font-heading font-semibold shrink-0 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_8px_16px_rgba(0,0,0,0.35)] " +
         (highlight
-          ? "border-amber-400 bg-amber-500/20 text-amber-50 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-          : "border-white/15 bg-white/[0.06] text-white/90")
+          ? "border-[#c6a15b] bg-gradient-to-b from-[#fffaf1] to-[#e7d3a4] text-[#1c1508]"
+          : "border-[#d7c7a1]/80 bg-gradient-to-b from-[#fffaf1] to-[#f3e6cc] text-[#1a1814]")
       }
     >
       {value}
@@ -796,11 +795,7 @@ export function StakeRow({
           type="button"
           disabled={disabled || actionBusy}
           onClick={onAction}
-          className={
-            "min-h-12 touch-manipulation h-11 px-5 rounded-xl font-semibold text-sm w-full sm:w-auto sm:min-w-[8.5rem] " +
-            "bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-black shadow-[0_4px_20px_rgba(245,158,11,0.35)] " +
-            "hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-          }
+          className={btnPrimary + " w-full sm:w-auto sm:min-w-[8.5rem]"}
         >
           {actionBusy ? "…" : actionLabel}
         </button>

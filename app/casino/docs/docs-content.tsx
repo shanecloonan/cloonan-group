@@ -21,6 +21,7 @@ const SECTIONS = [
   { id: "mines", label: "Mines" },
   { id: "hilo", label: "HiLo" },
   { id: "poker", label: "Poker" },
+  { id: "trente-et-quarante", label: "Trente et Quarante" },
 ] as const;
 
 export default function DocsContent() {
@@ -222,6 +223,7 @@ export default function DocsContent() {
                       ["roulette", "97.30%", "2.70%"],
                       ["slots", "≈96%", "≈4%"],
                       ["poker", "skill", "1% rake"],
+                      ["trente-et-quarante", "98.7%", "1.3%"],
                     ] as const
                   ).map(([g, rtp, edge]) => (
                     <tr key={g} className="border-b border-white/[0.04]">
@@ -332,6 +334,21 @@ export default function DocsContent() {
             verify={[
               "Shoe order is deterministic from the seed stream; all streets and bot actions are in the session log.",
               "Replay reconstructs community cards and showdown winners.",
+            ]}
+          />
+
+          <GameDoc
+            id="trente-et-quarante"
+            title="Trente et Quarante"
+            rtp="98.7%"
+            rules={[
+              "Six decks. Aces count 1, tens and faces count 10. Rouge is dealt first, then Noir, each until the row reaches 31 or more.",
+              "The row closer to 31 pays 1:1 on Rouge or Noir. An ordinary tie pushes every bet.",
+              "Both rows at exactly 31 is a refait: half the stake is returned.",
+              "Couleur wins when the winning row matches the suit color of the first Rouge card. Inverse is the opposite.",
+            ]}
+            verify={[
+              "Both rows replay from the shoe in deal order. Point totals and the refait check are deterministic.",
             ]}
           />
         </div>

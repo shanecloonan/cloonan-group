@@ -161,7 +161,8 @@ export type GameId =
   | "chuck-a-luck"
   | "ultimate-texas-holdem"
   | "craps"
-  | "teen-patti";
+  | "teen-patti"
+  | "trente-et-quarante";
 
 export interface Bet {
   sessionId: string;

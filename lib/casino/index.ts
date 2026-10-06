@@ -32,6 +32,7 @@ export * from "./chuck-a-luck";
 export * from "./ultimate-texas-holdem";
 export * from "./craps";
 export * from "./teen-patti";
+export * from "./trente-et-quarante";
 export * from "./coinflip";
 export * from "./dice";
 export * from "./roulette";
