@@ -31,7 +31,7 @@ const SUBSIDIARIES = [
   { name: "Joint Pacific", desc: "" },
   { name: "DTV Sports", desc: "NIL Agency." },
   { name: "Wynport", desc: "Casino and Sportsbook." },
-  { name: "Invention Record", desc: "Patent Pipeline Framework." },
+  { name: "Wit Research", desc: "Market analytics platform." },
   { name: "Deltamorph", desc: "Genomic Discovery Lab." },
   { name: "Permawrite", desc: "Permanent Database Blockchain." },
   { name: "Chip Fab", desc: "Semiconductor Research." },
