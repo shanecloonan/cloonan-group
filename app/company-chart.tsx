@@ -24,7 +24,7 @@ const ACCENTS = [
 
 const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
   { name: "Antler Gear", desc: "Premium bowhunting equipment." },
-  { name: "Permawrite", desc: "Permanent Database Blockchain." },
+  { name: "PFP Chain", desc: "Permanent Database Blockchain." },
   { name: "Stock FUD", desc: "FUD dissemination platform." },
   { name: "File Display", desc: "Internal tooling SaaS platform." },
   { name: "Glycell", desc: "Synthetic biology research." },
