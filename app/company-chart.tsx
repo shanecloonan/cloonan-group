@@ -37,7 +37,7 @@ const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
   { name: "Chip Fab", desc: "Semiconductor Research." },
   { name: "Vix Ventures", desc: "Venture Capital Partners." },
   { name: "Stock FUD", desc: "FUD dissemination platform." },
-  { name: "USM News", desc: "Fake news propaganda platform.", site: "USMnews.com" },
+  { name: "TVN News", desc: "Fake news propaganda platform.", site: "TVNnews.com" },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
