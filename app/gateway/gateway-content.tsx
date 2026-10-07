@@ -603,16 +603,6 @@ export default function GatewayContent() {
                   </code>{" "}
                   to start serving every read through it.
                 </p>
-                <div className="flex gap-2">
-                  <a
-                    href="https://github.com/shanecloonan/cloonan-group/blob/main/infra/arweave-gateway/README.md"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={pillBtn}
-                  >
-                    Deployment Guide
-                  </a>
-                </div>
               </div>
             )}
 
