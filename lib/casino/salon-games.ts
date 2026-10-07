@@ -20,7 +20,21 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { RED_POCKETS, pocketColor } from "./roulette";
 import { hashServerSeed, hexToBytes } from "./rng";
 
-export type SalonGame = "roulette" | "baccarat" | "sicbo";
+export type SalonGame = "roulette" | "baccarat" | "sicbo" | "derby" | "nerve" | "oddone" | "ticker";
+
+export const SALON_GAMES: SalonGame[] = ["roulette", "baccarat", "sicbo", "derby", "nerve", "oddone", "ticker"];
+
+/** Games whose result is drawn from the committed seed and can be replayed. */
+export const SEEDED_SALON_GAMES: SalonGame[] = ["roulette", "baccarat", "sicbo", "derby", "nerve"];
+
+/** Games where a player's choice is sealed until the reveal. */
+export const SEALED_SALON_GAMES: SalonGame[] = ["nerve", "oddone"];
+
+export const DERBY_WEIGHTS = [300, 230, 180, 130, 95, 65];
+export const DERBY_RETURN_TENTHS = [32, 42, 54, 75, 102, 149];
+export const DERBY_TICKS = 12;
+export const NERVE_MIN_TARGET = 110;
+export const NERVE_MAX_TARGET = 5000;
 
 export type SalonBet = {
   playerId: string;
@@ -47,14 +61,50 @@ export type SalonBaccaratResult = {
   natural: boolean;
 };
 export type SalonSicBoResult = { dice: [number, number, number]; sum: number; triple: boolean };
+export type SalonDerbyResult = { winner: number; ticks: number[][]; totals: number[] };
+export type SalonNerveResult = {
+  bust: number;
+  commits: { playerId: string; target: number | null; stake: number }[];
+};
+export type SalonOddOneResult = {
+  picks: { playerId: string; n: number | null; stake: number }[];
+  winner: string | null;
+  number: number | null;
+  pot: number;
+  carry: number;
+};
+export type SalonTickerResult = {
+  open: string;
+  close: string;
+  lockedAt: string;
+  settledAt: string;
+  direction: "up" | "down" | "flat";
+};
 
-export type SalonResult = SalonRouletteResult | SalonBaccaratResult | SalonSicBoResult;
+export type SalonResult =
+  | SalonRouletteResult
+  | SalonBaccaratResult
+  | SalonSicBoResult
+  | SalonDerbyResult
+  | SalonNerveResult
+  | SalonOddOneResult
+  | SalonTickerResult;
 
 const UINT32 = 4294967296;
 
 function u32(seedHex: string, clientSeed: string, nonce: number, cursor: number): number {
   const block = hmac(sha256, hexToBytes(seedHex), new TextEncoder().encode(`${clientSeed}:${nonce}:${cursor}`));
   return ((block[0] * 16777216) + (block[1] * 65536) + (block[2] * 256) + block[3]) >>> 0;
+}
+
+/** Raw uint32 at a cursor. Nerve reads one of these. */
+export function salonU32(seedHex: string, clientSeed: string, nonce: number, cursor: number): number {
+  return u32(seedHex, clientSeed, nonce, cursor);
+}
+
+/** Crash-style bust in cents from a uint32. 99% return, floor 1.00x. */
+export function nerveBustCents(u: number): number {
+  return Math.max(100, Math.floor((99 * UINT32) / (UINT32 - u)));
 }
 
 export function salonNextInt(
@@ -203,13 +253,113 @@ function sicBoReturn(kind: string, dice: [number, number, number]): number {
   }
 }
 
+function runDerby(seedHex: string, clientSeed: string, nonce: number): SalonDerbyResult {
+  const first = salonNextInt(seedHex, clientSeed, nonce, 0, 1000);
+  let cursor = first.cursor;
+  let winner = 6;
+  let acc = 0;
+  for (let h = 0; h < 6; h++) {
+    acc += DERBY_WEIGHTS[h];
+    if (first.value < acc) {
+      winner = h + 1;
+      break;
+    }
+  }
+  const totals = [0, 0, 0, 0, 0, 0];
+  const ticks: number[][] = [];
+  for (let t = 0; t < DERBY_TICKS; t++) {
+    const row: number[] = [];
+    for (let h = 0; h < 6; h++) {
+      const d = salonNextInt(seedHex, clientSeed, nonce, cursor, 3);
+      cursor = d.cursor;
+      const step = d.value + 1;
+      totals[h] += step;
+      row.push(step);
+    }
+    ticks.push(row);
+  }
+  let maxOther = 0;
+  for (let h = 0; h < 6; h++) if (h !== winner - 1 && totals[h] > maxOther) maxOther = totals[h];
+  if (totals[winner - 1] <= maxOther) {
+    const gap = maxOther - totals[winner - 1] + 1;
+    ticks[DERBY_TICKS - 1][winner - 1] += gap;
+    totals[winner - 1] += gap;
+  }
+  return { winner, ticks, totals };
+}
+
 export function resolveSalonRound(
   seedHex: string,
   clientSeed: string,
   nonce: number,
   game: SalonGame,
   bets: SalonBet[],
+  opts: { carryIn?: number } = {},
 ): { result: SalonResult; payouts: SalonPayout[] } {
+  if (game === "ticker") {
+    throw new Error("Ticker settles on a live price, not the seed");
+  }
+  if (game === "derby") {
+    const result = runDerby(seedHex, clientSeed, nonce);
+    const payouts = bets.map((b) => ({
+      playerId: b.playerId,
+      kind: b.kind,
+      stake: b.stake,
+      n: b.n ?? null,
+      payout:
+        b.kind === "win" && b.n === result.winner
+          ? Math.floor((b.stake * DERBY_RETURN_TENTHS[result.winner - 1]) / 10)
+          : 0,
+    }));
+    return { result, payouts };
+  }
+  if (game === "nerve") {
+    const bust = nerveBustCents(salonU32(seedHex, clientSeed, nonce, 0));
+    const commits = bets.map((b) => ({ playerId: b.playerId, target: b.n ?? null, stake: b.stake }));
+    const result: SalonNerveResult = { bust, commits };
+    const payouts = bets.map((b) => {
+      const target = b.n ?? null;
+      return {
+        playerId: b.playerId,
+        kind: "nerve",
+        stake: b.stake,
+        n: target,
+        payout: target !== null && target <= bust ? Math.floor((b.stake * target) / 100) : 0,
+      };
+    });
+    return { result, payouts };
+  }
+  if (game === "oddone") {
+    const counts = new Array<number>(11).fill(0);
+    let pot = opts.carryIn ?? 0;
+    for (const b of bets) {
+      pot += b.stake;
+      if (b.n !== null && b.n !== undefined && b.n >= 1 && b.n <= 10) counts[b.n] += 1;
+    }
+    let number: number | null = null;
+    for (let i = 1; i <= 10; i++) {
+      if (counts[i] === 1) {
+        number = i;
+        break;
+      }
+    }
+    const winner = number === null ? null : (bets.find((b) => b.n === number)?.playerId ?? null);
+    const result: SalonOddOneResult = {
+      picks: bets.map((b) => ({ playerId: b.playerId, n: b.n ?? null, stake: b.stake })),
+      winner,
+      number,
+      pot,
+      carry: winner === null ? pot : 0,
+    };
+    const payouts = bets.map((b) => ({
+      playerId: b.playerId,
+      kind: "pick",
+      stake: b.stake,
+      n: b.n ?? null,
+      payout: winner !== null && b.playerId === winner ? pot : 0,
+    }));
+    return { result, payouts };
+  }
   if (game === "roulette") {
     const draw = salonNextInt(seedHex, clientSeed, nonce, 0, 37);
     const pocket = draw.value;
@@ -257,6 +407,23 @@ export function resolveSalonRound(
 }
 
 function sameResult(game: SalonGame, a: SalonResult, b: SalonResult): boolean {
+  if (game === "derby") {
+    const x = a as SalonDerbyResult;
+    const y = b as SalonDerbyResult;
+    if (x.winner !== y.winner || x.ticks.length !== y.ticks.length) return false;
+    return x.ticks.every((row, t) => row.length === y.ticks[t]?.length && row.every((v, h) => v === y.ticks[t][h]));
+  }
+  if (game === "nerve") {
+    const x = a as SalonNerveResult;
+    const y = b as SalonNerveResult;
+    return x.bust === y.bust;
+  }
+  if (game === "oddone") {
+    const x = a as SalonOddOneResult;
+    const y = b as SalonOddOneResult;
+    return x.winner === y.winner && x.number === y.number && x.pot === y.pot && x.carry === y.carry;
+  }
+  if (game === "ticker") return false;
   if (game === "roulette") {
     const x = a as SalonRouletteResult;
     const y = b as SalonRouletteResult;
@@ -280,19 +447,25 @@ function sameResult(game: SalonGame, a: SalonResult, b: SalonResult): boolean {
   );
 }
 
-/** True when the revealed seed hashes to the pre-coup commitment and replays the published coup. */
+/**
+ * True when the revealed seed hashes to the pre-coup commitment and replays the
+ * published coup. The published payouts carry each sealed choice in `n`, so they
+ * double as the bet list for the replay. Returns null for games that never
+ * touch the seed (Odd One Out, Ticker).
+ */
 export function salonCoupChecksOut(args: {
   revealedSeed: string;
   committedHash: string;
   clientSeed: string;
   nonce: number;
   game: SalonGame;
-  bets: SalonBet[];
   result: SalonResult;
   payouts: SalonPayout[];
-}): boolean {
+}): boolean | null {
+  if (args.game === "ticker" || args.game === "oddone") return null;
   if (hashServerSeed(args.revealedSeed) !== args.committedHash) return false;
-  const replay = resolveSalonRound(args.revealedSeed, args.clientSeed, args.nonce, args.game, args.bets);
+  const bets: SalonBet[] = args.payouts.map((p) => ({ playerId: p.playerId, kind: p.kind, stake: p.stake, n: p.n }));
+  const replay = resolveSalonRound(args.revealedSeed, args.clientSeed, args.nonce, args.game, bets);
   if (!sameResult(args.game, replay.result, args.result)) return false;
   if (replay.payouts.length !== args.payouts.length) return false;
   return replay.payouts.every((p, i) => {
@@ -301,7 +474,21 @@ export function salonCoupChecksOut(args: {
   });
 }
 
+/** Replays Odd One Out from the published picks. No seed involved. */
+export function oddOneChecksOut(result: SalonOddOneResult, payouts: SalonPayout[]): boolean {
+  const stakes = result.picks.reduce((s, p) => s + p.stake, 0);
+  const bets: SalonBet[] = result.picks.map((p) => ({ playerId: p.playerId, kind: "pick", stake: p.stake, n: p.n }));
+  const replay = resolveSalonRound("00", "", 0, "oddone", bets, { carryIn: result.pot - stakes });
+  if (!sameResult("oddone", replay.result, result)) return false;
+  if (replay.payouts.length !== payouts.length) return false;
+  return replay.payouts.every((p, i) => p.playerId === payouts[i].playerId && p.payout === payouts[i].payout);
+}
+
 export function salonBetAllowed(game: SalonGame, kind: string, n: number | null): boolean {
+  if (game === "derby") return kind === "win" && n !== null && Number.isInteger(n) && n >= 1 && n <= 6;
+  if (game === "nerve") return kind === "nerve" && n !== null && Number.isInteger(n) && n >= NERVE_MIN_TARGET && n <= NERVE_MAX_TARGET;
+  if (game === "oddone") return kind === "pick" && n !== null && Number.isInteger(n) && n >= 1 && n <= 10;
+  if (game === "ticker") return n === null && (kind === "up" || kind === "down");
   if (game === "roulette") {
     if (kind === "straight") return n !== null && Number.isInteger(n) && n >= 0 && n <= 36;
     if (n !== null) return false;

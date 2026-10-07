@@ -5,7 +5,7 @@
  */
 
 import { supabase } from "../supabase";
-import type { SalonGame, SalonPayout, SalonResult } from "./salon-games";
+import { SALON_GAMES, type SalonGame, type SalonPayout, type SalonResult } from "./salon-games";
 
 export type SalonSeat = {
   seat: number;
@@ -26,13 +26,15 @@ export type SalonTable = {
   room_code: string;
   game: SalonGame;
   status: "open" | "closed";
-  phase: "betting" | "resolved";
+  phase: "betting" | "locked" | "resolved";
   max_seats: number;
   seats: SalonSeat[];
   bets: SalonBetRow[];
   round: number;
   result: (SalonResult & { committedHash?: string }) | null;
   payouts: SalonPayout[] | null;
+  /** Table-level state between rounds: Odd One Out carry, Ticker open price and lock time. */
+  meta: Record<string, unknown>;
   server_seed_hash: string;
   revealed_seed: string | null;
   version: number;
@@ -41,7 +43,8 @@ export type SalonTable = {
 };
 
 const PUBLIC_COLUMNS =
-  "id,room_code,game,status,phase,max_seats,seats,bets,round,result,payouts,server_seed_hash,revealed_seed,version,created_by,updated_at";
+  "id,room_code,game,status,phase,max_seats,seats,bets,round,result,payouts,meta,server_seed_hash,revealed_seed,version,created_by,updated_at";
+
 
 function num(v: unknown, fallback = 0): number {
   const n = typeof v === "number" ? v : Number(v);
@@ -66,7 +69,7 @@ export function normalizeSalonTable(raw: unknown): SalonTable | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   if (typeof r.id !== "string" || typeof r.room_code !== "string") return null;
-  const game = r.game === "baccarat" || r.game === "sicbo" || r.game === "roulette" ? r.game : null;
+  const game: SalonGame | null = SALON_GAMES.find((g) => g === r.game) ?? null;
   if (!game) return null;
   const seats = Array.isArray(r.seats)
     ? r.seats.map((s) => {
@@ -96,13 +99,14 @@ export function normalizeSalonTable(raw: unknown): SalonTable | null {
     room_code: r.room_code,
     game,
     status: r.status === "closed" ? "closed" : "open",
-    phase: r.phase === "resolved" ? "resolved" : "betting",
+    phase: r.phase === "resolved" ? "resolved" : r.phase === "locked" ? "locked" : "betting",
     max_seats: num(r.max_seats, 6),
     seats,
     bets,
     round: num(r.round),
     result: (r.result as SalonTable["result"]) ?? null,
     payouts: normalizePayouts(r.payouts),
+    meta: r.meta && typeof r.meta === "object" && !Array.isArray(r.meta) ? (r.meta as Record<string, unknown>) : {},
     server_seed_hash: String(r.server_seed_hash ?? ""),
     revealed_seed: r.revealed_seed ? String(r.revealed_seed) : null,
     version: num(r.version),
@@ -117,7 +121,9 @@ function one(data: unknown): SalonTable | null {
 }
 
 export function salonMigrationMissing(message: string): boolean {
-  return /does not exist|schema cache|PGRST202|PGRST205|could not find the function|casino_salon/i.test(message);
+  return /does not exist|schema cache|PGRST202|PGRST205|could not find the function|casino_salon|violates check constraint/i.test(
+    message,
+  );
 }
 
 function randomCode(): string {
@@ -172,6 +178,11 @@ export function joinSalon(id: string, playerId: string, name: string) {
 
 export function betSalon(id: string, playerId: string, kind: string, stake: number, n: number | null) {
   return call("salon_bet", { p_id: id, p_player: playerId, p_kind: kind, p_stake: stake, p_n: n });
+}
+
+/** Sealed choice for Nerve (kind "nerve", n = target cents) or Odd One Out (kind "pick", n = 1..10). */
+export function commitSalon(id: string, playerId: string, kind: string, stake: number, n: number) {
+  return call("salon_commit", { p_id: id, p_player: playerId, p_kind: kind, p_stake: stake, p_n: n });
 }
 
 export function spinSalon(id: string, playerId: string) {

@@ -1,6 +1,6 @@
 import type { CasinoGameId } from "./casino-ui";
 
-export type GameCategory = "cards" | "dice" | "instant" | "poker";
+export type GameCategory = "salon" | "cards" | "dice" | "instant" | "poker";
 
 export interface GameTile {
   id: string;
@@ -14,13 +14,14 @@ export interface GameTile {
 }
 
 export const CATEGORY_LABELS: Record<GameCategory, string> = {
+  salon: "Shared tables",
   cards: "Card salon",
   dice: "Dice pit",
   instant: "The floor",
   poker: "Poker room",
 };
 
-export const CATEGORY_ORDER: GameCategory[] = ["cards", "instant", "dice", "poker"];
+export const CATEGORY_ORDER: GameCategory[] = ["salon", "cards", "instant", "dice", "poker"];
 
 /** Live games the lobby can open (matches tables wired in casino-content). */
 export const PLAYABLE_GAME_IDS = new Set<string>([
@@ -54,6 +55,10 @@ export const PLAYABLE_GAME_IDS = new Set<string>([
   "teen-patti",
   "trente-et-quarante",
   "salon",
+  "derby",
+  "nerve",
+  "oddone",
+  "ticker",
 ]);
 
 export function isPlayableGame(id: string): id is CasinoGameId {
@@ -61,7 +66,11 @@ export function isPlayableGame(id: string): id is CasinoGameId {
 }
 
 export const GAME_CATALOG: GameTile[] = [
-  { id: "salon", title: "Salon Tables", rtp: "Shared", status: "live", emoji: "◆", mark: "ST", category: "cards" },
+  { id: "salon", title: "Salon Tables", rtp: "Shared", status: "live", emoji: "◆", mark: "ST", category: "salon" },
+  { id: "derby", title: "The Derby", rtp: "96.8%", status: "live", emoji: "◆", mark: "DB", category: "salon" },
+  { id: "nerve", title: "Nerve", rtp: "99%", status: "live", emoji: "↗", mark: "NV", category: "salon" },
+  { id: "oddone", title: "Odd One Out", rtp: "Pot", status: "live", emoji: "◇", mark: "OO", category: "salon" },
+  { id: "ticker", title: "Ticker", rtp: "Live", status: "live", emoji: "◉", mark: "TK", category: "salon" },
   { id: "trente-et-quarante", title: "Trente et Quarante", rtp: "98.7%", status: "live", emoji: "◆", mark: "TQ", category: "cards" },
   { id: "blackjack", title: "Blackjack", rtp: "99.6%", status: "live", emoji: "♠", mark: "BJ", category: "cards" },
   { id: "baccarat", title: "Baccarat", rtp: "98.9%", status: "live", emoji: "♦", mark: "BA", category: "cards" },

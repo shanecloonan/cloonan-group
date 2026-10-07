@@ -305,6 +305,10 @@ function CasinoContentInner() {
             <TrenteEtQuaranteTable chainId={chainId} token={token} adapter={adapter} />
           )}
           {tab === "salon" && <SalonFloor />}
+          {tab === "derby" && <SalonFloor initialGame="derby" />}
+          {tab === "nerve" && <SalonFloor initialGame="nerve" />}
+          {tab === "oddone" && <SalonFloor initialGame="oddone" />}
+          {tab === "ticker" && <SalonFloor initialGame="ticker" />}
           </>
         )}
       </CasinoShell>

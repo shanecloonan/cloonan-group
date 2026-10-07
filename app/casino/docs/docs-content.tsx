@@ -359,15 +359,16 @@ export default function DocsContent() {
             title="Salon Tables"
             rtp="Shared"
             rules={[
-              "Roulette, baccarat, and sic bo share one coup. Any seated player may close the betting.",
-              "House chips start at 1,000 and stay on the felt. They are not vault chips.",
-              "European roulette: even money pays 1 to 1, dozens 2 to 1, straight 35 to 1. Zero loses outside bets.",
-              "Baccarat is punto banco with a 5% banker commission. Cards are drawn with replacement. Player and banker push on a tie.",
-              "Sic bo big, small, odd, and even pay 1 to 1 and lose on triples. Any triple pays 30 to 1.",
+              "Every seat plays the same coup. Any seated player may call it. House chips start at 1,000 and stay on the felt. They are not vault chips.",
+              "Roulette, baccarat, and sic bo are the classics. European roulette pays even money 1 to 1, dozens 2 to 1, straight 35 to 1. Baccarat is punto banco with a 5% banker commission. Sic bo big, small, odd, and even lose on triples; any triple pays 30 to 1.",
+              "The Derby: six horses, twelve furlongs. The winner is drawn from the seed against fixed form (30%, 23%, 18%, 13%, 9.5%, 6.5%) and pays 3.2×, 4.2×, 5.4×, 7.5×, 10.2×, 14.9× on the stake. Every horse returns between 96% and 97.5%.",
+              "Nerve: each seat seals a cash-out multiplier from 1.10× to 50×. One bust is drawn from the seed on the 99% crash curve. A target at or under the bust pays stake × target; above it loses the stake.",
+              "Odd One Out: each seat seals a number from one to ten. The lowest number chosen by exactly one seat takes the whole pot. No unique number carries the pot forward. Needs two picks. The house takes nothing.",
+              "Ticker: back up or down on BTC-USD. A seat locks the window and the database records the Coinbase spot price. Sixty seconds later a seat settles and the losing pool is split across the winning pool pro rata. A flat print pushes. The house takes nothing.",
             ]}
             verify={[
-              "The commitment hash is published before the coup. The seed is revealed after the spin and the next hash replaces it.",
-              "Replay the revealed seed with the room code as the client seed and the round as the nonce.",
+              "Seeded games (roulette, baccarat, sic bo, Derby, Nerve) publish the commitment hash before the coup and reveal the seed after it. Replay with the room code as the client seed and the round as the nonce.",
+              "Odd One Out replays from the published picks alone. Ticker publishes both prices and the lock time with the result.",
             ]}
           />
         </div>

@@ -9,14 +9,23 @@
 
 import { hashServerSeed } from "../lib/casino/rng";
 import {
+  DERBY_RETURN_TENTHS,
+  DERBY_TICKS,
+  DERBY_WEIGHTS,
+  nerveBustCents,
+  oddOneChecksOut,
   resolveSalonRound,
   salonBankerDraws,
   salonBetAllowed,
   salonCoupChecksOut,
   salonNextInt,
   salonPip,
+  salonU32,
   type SalonBaccaratResult,
   type SalonBet,
+  type SalonDerbyResult,
+  type SalonNerveResult,
+  type SalonOddOneResult,
   type SalonRouletteResult,
   type SalonSicBoResult,
 } from "../lib/casino/salon-games";
@@ -168,16 +177,15 @@ const sampleBets: SalonBet[] = [{ playerId: "a", kind: "red", stake: 10, n: null
 const published = resolveSalonRound(seed, client, 3, "roulette", sampleBets);
 const committed = hashServerSeed(seed);
 if (
-  !salonCoupChecksOut({
+  salonCoupChecksOut({
     revealedSeed: seed,
     committedHash: committed,
     clientSeed: client,
     nonce: 3,
     game: "roulette",
-    bets: sampleBets,
     result: published.result,
     payouts: published.payouts,
-  })
+  }) !== true
 ) {
   fail("replay rejected a genuine coup");
 }
@@ -188,14 +196,114 @@ if (
     clientSeed: client,
     nonce: 3,
     game: "roulette",
-    bets: sampleBets,
     result: published.result,
     payouts: published.payouts,
-  })
+  }) !== false
 ) {
   fail("replay accepted a bad commitment");
 }
 pass("revealed seed replays only against its commitment");
+
+/* ---- The Derby ---- */
+const wins = [0, 0, 0, 0, 0, 0];
+const derbyRounds = 6000;
+for (let nonce = 0; nonce < derbyRounds; nonce++) {
+  const bets: SalonBet[] = [1, 2, 3, 4, 5, 6].map((h) => ({ playerId: `p${h}`, kind: "win", stake: 10, n: h }));
+  const coup = resolveSalonRound(seed, client, nonce, "derby", bets);
+  const r = coup.result as SalonDerbyResult;
+  if (r.winner < 1 || r.winner > 6) fail("derby winner out of range");
+  if (r.ticks.length !== DERBY_TICKS || r.ticks.some((row) => row.length !== 6)) fail("derby tick grid drifted");
+  const totals = [0, 0, 0, 0, 0, 0];
+  for (const row of r.ticks) for (let h = 0; h < 6; h++) totals[h] += row[h];
+  if (totals.some((t, h) => t !== r.totals[h])) fail("derby totals do not sum the ticks");
+  const lead = totals[r.winner - 1];
+  if (totals.some((t, h) => h !== r.winner - 1 && t >= lead)) fail("derby winner did not finish strictly first");
+  for (let t = 0; t < DERBY_TICKS - 1; t++) for (const s of r.ticks[t]) if (s < 1 || s > 3) fail("derby step outside 1..3");
+  wins[r.winner - 1] += 1;
+  for (const p of coup.payouts) {
+    const expect = p.n === r.winner ? Math.floor((10 * DERBY_RETURN_TENTHS[r.winner - 1]) / 10) : 0;
+    if (p.payout !== expect) fail("derby payout drifted");
+  }
+}
+for (let h = 0; h < 6; h++) {
+  const share = wins[h] / derbyRounds;
+  const expect = DERBY_WEIGHTS[h] / 1000;
+  if (Math.abs(share - expect) > 0.03) fail(`derby horse ${h + 1} won ${(share * 100).toFixed(1)}%, line says ${expect * 100}%`);
+}
+const derbyRtps = DERBY_WEIGHTS.map((w, h) => (w / 1000) * (DERBY_RETURN_TENTHS[h] / 10));
+for (const [h, rtp] of derbyRtps.entries()) {
+  if (rtp < 0.95 || rtp > 0.98) fail(`derby horse ${h + 1} returns ${rtp}`);
+}
+pass(`derby form holds over ${derbyRounds} races, every horse returns ${Math.min(...derbyRtps).toFixed(3)}–${Math.max(...derbyRtps).toFixed(3)}`);
+
+/* ---- Nerve ---- */
+let over2 = 0;
+const nerveRounds = 20000;
+for (let nonce = 0; nonce < nerveRounds; nonce++) {
+  const bust = nerveBustCents(salonU32(seed, client, nonce, 0));
+  if (bust < 100) fail("bust below 1.00x");
+  if (bust >= 200) over2 += 1;
+}
+const pOver2 = over2 / nerveRounds;
+if (Math.abs(pOver2 - 0.495) > 0.015) fail(`P(bust >= 2x) = ${pOver2}, expected ≈ 0.495`);
+if (nerveBustCents(0) !== 100) fail("u = 0 should bust at the floor");
+if (nerveBustCents(4294967295) <= 100000) fail("u = max should bust very high");
+{
+  const bets: SalonBet[] = [
+    { playerId: "a", kind: "nerve", stake: 100, n: 150 },
+    { playerId: "b", kind: "nerve", stake: 100, n: 5000 },
+  ];
+  const coup = resolveSalonRound(seed, client, 7, "nerve", bets);
+  const r = coup.result as SalonNerveResult;
+  const a = coup.payouts[0];
+  const b = coup.payouts[1];
+  if (a.payout !== (r.bust >= 150 ? 150 : 0)) fail("nerve payout for 1.50x drifted");
+  if (b.payout !== (r.bust >= 5000 ? 5000 : 0)) fail("nerve payout for 50x drifted");
+  if (
+    salonCoupChecksOut({
+      revealedSeed: seed,
+      committedHash: committed,
+      clientSeed: client,
+      nonce: 7,
+      game: "nerve",
+      result: r,
+      payouts: coup.payouts,
+    }) !== true
+  ) {
+    fail("nerve replay rejected its own coup");
+  }
+}
+pass(`nerve bust follows the 99% curve (P(>=2x) = ${pOver2.toFixed(3)}) and replays`);
+
+/* ---- Odd One Out ---- */
+{
+  const bets: SalonBet[] = [
+    { playerId: "a", kind: "pick", stake: 20, n: 1 },
+    { playerId: "b", kind: "pick", stake: 20, n: 1 },
+    { playerId: "c", kind: "pick", stake: 20, n: 3 },
+    { playerId: "d", kind: "pick", stake: 20, n: 2 },
+  ];
+  const coup = resolveSalonRound("00", "", 0, "oddone", bets, { carryIn: 40 });
+  const r = coup.result as SalonOddOneResult;
+  if (r.number !== 2 || r.winner !== "d") fail("lowest unique should be 2 by d");
+  if (r.pot !== 120 || r.carry !== 0) fail("odd one pot drifted");
+  if (coup.payouts.find((p) => p.playerId === "d")?.payout !== 120) fail("odd one winner should take the pot");
+  if (!oddOneChecksOut(r, coup.payouts)) fail("odd one replay rejected its own result");
+  const clash = resolveSalonRound("00", "", 0, "oddone", [
+    { playerId: "a", kind: "pick", stake: 10, n: 4 },
+    { playerId: "b", kind: "pick", stake: 10, n: 4 },
+  ]);
+  const cr = clash.result as SalonOddOneResult;
+  if (cr.winner !== null || cr.carry !== 20) fail("a full clash should carry the pot");
+  if (clash.payouts.some((p) => p.payout !== 0)) fail("nobody should be paid on a clash");
+}
+pass("odd one out pays the lowest unique number and carries on a clash");
+
+if (!salonBetAllowed("derby", "win", 6) || salonBetAllowed("derby", "win", 7)) fail("derby spots");
+if (!salonBetAllowed("nerve", "nerve", 110) || salonBetAllowed("nerve", "nerve", 5001)) fail("nerve range");
+if (!salonBetAllowed("oddone", "pick", 10) || salonBetAllowed("oddone", "pick", 0)) fail("odd one range");
+if (!salonBetAllowed("ticker", "up", null) || salonBetAllowed("ticker", "up", 1)) fail("ticker spots");
+pass("arcade spots are the published set");
 
 const pinned = salonNextInt("11".repeat(32), "ROOM01", 0, 0, 37);
 if (pinned.value !== 32 || pinned.cursor !== 1) fail(`pinned draw drifted (${pinned.value})`);
