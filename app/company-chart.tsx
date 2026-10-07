@@ -24,6 +24,8 @@ const ACCENTS = [
 
 const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
   { name: "Antler Gear", desc: "Premium bowhunting equipment." },
+  { name: "Permawrite", desc: "Permanent Database Blockchain." },
+  { name: "Stock FUD", desc: "FUD dissemination platform." },
   { name: "File Display", desc: "Internal tooling SaaS platform." },
   { name: "Glycell", desc: "Synthetic biology research." },
   { name: "Cheaper Brand", desc: "Knockoff products and Chinese bullshit." },
@@ -33,10 +35,8 @@ const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
   { name: "Wynport", desc: "Casino and Sportsbook." },
   { name: "Wit Research", desc: "Market analytics platform." },
   { name: "Deltamorph", desc: "Genomic Discovery Lab." },
-  { name: "Permawrite", desc: "Permanent Database Blockchain." },
   { name: "Chip Fab", desc: "Semiconductor Research." },
   { name: "Vix Ventures", desc: "Venture Capital Partners." },
-  { name: "Stock FUD", desc: "FUD dissemination platform." },
   { name: "TVN News", desc: "Fake news propaganda platform.", site: "TVNnews.com" },
 ];
 
