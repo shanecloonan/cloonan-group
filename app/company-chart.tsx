@@ -27,7 +27,7 @@ const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
   { name: "File Display", desc: "Internal tooling SaaS platform." },
   { name: "Glycell", desc: "Synthetic biology research." },
   { name: "Cheaper Brand", desc: "Knockoff products and Chinese bullshit." },
-  { name: "Acre Division", desc: "Fractionalized Land Investing." },
+  { name: "Dirt Shares", desc: "Fractionalized Land Investing." },
   { name: "Joint Pacific", desc: "" },
   { name: "DTV Sports", desc: "NIL Agency." },
   { name: "Wynport", desc: "Casino and Sportsbook." },
