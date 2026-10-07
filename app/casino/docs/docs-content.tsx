@@ -22,6 +22,7 @@ const SECTIONS = [
   { id: "hilo", label: "HiLo" },
   { id: "poker", label: "Poker" },
   { id: "trente-et-quarante", label: "Trente et Quarante" },
+  { id: "salon", label: "Salon Tables" },
 ] as const;
 
 export default function DocsContent() {
@@ -224,6 +225,7 @@ export default function DocsContent() {
                       ["slots", "≈96%", "≈4%"],
                       ["poker", "skill", "1% rake"],
                       ["trente-et-quarante", "98.7%", "1.3%"],
+                      ["salon", "Shared", "Felt chips"],
                     ] as const
                   ).map(([g, rtp, edge]) => (
                     <tr key={g} className="border-b border-white/[0.04]">
@@ -349,6 +351,23 @@ export default function DocsContent() {
             ]}
             verify={[
               "Both rows replay from the shoe in deal order. Point totals and the refait check are deterministic.",
+            ]}
+          />
+
+          <GameDoc
+            id="salon"
+            title="Salon Tables"
+            rtp="Shared"
+            rules={[
+              "Roulette, baccarat, and sic bo share one coup. Any seated player may close the betting.",
+              "House chips start at 1,000 and stay on the felt. They are not vault chips.",
+              "European roulette: even money pays 1 to 1, dozens 2 to 1, straight 35 to 1. Zero loses outside bets.",
+              "Baccarat is punto banco with a 5% banker commission. Cards are drawn with replacement. Player and banker push on a tie.",
+              "Sic bo big, small, odd, and even pay 1 to 1 and lose on triples. Any triple pays 30 to 1.",
+            ]}
+            verify={[
+              "The commitment hash is published before the coup. The seed is revealed after the spin and the next hash replaces it.",
+              "Replay the revealed seed with the room code as the client seed and the round as the nonce.",
             ]}
           />
         </div>

@@ -58,6 +58,7 @@ const UltimateTexasHoldemTable = dynamic(() => import("./ultimate-texas-holdem-t
 const CrapsTable = dynamic(() => import("./craps-table"), { ssr: false });
 const TeenPattiTable = dynamic(() => import("./teen-patti-table"), { ssr: false });
 const TrenteEtQuaranteTable = dynamic(() => import("./trente-et-quarante-table"), { ssr: false });
+const SalonFloor = dynamic(() => import("./salon-floor"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
  *  Chain catalog — which chain is the user playing on?
@@ -303,6 +304,7 @@ function CasinoContentInner() {
           {tab === "trente-et-quarante" && (
             <TrenteEtQuaranteTable chainId={chainId} token={token} adapter={adapter} />
           )}
+          {tab === "salon" && <SalonFloor />}
           </>
         )}
       </CasinoShell>

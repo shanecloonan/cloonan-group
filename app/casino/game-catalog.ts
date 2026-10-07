@@ -53,6 +53,7 @@ export const PLAYABLE_GAME_IDS = new Set<string>([
   "craps",
   "teen-patti",
   "trente-et-quarante",
+  "salon",
 ]);
 
 export function isPlayableGame(id: string): id is CasinoGameId {
@@ -60,6 +61,7 @@ export function isPlayableGame(id: string): id is CasinoGameId {
 }
 
 export const GAME_CATALOG: GameTile[] = [
+  { id: "salon", title: "Salon Tables", rtp: "Shared", status: "live", emoji: "◆", mark: "ST", category: "cards" },
   { id: "trente-et-quarante", title: "Trente et Quarante", rtp: "98.7%", status: "live", emoji: "◆", mark: "TQ", category: "cards" },
   { id: "blackjack", title: "Blackjack", rtp: "99.6%", status: "live", emoji: "♠", mark: "BJ", category: "cards" },
   { id: "baccarat", title: "Baccarat", rtp: "98.9%", status: "live", emoji: "♦", mark: "BA", category: "cards" },
