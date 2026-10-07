@@ -4,12 +4,12 @@ import { useRef, useCallback, useState } from "react";
 import { toPng } from "html-to-image";
 import { Download, Loader2 } from "lucide-react";
 
-function siteLabel(name: string) {
-  return `${name.replace(/\s+/g, "")}.com`;
+function siteLabel(name: string, site?: string) {
+  return site ?? `${name.replace(/\s+/g, "")}.com`;
 }
 
-function siteUrl(name: string) {
-  return `https://${name.replace(/\s+/g, "").toLowerCase()}.com`;
+function siteUrl(label: string) {
+  return `https://${label.toLowerCase()}`;
 }
 
 const ACCENTS = [
@@ -22,7 +22,7 @@ const ACCENTS = [
   { accent: "text-rose-300", border: "border-rose-300/40", bg: "bg-rose-300/5", tag: "bg-rose-300/15 text-rose-300" },
 ];
 
-const SUBSIDIARIES = [
+const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
   { name: "Antler Gear", desc: "Premium bowhunting equipment." },
   { name: "File Display", desc: "Internal tooling SaaS platform." },
   { name: "Glycell", desc: "Synthetic biology research." },
@@ -37,12 +37,18 @@ const SUBSIDIARIES = [
   { name: "Chip Fab", desc: "Semiconductor Research." },
   { name: "Vix Ventures", desc: "Venture Capital Partners." },
   { name: "Stock FUD", desc: "FUD dissemination platform." },
-].map((s, i) => ({
-  ...s,
-  ...ACCENTS[i % ACCENTS.length],
-  url: siteUrl(s.name),
-  site: siteLabel(s.name),
-}));
+  { name: "USM News", desc: "Fake news propaganda platform.", site: "USMnews.com" },
+];
+
+const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
+  const site = siteLabel(s.name, s.site);
+  return {
+    ...s,
+    ...ACCENTS[i % ACCENTS.length],
+    url: siteUrl(site),
+    site,
+  };
+});
 
 function FlowConnector() {
   return (
