@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
+import { CasinoChat } from "./casino-chat";
 import { CasinoMobileNav } from "./casino-mobile-nav";
 import { casinoPage, casinoShellBg } from "./casino-ui";
 import { useFunMode, useFunMuted } from "./fun-mode";
@@ -116,6 +117,7 @@ function CasinoShellInner({
         {children}
       </main>
       <CasinoMobileNav />
+      <CasinoChat />
     </div>
   );
 }

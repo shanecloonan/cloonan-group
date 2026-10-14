@@ -22,6 +22,8 @@ import {
 import { CasinoProvider } from "./casino-context";
 import { CasinoShell } from "./casino-shell";
 import { FunCelebrations } from "./fun-celebrations";
+import { GameComments } from "./game-comments";
+import { GAME_LABELS } from "./casino-ui";
 import { GameLobby } from "./game-lobby";
 import { GamePlayHeader } from "./game-play-header";
 import type { GameTab } from "./game-types";
@@ -311,6 +313,7 @@ function CasinoContentInner() {
           {tab === "nerve" && <SalonFloor initialGame="nerve" />}
           {tab === "oddone" && <SalonFloor initialGame="oddone" />}
           {tab === "ticker" && <SalonFloor initialGame="ticker" />}
+          <GameComments key={tab} gameId={tab} title={GAME_LABELS[tab as CasinoGameId] ?? tab} />
           </>
         )}
       </CasinoShell>
