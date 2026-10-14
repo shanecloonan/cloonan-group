@@ -1,0 +1,222 @@
+/* ==========================================================================
+ *  Casino Fun Mode — Vegas floor theme.
+ *  Everything is scoped under .cz-root[data-fun="on"], so the normal
+ *  (muted) theme is untouched when Fun Mode is off.
+ *  Motion: transform/opacity only; no flash faster than ~2 Hz.
+ * ========================================================================== */
+
+.cz-root[data-fun="on"] {
+  --fun-pink: #ff2bd6;
+  --fun-cyan: #00e5ff;
+  --fun-yellow: #ffe600;
+  --fun-green: #39ff14;
+  --fun-orange: #ff7a00;
+  --fun-violet: #b44bff;
+  --neon: var(--fun-pink);
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, rgba(255, 43, 214, 0.28), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 85% 10%, rgba(0, 229, 255, 0.22), transparent 70%),
+    radial-gradient(ellipse 70% 45% at 50% 105%, rgba(255, 230, 0, 0.16), transparent 70%),
+    linear-gradient(180deg, #1a0236 0%, #0f0124 55%, #08001a 100%);
+  color: #fff;
+}
+
+/* Sweeping spotlights (opacity-only pulse on the existing before layer). */
+.cz-root[data-fun="on"]::before {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(180, 75, 255, 0.35), transparent 35%),
+    radial-gradient(circle at 75% 60%, rgba(255, 43, 214, 0.28), transparent 35%) !important;
+  animation: fun-spot 6s ease-in-out infinite alternate;
+}
+.cz-root[data-fun="on"]::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 70% 25%, rgba(0, 229, 255, 0.22), transparent 30%),
+    radial-gradient(circle at 30% 80%, rgba(255, 230, 0, 0.16), transparent 30%);
+  animation: fun-spot 7s ease-in-out infinite alternate-reverse;
+}
+.cz-root[data-fun="on"] > main {
+  position: relative;
+  z-index: 1;
+}
+@keyframes fun-spot {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+/* ---- Header: neon strip with a chasing bulb rail ---- */
+.cz-root[data-fun="on"] .cz-header {
+  background: rgba(20, 0, 45, 0.88);
+  border-bottom-color: transparent;
+  box-shadow: 0 0 18px rgba(255, 43, 214, 0.55), 0 1px 0 var(--fun-pink);
+}
+.cz-root[data-fun="on"] .cz-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 6px;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff7b0 0 1.5px, var(--fun-yellow) 2.2px, transparent 3px) 0 50% / 14px 6px repeat-x;
+  filter: drop-shadow(0 0 3px var(--fun-yellow));
+  animation: fun-twinkle 0.9s steps(2, jump-none) infinite alternate;
+}
+.cz-root[data-fun="on"] .cz-header .font-heading {
+  color: #fff;
+  text-shadow: 0 0 6px var(--fun-pink), 0 0 16px var(--fun-pink);
+}
+.cz-root[data-fun="on"] .cz-header a {
+  color: #ffe9fb;
+}
+
+/* ---- Fun toggle itself ---- */
+.cz-root[data-fun="on"] .cz-fun-toggle {
+  color: #1a0236;
+  border-color: transparent;
+  background: linear-gradient(90deg, var(--fun-yellow), var(--fun-pink), var(--fun-cyan));
+  box-shadow: 0 0 12px rgba(255, 43, 214, 0.8);
+  font-weight: 700;
+}
+.cz-root[data-fun="on"] .cz-fun-mute {
+  color: var(--fun-cyan);
+  border-color: var(--fun-cyan);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+}
+
+/* ---- Generic panels: purple velvet with neon edge ---- */
+.cz-root[data-fun="on"] .cz-card {
+  background: linear-gradient(160deg, rgba(60, 0, 110, 0.85), rgba(22, 0, 48, 0.92));
+  border-color: rgba(255, 43, 214, 0.55);
+  box-shadow: 0 0 14px rgba(255, 43, 214, 0.35), inset 0 0 22px rgba(180, 75, 255, 0.25);
+}
+
+/* Headings and small labels pop. */
+.cz-root[data-fun="on"] main h1,
+.cz-root[data-fun="on"] main h2,
+.cz-root[data-fun="on"] main h3 {
+  color: var(--fun-yellow);
+  text-shadow: 0 0 6px rgba(255, 230, 0, 0.7), 0 0 14px rgba(255, 122, 0, 0.5);
+}
+.cz-root[data-fun="on"] main .text-\[\#c6a15b\] {
+  color: var(--fun-cyan);
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.6);
+}
+.cz-root[data-fun="on"] main .tabular-nums {
+  text-shadow: 0 0 10px rgba(255, 230, 0, 0.45);
+}
+
+/* ---- Lobby game tiles: neon signs with marquee bulbs ---- */
+.cz-root[data-fun="on"] .cz-tile {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--neon) 28%, #1a0236), #12002a 70%);
+  border: 1px solid var(--neon);
+  box-shadow: 0 0 10px var(--neon), 0 0 26px color-mix(in srgb, var(--neon) 40%, transparent), inset 0 0 18px color-mix(in srgb, var(--neon) 30%, transparent);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.cz-root[data-fun="on"] .cz-tile:hover,
+.cz-root[data-fun="on"] .cz-tile:focus-visible {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 0 16px var(--neon), 0 0 40px var(--neon), inset 0 0 22px color-mix(in srgb, var(--neon) 45%, transparent);
+}
+.cz-root[data-fun="on"] .cz-tile .font-heading {
+  color: #fff;
+  text-shadow: 0 0 5px var(--neon), 0 0 12px var(--neon);
+}
+.cz-root[data-fun="on"] .cz-tile > span:first-child > span:first-child {
+  color: var(--neon);
+  border-color: var(--neon);
+  background: color-mix(in srgb, var(--neon) 18%, transparent);
+  box-shadow: 0 0 10px var(--neon);
+}
+.cz-root[data-fun="on"] .cz-tile > span:first-child > span:last-child {
+  color: rgba(255, 255, 255, 0.75);
+}
+.cz-root[data-fun="on"] .cz-tile > span:last-child {
+  background: var(--neon);
+  box-shadow: 0 0 8px var(--neon);
+}
+
+/* Cycle neon colors across tiles. */
+.cz-root[data-fun="on"] .cz-tile:nth-child(6n + 1) { --neon: var(--fun-pink); }
+.cz-root[data-fun="on"] .cz-tile:nth-child(6n + 2) { --neon: var(--fun-cyan); }
+.cz-root[data-fun="on"] .cz-tile:nth-child(6n + 3) { --neon: var(--fun-yellow); }
+.cz-root[data-fun="on"] .cz-tile:nth-child(6n + 4) { --neon: var(--fun-green); }
+.cz-root[data-fun="on"] .cz-tile:nth-child(6n + 5) { --neon: var(--fun-orange); }
+.cz-root[data-fun="on"] .cz-tile:nth-child(6n + 6) { --neon: var(--fun-violet); }
+
+/* Marquee bulbs: two offset bulb rings that alternate (≈1.1 Hz per bulb). */
+.cz-root[data-fun="on"] .cz-tile::before,
+.cz-root[data-fun="on"] .cz-tile::after,
+.cz-root[data-fun="on"] .cz-marquee::before,
+.cz-root[data-fun="on"] .cz-marquee::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 4px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(circle, #fffbe0 0 1.3px, var(--bulb, #ffe600) 2px, transparent 2.8px) 0 0 / 12px 12px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: fun-twinkle 0.9s ease-in-out infinite alternate;
+}
+.cz-root[data-fun="on"] .cz-tile::after,
+.cz-root[data-fun="on"] .cz-marquee::after {
+  background-position: 6px 6px;
+  animation-direction: alternate-reverse;
+}
+@keyframes fun-twinkle {
+  from { opacity: 1; }
+  to { opacity: 0.15; }
+}
+
+/* ---- Buttons ---- */
+.cz-root[data-fun="on"] .cz-btn-primary {
+  color: #1a0236;
+  background: linear-gradient(180deg, #fff27a, var(--fun-yellow) 40%, var(--fun-orange));
+  box-shadow: 0 0 12px rgba(255, 230, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  animation: fun-pulse 1.6s ease-in-out infinite;
+}
+.cz-root[data-fun="on"] .cz-btn:not(.cz-btn-primary) {
+  color: #fff;
+  border-color: var(--fun-cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.45);
+}
+.cz-root[data-fun="on"] .cz-pill-active {
+  color: #1a0236;
+  background: var(--fun-pink);
+  border-color: var(--fun-pink);
+  box-shadow: 0 0 12px var(--fun-pink);
+}
+@keyframes fun-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+/* Inputs stay legible. */
+.cz-root[data-fun="on"] input {
+  background: rgba(10, 0, 25, 0.85);
+  border-color: var(--fun-cyan);
+  color: #fff;
+}
+
+/* ---- Reduced motion: keep the colors, drop the movement ---- */
+@media (prefers-reduced-motion: reduce) {
+  .cz-root[data-fun="on"],
+  .cz-root[data-fun="on"] *,
+  .cz-root[data-fun="on"]::before,
+  .cz-root[data-fun="on"]::after,
+  .cz-root[data-fun="on"] *::before,
+  .cz-root[data-fun="on"] *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

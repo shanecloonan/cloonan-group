@@ -60,7 +60,7 @@ function GameTileButton({ g, onOpen }: { g: (typeof GAME_CATALOG)[0]; onOpen: ()
       className={
         card +
         cardHover +
-        " group px-3.5 py-3.5 sm:px-4 sm:py-4 flex flex-col items-start text-left gap-3 min-h-[6.5rem] cursor-pointer active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c6a15b]/50"
+        " cz-tile group px-3.5 py-3.5 sm:px-4 sm:py-4 flex flex-col items-start text-left gap-3 min-h-[6.5rem] cursor-pointer active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c6a15b]/50"
       }
     >
       <span className="flex w-full items-center justify-between gap-2">

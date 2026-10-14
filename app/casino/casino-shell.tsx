@@ -5,6 +5,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { CasinoMobileNav } from "./casino-mobile-nav";
 import { casinoPage, casinoShellBg } from "./casino-ui";
+import { useFunMode, useFunMuted } from "./fun-mode";
+import { FunModeToggle, useFunMusic } from "./fun-mode-toggle";
+import "./fun-mode.css";
 
 const DESKTOP_NAV = [
   { href: "/casino", label: "Games", match: (p: string) => p === "/casino" },
@@ -27,10 +30,13 @@ function CasinoShellInner({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const inTable = pathname === "/casino" && !!searchParams.get("game");
+  const fun = useFunMode();
+  const funMuted = useFunMuted();
+  useFunMusic(fun, funMuted);
 
   return (
-    <div className={casinoPage + " " + casinoShellBg}>
-      <header className="sticky top-0 z-40 border-b border-[#c6a15b]/20 bg-[#070806]/90 backdrop-blur-2xl">
+    <div className={casinoPage + " " + casinoShellBg} data-fun={fun ? "on" : undefined}>
+      <header className="cz-header sticky top-0 z-40 border-b border-[#c6a15b]/20 bg-[#070806]/90 backdrop-blur-2xl">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16 gap-4">
             <Link href="/casino" className="flex items-center gap-3 shrink-0 group">
@@ -73,6 +79,10 @@ function CasinoShellInner({
                 Vault
               </Link>
             </nav>
+
+            <div className="ml-auto flex items-center gap-2">
+              <FunModeToggle />
+            </div>
 
             <Link
               href="/casino/wallet"
