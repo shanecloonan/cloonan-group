@@ -46,7 +46,7 @@ function CardSlot({ c, label, highlight }: { c?: Card; label: string; highlight?
     <div
       className={
         "flex flex-col items-center gap-1.5 rounded-xl border p-2 min-w-[4.25rem] " +
-        (highlight ? "border-emerald-400/50 bg-emerald-500/10" : "border-white/10 bg-white/[0.04]")
+        (highlight ? "border-[#8c9880]/50 bg-[#8c9880]/10" : "border-white/10 bg-white/[0.04]")
       }
     >
       <span className="text-[9px] uppercase tracking-wider text-white/40">{label}</span>

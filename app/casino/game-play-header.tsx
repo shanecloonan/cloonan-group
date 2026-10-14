@@ -27,13 +27,13 @@ export function GamePlayHeader({
         {GAME_LABELS[gameId]}
       </h2>
       {!playMoney.enabled && (
-        <span className="text-[10px] sm:text-xs font-mono text-emerald-300/90 tabular-nums shrink-0 max-w-[6rem] sm:max-w-none truncate text-right">
+        <span className="text-[10px] sm:text-xs font-mono text-[#a9b49c]/90 tabular-nums shrink-0 max-w-[6rem] sm:max-w-none truncate text-right">
           {fmtMoney(balance.available, token, 2)}
         </span>
       )}
       <Link
         href="/casino/docs"
-        className="text-[11px] text-white/45 hover:text-amber-200/90 shrink-0 px-2 py-1"
+        className="text-[11px] text-white/45 hover:text-[#e8dcc0]/90 shrink-0 px-2 py-1"
       >
         Rules
       </Link>

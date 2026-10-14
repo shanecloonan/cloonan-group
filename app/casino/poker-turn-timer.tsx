@@ -47,7 +47,7 @@ export function PokerTurnTimer({
     <div
       className={
         "text-center text-xs font-mono tabular-nums " +
-        (urgent ? "text-rose-300 animate-pulse" : "text-amber-200/70")
+        (urgent ? "text-[#c4938a] animate-pulse" : "text-[#e8dcc0]/70")
       }
     >
       {sec}s to act

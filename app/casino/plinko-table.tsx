@@ -333,7 +333,7 @@ export default function PlinkoTable({ chainId, token }: Props) {
                     className={
                       "h-10 px-3 text-[12px] font-medium rounded-lg border transition-all flex-1 cursor-pointer " +
                       (risk === r
-                        ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-200"
+                        ? "border-[#8c9880]/50 bg-[#8c9880]/10 text-[#cfd5c4]"
                         : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:bg-white/[0.06]")
                     }
                     onClick={() => setRisk(r)}
@@ -354,7 +354,7 @@ export default function PlinkoTable({ chainId, token }: Props) {
                     className={
                       "h-10 px-3 text-[12px] font-medium rounded-lg border transition-all flex-1 cursor-pointer " +
                       (rows === r
-                        ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-200"
+                        ? "border-[#8c9880]/50 bg-[#8c9880]/10 text-[#cfd5c4]"
                         : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:bg-white/[0.06]")
                     }
                     onClick={() => setRows(r)}
@@ -466,9 +466,9 @@ export default function PlinkoTable({ chainId, token }: Props) {
 
         <FairnessCard seedPair={seedPair} onRotateSeed={() => rotateSeed()}>
           Each row consumes one bit from{" "}
-          <code className="text-emerald-300">HMAC-SHA256(server_seed, client_seed:nonce)</code>.
-          <code className="text-emerald-300"> 0</code> = left,
-          <code className="text-emerald-300"> 1</code> = right. The bin index = count of 1s.
+          <code className="text-[#a9b49c]">HMAC-SHA256(server_seed, client_seed:nonce)</code>.
+          <code className="text-[#a9b49c]"> 0</code> = left,
+          <code className="text-[#a9b49c]"> 1</code> = right. The bin index = count of 1s.
         </FairnessCard>
 
         {lastRevealedSeed && (
@@ -589,8 +589,8 @@ function PlinkoBoard({
           <defs>
             <radialGradient id="ballGrad" cx="0.35" cy="0.3" r="0.65">
               <stop offset="0%" stopColor="#fef3c7" />
-              <stop offset="60%" stopColor="#f59e0b" />
-              <stop offset="100%" stopColor="#b45309" />
+              <stop offset="60%" stopColor="#c6a15b" />
+              <stop offset="100%" stopColor="#8a6a32" />
             </radialGradient>
           </defs>
 
@@ -606,7 +606,7 @@ function PlinkoBoard({
                   cx={x}
                   cy={y}
                   r={3}
-                  fill={passed ? "rgba(16,185,129,0.7)" : "rgba(255,255,255,0.25)"}
+                  fill={passed ? "rgba(140,152,128,0.7)" : "rgba(255,255,255,0.25)"}
                 />
               );
             }),
@@ -621,7 +621,7 @@ function PlinkoBoard({
               fill="url(#ballGrad)"
               style={{
                 transition: "cx 100ms ease-out, cy 100ms ease-out",
-                filter: "drop-shadow(0 0 4px rgba(245, 158, 11, 0.6))",
+                filter: "drop-shadow(0 0 4px rgba(198,161,91, 0.6))",
               }}
             />
           )}
@@ -631,8 +631,8 @@ function PlinkoBoard({
             const cellX = centerX - (rows / 2) * pegStep + i * pegStep;
             const cellY = lastY + 20;
             const won = lastBin?.bin === i;
-            const fill = m >= 10 ? "rgba(244,63,94,0.18)" : m >= 2 ? "rgba(245,158,11,0.18)" : m >= 1 ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.04)";
-            const stroke = won ? "rgba(16,185,129,0.9)" : "rgba(255,255,255,0.1)";
+            const fill = m >= 10 ? "rgba(160,100,90,0.18)" : m >= 2 ? "rgba(198,161,91,0.18)" : m >= 1 ? "rgba(140,152,128,0.18)" : "rgba(255,255,255,0.04)";
+            const stroke = won ? "rgba(140,152,128,0.9)" : "rgba(255,255,255,0.1)";
             const text = m < 1 ? m.toFixed(1) : m < 10 ? m.toFixed(1) : Math.round(m).toString();
             return (
               <g key={i}>
@@ -649,7 +649,7 @@ function PlinkoBoard({
                 <text
                   x={cellX}
                   y={cellY + 24}
-                  fill={won ? "#a7f3d0" : "rgba(255,255,255,0.65)"}
+                  fill={won ? "#cfd5c4" : "rgba(255,255,255,0.65)"}
                   fontSize={rows >= 16 ? 9 : 11}
                   fontWeight="600"
                   textAnchor="middle"
@@ -750,9 +750,9 @@ function AutoPanel({
         {progress && (
           <div className="text-[12px] text-white/60 flex gap-3 font-mono">
             <span>{progress.remaining} left</span>
-            <span className="text-emerald-300">{progress.wins}W</span>
-            <span className="text-rose-300">{progress.losses}L</span>
-            <span className={progress.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300"}>
+            <span className="text-[#a9b49c]">{progress.wins}W</span>
+            <span className="text-[#c4938a]">{progress.losses}L</span>
+            <span className={progress.pnlUnits >= 0n ? "text-[#a9b49c]" : "text-[#c4938a]"}>
               pnl {fmtMoney(progress.pnlUnits, token)}
             </span>
           </div>

@@ -52,8 +52,8 @@ function MiniCard({ c, highlight }: { c: Card; highlight?: boolean }) {
       className={
         "inline-flex flex-col items-center justify-center w-8 h-11 sm:w-9 sm:h-12 rounded border text-[10px] sm:text-xs font-mono shrink-0 " +
         (highlight
-          ? "border-emerald-400 bg-emerald-500/20 text-emerald-100"
-          : "border-white/15 bg-white/[0.06] " + (red ? "text-rose-300" : "text-white/85"))
+          ? "border-[#8c9880] bg-[#8c9880]/20 text-[#cfd5c4]"
+          : "border-white/15 bg-white/[0.06] " + (red ? "text-[#c4938a]" : "text-white/85"))
       }
     >
       <span className="font-bold leading-none">{c.rank}</span>
@@ -169,7 +169,7 @@ export default function AndarBaharTable({ chainId, token }: Props) {
           {st ? (
             <>
               <div className="flex justify-center">
-                <div className="rounded-xl border-2 border-amber-400/40 bg-amber-500/10 px-4 py-3 flex flex-col items-center gap-2">
+                <div className="rounded-xl border-2 border-[#c6a15b]/40 bg-[#c6a15b]/10 px-4 py-3 flex flex-col items-center gap-2">
                   <div className={labelCls + " !mb-0"}>Joker</div>
                   <PlayingCard c={st.jokerCard} large />
                 </div>
@@ -178,7 +178,7 @@ export default function AndarBaharTable({ chainId, token }: Props) {
                 <div
                   className={
                     "rounded-xl border p-3 " +
-                    (st.winner === "andar" ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10")
+                    (st.winner === "andar" ? "border-[#8c9880]/40 bg-[#8c9880]/10" : "border-white/10")
                   }
                 >
                   <div className="text-xs font-semibold text-center text-white/80 mb-2">Andar (inside)</div>
@@ -188,7 +188,7 @@ export default function AndarBaharTable({ chainId, token }: Props) {
                 <div
                   className={
                     "rounded-xl border p-3 " +
-                    (st.winner === "bahar" ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10")
+                    (st.winner === "bahar" ? "border-[#8c9880]/40 bg-[#8c9880]/10" : "border-white/10")
                   }
                 >
                   <div className="text-xs font-semibold text-center text-white/80 mb-2">Bahar (outside)</div>

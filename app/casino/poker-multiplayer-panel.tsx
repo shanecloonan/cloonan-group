@@ -290,7 +290,7 @@ export function PokerMultiplayerPanel({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-amber-400/20 bg-gradient-to-r from-amber-500/10 via-transparent to-violet-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="rounded-xl border border-[#c6a15b]/20 bg-gradient-to-r from-[#c6a15b]/10 via-transparent to-[#8a857a]/5 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className={pillGold}>Texas Hold&apos;em · live</span>
           <p className="text-xs text-white/55 mt-1.5 max-w-md">
@@ -301,12 +301,12 @@ export function PokerMultiplayerPanel({
       </div>
 
       {!userId && (
-        <p className="text-sm text-amber-200/80 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
+        <p className="text-sm text-[#e8dcc0]/80 rounded-xl border border-[#c6a15b]/20 bg-[#c6a15b]/10 px-4 py-3">
           Sign in to host or join a live table.
         </p>
       )}
 
-      {msg && <p className="text-sm text-rose-300">{msg}</p>}
+      {msg && <p className="text-sm text-[#c4938a]">{msg}</p>}
 
       {!active ? (
         <>
@@ -340,7 +340,7 @@ export function PokerMultiplayerPanel({
                   className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]"
                 >
                   <div>
-                    <div className="font-mono text-amber-200">{r.room_code}</div>
+                    <div className="font-mono text-[#e8dcc0]">{r.room_code}</div>
                     <div className="text-[11px] text-white/40">
                       {humanCount(r)} seated · {r.status}
                     </div>
@@ -368,10 +368,10 @@ export function PokerMultiplayerPanel({
           <div className="flex justify-between items-center">
             <div>
               <div className="flex items-center gap-2">
-                <div className="text-lg font-mono text-amber-200 tracking-widest">{active.room_code}</div>
+                <div className="text-lg font-mono text-[#e8dcc0] tracking-widest">{active.room_code}</div>
                 <button
                   type="button"
-                  className="text-[10px] text-amber-300/80 hover:text-amber-200 uppercase tracking-wider"
+                  className="text-[10px] text-[#d2b781]/80 hover:text-[#e8dcc0] uppercase tracking-wider"
                   onClick={() => {
                     void navigator.clipboard.writeText(active.room_code);
                     setCopied(true);
@@ -392,8 +392,8 @@ export function PokerMultiplayerPanel({
                       "text-[10px] px-1.5 py-0.5 rounded border " +
                       (uid
                         ? uid === userId
-                          ? "border-amber-400/50 bg-amber-500/15 text-amber-100"
-                          : "border-emerald-400/30 bg-emerald-500/10 text-emerald-200/80"
+                          ? "border-[#c6a15b]/50 bg-[#c6a15b]/15 text-[#e8dcc0]"
+                          : "border-[#8c9880]/30 bg-[#8c9880]/10 text-[#cfd5c4]/80"
                         : "border-white/10 text-white/30")
                     }
                   >

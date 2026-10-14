@@ -20,10 +20,10 @@ import { playerName, SealedRoster, Spot, spotStake } from "./salon-kit";
  * ------------------------------------------------------------------------- */
 
 export const DERBY_HORSES = [
-  { name: "Gilded Marquis", silk: "bg-[#e0c27a]" },
-  { name: "Midnight Reserve", silk: "bg-[#2f3a6b]" },
+  { name: "Gilded Marquis", silk: "bg-[#cdb27e]" },
+  { name: "Midnight Reserve", silk: "bg-[#34363e]" },
   { name: "Velvet Ledger", silk: "bg-[#7a2a3a]" },
-  { name: "Champagne Atelier", silk: "bg-[#f3e6c4]" },
+  { name: "Champagne Atelier", silk: "bg-[#e6dcc4]" },
   { name: "Quiet Croupier", silk: "bg-[#2d6b4a]" },
   { name: "Lacquer Box", silk: "bg-[#1a1512] ring-1 ring-[#c6a15b]/50" },
 ] as const;
@@ -63,14 +63,14 @@ export function DerbyCloth({
             className={
               "flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left cursor-pointer disabled:cursor-default disabled:opacity-80 " +
               "bg-black/30 border-[#c6a15b]/25 hover:border-[#e8d5a3]/50 transition-colors" +
-              (mine ? " ring-1 ring-[#f3e6c4]" : "")
+              (mine ? " ring-1 ring-[#e6dcc4]" : "")
             }
           >
             <span className="font-mono text-[10px] text-[#c6a15b]">{n}</span>
             <span className={"h-3.5 w-3.5 shrink-0 rounded-full " + h.silk} />
             <span className="flex-1 font-heading text-sm text-[#f6f1e7]">{h.name}</span>
             {stake > 0 && (
-              <span className="rounded-full bg-[#f3e6c4] px-1.5 text-[10px] font-mono leading-4 text-[#1c1508]">{stake}</span>
+              <span className="rounded-full bg-[#e6dcc4] px-1.5 text-[10px] font-mono leading-4 text-[#1c1508]">{stake}</span>
             )}
             <span className="w-12 text-right font-mono text-xs text-[#e8d5a3]">{derbyOdds(n)}</span>
           </button>
@@ -124,7 +124,7 @@ function RaceAnimation({ result, onReplay }: { result: SalonDerbyResult; onRepla
         </button>
       </div>
       <div className="relative space-y-1.5 rounded-xl border border-[#c6a15b]/20 bg-black/25 p-3">
-        <span className="pointer-events-none absolute inset-y-3 right-3 w-px bg-[repeating-linear-gradient(to_bottom,#f3e6c4_0_4px,transparent_4px_8px)] opacity-60" />
+        <span className="pointer-events-none absolute inset-y-3 right-3 w-px bg-[repeating-linear-gradient(to_bottom,#e6dcc4_0_4px,transparent_4px_8px)] opacity-60" />
         {DERBY_HORSES.map((h, i) => {
           const pct = Math.min(100, (progress[i] / finish) * 100);
           const winner = done && result.winner === i + 1;
@@ -135,7 +135,7 @@ function RaceAnimation({ result, onReplay }: { result: SalonDerbyResult; onRepla
                 <div
                   className={
                     "absolute inset-y-0 left-0 rounded-full transition-[width] ease-linear " +
-                    (winner ? "bg-gradient-to-r from-[#a7843c] to-[#f3e6c4]" : "bg-white/10")
+                    (winner ? "bg-gradient-to-r from-[#9a8050] to-[#e6dcc4]" : "bg-white/10")
                   }
                   style={{ width: `${pct}%`, transitionDuration: `${TICK_MS}ms` }}
                 />
@@ -379,7 +379,7 @@ export function OddOneReveal({ result, table }: { result: SalonOddOneResult; tab
               className={
                 "min-h-16 rounded-lg border px-1.5 py-1.5 text-center " +
                 (win
-                  ? "border-[#e8d5a3] bg-gradient-to-b from-[#f3e6c4] to-[#a7843c] text-[#1c1508]"
+                  ? "border-[#e8d5a3] bg-gradient-to-b from-[#e6dcc4] to-[#9a8050] text-[#1c1508]"
                   : clash
                     ? "border-[#c48a80]/40 bg-[#6e2424]/40 text-[#f8e8e4]"
                     : names.length === 1
@@ -514,7 +514,7 @@ export function TickerLocked({ table }: { table: SalonTable }) {
 export function TickerReveal({ result }: { result: SalonTickerResult }) {
   const tone =
     result.direction === "up"
-      ? "text-[#9fe0b8]"
+      ? "text-[#a9b49c]"
       : result.direction === "down"
         ? "text-[#e7b2aa]"
         : "text-[#f6f1e7]";

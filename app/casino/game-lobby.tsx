@@ -43,8 +43,8 @@ function SyncPill({ persistent }: { persistent: boolean }) {
       className={
         "text-[10px] font-medium px-2 py-0.5 rounded-full border " +
         (persistent
-          ? "border-emerald-400/30 text-emerald-300 bg-emerald-500/10"
-          : "border-amber-400/30 text-amber-200 bg-amber-500/10")
+          ? "border-[#8c9880]/30 text-[#a9b49c] bg-[#8c9880]/10"
+          : "border-[#c6a15b]/30 text-[#e8dcc0] bg-[#c6a15b]/10")
       }
     >
       {persistent ? "Cloud sync" : "Local play"}
@@ -255,7 +255,7 @@ export function GameLobby({
             {history.slice(0, 4).map((h, i) => (
               <li key={i} className="flex justify-between gap-2">
                 <span className="truncate text-white/55">{gameLabel(h.game)}</span>
-                <span className={h.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300"}>
+                <span className={h.pnlUnits >= 0n ? "text-[#a9b49c]" : "text-[#c4938a]"}>
                   {fmtPnl(h.pnlUnits, token)}
                 </span>
               </li>
@@ -294,7 +294,7 @@ export function GameLobby({
                     className={
                       "px-3 py-2 rounded-xl text-xs font-semibold border transition-all " +
                       (chainId === c.id
-                        ? "border-amber-400/45 bg-amber-500/15 text-amber-100"
+                        ? "border-[#c6a15b]/45 bg-[#c6a15b]/15 text-[#e8dcc0]"
                         : live
                           ? "border-white/[0.1] bg-white/[0.03] text-white/70 hover:border-white/20 cursor-pointer"
                           : "border-white/[0.05] text-white/30 cursor-not-allowed opacity-60")
@@ -315,7 +315,7 @@ export function GameLobby({
                     className={
                       "px-3 py-1.5 rounded-lg text-xs font-semibold border " +
                       (token.symbol === t.symbol && token.address === t.address
-                        ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
+                        ? "border-[#8c9880]/50 bg-[#8c9880]/15 text-[#cfd5c4]"
                         : "border-white/[0.1] text-white/60 hover:bg-white/[0.05] cursor-pointer")
                     }
                   >

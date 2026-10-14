@@ -181,13 +181,13 @@ export default function VideoPokerTable({ chainId, token }: Props) {
                     className={
                       "min-w-[3.25rem] sm:min-w-[3.75rem] min-h-[4.5rem] touch-manipulation rounded-xl border-2 text-lg sm:text-xl font-mono transition-all cursor-pointer disabled:cursor-default " +
                       (hold[i]
-                        ? "border-amber-400/70 bg-amber-500/15 text-amber-50 shadow-[0_0_16px_rgba(245,158,11,0.15)]"
+                        ? "border-[#c6a15b]/70 bg-[#c6a15b]/15 text-[#e8dcc0]"
                         : "border-white/[0.12] bg-white/[0.04] text-white/90 hover:border-white/25")
                     }
                   >
                     {cardLabel(c)}
                     {hold[i] && dealing && (
-                      <span className="block text-[8px] uppercase tracking-wider text-amber-300/80 mt-0.5">
+                      <span className="block text-[8px] uppercase tracking-wider text-[#d2b781]/80 mt-0.5">
                         Hold
                       </span>
                     )}

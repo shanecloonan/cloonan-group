@@ -159,7 +159,7 @@ export default function BaccaratTable({ chainId, token }: Props) {
               <RulesHint>Pick a spot and deal — standard 8-deck shoe with third-card rules.</RulesHint>
             )}
             {st?.winner === "tie" && (
-              <p className="text-center text-sm text-amber-200/90 font-medium">Tie — {st.playerTotal}</p>
+              <p className="text-center text-sm text-[#e8dcc0]/90 font-medium">Tie — {st.playerTotal}</p>
             )}
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {SPOTS.map((s) => (
@@ -216,7 +216,7 @@ export default function BaccaratTable({ chainId, token }: Props) {
                         onClick={() => setVerifyTarget(h)}
                         className={
                           "font-mono shrink-0 cursor-pointer " +
-                          (h.result!.pnlUnits >= 0n ? "text-emerald-300/90" : "text-rose-300/90")
+                          (h.result!.pnlUnits >= 0n ? "text-[#a9b49c]/90" : "text-[#c4938a]/90")
                         }
                       >
                         {fmtMoney(h.result!.pnlUnits, token)}

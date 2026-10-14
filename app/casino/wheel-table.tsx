@@ -35,12 +35,12 @@ import {
 import { displaySymbol } from "./token-label";
 
 const MULT_COLOR: Record<WheelBetMult, string> = {
-  1: "#64748b",
-  2: "#3b82f6",
-  5: "#10b981",
-  10: "#a855f7",
-  20: "#f97316",
-  40: "#eab308",
+  1: "#4a4740",
+  2: "#6e685d",
+  5: "#8c9880",
+  10: "#a0645a",
+  20: "#9a7a4a",
+  40: "#c6a15b",
 };
 
 const LAST_BET_KEY = "mf_casino_wheel_bet";
@@ -165,7 +165,7 @@ export default function WheelTable({ chainId, token }: Props) {
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="relative w-[min(100%,280px)] aspect-square shrink-0">
               <div
-                className="absolute inset-2 rounded-full border-4 border-amber-500/40 shadow-[0_0_40px_rgba(245,158,11,0.15)] transition-transform duration-[3s] ease-out"
+                className="absolute inset-2 rounded-full border-4 border-[#c6a15b]/40 transition-transform duration-[3s] ease-out"
                 style={{
                   background: wheelGradient,
                   transform: `rotate(${spinDeg}deg)`,
@@ -177,7 +177,7 @@ export default function WheelTable({ chainId, token }: Props) {
                     <span
                       className={
                         "text-lg font-bold font-mono " +
-                        (st.won ? "text-emerald-300" : "text-white/80")
+                        (st.won ? "text-[#a9b49c]" : "text-white/80")
                       }
                     >
                       {st.landedMult}×
@@ -208,7 +208,7 @@ export default function WheelTable({ chainId, token }: Props) {
                       className={
                         "touch-manipulation min-h-14 rounded-xl border-2 font-bold text-sm transition-all cursor-pointer disabled:opacity-50 " +
                         (active
-                          ? "border-amber-400 bg-amber-500/20 text-amber-100 shadow-[0_0_16px_rgba(245,158,11,0.2)]"
+                          ? "border-[#c6a15b] bg-[#c6a15b]/20 text-[#e8dcc0]"
                           : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/25")
                       }
                       style={{ borderColor: active ? MULT_COLOR[m] : undefined }}

@@ -44,7 +44,7 @@ export default function DocsContent() {
               className={
                 "block px-3 py-2 rounded-lg text-sm transition-colors " +
                 (active === s.id
-                  ? "bg-amber-500/15 text-amber-100 border border-amber-400/25"
+                  ? "bg-[#c6a15b]/15 text-[#e8dcc0] border border-[#c6a15b]/25"
                   : "text-white/55 hover:text-white hover:bg-white/[0.04]")
               }
             >
@@ -53,7 +53,7 @@ export default function DocsContent() {
           ))}
           <Link
             href="/casino/verify"
-            className="block mt-4 px-3 py-2 text-sm text-amber-300 hover:text-amber-200"
+            className="block mt-4 px-3 py-2 text-sm text-[#d2b781] hover:text-[#e8dcc0]"
           >
             Open verifier →
           </Link>
@@ -63,24 +63,24 @@ export default function DocsContent() {
           <DocSection id="overview" title="Overview">
             <p>
               MoneyFund Casino runs ten live games on a shared engine: deterministic rules in{" "}
-              <code className="text-amber-200/90">lib/casino/</code>, session audit logs, and HMAC-SHA256
+              <code className="text-[#e8dcc0]/90">lib/casino/</code>, session audit logs, and HMAC-SHA256
               commit-reveal randomness. <strong className="text-white">FakeMONEY</strong> needs no account —
               you get a random guest name and free chips (+10K / +100K / +1M) from the bottom chip bar. Signed-in users
-              on real chains sync to Supabase. On-chain settlement via <code className="text-amber-200/90">CasinoVault.sol</code> is
+              on real chains sync to Supabase. On-chain settlement via <code className="text-[#e8dcc0]/90">CasinoVault.sol</code> is
               Phase 2 (Base L2 first).
             </p>
             <ul className="list-disc pl-5 space-y-1 mt-3">
               <li>Every settled session stores stake, nonces, seeds, and full result JSON.</li>
               <li>
-                <Link href="/casino/dashboard" className="text-amber-300 hover:underline">
+                <Link href="/casino/dashboard" className="text-[#d2b781] hover:underline">
                   Dashboard
                 </Link>{" "}
                 — filter your play;{" "}
-                <Link href="/casino/history" className="text-amber-300 hover:underline">
+                <Link href="/casino/history" className="text-[#d2b781] hover:underline">
                   Activity
                 </Link>{" "}
                 — your sessions plus a global bet log (Supabase Realtime when the feed migration is applied);{" "}
-                <Link href="/casino/leaderboard" className="text-amber-300 hover:underline">
+                <Link href="/casino/leaderboard" className="text-[#d2b781] hover:underline">
                   Leaderboard
                 </Link>{" "}
                 — opt-in rankings.
@@ -117,14 +117,14 @@ export default function DocsContent() {
             <p>
               Before play, you see <strong className="text-white">server_seed_hash = SHA-256(server_seed)</strong>.
               Each action advances a monotonic nonce. Outcomes use{" "}
-              <code className="text-amber-200/90">HMAC-SHA256(server_seed, client_seed:nonce:…)</code> as a byte
+              <code className="text-[#e8dcc0]/90">HMAC-SHA256(server_seed, client_seed:nonce:…)</code> as a byte
               stream — never raw floating RNG.
             </p>
             <ol className="list-decimal pl-5 space-y-2 mt-3">
               <li>Export or copy the settled session JSON from History or the in-table share button.</li>
               <li>
                 Paste into{" "}
-                <Link href="/casino/verify" className="text-amber-300 hover:underline">
+                <Link href="/casino/verify" className="text-[#d2b781] hover:underline">
                   /casino/verify
                 </Link>{" "}
                 with the revealed server seed (shown when you rotate seeds).
@@ -135,66 +135,66 @@ export default function DocsContent() {
 
           <DocSection id="crypto" title="Crypto & vault">
             <p>
-              Specification: <code className="text-amber-200/90">infra/contracts/ethereum/CasinoVault.sol</code>.
+              Specification: <code className="text-[#e8dcc0]/90">infra/contracts/ethereum/CasinoVault.sol</code>.
               Players deposit ERC-20 (USDC on Base); the hot operator signs EIP-712 withdrawal vouchers; players
-              submit <code className="text-amber-200/90">withdraw()</code> themselves. Deposits can pause; withdrawals
+              submit <code className="text-[#e8dcc0]/90">withdraw()</code> themselves. Deposits can pause; withdrawals
               cannot — rescue path. Per-token daily caps and multisig timelock on admin functions.
             </p>
             <ol className="list-decimal pl-5 space-y-2 mt-3 text-white/70">
               <li>
-                Compile: <code className="text-amber-200/90">cd infra/contracts/ethereum</code>, then{" "}
-                <code className="text-amber-200/90">forge install OpenZeppelin/openzeppelin-contracts forge-std --no-commit</code>,{" "}
-                <code className="text-amber-200/90">forge build</code>.
+                Compile: <code className="text-[#e8dcc0]/90">cd infra/contracts/ethereum</code>, then{" "}
+                <code className="text-[#e8dcc0]/90">forge install OpenZeppelin/openzeppelin-contracts forge-std --no-commit</code>,{" "}
+                <code className="text-[#e8dcc0]/90">forge build</code>.
               </li>
               <li>
-                Deploy with <code className="text-amber-200/90">script/DeployCasinoVault.s.sol</code> (owner = multisig,
+                Deploy with <code className="text-[#e8dcc0]/90">script/DeployCasinoVault.s.sol</code> (owner = multisig,
                 operator = hot signer).
               </li>
               <li>
-                Set <code className="text-amber-200/90">NEXT_PUBLIC_CASINO_VAULT_*</code> and{" "}
-                <code className="text-amber-200/90">CASINO_OPERATOR_KEY</code> for withdraw signing via{" "}
-                <code className="text-amber-200/90">/api/casino/withdraw-authorize</code>.
+                Set <code className="text-[#e8dcc0]/90">NEXT_PUBLIC_CASINO_VAULT_*</code> and{" "}
+                <code className="text-[#e8dcc0]/90">CASINO_OPERATOR_KEY</code> for withdraw signing via{" "}
+                <code className="text-[#e8dcc0]/90">/api/casino/withdraw-authorize</code>.
               </li>
               <li>
-                Check deployment status: <code className="text-amber-200/90">GET /api/casino/vault-status</code> (also
+                Check deployment status: <code className="text-[#e8dcc0]/90">GET /api/casino/vault-status</code> (also
                 surfaced on the Wallet page when a chain is not configured).
               </li>
               <li>
-                After a finalized deposit tx, <code className="text-amber-200/90">POST /api/casino/deposit-credit</code>{" "}
+                After a finalized deposit tx, <code className="text-[#e8dcc0]/90">POST /api/casino/deposit-credit</code>{" "}
                 verifies the receipt on-chain and credits the Supabase ledger idempotently by tx hash.
               </li>
               <li>
-                Before submitting a withdraw tx, <code className="text-amber-200/90">POST /api/casino/withdraw-lock</code>{" "}
-                moves available → locked (JWT). On failure, <code className="text-amber-200/90">POST /api/casino/withdraw-unlock</code>{" "}
+                Before submitting a withdraw tx, <code className="text-[#e8dcc0]/90">POST /api/casino/withdraw-lock</code>{" "}
+                moves available → locked (JWT). On failure, <code className="text-[#e8dcc0]/90">POST /api/casino/withdraw-unlock</code>{" "}
                 releases the lock.
               </li>
               <li>
-                After lock + finalized withdraw tx, <code className="text-amber-200/90">POST /api/casino/withdraw-debit</code>{" "}
-                verifies <code className="text-amber-200/90">Withdrawn</code> on-chain and burns locked balance by tx hash.
+                After lock + finalized withdraw tx, <code className="text-[#e8dcc0]/90">POST /api/casino/withdraw-debit</code>{" "}
+                verifies <code className="text-[#e8dcc0]/90">Withdrawn</code> on-chain and burns locked balance by tx hash.
               </li>
               <li>
-                Operator indexer: <code className="text-amber-200/90">POST /api/casino/operator/deposit-credit</code> and{" "}
-                <code className="text-amber-200/90">POST /api/casino/operator/withdraw-debit</code> with{" "}
-                <code className="text-amber-200/90">Authorization: Bearer CASINO_OPERATOR_SECRET</code> and{" "}
-                <code className="text-amber-200/90">userId</code> in the body (idempotent ledger credit/debit by tx hash).
+                Operator indexer: <code className="text-[#e8dcc0]/90">POST /api/casino/operator/deposit-credit</code> and{" "}
+                <code className="text-[#e8dcc0]/90">POST /api/casino/operator/withdraw-debit</code> with{" "}
+                <code className="text-[#e8dcc0]/90">Authorization: Bearer CASINO_OPERATOR_SECRET</code> and{" "}
+                <code className="text-[#e8dcc0]/90">userId</code> in the body (idempotent ledger credit/debit by tx hash).
               </li>
               <li>
                 Sepolia test USDC: allowlist Circle mint{" "}
-                <code className="text-amber-200/90">0x1c7D4B196Cb0C7B29D5Daedb9e2cCeDaD4d5D4f4</code> on the vault. Manual
-                credit: <code className="text-amber-200/90">npx tsx scripts/credit-casino-deposit.ts</code> with service role env.
+                <code className="text-[#e8dcc0]/90">0x1c7D4B196Cb0C7B29D5Daedb9e2cCeDaD4d5D4f4</code> on the vault. Manual
+                credit: <code className="text-[#e8dcc0]/90">npx tsx scripts/credit-casino-deposit.ts</code> with service role env.
               </li>
               <li>
-                Multiplayer poker uses <code className="text-amber-200/90">turn_started_at</code> for the 45s action clock so bot
+                Multiplayer poker uses <code className="text-[#e8dcc0]/90">turn_started_at</code> for the 45s action clock so bot
                 updates do not reset the timer.
               </li>
             </ol>
             <p className="mt-3">
               Until vault addresses are configured, use FakeMONEY on the lobby. Wallet UI at{" "}
-              <Link href="/casino/wallet" className="text-amber-300 hover:underline">
+              <Link href="/casino/wallet" className="text-[#d2b781] hover:underline">
                 /casino/wallet
               </Link>{" "}
               exercises the full two-step deposit flow when env vars are set. Public activity:{" "}
-              <Link href="/casino/history?view=global" className="text-amber-300 hover:underline">
+              <Link href="/casino/history?view=global" className="text-[#d2b781] hover:underline">
                 Activity · global feed
               </Link>
               .
@@ -230,7 +230,7 @@ export default function DocsContent() {
                   ).map(([g, rtp, edge]) => (
                     <tr key={g} className="border-b border-white/[0.04]">
                       <td className="p-3 text-white/85">{GAME_LABELS[g as CasinoGameId]}</td>
-                      <td className="p-3 text-right font-mono text-emerald-300/90">{rtp}</td>
+                      <td className="p-3 text-right font-mono text-[#a9b49c]/90">{rtp}</td>
                       <td className="p-3 text-right font-mono text-white/50">{edge}</td>
                     </tr>
                   ))}
@@ -414,7 +414,7 @@ function GameDoc({
     <DocSection id={id} title={title}>
       <div className={card + " p-4 mb-4 flex flex-wrap items-center justify-between gap-2"}>
         <span className="text-white/50 text-xs uppercase tracking-wider">Published RTP</span>
-        <span className="font-mono text-lg text-emerald-300/95">{rtp}</span>
+        <span className="font-mono text-lg text-[#a9b49c]/95">{rtp}</span>
       </div>
       <h3 className="text-xs uppercase tracking-[0.15em] text-white/40 font-semibold mb-2">Rules</h3>
       <ul className="list-disc pl-5 space-y-1.5">
@@ -436,7 +436,7 @@ function GameDoc({
       )}
       <p className="mt-4 text-white/50 text-xs border-t border-white/[0.06] pt-3">
         Export session JSON from History or the in-table share link →{" "}
-        <Link href="/casino/verify" className="text-amber-300 hover:underline">
+        <Link href="/casino/verify" className="text-[#d2b781] hover:underline">
           /casino/verify
         </Link>{" "}
         with your revealed server seed.
@@ -447,8 +447,8 @@ function GameDoc({
 
 function Callout({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className={card + " p-4 border-amber-400/20 bg-amber-500/[0.06]"}>
-      <div className="text-sm font-semibold text-amber-100 mb-1">{title}</div>
+    <div className={card + " p-4 border-[#c6a15b]/20 bg-[#c6a15b]/[0.06]"}>
+      <div className="text-sm font-semibold text-[#e8dcc0] mb-1">{title}</div>
       <div className="text-white/65 text-sm leading-relaxed">{children}</div>
     </div>
   );
@@ -460,12 +460,12 @@ function PlatformCard({ href, title, body }: { href: string; title: string; body
       href={href}
       className={
         card +
-        " block p-4 hover:border-amber-400/30 transition-all group"
+        " block p-4 hover:border-[#c6a15b]/30 transition-all group"
       }
     >
-      <div className="text-sm font-semibold text-white group-hover:text-amber-100">{title}</div>
+      <div className="text-sm font-semibold text-white group-hover:text-[#e8dcc0]">{title}</div>
       <p className="mt-1.5 text-xs text-white/50 leading-relaxed">{body}</p>
-      <span className="inline-block mt-2 text-[11px] text-amber-300/80">Open →</span>
+      <span className="inline-block mt-2 text-[11px] text-[#d2b781]/80">Open →</span>
     </Link>
   );
 }

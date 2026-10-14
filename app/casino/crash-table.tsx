@@ -425,10 +425,10 @@ export default function CrashTable({ chainId, token }: Props) {
   const liveMultDisplay = phase === "running" ? currentMult : (lastResult?.exit ?? 1.0);
   const liveColor =
     phase === "running"
-      ? "text-emerald-300"
+      ? "text-[#a9b49c]"
       : lastResult?.won
-        ? "text-emerald-300"
-        : "text-rose-300";
+        ? "text-[#a9b49c]"
+        : "text-[#c4938a]";
 
   const stakeUnits = humanToUnits(betAmount, token);
   const projectedPayout = stakeUnits > 0n ? (stakeUnits * BigInt(Math.floor(autoCashout * 1_000_000))) / 1_000_000n : 0n;
@@ -594,9 +594,9 @@ export default function CrashTable({ chainId, token }: Props) {
 
         <FairnessCard seedPair={seedPair} onRotateSeed={() => rotateSeed()}>
           Each round&apos;s bust point is derived from
-          {" "}<code className="text-emerald-300">HMAC-SHA256(server_seed, client_seed:nonce)</code>{" "}
+          {" "}<code className="text-[#a9b49c]">HMAC-SHA256(server_seed, client_seed:nonce)</code>{" "}
           and the formula{" "}
-          <code className="text-emerald-300">floor((100·E − h)/(E − h))/100</code>.
+          <code className="text-[#a9b49c]">floor((100·E − h)/(E − h))/100</code>.
           Rotate to reveal the current server seed and verify past rounds.
         </FairnessCard>
 
@@ -712,8 +712,8 @@ function CurveCanvas({
         <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 w-full h-full">
           <defs>
             <linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={busted ? "#f43f5e" : "#10b981"} stopOpacity="0.35" />
-              <stop offset="100%" stopColor={busted ? "#f43f5e" : "#10b981"} stopOpacity="0.0" />
+              <stop offset="0%" stopColor={busted ? "#a0645a" : "#8c9880"} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={busted ? "#a0645a" : "#8c9880"} stopOpacity="0.0" />
             </linearGradient>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
@@ -729,7 +729,7 @@ function CurveCanvas({
               x2={width - padding}
               y1={yToPx(autoCashout)}
               y2={yToPx(autoCashout)}
-              stroke="rgba(16,185,129,0.45)"
+              stroke="rgba(140,152,128,0.45)"
               strokeWidth="1"
               strokeDasharray="6 4"
             />
@@ -738,7 +738,7 @@ function CurveCanvas({
             <text
               x={width - padding - 4}
               y={yToPx(autoCashout) - 4}
-              fill="rgba(16,185,129,0.7)"
+              fill="rgba(140,152,128,0.7)"
               fontSize="10"
               textAnchor="end"
               fontFamily="monospace"
@@ -754,7 +754,7 @@ function CurveCanvas({
               x2={width - padding}
               y1={yToPx(bustAt)}
               y2={yToPx(bustAt)}
-              stroke="rgba(244,63,94,0.55)"
+              stroke="rgba(160,100,90,0.55)"
               strokeWidth="1"
               strokeDasharray="6 4"
             />
@@ -770,7 +770,7 @@ function CurveCanvas({
               <polyline
                 points={polyline}
                 fill="none"
-                stroke={busted ? "#f43f5e" : "#10b981"}
+                stroke={busted ? "#a0645a" : "#8c9880"}
                 strokeWidth="2.4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -781,7 +781,7 @@ function CurveCanvas({
                   cx={xToPx(tNow)}
                   cy={yToPx(currentMult)}
                   r="5"
-                  fill="#10b981"
+                  fill="#8c9880"
                   className="drop-shadow"
                 />
               )}
@@ -824,9 +824,9 @@ function CurveCanvas({
                 (phase === "running"
                   ? "text-7xl text-white"
                   : busted
-                    ? "text-7xl text-rose-300"
+                    ? "text-7xl text-[#c4938a]"
                     : cashed
-                      ? "text-7xl text-emerald-300"
+                      ? "text-7xl text-[#a9b49c]"
                       : "text-6xl text-white/30")
               }
             >
@@ -837,7 +837,7 @@ function CurveCanvas({
                   : "1.00×"}
             </div>
             {phase === "settled" && lastResult && (
-              <div className={"mt-1 text-[12px] " + (lastResult.won ? "text-emerald-200" : "text-rose-200")}>
+              <div className={"mt-1 text-[12px] " + (lastResult.won ? "text-[#cfd5c4]" : "text-[#dcc0b8]")}>
                 {lastResult.won
                   ? `Cashed out before bust at ${lastResult.bustAt.toFixed(2)}×`
                   : `Busted at ${lastResult.bustAt.toFixed(2)}×`}
@@ -942,9 +942,9 @@ function AutoPanel({
         {progress && (
           <div className="text-[12px] text-white/60 flex gap-3 font-mono">
             <span>{progress.remaining} left</span>
-            <span className="text-emerald-300">{progress.wins}W</span>
-            <span className="text-rose-300">{progress.losses}L</span>
-            <span className={progress.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300"}>
+            <span className="text-[#a9b49c]">{progress.wins}W</span>
+            <span className="text-[#c4938a]">{progress.losses}L</span>
+            <span className={progress.pnlUnits >= 0n ? "text-[#a9b49c]" : "text-[#c4938a]"}>
               pnl {fmtMoney(progress.pnlUnits, token)}
             </span>
             {running && currentStake > 0 && (

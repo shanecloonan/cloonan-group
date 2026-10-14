@@ -373,8 +373,8 @@ export default function DiceTable({ chainId, token }: Props) {
                 (animating
                   ? "text-white/80"
                   : won
-                    ? "text-emerald-300"
-                    : "text-rose-300")
+                    ? "text-[#a9b49c]"
+                    : "text-[#c4938a]")
               }
             >
               {(displayedRollBps / 100).toFixed(2)}
@@ -394,7 +394,7 @@ export default function DiceTable({ chainId, token }: Props) {
                 <div>
                   <div className="flex items-center justify-between text-[11px] text-white/60 mb-1.5">
                     <span>Target: <span className="text-white font-mono">{(targetBps / 100).toFixed(2)}</span></span>
-                    <span>Win chance: <span className="text-emerald-300 font-mono">{live.winChance.toFixed(2)}%</span></span>
+                    <span>Win chance: <span className="text-[#a9b49c] font-mono">{live.winChance.toFixed(2)}%</span></span>
                   </div>
                   <input
                     type="range"
@@ -404,7 +404,7 @@ export default function DiceTable({ chainId, token }: Props) {
                     value={targetBps}
                     onChange={(e) => setTargetBps(Number(e.target.value))}
                     disabled={animating || autoRunning}
-                    className="w-full accent-emerald-400"
+                    className="w-full accent-[#8c9880]"
                   />
                   <div className="flex items-center justify-between text-[10px] text-white/30 mt-1">
                     <span>0.02</span>
@@ -426,7 +426,7 @@ export default function DiceTable({ chainId, token }: Props) {
                   className={inputCls + " font-mono"}
                 />
                 <div className="mt-2 text-[11px] text-white/60 flex items-center justify-between">
-                  <span>Win chance: <span className="text-emerald-300 font-mono">{live.winChance.toFixed(2)}%</span></span>
+                  <span>Win chance: <span className="text-[#a9b49c] font-mono">{live.winChance.toFixed(2)}%</span></span>
                   <span>Roll must be &gt; {(live.targetBps / 100).toFixed(2)}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-1 flex-wrap">
@@ -464,9 +464,9 @@ export default function DiceTable({ chainId, token }: Props) {
                 ))}
               </div>
             </div>
-            <div className="p-3 rounded-lg bg-emerald-500/[0.06] border border-emerald-400/20 text-center">
-              <div className="text-[10px] text-emerald-300/70 uppercase tracking-[0.12em]">Payout</div>
-              <div className="text-2xl font-bold font-mono text-emerald-300">
+            <div className="p-3 rounded-lg bg-[#8c9880]/[0.06] border border-[#8c9880]/20 text-center">
+              <div className="text-[10px] text-[#a9b49c]/70 uppercase tracking-[0.12em]">Payout</div>
+              <div className="text-2xl font-bold font-mono text-[#a9b49c]">
                 {live.multiplier.toFixed(4)}×
               </div>
               <div className="text-[11px] text-white/50 mt-1">
@@ -486,7 +486,7 @@ export default function DiceTable({ chainId, token }: Props) {
             {animating ? "Rolling…" : "Roll · Enter"}
           </button>
           {!live.reachable && (
-            <p className="mt-2 text-[11px] text-amber-300">
+            <p className="mt-2 text-[11px] text-[#d2b781]">
               That multiplier is out of range. Try something between 1.01× and 9900×.
             </p>
           )}
@@ -508,11 +508,11 @@ export default function DiceTable({ chainId, token }: Props) {
           right={
             autoRunning ? (
               <button type="button" onClick={() => { cancelAutoRef.current = true; }}
-                className="text-[10px] uppercase tracking-[0.12em] text-rose-300 hover:text-rose-200 cursor-pointer"
+                className="text-[10px] uppercase tracking-[0.12em] text-[#c4938a] hover:text-[#dcc0b8] cursor-pointer"
               >stop</button>
             ) : (
               <button type="button" onClick={() => setAutoOpen((v) => !v)}
-                className={"text-[10px] uppercase tracking-[0.12em] cursor-pointer " + (autoOpen ? "text-emerald-300" : "text-white/40 hover:text-white/70")}
+                className={"text-[10px] uppercase tracking-[0.12em] cursor-pointer " + (autoOpen ? "text-[#a9b49c]" : "text-white/40 hover:text-white/70")}
               >{autoOpen ? "configured" : "configure"}</button>
             )
           }
@@ -538,7 +538,7 @@ export default function DiceTable({ chainId, token }: Props) {
                   <div>Played {auto.rounds - autoProgress.remaining}/{auto.rounds}</div>
                   <div>Wins {autoProgress.wins} · Losses {autoProgress.losses}</div>
                   <div>Wagered {fmtMoney(autoProgress.totalWagered, token)}</div>
-                  <div className={Number(autoProgress.totalWon - autoProgress.totalWagered) > 0 ? "text-emerald-300" : "text-rose-300"}>
+                  <div className={Number(autoProgress.totalWon - autoProgress.totalWagered) > 0 ? "text-[#a9b49c]" : "text-[#c4938a]"}>
                     PnL {fmtMoney(autoProgress.totalWon - autoProgress.totalWagered, token)}
                   </div>
                 </div>
@@ -572,7 +572,7 @@ export default function DiceTable({ chainId, token }: Props) {
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={
                       "w-12 h-7 rounded-md flex items-center justify-center text-[11px] font-mono font-bold " +
-                      (r.won ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300")
+                      (r.won ? "bg-[#8c9880]/15 text-[#a9b49c]" : "bg-[#a0645a]/15 text-[#c4938a]")
                     }>
                       {(r.rollBps / 100).toFixed(2)}
                     </span>
@@ -581,11 +581,11 @@ export default function DiceTable({ chainId, token }: Props) {
                     </span>
                   </div>
                   <div className="text-right">
-                    <div className={"text-[11px] font-mono " + (r.won ? "text-emerald-300" : "text-rose-300")}>
+                    <div className={"text-[11px] font-mono " + (r.won ? "text-[#a9b49c]" : "text-[#c4938a]")}>
                       {fmtPnl(h.result!.pnlUnits, token)}
                     </div>
                     <button type="button" onClick={() => setVerifyTarget(h)}
-                      className="text-[10px] text-white/40 hover:text-emerald-300 cursor-pointer"
+                      className="text-[10px] text-white/40 hover:text-[#a9b49c] cursor-pointer"
                     >verify →</button>
                   </div>
                 </div>
@@ -604,7 +604,7 @@ export default function DiceTable({ chainId, token }: Props) {
           title="Verify roll"
           description={
             <>
-              Paste the revealed <span className="text-emerald-300">server seed</span>. We re-derive this roll
+              Paste the revealed <span className="text-[#a9b49c]">server seed</span>. We re-derive this roll
               with <span className="font-mono">HMAC-SHA256(seed, clientSeed:nonce)</span> and rejection-sample a
               uniform integer in [0, 10000).
             </>
@@ -660,7 +660,7 @@ function ModePill({ label, active, onClick }: { label: string; active: boolean; 
       className={
         "h-7 px-3 rounded-md text-[12px] font-semibold border transition-all cursor-pointer " +
         (active
-          ? "bg-emerald-500/15 border-emerald-400/40 text-emerald-200"
+          ? "bg-[#8c9880]/15 border-[#8c9880]/40 text-[#cfd5c4]"
           : "bg-white/[0.03] border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06]")
       }
     >{label}</button>
@@ -673,7 +673,7 @@ function DirectionPill({ label, hotkey, active, onClick, disabled }: { label: st
       className={
         "h-10 rounded-lg border font-semibold text-sm transition-all flex items-center justify-center gap-2 " +
         (active
-          ? "bg-emerald-500/15 border-emerald-400/40 text-emerald-200"
+          ? "bg-[#8c9880]/15 border-[#8c9880]/40 text-[#cfd5c4]"
           : "bg-white/[0.03] border-white/[0.08] text-white/70 hover:text-white hover:bg-white/[0.06]") +
         (disabled ? " opacity-50 cursor-not-allowed" : " cursor-pointer")
       }
@@ -707,18 +707,18 @@ function NumberLine({
   const winZoneWidth = direction === "under" ? targetPct : 100 - targetPct;
 
   return (
-    <div className="relative h-20 rounded-xl bg-gradient-to-r from-rose-500/[0.08] via-white/[0.02] to-emerald-500/[0.08] border border-white/[0.06] overflow-hidden">
+    <div className="relative h-20 rounded-xl bg-gradient-to-r from-[#a0645a]/[0.08] via-white/[0.02] to-[#8c9880]/[0.08] border border-white/[0.06] overflow-hidden">
       {/* Winning zone */}
       <div
-        className="absolute inset-y-0 bg-emerald-500/15 border-x border-emerald-400/30 transition-all duration-200"
+        className="absolute inset-y-0 bg-[#8c9880]/15 border-x border-[#8c9880]/30 transition-all duration-200"
         style={{ left: `${winZoneLeft}%`, width: `${winZoneWidth}%` }}
       />
       {/* Target line */}
       <div
-        className="absolute inset-y-2 w-px bg-emerald-300/80 transition-all duration-200"
+        className="absolute inset-y-2 w-px bg-[#a9b49c]/80 transition-all duration-200"
         style={{ left: `${targetPct}%` }}
       >
-        <div className="absolute top-0 -translate-x-1/2 px-1 py-0.5 rounded bg-emerald-500/30 text-[9px] font-mono text-emerald-100 whitespace-nowrap">
+        <div className="absolute top-0 -translate-x-1/2 px-1 py-0.5 rounded bg-[#8c9880]/30 text-[9px] font-mono text-[#cfd5c4] whitespace-nowrap">
           {(targetBps / 100).toFixed(2)}
         </div>
       </div>
@@ -727,7 +727,7 @@ function NumberLine({
         <div
           className={
             "absolute inset-y-0 flex items-center transition-all duration-100 " +
-            (rolling ? "" : won ? "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]")
+            (rolling ? "" : won ? "drop-" : "drop-")
           }
           style={{ left: `${rollPct}%`, transform: "translateX(-50%)" }}
         >
@@ -736,8 +736,8 @@ function NumberLine({
             (rolling
               ? "bg-white/80 border-white/40 text-stone-900"
               : won
-                ? "bg-emerald-400 border-emerald-200 text-emerald-950"
-                : "bg-rose-400 border-rose-200 text-rose-950")
+                ? "bg-[#8c9880] border-[#a9b49c] text-[#a9b49c]"
+                : "bg-[#a0645a] border-[#c4938a] text-[#c4938a]")
           }>
             ▼
           </div>

@@ -283,7 +283,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
           <button
             type="button"
             onClick={() => setShowRules(true)}
-            className="text-[10px] uppercase tracking-[0.12em] text-emerald-300 hover:text-emerald-200 cursor-pointer"
+            className="text-[10px] uppercase tracking-[0.12em] text-[#a9b49c] hover:text-[#cfd5c4] cursor-pointer"
           >
             edit →
           </button>
@@ -306,7 +306,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
               onClick={() => setShowAdvisor((v) => !v)}
               className={
                 "text-[10px] uppercase tracking-[0.12em] cursor-pointer " +
-                (showAdvisor ? "text-emerald-300 hover:text-emerald-200" : "text-white/40 hover:text-white/70")
+                (showAdvisor ? "text-[#a9b49c] hover:text-[#cfd5c4]" : "text-white/40 hover:text-white/70")
               }
             >
               {showAdvisor ? "on" : "off"}
@@ -322,7 +322,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
               <div className="text-[10px] uppercase tracking-[0.12em] text-white/40 mb-1">
                 Suggested
               </div>
-              <div className="text-base font-semibold text-emerald-300 capitalize">
+              <div className="text-base font-semibold text-[#a9b49c] capitalize">
                 {advice.action.replace("_", " ")}
               </div>
               <div className="text-[12px] text-white/60 mt-1.5 leading-relaxed">
@@ -379,7 +379,7 @@ export default function BlackjackTable({ chainId, token }: Props) {
           title="Verify hand"
           description={
             <>
-              Paste the revealed <span className="text-emerald-300">server seed</span>. We re-derive the
+              Paste the revealed <span className="text-[#a9b49c]">server seed</span>. We re-derive the
               entire deal and every action with HMAC-SHA256 and compare state hashes.
             </>
           }
@@ -501,7 +501,7 @@ function DealForm({
           </button>
         </div>
         {disabled && balance.available < humanToUnits(betAmount, token) && (
-          <p className="mt-2 text-[11px] text-amber-300">
+          <p className="mt-2 text-[11px] text-[#d2b781]">
             Bet exceeds available balance.
           </p>
         )}
@@ -550,7 +550,7 @@ function Felt({
       </div>
 
       {/* Felt divider */}
-      <div className="my-6 h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
+      <div className="my-6 h-px bg-gradient-to-r from-transparent via-[#8c9880]/20 to-transparent" />
 
       {/* Player hands */}
       <div className="space-y-3">
@@ -563,9 +563,9 @@ function Felt({
               className={
                 "p-3 rounded-xl border transition-all " +
                 (isActive
-                  ? "border-emerald-400/40 bg-emerald-500/[0.06]"
+                  ? "border-[#8c9880]/40 bg-[#8c9880]/[0.06]"
                   : hand.surrendered
-                    ? "border-amber-400/20 bg-amber-500/[0.04]"
+                    ? "border-[#c6a15b]/20 bg-[#c6a15b]/[0.04]"
                     : "border-white/[0.05] bg-white/[0.02]")
               }
             >
@@ -588,12 +588,12 @@ function Felt({
                   <CardChip key={`h${i}c${j}`} card={c} delay={j * 60} />
                 ))}
               </div>
-              {hand.busted && <div className="mt-2 text-[11px] text-rose-300">BUST</div>}
+              {hand.busted && <div className="mt-2 text-[11px] text-[#c4938a]">BUST</div>}
               {hand.stood && !hand.busted && (
                 <div className="mt-2 text-[11px] text-white/40">STAND</div>
               )}
               {hand.surrendered && (
-                <div className="mt-2 text-[11px] text-amber-300">SURRENDERED — half stake refunded</div>
+                <div className="mt-2 text-[11px] text-[#d2b781]">SURRENDERED — half stake refunded</div>
               )}
             </div>
           );
@@ -602,11 +602,11 @@ function Felt({
 
       {/* Advice strip */}
       {advice && state.phase !== "settled" && (
-        <div className="mt-4 mx-auto max-w-md px-3 py-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-400/20 text-center">
-          <div className="text-[10px] uppercase tracking-[0.15em] text-emerald-300/60">
+        <div className="mt-4 mx-auto max-w-md px-3 py-2 rounded-lg bg-[#8c9880]/[0.06] border border-[#8c9880]/20 text-center">
+          <div className="text-[10px] uppercase tracking-[0.15em] text-[#a9b49c]/60">
             Basic strategy
           </div>
-          <div className="text-sm font-semibold text-emerald-200 capitalize">
+          <div className="text-sm font-semibold text-[#cfd5c4] capitalize">
             {advice.action.replace("_", " ")}
           </div>
         </div>
@@ -705,7 +705,7 @@ function Settlement({
       <div
         className={
           "text-3xl font-bold " +
-          (isWin ? "text-emerald-400" : isPush ? "text-white/80" : "text-rose-400")
+          (isWin ? "text-[#a9b49c]" : isPush ? "text-white/80" : "text-[#c4938a]")
         }
       >
         {isWin
@@ -772,7 +772,7 @@ function CardChip({
     return (
       <div
         ref={ref}
-        className="w-14 h-20 rounded-[0.4rem] bg-gradient-to-br from-[#143024] via-[#0c1c16] to-[#1a1208] border border-[#c6a15b]/45 flex items-center justify-center text-[#e8d5a3]/80 text-sm select-none shadow-[inset_0_0_0_1px_rgba(232,213,163,0.15)] transition-all duration-300 ease-out"
+        className="w-14 h-20 rounded-[0.4rem] bg-gradient-to-br from-[#1c1c18] via-[#121210] to-[#1a1208] border border-[#c6a15b]/45 flex items-center justify-center text-[#e8d5a3]/80 text-sm select-none shadow-[inset_0_0_0_1px_rgba(232,213,163,0.15)] transition-all duration-300 ease-out"
         style={{ transitionDelay: `${delay}ms` }}
       >
         ◆
@@ -824,7 +824,7 @@ function HistoryRow({
         <div
           className={
             "text-[12px] font-mono font-semibold " +
-            (win ? "text-emerald-300" : push ? "text-white/60" : "text-rose-300")
+            (win ? "text-[#a9b49c]" : push ? "text-white/60" : "text-[#c4938a]")
           }
         >
           {fmtPnl(r.pnlUnits, token)}
@@ -832,7 +832,7 @@ function HistoryRow({
         <button
           type="button"
           onClick={onVerify}
-          className="text-[10px] text-white/40 hover:text-emerald-300 cursor-pointer"
+          className="text-[10px] text-white/40 hover:text-[#a9b49c] cursor-pointer"
         >
           verify →
         </button>
@@ -877,7 +877,7 @@ function RulesModal({
         </header>
 
         {inSession && (
-          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-400/20 text-[12px] text-amber-200">
+          <div className="p-3 rounded-lg bg-[#c6a15b]/10 border border-[#c6a15b]/20 text-[12px] text-[#e8dcc0]">
             You&apos;re mid-hand — changes apply to the next deal.
           </div>
         )}
@@ -984,7 +984,7 @@ function RuleToggle({
         onClick={() => onChange(!value)}
         className={
           "shrink-0 w-10 h-6 rounded-full transition-all relative " +
-          (value ? "bg-emerald-500" : "bg-white/[0.1]")
+          (value ? "bg-[#8c9880]" : "bg-white/[0.1]")
         }
       >
         <span

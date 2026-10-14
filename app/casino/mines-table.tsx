@@ -434,7 +434,7 @@ export default function MinesTable({ chainId, token }: Props) {
             <div className="flex-[2] min-w-[200px]">
               <div className="flex items-baseline justify-between mb-1.5">
                 <label className={labelCls + " mb-0"}>Mines</label>
-                <span className="text-[12px] font-mono text-emerald-300">
+                <span className="text-[12px] font-mono text-[#a9b49c]">
                   {mineCount} {mineCount === 1 ? "mine" : "mines"} · {25 - mineCount} safe
                 </span>
               </div>
@@ -445,7 +445,7 @@ export default function MinesTable({ chainId, token }: Props) {
                 value={mineCount}
                 onChange={(e) => setMineCount(Number(e.target.value))}
                 disabled={inRound || autoRunning}
-                className="w-full accent-emerald-500"
+                className="w-full accent-[#8c9880]"
               />
               <div className="mt-1 flex gap-1.5">
                 {[1, 3, 5, 10, 24].map((m) => (
@@ -455,7 +455,7 @@ export default function MinesTable({ chainId, token }: Props) {
                     className={
                       "h-7 px-2 text-[10px] font-medium rounded-md border transition-all cursor-pointer " +
                       (mineCount === m
-                        ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-200"
+                        ? "border-[#8c9880]/50 bg-[#8c9880]/10 text-[#cfd5c4]"
                         : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:bg-white/[0.06]")
                     }
                     onClick={() => setMineCount(m)}
@@ -567,9 +567,9 @@ export default function MinesTable({ chainId, token }: Props) {
                   className={
                     "flex items-center justify-between px-2.5 py-1.5 rounded-md text-[11px] font-mono " +
                     (reached
-                      ? "bg-emerald-500/10 border border-emerald-400/30 text-emerald-200"
+                      ? "bg-[#8c9880]/10 border border-[#8c9880]/30 text-[#cfd5c4]"
                       : isNext
-                        ? "bg-amber-500/10 border border-amber-400/40 text-amber-200"
+                        ? "bg-[#c6a15b]/10 border border-[#c6a15b]/40 text-[#e8dcc0]"
                         : "bg-white/[0.02] border border-white/[0.05] text-white/60")
                   }
                 >
@@ -614,7 +614,7 @@ export default function MinesTable({ chainId, token }: Props) {
 
         <FairnessCard seedPair={seedPair} onRotateSeed={() => rotateSeed()}>
           Mine layout is a Fisher–Yates shuffle of [0, 25) driven by{" "}
-          <code className="text-emerald-300">HMAC-SHA256(server_seed, client_seed:nonce)</code>.
+          <code className="text-[#a9b49c]">HMAC-SHA256(server_seed, client_seed:nonce)</code>.
           The first M shuffled positions are the mines. Once the seed is revealed anyone can
           recompute the exact layout.
         </FairnessCard>
@@ -634,7 +634,7 @@ export default function MinesTable({ chainId, token }: Props) {
           description={
             <>
               Paste the revealed server seed. We replay the Fisher–Yates mine layout from{" "}
-              <span className="font-mono text-emerald-300">HMAC(seed, client:nonce)</span> and every
+              <span className="font-mono text-[#a9b49c]">HMAC(seed, client:nonce)</span> and every
               pick/cashout step.
             </>
           }
@@ -728,23 +728,23 @@ function MinesBoard({
           let cls = "bg-white/[0.06] border-white/[0.08] hover:bg-white/[0.10]";
           if (showSafeMid || showSafeAtEnd) {
             body = (
-              <span className="text-emerald-300 text-xl drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]">
+              <span className="text-[#a9b49c] text-xl drop-">
                 ◆
               </span>
             );
-            cls = "bg-emerald-500/15 border-emerald-400/40";
+            cls = "bg-[#8c9880]/15 border-[#8c9880]/40";
           } else if (showMineAtEnd) {
             body = (
-              <span className={"text-2xl " + (isHit ? "text-rose-300" : "text-white/40")}>
+              <span className={"text-2xl " + (isHit ? "text-[#c4938a]" : "text-white/40")}>
                 ✸
               </span>
             );
             cls = isHit
-              ? "bg-rose-500/25 border-rose-400/60 animate-pulse"
+              ? "bg-[#a0645a]/25 border-[#a0645a]/60 animate-pulse"
               : "bg-white/[0.04] border-white/[0.08]";
           }
           if (won && !isRevealed) {
-            cls = "bg-emerald-500/[0.04] border-emerald-400/15";
+            cls = "bg-[#8c9880]/[0.04] border-[#8c9880]/15";
           }
 
           const disabled = busy || !state || terminal || isRevealed;
@@ -768,11 +768,11 @@ function MinesBoard({
       {terminal && (
         <div className="mt-4 text-center">
           {exploded ? (
-            <div className="text-[13px] text-rose-300">
+            <div className="text-[13px] text-[#c4938a]">
               Hit a mine after {state?.picks ?? 0} safe pick{state?.picks === 1 ? "" : "s"}.
             </div>
           ) : (
-            <div className="text-[13px] text-emerald-300">
+            <div className="text-[13px] text-[#a9b49c]">
               Cashed out at {state?.multiplier.toFixed(2)}× ·{" "}
               {state?.picks} safe pick{state?.picks === 1 ? "" : "s"}.
             </div>
@@ -886,9 +886,9 @@ function AutoPanel({
         {progress && (
           <div className="text-[12px] text-white/60 flex gap-3 font-mono">
             <span>{progress.remaining} left</span>
-            <span className="text-emerald-300">{progress.wins}W</span>
-            <span className="text-rose-300">{progress.losses}L</span>
-            <span className={progress.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300"}>
+            <span className="text-[#a9b49c]">{progress.wins}W</span>
+            <span className="text-[#c4938a]">{progress.losses}L</span>
+            <span className={progress.pnlUnits >= 0n ? "text-[#a9b49c]" : "text-[#c4938a]"}>
               pnl {fmtMoney(progress.pnlUnits, token)}
             </span>
           </div>

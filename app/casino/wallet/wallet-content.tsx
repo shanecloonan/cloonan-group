@@ -58,7 +58,7 @@ type EvmChainKind =
   | "ethereum-sepolia";
 
 const CHAIN_CATALOG: { id: ChainId; display: string; kind: "dev" | "evm"; tokens: TokenSpec[] }[] = [
-  { id: "dev-mock", display: "Dev (play money)", kind: "dev", tokens: [CHAIN_ADAPTERS["dev-mock"].supportedTokens[0]] },
+  { id: "dev-mock", display: "FakeMONEY", kind: "dev", tokens: [CHAIN_ADAPTERS["dev-mock"].supportedTokens[0]] },
   { id: "ethereum-base", display: "Base", kind: "evm", tokens: [USDC_BASE, ETH_NATIVE] },
   { id: "ethereum-mainnet", display: "Ethereum mainnet", kind: "evm", tokens: [USDC_ETHEREUM_MAINNET, ETH_NATIVE] },
   { id: "ethereum-arbitrum", display: "Arbitrum One", kind: "evm", tokens: [ETH_NATIVE] },
@@ -281,7 +281,7 @@ export default function WalletContent() {
           )}
 
           {token.isNative && chainEntry.kind === "evm" && (
-            <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-400/20 text-[12px] text-amber-200">
+            <div className="mt-3 p-3 rounded-lg bg-[#c6a15b]/10 border border-[#c6a15b]/20 text-[12px] text-[#e8dcc0]">
               <strong>Native ETH path</strong> requires WETH wrapping (not yet
               implemented in CasinoVault v1). Select an ERC-20 token like USDC
               to test the live deposit flow.
@@ -298,7 +298,7 @@ export default function WalletContent() {
               className={
                 "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors " +
                 (tab === t
-                  ? "border-emerald-400 text-white"
+                  ? "border-[#8c9880] text-white"
                   : "border-transparent text-white/50 hover:text-white/80")
               }
             >
@@ -369,7 +369,7 @@ function StatusCard({
       </div>
       <div className="font-mono text-lg text-white/90 truncate">{value}</div>
       {sub && (
-        <div className={"text-[11px] mt-0.5 " + (ok ? "text-white/40" : "text-amber-300")}>
+        <div className={"text-[11px] mt-0.5 " + (ok ? "text-white/40" : "text-[#d2b781]")}>
           {sub}
         </div>
       )}
@@ -416,7 +416,7 @@ function VaultDeploymentPanel() {
     <section className={card + " p-5"}>
       <h2 className="text-lg font-semibold text-white mb-1">Vault deployment status</h2>
       <p className="text-xs text-white/45 mb-4">
-        On-chain chains need <code className="text-emerald-300/90">NEXT_PUBLIC_CASINO_VAULT_*</code> and RPC env vars.
+        On-chain chains need <code className="text-[#a9b49c]/90">NEXT_PUBLIC_CASINO_VAULT_*</code> and RPC env vars.
         Operator key enables EIP-712 withdrawals.
       </p>
       <ul className="space-y-2">
@@ -431,7 +431,7 @@ function VaultDeploymentPanel() {
                 className={
                   "px-2 py-0.5 rounded-full border " +
                   (c.ready
-                    ? "border-emerald-400/35 text-emerald-200 bg-emerald-500/10"
+                    ? "border-[#8c9880]/35 text-[#cfd5c4] bg-[#8c9880]/10"
                     : "border-white/10 text-white/40")
                 }
               >
@@ -441,8 +441,8 @@ function VaultDeploymentPanel() {
                 className={
                   "px-2 py-0.5 rounded-full border " +
                   (c.rpcConfigured
-                    ? "border-emerald-400/35 text-emerald-200 bg-emerald-500/10"
-                    : "border-amber-400/30 text-amber-200/90 bg-amber-500/10")
+                    ? "border-[#8c9880]/35 text-[#cfd5c4] bg-[#8c9880]/10"
+                    : "border-[#c6a15b]/30 text-[#e8dcc0]/90 bg-[#c6a15b]/10")
                 }
               >
                 {c.rpcConfigured ? "RPC ok" : "RPC missing"}
@@ -457,11 +457,11 @@ function VaultDeploymentPanel() {
         <span>Service role: {status.serviceRoleConfigured ? "✓" : "✗"}</span>
       </div>
       {!status.anyDeployed && (
-        <p className="mt-3 text-xs text-amber-200/80">
-          Deploy with <code className="text-amber-300">scripts/deploy-casino-vault.ps1</code> then set env vars.
+        <p className="mt-3 text-xs text-[#e8dcc0]/80">
+          Deploy with <code className="text-[#d2b781]">scripts/deploy-casino-vault.ps1</code> then set env vars.
         </p>
       )}
-      <Link href="/casino/docs#crypto" className="inline-block mt-3 text-xs text-amber-300 hover:underline">
+      <Link href="/casino/docs#crypto" className="inline-block mt-3 text-xs text-[#d2b781] hover:underline">
         Deployment guide →
       </Link>
     </section>
@@ -488,8 +488,8 @@ function VaultDeployBanner({
   const row = status?.chains.find((c) => c.chainId === chainId);
 
   return (
-    <div className="p-4 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] text-sm text-amber-100/90">
-      <strong className="text-amber-200">Vault not live on this chain yet.</strong>{" "}
+    <div className="p-4 rounded-xl border border-[#c6a15b]/25 bg-[#c6a15b]/[0.08] text-sm text-[#e8dcc0]/90">
+      <strong className="text-[#e8dcc0]">Vault not live on this chain yet.</strong>{" "}
       {row
         ? `Deploy CasinoVault.sol and set NEXT_PUBLIC_CASINO_VAULT_${chainId.toUpperCase().replaceAll("-", "_")}.`
         : "Check /api/casino/vault-status or use FakeMONEY on the lobby."}{" "}
@@ -498,7 +498,7 @@ function VaultDeployBanner({
           No chain has a vault address in env — CI builds the contract; deployment is the next step.
         </span>
       )}
-      <Link href="/casino/docs#crypto" className="block mt-2 text-xs text-amber-300 hover:underline">
+      <Link href="/casino/docs#crypto" className="block mt-2 text-xs text-[#d2b781] hover:underline">
         Deployment guide →
       </Link>
     </div>
@@ -508,10 +508,10 @@ function VaultDeployBanner({
 function CloudSyncBanner({ signedIn }: { signedIn: boolean }) {
   if (signedIn) {
     return (
-      <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/25 flex items-start gap-3">
-        <span className="mt-0.5 text-emerald-300">☁</span>
-        <div className="text-[12px] text-emerald-100/90 leading-relaxed">
-          <strong className="text-emerald-200">Cloud-synced.</strong>{" "}
+      <div className="p-3 rounded-lg bg-[#8c9880]/10 border border-[#8c9880]/25 flex items-start gap-3">
+        <span className="mt-0.5 text-[#a9b49c]">☁</span>
+        <div className="text-[12px] text-[#cfd5c4]/90 leading-relaxed">
+          <strong className="text-[#cfd5c4]">Cloud-synced.</strong>{" "}
           Deposits and withdrawals reconcile against your Supabase casino
           balance. Game seeds, sessions, and bankroll roam with your
           account across devices.
@@ -520,16 +520,16 @@ function CloudSyncBanner({ signedIn }: { signedIn: boolean }) {
     );
   }
   return (
-    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-400/25 flex items-start gap-3">
-      <span className="mt-0.5 text-amber-300">⚡</span>
-      <div className="text-[12px] text-amber-100/90 leading-relaxed">
-        <strong className="text-amber-200">Local-only mode.</strong>{" "}
+    <div className="p-3 rounded-lg bg-[#c6a15b]/10 border border-[#c6a15b]/25 flex items-start gap-3">
+      <span className="mt-0.5 text-[#d2b781]">⚡</span>
+      <div className="text-[12px] text-[#e8dcc0]/90 leading-relaxed">
+        <strong className="text-[#e8dcc0]">Local-only mode.</strong>{" "}
         You're not signed in. On-chain deposits will reach the vault but
         we can't credit a casino balance to you until you{" "}
-        <Link href="/auth" className="underline-offset-2 hover:underline text-amber-200">
+        <Link href="/auth" className="underline-offset-2 hover:underline text-[#e8dcc0]">
           sign in
         </Link>
-        . Use the Dev (play money) chain to try the UX risk-free.
+        . Use FakeMONEY to try the UX risk-free.
       </div>
     </div>
   );
@@ -538,15 +538,15 @@ function CloudSyncBanner({ signedIn }: { signedIn: boolean }) {
 function NotConfiguredBanner({ chainId }: { chainId: ChainId }) {
   const envName = `NEXT_PUBLIC_CASINO_VAULT_${chainId.toUpperCase().replaceAll("-", "_")}`;
   return (
-    <div className="mt-4 p-4 rounded-lg bg-amber-500/10 border border-amber-400/30">
-      <div className="text-amber-200 text-sm font-semibold mb-1">
+    <div className="mt-4 p-4 rounded-lg bg-[#c6a15b]/10 border border-[#c6a15b]/30">
+      <div className="text-[#e8dcc0] text-sm font-semibold mb-1">
         Vault address not configured for this chain
       </div>
       <div className="text-[12px] text-white/70 leading-relaxed">
         To enable real deposits and withdrawals on {chainId}, deploy{" "}
-        <code className="text-amber-200">CasinoVault.sol</code> (see{" "}
-        <code className="text-amber-200">infra/contracts/ethereum/</code>) and
-        set the address in your <code className="text-amber-200">.env.local</code>:
+        <code className="text-[#e8dcc0]">CasinoVault.sol</code> (see{" "}
+        <code className="text-[#e8dcc0]">infra/contracts/ethereum/</code>) and
+        set the address in your <code className="text-[#e8dcc0]">.env.local</code>:
         <pre className="mt-2 text-[11px] bg-black/40 border border-white/[0.06] rounded p-2 overflow-x-auto">
           {envName}=0x…
         </pre>
@@ -798,21 +798,21 @@ function DepositPanel({
       </button>
 
       {status && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/20 text-sm text-emerald-200">
+        <div className="p-3 rounded-lg bg-[#8c9880]/10 border border-[#8c9880]/20 text-sm text-[#cfd5c4]">
           {status}
         </div>
       )}
       {error && (
-        <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
+        <div className="p-3 rounded-lg bg-[#a0645a]/10 border border-[#a0645a]/20 text-sm text-[#dcc0b8]">
           {error}
         </div>
       )}
 
       <div className="text-[11px] text-white/40 leading-relaxed border-t border-white/[0.06] pt-3">
         Two transactions: first your wallet signs an ERC-20{" "}
-        <code className="text-emerald-300">approve(vault, amount)</code>{" "}
+        <code className="text-[#a9b49c]">approve(vault, amount)</code>{" "}
         (skipped if allowance is already sufficient), then{" "}
-        <code className="text-emerald-300">vault.deposit(token, amount)</code>.{" "}
+        <code className="text-[#a9b49c]">vault.deposit(token, amount)</code>.{" "}
         Funds become spendable on the casino balance once{" "}
         {adapter?.requiredConfirmations ?? "several"} block confirmations land.
       </div>
@@ -1125,23 +1125,23 @@ function WithdrawPanel({
       </button>
 
       {status && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/20 text-sm text-emerald-200">
+        <div className="p-3 rounded-lg bg-[#8c9880]/10 border border-[#8c9880]/20 text-sm text-[#cfd5c4]">
           {status}
         </div>
       )}
       {error && (
-        <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
+        <div className="p-3 rounded-lg bg-[#a0645a]/10 border border-[#a0645a]/20 text-sm text-[#dcc0b8]">
           {error}
         </div>
       )}
 
       <div className="text-[11px] text-white/40 leading-relaxed border-t border-white/[0.06] pt-3">
         Withdrawals are EIP-712 authorized. The server signs a{" "}
-        <code className="text-emerald-300">Withdrawal</code> voucher with
+        <code className="text-[#a9b49c]">Withdrawal</code> voucher with
         the operator key (per{" "}
-        <code className="text-emerald-300">CasinoVault.sol</code>); your
+        <code className="text-[#a9b49c]">CasinoVault.sol</code>); your
         wallet then submits the signed voucher to{" "}
-        <code className="text-emerald-300">vault.withdraw(...)</code>.
+        <code className="text-[#a9b49c]">vault.withdraw(...)</code>.
         Funds go directly to your address — anyone can relay the tx but
         only you can receive.
       </div>
@@ -1163,7 +1163,7 @@ function HistoryPanel({
   if (history.length === 0) {
     return (
       <section className={card + " p-6 text-center text-white/50 text-sm"}>
-        No deposit or withdrawal history yet. Try the Dev (play money) chain to see how it looks.
+        No deposit or withdrawal history yet. Try FakeMONEY to see how it looks.
       </section>
     );
   }
@@ -1189,8 +1189,8 @@ function HistoryPanel({
                 <span
                   className={
                     e.kind === "deposit"
-                      ? "text-emerald-300"
-                      : "text-amber-300"
+                      ? "text-[#a9b49c]"
+                      : "text-[#d2b781]"
                   }
                 >
                   {e.kind}
@@ -1215,7 +1215,7 @@ function HistoryPanel({
                     href={e.txUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-emerald-300 hover:underline font-mono"
+                    className="text-[#a9b49c] hover:underline font-mono"
                   >
                     {shortAddr(e.txHash)} ↗
                   </a>
@@ -1234,7 +1234,7 @@ function HistoryPanel({
             href={adapter.explorerBaseUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-emerald-300/80 hover:underline"
+            className="text-[#a9b49c]/80 hover:underline"
           >
             {adapter.explorerBaseUrl}
           </a>
@@ -1246,10 +1246,10 @@ function HistoryPanel({
 
 function StatusPill({ status }: { status: WalletHistoryEntry["status"] }) {
   const cls: Record<WalletHistoryEntry["status"], string> = {
-    submitted: "bg-amber-500/15 text-amber-200 border-amber-400/30",
-    confirming: "bg-amber-500/15 text-amber-200 border-amber-400/30",
-    finalized: "bg-emerald-500/15 text-emerald-200 border-emerald-400/30",
-    failed: "bg-rose-500/15 text-rose-200 border-rose-400/30",
+    submitted: "bg-[#c6a15b]/15 text-[#e8dcc0] border-[#c6a15b]/30",
+    confirming: "bg-[#c6a15b]/15 text-[#e8dcc0] border-[#c6a15b]/30",
+    finalized: "bg-[#8c9880]/15 text-[#cfd5c4] border-[#8c9880]/30",
+    failed: "bg-[#a0645a]/15 text-[#dcc0b8] border-[#a0645a]/30",
   };
   return (
     <span className={"px-2 py-0.5 rounded-full border text-[10px] font-medium uppercase tracking-wide " + cls[status]}>

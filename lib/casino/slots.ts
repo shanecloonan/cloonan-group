@@ -553,14 +553,14 @@ export const SYMBOL_GLYPH: Record<SlotSymbolId, string> = {
 
 /** Tailwind color class per symbol — for the reel UI. */
 export const SYMBOL_COLOR: Record<SlotSymbolId, string> = {
-  TEN: "text-sky-300",
-  J: "text-sky-200",
-  Q: "text-violet-300",
-  K: "text-violet-200",
-  A: "text-amber-300",
-  GEM: "text-emerald-300",
-  BELL: "text-yellow-300",
-  SEVEN: "text-rose-400",
-  WILD: "text-fuchsia-300",
-  SCATTER: "text-amber-200",
+  TEN: "text-[#bdb6a8]",
+  J: "text-[#d6d0c4]",
+  Q: "text-[#bdb6a8]",
+  K: "text-[#e6e0d4]",
+  A: "text-[#d2b781]",
+  GEM: "text-[#c9c2b2]",
+  BELL: "text-[#d2b781]",
+  SEVEN: "text-[#c4938a]",
+  WILD: "text-[#e8dcc0]",
+  SCATTER: "text-[#d2b781]",
 };

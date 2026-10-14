@@ -202,8 +202,8 @@ export default function CasinoWarTable({ chainId, token }: Props) {
               <RulesHint>Ace high · tie = war (match bet) or surrender half.</RulesHint>
             )}
             {needsTieChoice && (
-              <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 space-y-3">
-                <p className="text-sm text-amber-100 text-center font-medium">
+              <div className="rounded-xl border border-[#c6a15b]/30 bg-[#c6a15b]/10 p-4 space-y-3">
+                <p className="text-sm text-[#e8dcc0] text-center font-medium">
                   Tie on {cardLabel(st.playerCard)} — go to war or surrender?
                 </p>
                 <ActionStack>

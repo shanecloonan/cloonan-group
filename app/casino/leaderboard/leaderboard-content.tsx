@@ -130,7 +130,7 @@ export default function LeaderboardContent() {
                   <td
                     className={
                       "p-4 text-right font-mono font-semibold " +
-                      (Number(row.total_pnl) >= 0 ? "text-emerald-300" : "text-rose-300")
+                      (Number(row.total_pnl) >= 0 ? "text-[#a9b49c]" : "text-[#c4938a]")
                     }
                   >
                     {fmtUnits(row.total_pnl, row.token_symbol)}
@@ -163,7 +163,7 @@ export default function LeaderboardContent() {
                   <td
                     className={
                       "p-4 text-right font-mono font-semibold " +
-                      (Number(row.pnl) >= 0 ? "text-emerald-300" : "text-rose-300")
+                      (Number(row.pnl) >= 0 ? "text-[#a9b49c]" : "text-[#c4938a]")
                     }
                   >
                     {fmtUnits(row.pnl, row.token_symbol)}
@@ -200,8 +200,8 @@ function PodiumCard({
       className={
         "rounded-2xl border p-5 text-center bg-gradient-to-b " +
         (variant === "win"
-          ? "from-amber-500/15 to-transparent border-amber-400/25"
-          : "from-rose-500/12 to-transparent border-rose-400/20")
+          ? "from-[#c6a15b]/15 to-transparent border-[#c6a15b]/25"
+          : "from-[#a0645a]/12 to-transparent border-[#a0645a]/20")
       }
     >
       <div className="text-2xl mb-2">{medals[rank - 1] ?? rank}</div>
@@ -209,7 +209,7 @@ function PodiumCard({
       <div
         className={
           "mt-2 font-mono text-lg font-bold " +
-          (variant === "win" ? "text-emerald-300" : "text-rose-300")
+          (variant === "win" ? "text-[#a9b49c]" : "text-[#c4938a]")
         }
       >
         {pnl}

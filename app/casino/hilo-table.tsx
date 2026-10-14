@@ -567,8 +567,8 @@ export default function HiloTable({ chainId, token }: Props) {
                       className={
                         "flex items-center justify-between gap-2 p-2 rounded-lg border text-[11px] " +
                         (p.won
-                          ? "bg-emerald-500/[0.06] border-emerald-400/30"
-                          : "bg-rose-500/[0.06] border-rose-400/30")
+                          ? "bg-[#8c9880]/[0.06] border-[#8c9880]/30"
+                          : "bg-[#a0645a]/[0.06] border-[#a0645a]/30")
                       }
                     >
                       <div className="flex items-center gap-1.5 font-mono">
@@ -582,7 +582,7 @@ export default function HiloTable({ chainId, token }: Props) {
                       </div>
                       <span
                         className={
-                          "font-mono " + (p.won ? "text-emerald-300" : "text-rose-300")
+                          "font-mono " + (p.won ? "text-[#a9b49c]" : "text-[#c4938a]")
                         }
                       >
                         {p.won ? `${p.multiplierAfter.toFixed(2)}×` : "lost"}
@@ -628,7 +628,7 @@ export default function HiloTable({ chainId, token }: Props) {
 
         <FairnessCard seedPair={seedPair} onRotateSeed={() => rotateSeed()}>
           Each card is an independent unbiased draw from the 52-card deck via{" "}
-          <code className="text-emerald-300">HMAC-SHA256(server_seed, client_seed:nonce)</code>.
+          <code className="text-[#a9b49c]">HMAC-SHA256(server_seed, client_seed:nonce)</code>.
           The starting card uses the first draw; each subsequent pick uses the next.
           Both buttons count ties as wins — that&apos;s how the flat 1% edge applies
           symmetrically across all 13 ranks.
@@ -725,10 +725,10 @@ function HiloDisplay({
           </div>
         )}
         {flash === "win" && (
-          <div className="absolute inset-0 rounded-2xl ring-4 ring-emerald-400/60 animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 rounded-2xl ring-4 ring-[#8c9880]/60 animate-pulse pointer-events-none" />
         )}
         {flash === "loss" && (
-          <div className="absolute inset-0 rounded-2xl ring-4 ring-rose-400/60 animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 rounded-2xl ring-4 ring-[#a0645a]/60 animate-pulse pointer-events-none" />
         )}
       </div>
       {state && state.picks.length > 0 && !terminal && (
@@ -762,19 +762,19 @@ function BigCard({ card: c, flash, dim }: { card: Card; flash: "win" | "loss" | 
     >
       <div
         className={
-          "text-3xl font-bold leading-none " + (isRed ? "text-rose-300" : "text-white")
+          "text-3xl font-bold leading-none " + (isRed ? "text-[#c4938a]" : "text-white")
         }
       >
         {c.rank}
         <div className="text-2xl font-normal mt-1">{c.suit}</div>
       </div>
-      <div className={"self-center text-7xl " + (isRed ? "text-rose-300" : "text-white/90")}>
+      <div className={"self-center text-7xl " + (isRed ? "text-[#c4938a]" : "text-white/90")}>
         {c.suit}
       </div>
       <div
         className={
           "text-3xl font-bold self-end rotate-180 leading-none " +
-          (isRed ? "text-rose-300" : "text-white")
+          (isRed ? "text-[#c4938a]" : "text-white")
         }
       >
         {c.rank}
@@ -790,7 +790,7 @@ function MiniCard({ card: c }: { card: Card }) {
     <span
       className={
         "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white/[0.06] border border-white/[0.08] font-semibold text-[11px] " +
-        (isRed ? "text-rose-300" : "text-white/90")
+        (isRed ? "text-[#c4938a]" : "text-white/90")
       }
     >
       {c.rank}
@@ -825,15 +825,15 @@ function GuessButton({
       className={
         "p-4 rounded-xl border-2 transition-all text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 " +
         (isHigher
-          ? "bg-emerald-500/[0.08] border-emerald-400/30 hover:border-emerald-300/60 hover:bg-emerald-500/[0.14]"
-          : "bg-sky-500/[0.08] border-sky-400/30 hover:border-sky-300/60 hover:bg-sky-500/[0.14]") +
+          ? "bg-[#8c9880]/[0.08] border-[#8c9880]/30 hover:border-[#a9b49c]/60 hover:bg-[#8c9880]/[0.14]"
+          : "bg-[#8a857a]/[0.08] border-[#8a857a]/30 hover:border-[#bdb6a8]/60 hover:bg-[#8a857a]/[0.14]") +
         (disabled ? "" : " hover:scale-[1.01] active:scale-[0.99]")
       }
       onClick={onClick}
       disabled={disabled}
     >
       <div className="flex items-center gap-2 mb-2">
-        <span className={"text-2xl " + (isHigher ? "text-emerald-300" : "text-sky-300")}>
+        <span className={"text-2xl " + (isHigher ? "text-[#a9b49c]" : "text-[#bdb6a8]")}>
           {isHigher ? "▲" : "▼"}
         </span>
         <span className="font-semibold text-white">
@@ -845,7 +845,7 @@ function GuessButton({
       </div>
       <div className="flex items-baseline justify-between font-mono text-[12px]">
         <span className="text-white/60">{(p * 100).toFixed(2)}% win</span>
-        <span className={isHigher ? "text-emerald-300" : "text-sky-300"}>
+        <span className={isHigher ? "text-[#a9b49c]" : "text-[#bdb6a8]"}>
           {multiplier.toFixed(2)}×
         </span>
       </div>
@@ -914,7 +914,7 @@ function AutoPanel({
                 className={
                   "h-10 px-2 text-[11px] font-medium rounded-lg border flex-1 cursor-pointer " +
                   (cfg.direction === d
-                    ? "border-emerald-400/50 bg-emerald-500/10 text-emerald-200"
+                    ? "border-[#8c9880]/50 bg-[#8c9880]/10 text-[#cfd5c4]"
                     : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:bg-white/[0.06]")
                 }
                 onClick={() => setCfg({ ...cfg, direction: d })}
@@ -962,9 +962,9 @@ function AutoPanel({
         {progress && (
           <div className="text-[12px] text-white/60 flex gap-3 font-mono">
             <span>{progress.remaining} left</span>
-            <span className="text-emerald-300">{progress.wins}W</span>
-            <span className="text-rose-300">{progress.losses}L</span>
-            <span className={progress.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300"}>
+            <span className="text-[#a9b49c]">{progress.wins}W</span>
+            <span className="text-[#c4938a]">{progress.losses}L</span>
+            <span className={progress.pnlUnits >= 0n ? "text-[#a9b49c]" : "text-[#c4938a]"}>
               pnl {fmtMoney(progress.pnlUnits, token)}
             </span>
           </div>

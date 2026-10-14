@@ -168,10 +168,10 @@ export default function KenoTable({ chainId, token }: Props) {
             />
             <div className="flex flex-wrap gap-3 text-[11px] text-white/45">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded border-2 border-amber-400/70 bg-amber-500/20" /> Pick
+                <span className="w-3 h-3 rounded border-2 border-[#c6a15b]/70 bg-[#c6a15b]/20" /> Pick
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-400" /> Hit
+                <span className="w-3 h-3 rounded bg-[#8c9880]/30 border border-[#8c9880]" /> Hit
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded bg-white/[0.08] border border-white/15" /> Drawn

@@ -350,7 +350,7 @@ export default function SlotsTable({ chainId, token }: Props) {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="font-heading text-2xl sm:text-4xl font-semibold tracking-tight">
-              Slots<span className="text-emerald-400">.</span>
+              Slots<span className="text-[#a9b49c]">.</span>
             </h1>
             <p className="text-white/50 text-sm mt-1">
               5 reels · 20 paylines · wilds, scatters, free spins · target RTP ≈ 96%
@@ -503,7 +503,7 @@ export default function SlotsTable({ chainId, token }: Props) {
           truncateClientSeed={false}
         >
           Reel stops are drawn from{" "}
-          <code className="text-emerald-300">HMAC-SHA256(server_seed, client_seed:nonce)</code> with
+          <code className="text-[#a9b49c]">HMAC-SHA256(server_seed, client_seed:nonce)</code> with
           rejection sampling. Rotate to reveal the prior server seed and verify any settled spin.
         </FairnessCard>
 
@@ -519,7 +519,7 @@ export default function SlotsTable({ chainId, token }: Props) {
             onDismiss={dismissRevealedSeed}
             hint={
               <>
-                Paste this seed on <code className="text-emerald-300">/casino/verify</code> to audit
+                Paste this seed on <code className="text-[#a9b49c]">/casino/verify</code> to audit
                 any spin from the prior rotation.
               </>
             }
@@ -593,7 +593,7 @@ function ReelWindow({
   return (
     <div className="relative">
       {isFree && (
-        <div className="absolute -top-2 right-0 z-10 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-200 text-[10px] font-semibold uppercase tracking-[0.15em]">
+        <div className="absolute -top-2 right-0 z-10 px-2.5 py-1 rounded-full bg-[#c6a15b]/15 border border-[#c6a15b]/30 text-[#e8dcc0] text-[10px] font-semibold uppercase tracking-[0.15em]">
           Free spin {freeSpinCount}/{totalFreeSpins}
         </div>
       )}
@@ -658,7 +658,7 @@ function ReelCell({
         "flex items-center justify-center font-bold text-2xl sm:text-4xl h-[58px] sm:h-[84px] border-b border-white/[0.04] last:border-b-0 transition-all " +
         SYMBOL_COLOR[symbol] +
         (isWin && !spinning
-          ? " bg-emerald-400/15 ring-1 ring-inset ring-emerald-400/40 scale-105"
+          ? " bg-[#8c9880]/15 ring-1 ring-inset ring-[#8c9880]/40 scale-105"
           : spinning
             ? " opacity-70 blur-[1px]"
             : "")
@@ -797,18 +797,18 @@ function SettlementBanner({
   }
   if (!win) {
     return (
-      <div className="h-[58px] flex items-center justify-center rounded-lg border border-rose-400/20 bg-rose-500/10 text-rose-200 text-sm">
+      <div className="h-[58px] flex items-center justify-center rounded-lg border border-[#a0645a]/20 bg-[#a0645a]/10 text-[#dcc0b8] text-sm">
         Lost {fmtMoney(-pnl, token)} {freeSpinsTriggered ? ` — but ${freeSpins} free spin(s) triggered next` : ""}
       </div>
     );
   }
   return (
-    <div className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 p-4 flex items-center justify-between">
+    <div className="rounded-lg border border-[#8c9880]/30 bg-[#8c9880]/10 p-4 flex items-center justify-between">
       <div>
-        <div className="text-emerald-200 text-[11px] uppercase tracking-[0.15em] font-semibold">
+        <div className="text-[#cfd5c4] text-[11px] uppercase tracking-[0.15em] font-semibold">
           {freeSpinsTriggered ? `Win + ${freeSpins} free spins!` : "You won"}
         </div>
-        <div className="text-emerald-300 font-mono text-xl font-semibold mt-0.5">
+        <div className="text-[#a9b49c] font-mono text-xl font-semibold mt-0.5">
           +{fmtMoney(pnl, token)}
         </div>
       </div>
@@ -861,7 +861,7 @@ function Paytable({ token, perLineUnits }: { token: TokenSpec; perLineUnits: big
         ))}
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <div className="p-3 rounded-lg bg-fuchsia-500/5 border border-fuchsia-400/20">
+        <div className="p-3 rounded-lg bg-[#8a857a]/5 border border-[#8a857a]/20">
           <div className="flex items-center gap-2">
             <span className={"text-2xl font-bold " + SYMBOL_COLOR.WILD}>
               {SYMBOL_GLYPH.WILD}
@@ -872,7 +872,7 @@ function Paytable({ token, perLineUnits }: { token: TokenSpec; perLineUnits: big
             Substitutes for any non-scatter symbol on paylines.
           </div>
         </div>
-        <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-400/20">
+        <div className="p-3 rounded-lg bg-[#c6a15b]/5 border border-[#c6a15b]/20">
           <div className="flex items-center gap-2">
             <span className={"text-2xl font-bold " + SYMBOL_COLOR.SCATTER}>
               {SYMBOL_GLYPH.SCATTER}
@@ -881,7 +881,7 @@ function Paytable({ token, perLineUnits }: { token: TokenSpec; perLineUnits: big
           </div>
           <div className="text-[11px] text-white/50 mt-1">
             3+ anywhere pays{" "}
-            <span className="font-mono text-amber-200">
+            <span className="font-mono text-[#e8dcc0]">
               {DEFAULT_SLOTS_CONFIG.scatterPay.join("×, ")}×
             </span>{" "}
             total bet + free spins.
@@ -913,20 +913,20 @@ function RecentSpinRow({
       <div className="text-[12px] flex items-center gap-2">
         <span
           className={
-            "w-2 h-2 rounded-full " + (win ? "bg-emerald-400" : pnl === 0n ? "bg-white/30" : "bg-rose-400")
+            "w-2 h-2 rounded-full " + (win ? "bg-[#8c9880]" : pnl === 0n ? "bg-white/30" : "bg-[#a0645a]")
           }
         />
         <span className="font-mono text-white/80">
           {fmtPnl(pnl, token)}
         </span>
         {fs > 0 && (
-          <span className="text-[10px] text-amber-300 uppercase tracking-wide">
+          <span className="text-[10px] text-[#d2b781] uppercase tracking-wide">
             +{fs} FS
           </span>
         )}
       </div>
       <button
-        className="text-[11px] text-emerald-300 hover:text-emerald-200 hover:underline underline-offset-2"
+        className="text-[11px] text-[#a9b49c] hover:text-[#cfd5c4] hover:underline underline-offset-2"
         onClick={onVerify}
       >
         verify →

@@ -187,7 +187,7 @@ export default function PokerTable({ chainId, token }: Props) {
               className={
                 "h-8 px-3 rounded-lg text-xs font-medium border cursor-pointer " +
                 (mode === "solo"
-                  ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
+                  ? "border-[#c6a15b]/40 bg-[#c6a15b]/15 text-[#e8dcc0]"
                   : "border-white/10 text-white/50")
               }
               onClick={() => setMode("solo")}
@@ -199,7 +199,7 @@ export default function PokerTable({ chainId, token }: Props) {
               className={
                 "h-8 px-3 rounded-lg text-xs font-medium border cursor-pointer " +
                 (mode === "multi"
-                  ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
+                  ? "border-[#c6a15b]/40 bg-[#c6a15b]/15 text-[#e8dcc0]"
                   : "border-white/10 text-white/50")
               }
               onClick={() => setMode("multi")}
@@ -248,7 +248,7 @@ export default function PokerTable({ chainId, token }: Props) {
             </button>
             {chainId === "dev-mock" && (
               <button type="button" className={btnGhost} onClick={() => depositPlayMoney(devPlayMoneyTopUpUnits(token))}>
-                +10k play money
+                +10k <span className="normal-case">FakeMONEY</span>
               </button>
             )}
           </div>
@@ -257,7 +257,7 @@ export default function PokerTable({ chainId, token }: Props) {
         {st && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-lg px-4">
             <div className="rounded-xl bg-black/70 border border-white/10 backdrop-blur-md p-3 text-center">
-              <p className="text-sm text-amber-100/90">{st.message}</p>
+              <p className="text-sm text-[#e8dcc0]/90">{st.message}</p>
               <p className="text-xs text-white/40 mt-1">
                 Pot {fmtMoney(st.pot, token)}
                 {st.phase !== "complete" && ` · ${st.phase}`}
@@ -285,7 +285,7 @@ export default function PokerTable({ chainId, token }: Props) {
       {mode === "solo" && terminal && session?.result && (
         <section className={card + " p-5 space-y-3"}>
           <h3 className="text-lg font-semibold text-white">Hand complete</h3>
-          <p className={"font-mono text-lg " + (session.result.pnlUnits >= 0n ? "text-emerald-300" : "text-rose-300")}>
+          <p className={"font-mono text-lg " + (session.result.pnlUnits >= 0n ? "text-[#a9b49c]" : "text-[#c4938a]")}>
             {(session.result.pnlUnits >= 0n ? "+" : "") + fmtMoney(session.result.pnlUnits, token)}
           </p>
           {st?.winners.map((w, i) => (
@@ -310,7 +310,7 @@ export default function PokerTable({ chainId, token }: Props) {
           title="Verify poker hand"
           description={
             <>
-              Paste the revealed <span className="text-emerald-300">server seed</span>. We replay the shuffle and
+              Paste the revealed <span className="text-[#a9b49c]">server seed</span>. We replay the shuffle and
               every action with the same HMAC stream used at deal time.
             </>
           }

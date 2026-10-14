@@ -4,11 +4,11 @@ export const casinoPage =
   "min-h-[calc(100vh-56px)] w-full bg-[#070806] text-[#f6f1e7] selection:bg-[#c6a15b]/35";
 
 export const casinoShellBg =
-  "relative before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(198,161,91,0.16),transparent_58%),radial-gradient(ellipse_60%_45%_at_0%_30%,rgba(18,48,32,0.55),transparent_60%),radial-gradient(ellipse_50%_40%_at_100%_100%,rgba(12,28,20,0.7),transparent)]";
+  "relative before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(198,161,91,0.07),transparent_58%)]";
 
 /** Deep baize used as the play surface inside a table. */
 export const felt =
-  "relative overflow-hidden rounded-2xl border border-[#c6a15b]/28 bg-[radial-gradient(ellipse_at_50%_0%,rgba(198,161,91,0.14),transparent_46%),radial-gradient(ellipse_at_50%_130%,#04110c,#0c2419_48%,#07140f)] shadow-[inset_0_0_0_1px_rgba(232,213,163,0.1),inset_0_28px_70px_rgba(0,0,0,0.28)]";
+  "relative overflow-hidden rounded-2xl border border-[#c6a15b]/28 bg-[radial-gradient(ellipse_at_50%_0%,rgba(198,161,91,0.06),transparent_46%),radial-gradient(ellipse_at_50%_130%,#0b0b09,#141410_48%,#0e0e0c)] shadow-[inset_0_0_0_1px_rgba(232,213,163,0.1),inset_0_28px_70px_rgba(0,0,0,0.28)]";
 
 /** Premium section header used on hub pages */
 export const sectionTitle = "font-heading text-lg sm:text-xl font-semibold tracking-tight text-[#f6f1e7]";
@@ -32,7 +32,7 @@ export const inputCls =
   "w-full h-10 px-3 rounded-lg bg-black/40 border border-[#c6a15b]/15 text-[#f6f1e7] text-sm placeholder:text-[#f6f1e7]/30 outline-none focus:border-[#e8d5a3]/55 focus:ring-1 focus:ring-[#c6a15b]/30 transition-all";
 
 export const btnPrimary =
-  "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-[12px] tracking-[0.16em] uppercase bg-gradient-to-b from-[#f3e6c4] via-[#e0c27a] to-[#a7843c] text-[#1c1508] shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_8px_24px_rgba(167,132,60,0.28)] hover:brightness-105 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+  "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-[12px] tracking-[0.16em] uppercase bg-gradient-to-b from-[#e6dcc4] via-[#cdb27e] to-[#9a8050] text-[#1c1508] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] hover:brightness-105 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
 export const btnSecondary =
   "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-sm bg-white/[0.04] border border-[#c6a15b]/20 text-[#f6f1e7]/90 hover:bg-[#c6a15b]/10 hover:border-[#e8d5a3]/40 active:scale-[0.98] disabled:opacity-40 transition-all cursor-pointer";
@@ -41,7 +41,7 @@ export const btnGhost =
   "h-10 px-4 rounded-lg font-medium text-[11px] tracking-[0.14em] uppercase bg-transparent border border-[#c6a15b]/20 text-[#f6f1e7]/70 hover:bg-[#c6a15b]/10 hover:text-[#f6ecd4] hover:border-[#e8d5a3]/40 active:scale-[0.98] transition-all cursor-pointer";
 
 export const btnGold =
-  "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-[12px] tracking-[0.16em] uppercase bg-gradient-to-b from-[#f3e6c4] via-[#e0c27a] to-[#a7843c] text-[#1c1508] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] hover:brightness-105 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
+  "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-[12px] tracking-[0.16em] uppercase bg-gradient-to-b from-[#e6dcc4] via-[#cdb27e] to-[#9a8050] text-[#1c1508] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] hover:brightness-105 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
 
 export const btnDanger =
   "min-h-12 touch-manipulation h-11 px-5 rounded-lg font-semibold text-[12px] tracking-[0.14em] uppercase bg-gradient-to-b from-[#8a3a32] to-[#4a1c18] text-[#f6e6dc] border border-[#c48a80]/30 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer";
@@ -50,7 +50,7 @@ export const pill =
   "inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-semibold uppercase tracking-[0.12em] border";
 
 export const pillLive =
-  pill + " border-emerald-400/35 text-emerald-200 bg-emerald-500/10";
+  pill + " border-[#8c9880]/35 text-[#cfd5c4] bg-[#8c9880]/10";
 
 export const pillGold =
   pill + " border-[#c6a15b]/40 text-[#f6ecd4] bg-[#c6a15b]/10";

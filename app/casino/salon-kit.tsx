@@ -40,7 +40,7 @@ export function Spot({
       : tone === "black"
         ? "bg-[#141210] text-[#f6f1e7] border-white/15"
         : tone === "green"
-          ? "bg-[#0f3d2a] text-[#e7f6ee] border-[#7dcea0]/30"
+          ? "bg-[#1f1f1a] text-[#e6e0d4] border-[#8c9880]/30"
           : tone === "gold"
             ? "bg-[#3a2e14] text-[#f6ecd4] border-[#e8d5a3]/40"
             : "bg-black/30 text-[#f6f1e7] border-[#c6a15b]/25";

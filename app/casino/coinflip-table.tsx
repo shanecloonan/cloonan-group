@@ -331,8 +331,8 @@ export default function CoinflipTable({ chainId, token }: Props) {
                 className={
                   "px-4 py-1 rounded-full text-sm font-semibold border " +
                   (lastWon
-                    ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
-                    : "border-rose-400/40 text-rose-300 bg-rose-500/10")
+                    ? "border-[#8c9880]/40 text-[#a9b49c] bg-[#8c9880]/10"
+                    : "border-[#a0645a]/40 text-[#c4938a] bg-[#a0645a]/10")
                 }
               >
                 {fmtPnl(lastSession!.result!.pnlUnits, token)} ·
@@ -402,7 +402,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
                 </button>
               </div>
               <div className="mt-2 text-[11px] text-white/40 flex items-center justify-between">
-                <span>Wins pay <span className="text-emerald-300 font-mono">{multiplier.toFixed(2)}×</span></span>
+                <span>Wins pay <span className="text-[#a9b49c] font-mono">{multiplier.toFixed(2)}×</span></span>
                 <span>RTP {rtpPercent(config).toFixed(2)}%</span>
               </div>
             </div>
@@ -427,7 +427,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
               <button
                 type="button"
                 onClick={stopAuto}
-                className="text-[10px] uppercase tracking-[0.12em] text-rose-300 hover:text-rose-200 cursor-pointer"
+                className="text-[10px] uppercase tracking-[0.12em] text-[#c4938a] hover:text-[#dcc0b8] cursor-pointer"
               >
                 stop
               </button>
@@ -437,7 +437,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
                 onClick={() => setAuto((a) => ({ ...a, enabled: !a.enabled }))}
                 className={
                   "text-[10px] uppercase tracking-[0.12em] cursor-pointer " +
-                  (auto.enabled ? "text-emerald-300" : "text-white/40 hover:text-white/70")
+                  (auto.enabled ? "text-[#a9b49c]" : "text-white/40 hover:text-white/70")
                 }
               >
                 {auto.enabled ? "configured" : "configure"}
@@ -499,8 +499,8 @@ export default function CoinflipTable({ chainId, token }: Props) {
                   </div>
                   <div className={
                     Number(autoProgress.totalWon - autoProgress.totalWagered) > 0
-                      ? "text-emerald-300"
-                      : "text-rose-300"
+                      ? "text-[#a9b49c]"
+                      : "text-[#c4938a]"
                   }>
                     PnL {fmtMoney(autoProgress.totalWon - autoProgress.totalWagered, token)}
                   </div>
@@ -521,7 +521,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
               {" "}× <span className="font-mono">{streak.len}</span>
             </div>
             <div>
-              Longest win streak: <span className="font-mono text-emerald-300">{streak.longestWin}</span>
+              Longest win streak: <span className="font-mono text-[#a9b49c]">{streak.longestWin}</span>
             </div>
           </div>
         </AsideSection>
@@ -552,23 +552,23 @@ export default function CoinflipTable({ chainId, token }: Props) {
                     <span
                       className={
                         "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold " +
-                        (r.result === "heads" ? "bg-yellow-500/20 text-yellow-300" : "bg-slate-500/20 text-slate-300")
+                        (r.result === "heads" ? "bg-[#c6a15b]/20 text-[#d2b781]" : "bg-stone-500/20 text-stone-300")
                       }
                     >
                       {r.result === "heads" ? "H" : "T"}
                     </span>
-                    <span className={"text-[11px] " + (won ? "text-emerald-300" : "text-rose-300")}>
+                    <span className={"text-[11px] " + (won ? "text-[#a9b49c]" : "text-[#c4938a]")}>
                       {won ? "win" : "loss"}
                     </span>
                   </div>
                   <div className="text-right">
-                    <div className={"text-[11px] font-mono " + (won ? "text-emerald-300" : "text-rose-300")}>
+                    <div className={"text-[11px] font-mono " + (won ? "text-[#a9b49c]" : "text-[#c4938a]")}>
                       {fmtPnl(h.result!.pnlUnits, token)}
                     </div>
                     <button
                       type="button"
                       onClick={() => setVerifyTarget(h)}
-                      className="text-[10px] text-white/40 hover:text-emerald-300 cursor-pointer"
+                      className="text-[10px] text-white/40 hover:text-[#a9b49c] cursor-pointer"
                     >
                       verify →
                     </button>
@@ -589,7 +589,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
           title="Verify flip"
           description={
             <>
-              Paste the revealed <span className="text-emerald-300">server seed</span>. We re-derive the
+              Paste the revealed <span className="text-[#a9b49c]">server seed</span>. We re-derive the
               single RNG byte for this flip — LSB 0 → heads, 1 → tails.
             </>
           }
@@ -680,8 +680,8 @@ function CoinFace({ side, back }: { side: CoinSide; back?: boolean }) {
       className={
         "absolute inset-0 rounded-full flex flex-col items-center justify-center font-bold border-4 shadow-2xl " +
         (isHeads
-          ? "bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 border-yellow-500/60 text-amber-900"
-          : "bg-gradient-to-br from-slate-300 via-slate-400 to-slate-600 border-slate-500/60 text-slate-900")
+          ? "bg-gradient-to-br from-[#d2b781] via-[#c6a15b] to-[#c6a15b] border-[#c6a15b]/60 text-[#d2b781]"
+          : "bg-gradient-to-br from-stone-300 via-stone-400 to-stone-600 border-stone-500/60 text-stone-900")
       }
       style={{
         backfaceVisibility: "hidden",
@@ -718,7 +718,7 @@ function PickButton({
       className={
         "h-14 rounded-xl border font-semibold text-sm flex items-center justify-center gap-2 transition-all " +
         (active
-          ? (isHeads ? "border-yellow-400/50 bg-yellow-500/15 text-yellow-200" : "border-slate-400/50 bg-slate-500/15 text-slate-200")
+          ? (isHeads ? "border-[#c6a15b]/50 bg-[#c6a15b]/15 text-[#e8dcc0]" : "border-stone-400/50 bg-stone-500/15 text-stone-200")
           : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white") +
         (disabled ? " opacity-50 cursor-not-allowed" : " cursor-pointer active:scale-[0.98]")
       }

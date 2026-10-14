@@ -231,7 +231,7 @@ export default function DashboardContent() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={"text-sm font-mono " + (pnl >= 0n ? "text-emerald-300" : "text-rose-300")}>
+                      <div className={"text-sm font-mono " + (pnl >= 0n ? "text-[#a9b49c]" : "text-[#c4938a]")}>
                         {fmtPnl(pnl, DASHBOARD_TOKEN, 2)}
                       </div>
                       {r.origin === "cloud" && r.sessionId ? (
@@ -239,7 +239,7 @@ export default function DashboardContent() {
                       ) : (
                         <Link
                           href={buildVerifyLink(r.session)}
-                          className="text-[10px] text-amber-300/80 hover:text-amber-200"
+                          className="text-[10px] text-[#d2b781]/80 hover:text-[#e8dcc0]"
                         >
                           Verify →
                         </Link>
@@ -252,10 +252,10 @@ export default function DashboardContent() {
           </div>
 
           <div className="flex flex-wrap gap-4 text-sm">
-            <Link href="/casino/history" className="text-amber-300 hover:text-amber-200">
+            <Link href="/casino/history" className="text-[#d2b781] hover:text-[#e8dcc0]">
               Full activity log →
             </Link>
-            <Link href="/casino/history?view=global" className="text-amber-300 hover:text-amber-200">
+            <Link href="/casino/history?view=global" className="text-[#d2b781] hover:text-[#e8dcc0]">
               Global feed →
             </Link>
           </div>
@@ -304,7 +304,7 @@ export default function DashboardContent() {
                     <span className="text-white/70 truncate">
                       {f.display_label} · {GAME_LABELS[f.game_id as CasinoGameId] ?? f.game_id}
                     </span>
-                    <span className={Number(f.pnl) >= 0 ? "text-emerald-300" : "text-rose-300"}>
+                    <span className={Number(f.pnl) >= 0 ? "text-[#a9b49c]" : "text-[#c4938a]"}>
                       {(Number(f.pnl) / 1e6).toFixed(2)}
                     </span>
                   </div>

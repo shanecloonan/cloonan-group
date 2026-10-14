@@ -557,14 +557,14 @@ export default function VerifyContent() {
             <div className="mt-2 flex items-center gap-2 text-[11px] text-white/40">
               <span>Tip:</span>
               <span>
-                In any game table, click <code className="text-emerald-300">verify →</code> on a
+                In any game table, click <code className="text-[#a9b49c]">verify →</code> on a
                 settled hand to get a pre-filled link.
               </span>
             </div>
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
+            <div className="p-3 rounded-lg bg-[#a0645a]/10 border border-[#a0645a]/20 text-sm text-[#dcc0b8]">
               {error}
             </div>
           )}
@@ -598,8 +598,8 @@ export default function VerifyContent() {
                 className={
                   "text-center py-3 rounded-lg font-semibold text-lg " +
                   (allOk
-                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
-                    : "bg-rose-500/15 text-rose-300 border border-rose-400/30")
+                    ? "bg-[#8c9880]/15 text-[#a9b49c] border border-[#8c9880]/30"
+                    : "bg-[#a0645a]/15 text-[#c4938a] border border-[#a0645a]/30")
                 }
               >
                 {allOk ? "✓ Verified provably fair" : "✗ Verification failed"}
@@ -626,7 +626,7 @@ export default function VerifyContent() {
 
               <div className="text-[11px] text-white/40 leading-relaxed">
                 Replay is fully local — Open DevTools → Sources → see{" "}
-                <code className="text-emerald-300">lib/casino/verify.ts</code> for the implementation.
+                <code className="text-[#a9b49c]">lib/casino/verify.ts</code> for the implementation.
               </div>
             </>
           )}
@@ -640,7 +640,7 @@ export default function VerifyContent() {
                 <div className="text-sm font-semibold">{g.label}</div>
                 <div className="text-[11px] text-white/40 mt-0.5">{g.id}</div>
                 <p className="text-[11px] text-white/55 mt-2 leading-relaxed">{g.hint}</p>
-                <div className="text-[11px] text-emerald-300/90 mt-2">
+                <div className="text-[11px] text-[#a9b49c]/90 mt-2">
                   Replayed locally via HMAC-SHA256
                 </div>
               </div>
@@ -1340,12 +1340,12 @@ function CheckRow({ ok, label }: { ok: boolean; label: string }) {
       <span
         className={
           "w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold " +
-          (ok ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300")
+          (ok ? "bg-[#8c9880]/20 text-[#a9b49c]" : "bg-[#a0645a]/20 text-[#c4938a]")
         }
       >
         {ok ? "✓" : "✗"}
       </span>
-      <span className={ok ? "text-white/80" : "text-rose-200"}>{label}</span>
+      <span className={ok ? "text-white/80" : "text-[#dcc0b8]"}>{label}</span>
     </div>
   );
 }

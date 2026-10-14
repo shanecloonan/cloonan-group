@@ -88,7 +88,7 @@ export function CasinoVerifyModal<State>({
           <div className="text-[12px] text-white/40">Enter a server seed to run the replay.</div>
         )}
         {verification && "error" in verification && (
-          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200">
+          <div className="p-3 rounded-lg bg-[#a0645a]/10 border border-[#a0645a]/20 text-sm text-[#dcc0b8]">
             Verifier threw: {verification.error}
           </div>
         )}
@@ -105,8 +105,8 @@ export function CasinoVerifyModal<State>({
               className={
                 "text-center py-2 rounded-lg font-semibold " +
                 (allOk
-                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
-                  : "bg-rose-500/15 text-rose-300 border border-rose-400/30")
+                  ? "bg-[#8c9880]/15 text-[#a9b49c] border border-[#8c9880]/30"
+                  : "bg-[#a0645a]/15 text-[#c4938a] border border-[#a0645a]/30")
               }
             >
               {allOk ? "✓ Verified provably fair" : "✗ Verification failed"}
@@ -148,12 +148,12 @@ function VerifyCheckRow({ ok, label }: { ok: boolean; label: string }) {
       <span
         className={
           "w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold " +
-          (ok ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300")
+          (ok ? "bg-[#8c9880]/20 text-[#a9b49c]" : "bg-[#a0645a]/20 text-[#c4938a]")
         }
       >
         {ok ? "✓" : "✗"}
       </span>
-      <span className={ok ? "text-white/80" : "text-rose-200"}>{label}</span>
+      <span className={ok ? "text-white/80" : "text-[#dcc0b8]"}>{label}</span>
     </div>
   );
 }

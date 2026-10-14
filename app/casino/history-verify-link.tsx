@@ -33,11 +33,11 @@ export function HistoryVerifyLink({ sessionId }: { sessionId: string }) {
         type="button"
         disabled={busy}
         onClick={() => void openVerify()}
-        className="text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer disabled:opacity-40"
+        className="text-[11px] text-[#a9b49c] hover:text-[#cfd5c4] cursor-pointer disabled:opacity-40"
       >
         {busy ? "loading…" : "verify →"}
       </button>
-      {err && <span className="text-[9px] text-rose-300/90 max-w-[140px] text-right">{err}</span>}
+      {err && <span className="text-[9px] text-[#c4938a]/90 max-w-[140px] text-right">{err}</span>}
     </span>
   );
 }

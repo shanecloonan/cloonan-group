@@ -56,7 +56,7 @@ export function CasinoActionStrip() {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
           <span className="text-xs text-white/50 shrink-0">
             Balance{" "}
-            <span className="font-mono text-emerald-300/90 font-semibold tabular-nums">
+            <span className="font-mono text-[#a9b49c]/90 font-semibold tabular-nums">
               {fmtMoney(balance.available, token, 2)}
             </span>
             {balance.locked > 0n && (
@@ -75,12 +75,12 @@ export function CasinoActionStrip() {
           </button>
           <Link
             href={walletHref}
-            className="h-7 px-2.5 rounded-lg text-[10px] font-semibold border border-amber-400/35 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20 transition-colors"
+            className="h-7 px-2.5 rounded-lg text-[10px] font-semibold border border-[#c6a15b]/35 bg-[#c6a15b]/10 text-[#e8dcc0] hover:bg-[#c6a15b]/20 transition-colors"
           >
             Deposit / withdraw
           </Link>
           {!persistent && (
-            <Link href="/auth" className="text-[10px] text-amber-300 hover:text-amber-200 underline-offset-2 hover:underline">
+            <Link href="/auth" className="text-[10px] text-[#d2b781] hover:text-[#e8dcc0] underline-offset-2 hover:underline">
               Sign in to sync
             </Link>
           )}
@@ -97,7 +97,7 @@ export function CasinoActionStrip() {
           >
             Rotate seed
           </button>
-          <Link href="/casino/verify" className="text-emerald-300/90 hover:text-emerald-200">
+          <Link href="/casino/verify" className="text-[#a9b49c]/90 hover:text-[#cfd5c4]">
             Verify →
           </Link>
         </div>
@@ -108,9 +108,9 @@ export function CasinoActionStrip() {
       )}
 
       {!persistent && (
-        <p className="px-4 sm:px-6 lg:px-8 pb-2.5 text-[10px] text-amber-200/85">
+        <p className="px-4 sm:px-6 lg:px-8 pb-2.5 text-[10px] text-[#e8dcc0]/85">
           Guest on {chainId.replaceAll("-", " ")} —{" "}
-          <Link href="/auth" className="underline text-amber-300">
+          <Link href="/auth" className="underline text-[#d2b781]">
             sign in
           </Link>{" "}
           to sync balance.
@@ -125,12 +125,12 @@ export function VaultChainLobbyBanner({ chainId }: { chainId: ChainId }) {
   if (chainId === "dev-mock" || persistent) return null;
 
   return (
-    <div className="mt-3 p-3 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] text-sm text-amber-100/90">
-      <Link href="/auth" className="text-amber-300 hover:underline font-medium">
+    <div className="mt-3 p-3 rounded-xl border border-[#c6a15b]/25 bg-[#c6a15b]/[0.08] text-sm text-[#e8dcc0]/90">
+      <Link href="/auth" className="text-[#d2b781] hover:underline font-medium">
         Sign in
       </Link>{" "}
       to sync balance on this chain.{" "}
-      <Link href={`/casino/wallet?chain=${encodeURIComponent(chainId)}`} className="text-amber-300 hover:underline">
+      <Link href={`/casino/wallet?chain=${encodeURIComponent(chainId)}`} className="text-[#d2b781] hover:underline">
         Wallet →
       </Link>
     </div>

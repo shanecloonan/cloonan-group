@@ -584,7 +584,7 @@ function SalonTableView({
                     className={
                       "h-10 min-w-12 rounded-full border font-mono text-sm cursor-pointer " +
                       (chip === c
-                        ? "border-[#e8d5a3] bg-gradient-to-b from-[#f3e6c4] to-[#a7843c] text-[#1c1508]"
+                        ? "border-[#e8d5a3] bg-gradient-to-b from-[#e6dcc4] to-[#9a8050] text-[#1c1508]"
                         : "border-[#c6a15b]/30 bg-black/30 text-[#f6ecd4]")
                     }
                   >
@@ -698,7 +698,7 @@ function ResultMedallion({ table }: { table: SalonTable }) {
         ? "from-[#7a2a2a] to-[#3a1212] text-[#f6e6dc]"
         : r.color === "black"
           ? "from-[#2a2a28] to-[#0e0e0c] text-[#f6f1e7]"
-          : "from-[#1d6b45] to-[#0c3a24] text-[#e7f6ee]";
+          : "from-[#3a3a30] to-[#1c1c17] text-[#e6e0d4]";
     return (
       <div className="flex flex-col items-center gap-1">
         <div className={"flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-b font-heading text-2xl " + tone}>

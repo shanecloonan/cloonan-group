@@ -32,7 +32,7 @@ export function PokerActionBar({
   return (
     <div className="flex flex-wrap gap-2 justify-center">
       {legal.some((a) => a.type === "fold") && (
-        <button type="button" className={btnGhost + " !border-rose-400/40 !text-rose-200"} disabled={busy} onClick={() => onAct({ type: "fold" })}>
+        <button type="button" className={btnGhost + " !border-[#a0645a]/40 !text-[#dcc0b8]"} disabled={busy} onClick={() => onAct({ type: "fold" })}>
           Fold
         </button>
       )}

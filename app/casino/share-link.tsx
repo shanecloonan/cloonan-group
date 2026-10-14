@@ -54,7 +54,7 @@ export function ShareLinkRow({
         <button
           type="button"
           onClick={copy}
-          className="h-9 px-3 rounded-lg font-medium text-xs bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 hover:text-emerald-100 hover:bg-emerald-500/25 cursor-pointer transition-all"
+          className="h-9 px-3 rounded-lg font-medium text-xs bg-[#8c9880]/15 border border-[#8c9880]/30 text-[#cfd5c4] hover:text-[#cfd5c4] hover:bg-[#8c9880]/25 cursor-pointer transition-all"
         >
           {copied ? "Copied ✓" : "Copy"}
         </button>

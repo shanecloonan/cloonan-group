@@ -58,7 +58,7 @@ export function MetricStat({
   variant?: "tile" | "inline" | "panel";
 }) {
   const accentCls =
-    accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white";
+    accent === "emerald" ? "text-[#a9b49c]" : accent === "rose" ? "text-[#c4938a]" : "text-white";
   const valueCls =
     variant === "inline"
       ? `text-base font-bold font-mono mt-0.5 ${accentCls}`
@@ -101,7 +101,7 @@ export function AsideHistoryButton({
   return (
     <button
       type="button"
-      className="w-full flex items-center justify-between gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-emerald-400/30 hover:bg-emerald-500/[0.04] transition-colors text-left cursor-pointer"
+      className="w-full flex items-center justify-between gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-[#8c9880]/30 hover:bg-[#8c9880]/[0.04] transition-colors text-left cursor-pointer"
       onClick={onClick}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -109,15 +109,15 @@ export function AsideHistoryButton({
           className={
             "shrink-0 h-6 px-2 rounded-md text-[10px] font-mono font-semibold flex items-center justify-center " +
             (won
-              ? "bg-emerald-500/15 text-emerald-200 border border-emerald-400/30"
-              : "bg-rose-500/15 text-rose-200 border border-rose-400/30")
+              ? "bg-[#8c9880]/15 text-[#cfd5c4] border border-[#8c9880]/30"
+              : "bg-[#a0645a]/15 text-[#dcc0b8] border border-[#a0645a]/30")
           }
         >
           {badge}
         </span>
         <span className="text-[10px] text-white/40 truncate">{meta}</span>
       </div>
-      <div className={"shrink-0 text-[12px] font-mono " + (won ? "text-emerald-300" : "text-rose-300")}>
+      <div className={"shrink-0 text-[12px] font-mono " + (won ? "text-[#a9b49c]" : "text-[#c4938a]")}>
         {fmtPnl(pnl, token)}
       </div>
     </button>
@@ -293,7 +293,7 @@ export function TableBalanceHeader({
             onClick={onDeposit}
             className="mt-1 text-[11px] tracking-[0.08em] uppercase text-[#e8d5a3] hover:text-[#f6ecd4] cursor-pointer"
           >
-            + Add {DEV_PLAY_MONEY_HUMAN.toLocaleString()} play money
+            + Add {DEV_PLAY_MONEY_HUMAN.toLocaleString()} <span className="normal-case">FakeMONEY</span>
           </button>
         )}
       </div>
@@ -375,7 +375,7 @@ export function FairnessCard({
         <h3 className="font-semibold text-white">Provable fairness</h3>
         <button
           type="button"
-          className="text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer"
+          className="text-[11px] text-[#a9b49c] hover:text-[#cfd5c4] cursor-pointer"
           onClick={onRotateSeed}
         >
           Rotate seed →
@@ -413,7 +413,7 @@ export function RevealedSeedBanner({
   return (
     <div className="px-4 sm:px-6 lg:px-8 pb-2.5 flex flex-wrap items-center gap-2 text-[10px] border-t border-white/[0.06]">
       <span className="text-white/40 uppercase tracking-wider shrink-0">Revealed seed</span>
-      <code className="font-mono text-emerald-200/90 break-all min-w-0">{serverSeed}</code>
+      <code className="font-mono text-[#cfd5c4]/90 break-all min-w-0">{serverSeed}</code>
       <button
         type="button"
         onClick={onDismiss}
@@ -453,9 +453,9 @@ export function RevealedSeedCard({
   verifyDigest?: boolean;
 }) {
   return (
-    <section className={card + " p-4 border-emerald-400/30 bg-emerald-500/[0.04]"}>
+    <section className={card + " p-4 border-[#8c9880]/30 bg-[#8c9880]/[0.04]"}>
       <div className="flex items-baseline justify-between mb-1.5">
-        <h3 className="font-semibold text-emerald-200 text-[13px]">Server seed revealed</h3>
+        <h3 className="font-semibold text-[#cfd5c4] text-[13px]">Server seed revealed</h3>
         <button
           type="button"
           className="text-[11px] text-white/40 hover:text-white/70 cursor-pointer"
@@ -498,7 +498,7 @@ export function DevBankrollCard({
     <section className={card + " p-5"}>
       <h3 className="text-sm font-semibold text-white mb-2">FakeMONEY bankroll</h3>
       <p className="text-[12px] text-white/50 mb-3 leading-relaxed">
-        Play money for testing. In production, fund the vault instead.
+        FakeMONEY for testing. In production, fund the vault instead.
       </p>
       <button type="button" className={btnGhost + " w-full"} onClick={onDeposit}>
         +{amountHuman.toLocaleString()} {displaySymbol(token.symbol)}
@@ -549,7 +549,7 @@ export function RulesHint({ children }: { children: ReactNode }) {
 /* ---- Cards ---- */
 
 const panelTone = {
-  player: "border-[#c6a15b]/28 bg-[#07140f]/80",
+  player: "border-[#c6a15b]/28 bg-[#0e0e0c]/80",
   dealer: "border-[#f6f1e7]/10 bg-black/30",
   board: "border-[#c6a15b]/22 bg-[#161208]/75",
   accent: "border-[#8a3a32]/45 bg-[#1a0e0c]/75",
@@ -570,7 +570,7 @@ export function PlayingCard({
       <div
         className={
           sz +
-          " rounded-[0.4rem] border border-[#c6a15b]/40 bg-gradient-to-br from-[#143024] via-[#0c1c16] to-[#1a1208] flex items-center justify-center text-[#e8d5a3]/70 shrink-0 shadow-[inset_0_0_0_1px_rgba(232,213,163,0.15)]"
+          " rounded-[0.4rem] border border-[#c6a15b]/40 bg-gradient-to-br from-[#1c1c18] via-[#121210] to-[#1a1208] flex items-center justify-center text-[#e8d5a3]/70 shrink-0 shadow-[inset_0_0_0_1px_rgba(232,213,163,0.15)]"
         }
         aria-hidden
       >
@@ -671,10 +671,10 @@ export function DiceRow({
 export function PhaseChip({ children, variant = "amber" }: { children: ReactNode; variant?: "amber" | "emerald" | "rose" }) {
   const cls =
     variant === "emerald"
-      ? "border-emerald-400/40 text-emerald-200 bg-emerald-500/10"
+      ? "border-[#8c9880]/40 text-[#cfd5c4] bg-[#8c9880]/10"
       : variant === "rose"
-        ? "border-rose-400/40 text-rose-200 bg-rose-500/10"
-        : "border-amber-400/40 text-amber-200 bg-amber-500/10";
+        ? "border-[#a0645a]/40 text-[#dcc0b8] bg-[#a0645a]/10"
+        : "border-[#c6a15b]/40 text-[#e8dcc0] bg-[#c6a15b]/10";
   return (
     <p className={"text-center text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border " + cls}>
       {children}
@@ -702,9 +702,9 @@ export function StreetSteps({
             className={
               "text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors " +
               (done
-                ? "border-emerald-400/40 text-emerald-200/90 bg-emerald-500/15"
+                ? "border-[#8c9880]/40 text-[#cfd5c4]/90 bg-[#8c9880]/15"
                 : active
-                  ? "border-amber-400/50 text-amber-100 bg-amber-500/20"
+                  ? "border-[#c6a15b]/50 text-[#e8dcc0] bg-[#c6a15b]/20"
                   : "border-white/10 text-white/35 bg-white/[0.02]")
             }
           >
@@ -729,7 +729,7 @@ export function BetStatusPills({
           className={
             "text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border " +
             (it.active
-              ? "border-emerald-400/40 text-emerald-200 bg-emerald-500/15"
+              ? "border-[#8c9880]/40 text-[#cfd5c4] bg-[#8c9880]/15"
               : "border-white/12 text-white/40 bg-white/[0.02] line-through decoration-white/25")
           }
         >
@@ -745,7 +745,7 @@ export function PnlBanner({ pnl, token }: { pnl: bigint; token: TokenSpec }) {
     <p
       className={
         "text-center text-base sm:text-lg font-mono font-semibold " +
-        (pnl > 0n ? "text-emerald-300" : pnl < 0n ? "text-rose-300" : "text-white/55")
+        (pnl > 0n ? "text-[#a9b49c]" : pnl < 0n ? "text-[#c4938a]" : "text-white/55")
       }
     >
       {fmtPnl(pnl, token)}
@@ -862,7 +862,7 @@ export function TableAside({
       {showBal && (
         <section className={card + " p-4"}>
           <div className={labelCls}>Balance</div>
-          <div className="text-lg font-mono text-emerald-300 tabular-nums">{fmtMoney(balance, token, 2)}</div>
+          <div className="text-lg font-mono text-[#a9b49c] tabular-nums">{fmtMoney(balance, token, 2)}</div>
         </section>
       )}
       {hint && (
@@ -876,7 +876,7 @@ export function TableAside({
           <button
             type="button"
             onClick={onVerify}
-            className="text-xs text-emerald-300 hover:text-emerald-200 w-full text-left cursor-pointer py-1"
+            className="text-xs text-[#a9b49c] hover:text-[#cfd5c4] w-full text-left cursor-pointer py-1"
           >
             Verify hand →
           </button>
@@ -902,7 +902,7 @@ export function NewHandButton({ onClick }: { onClick: () => void }) {
 }
 
 export function ErrorBanner({ message }: { message: string }) {
-  return <p className="text-sm text-rose-300 text-center">{message}</p>;
+  return <p className="text-sm text-[#c4938a] text-center">{message}</p>;
 }
 
 /** Win/loss summary for one-shot (dice/craps/keno) rounds. */
@@ -917,9 +917,9 @@ export function SettlementBanner({
 }) {
   const tone =
     pnl > 0n
-      ? "border-emerald-400/30 bg-emerald-500/10"
+      ? "border-[#8c9880]/30 bg-[#8c9880]/10"
       : pnl < 0n
-        ? "border-rose-400/30 bg-rose-500/10"
+        ? "border-[#a0645a]/30 bg-[#a0645a]/10"
         : "border-white/10 bg-white/[0.03]";
   return (
     <div className={"rounded-xl border p-4 space-y-2 text-center " + tone}>
@@ -954,7 +954,7 @@ export function ChoiceButton({
       className={
         "touch-manipulation min-h-12 rounded-xl border-2 px-2 py-2 text-left transition-all cursor-pointer disabled:opacity-50 " +
         (active
-          ? "border-amber-400 bg-amber-500/15 text-amber-50"
+          ? "border-[#c6a15b] bg-[#c6a15b]/15 text-[#e8dcc0]"
           : "border-white/10 bg-white/[0.04] text-white/75 hover:border-white/25") +
         " " +
         className
@@ -997,9 +997,9 @@ export function KenoBoard({
             className={
               "aspect-square min-h-[2.25rem] touch-manipulation rounded-lg text-xs sm:text-sm font-semibold font-mono transition-all cursor-pointer disabled:cursor-default " +
               (hit
-                ? "bg-emerald-500/30 border-2 border-emerald-400 text-emerald-100"
+                ? "bg-[#8c9880]/30 border-2 border-[#8c9880] text-[#cfd5c4]"
                 : selected
-                  ? "bg-amber-500/25 border-2 border-amber-400/70 text-amber-100"
+                  ? "bg-[#c6a15b]/25 border-2 border-[#c6a15b]/70 text-[#e8dcc0]"
                   : drawnOnly
                     ? "bg-white/[0.08] border border-white/20 text-white/70"
                     : "bg-white/[0.03] border border-white/[0.08] text-white/55 hover:bg-white/[0.08]")
@@ -1035,7 +1035,7 @@ export function PickGrid({
           className={
             "min-h-12 touch-manipulation rounded-xl font-bold text-lg border transition-all cursor-pointer " +
             (selected === n
-              ? "border-amber-400/60 bg-amber-500/25 text-amber-50 shadow-[0_0_16px_rgba(245,158,11,0.15)]"
+              ? "border-[#c6a15b]/60 bg-[#c6a15b]/25 text-[#e8dcc0]"
               : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/25 active:scale-[0.98] disabled:opacity-40")
           }
         >

@@ -174,7 +174,7 @@ export default function TrenteEtQuaranteTable({ chainId, token }: Props) {
                     className={
                       "min-h-[68px] touch-manipulation rounded-lg border px-3 py-2.5 text-left transition-all cursor-pointer disabled:opacity-50 " +
                       (on
-                        ? "border-[#e8d5a3]/70 bg-gradient-to-b from-[#f3e6c4]/18 to-[#a7843c]/10 shadow-[inset_0_1px_0_rgba(255,236,196,0.25)]"
+                        ? "border-[#e8d5a3]/70 bg-gradient-to-b from-[#e6dcc4]/18 to-[#9a8050]/10 shadow-[inset_0_1px_0_rgba(255,236,196,0.25)]"
                         : "border-[#c6a15b]/15 bg-black/25 hover:border-[#c6a15b]/40")
                     }
                   >

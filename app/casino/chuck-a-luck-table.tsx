@@ -134,7 +134,7 @@ export default function ChuckALuckTable({ chainId, token }: Props) {
             {st && (
               <div className="space-y-3 rounded-xl border border-white/[0.06] bg-black/20 p-4">
                 <p className="text-center text-xs text-white/50">
-                  Your pick: <span className="text-amber-200 font-semibold">{st.pick}</span>
+                  Your pick: <span className="text-[#e8dcc0] font-semibold">{st.pick}</span>
                 </p>
                 <DiceRow dice={st.dice} highlightValue={st.pick} />
                 <p className="text-center text-sm text-white/70">

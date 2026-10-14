@@ -202,7 +202,7 @@ export default function SicBoTable({ chainId, token }: Props) {
                     className={
                       "touch-manipulation min-h-10 px-3 rounded-lg border-2 text-sm font-medium cursor-pointer " +
                       (betType === "any_triple"
-                        ? "border-amber-400 bg-amber-500/15 text-amber-50"
+                        ? "border-[#c6a15b] bg-[#c6a15b]/15 text-[#e8dcc0]"
                         : "border-white/10 text-white/70")
                     }
                   >
@@ -217,7 +217,7 @@ export default function SicBoTable({ chainId, token }: Props) {
                       className={
                         "touch-manipulation w-10 h-10 rounded-lg border-2 text-sm font-bold cursor-pointer " +
                         (betType === "triple" && betValue === f
-                          ? "border-amber-400 bg-amber-500/15 text-amber-50"
+                          ? "border-[#c6a15b] bg-[#c6a15b]/15 text-[#e8dcc0]"
                           : "border-white/10 text-white/70")
                       }
                     >
@@ -240,7 +240,7 @@ export default function SicBoTable({ chainId, token }: Props) {
                       className={
                         "touch-manipulation min-h-11 rounded-lg border text-center transition-all cursor-pointer " +
                         (betType === "total" && betValue === t
-                          ? "border-amber-400 bg-amber-500/15 text-amber-50"
+                          ? "border-[#c6a15b] bg-[#c6a15b]/15 text-[#e8dcc0]"
                           : "border-white/10 bg-white/[0.03] text-white/70 hover:border-white/20")
                       }
                     >

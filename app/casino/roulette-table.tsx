@@ -329,7 +329,7 @@ export default function RouletteTable({ chainId, token }: Props) {
                 <button
                   type="button"
                   onClick={() => setVerifyTarget(lastSession)}
-                  className="text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer"
+                  className="text-[11px] text-[#a9b49c] hover:text-[#cfd5c4] cursor-pointer"
                 >
                   verify →
                 </button>
@@ -350,7 +350,7 @@ export default function RouletteTable({ chainId, token }: Props) {
               className={
                 "h-9 w-12 rounded-full text-xs font-bold border-2 transition-all cursor-pointer " +
                 (chip === d
-                  ? "bg-emerald-500/20 border-emerald-400 text-emerald-200 scale-105"
+                  ? "bg-[#8c9880]/20 border-[#8c9880] text-[#cfd5c4] scale-105"
                   : "bg-white/[0.03] border-white/[0.12] text-white/70 hover:border-white/[0.25]") +
                 (spinning ? " opacity-50 cursor-not-allowed" : "")
               }
@@ -430,7 +430,7 @@ export default function RouletteTable({ chainId, token }: Props) {
                   <div className="text-right">
                     <div className="text-[12px] font-mono">{fmtMoney(amt, token)}</div>
                     <button type="button" onClick={() => removeChip(k)} disabled={spinning}
-                      className="text-[10px] text-white/40 hover:text-rose-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="text-[10px] text-white/40 hover:text-[#c4938a] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       − chip
                     </button>
@@ -470,11 +470,11 @@ export default function RouletteTable({ chainId, token }: Props) {
                     </span>
                   </div>
                   <div className="text-right">
-                    <div className={"text-[11px] font-mono " + (won ? "text-emerald-300" : push ? "text-white/60" : "text-rose-300")}>
+                    <div className={"text-[11px] font-mono " + (won ? "text-[#a9b49c]" : push ? "text-white/60" : "text-[#c4938a]")}>
                       {fmtPnl(h.result!.pnlUnits, token)}
                     </div>
                     <button type="button" onClick={() => setVerifyTarget(h)}
-                      className="text-[10px] text-white/40 hover:text-emerald-300 cursor-pointer"
+                      className="text-[10px] text-white/40 hover:text-[#a9b49c] cursor-pointer"
                     >verify →</button>
                   </div>
                 </div>
@@ -493,7 +493,7 @@ export default function RouletteTable({ chainId, token }: Props) {
           title="Verify spin"
           description={
             <>
-              Paste the revealed <span className="text-emerald-300">server seed</span>. We re-derive the wheel
+              Paste the revealed <span className="text-[#a9b49c]">server seed</span>. We re-derive the wheel
               spin with <span className="font-mono">nextInt(37)</span> (rejection-sampled, zero modulo bias).
             </>
           }
@@ -559,7 +559,7 @@ function BettingLayout({
   const botRow = Array.from({ length: 12 }, (_, i) => 1 + i * 3);
 
   return (
-    <div className="rounded-xl bg-emerald-950/30 border border-emerald-900/40 p-2 sm:p-3 select-none">
+    <div className="rounded-xl bg-[#2a2721]/30 border border-[#8c9880]/40 p-2 sm:p-3 select-none">
       <RouletteMobileLayout
         placements={placements}
         onClick={onClick}
@@ -823,8 +823,8 @@ function RouletteInsideGrid({
               className={
                 "absolute -left-1 top-1/2 -translate-y-1/2 z-20 w-1.5 h-10 rounded-full " +
                 (placements[street]
-                  ? "bg-amber-400/80"
-                  : "bg-amber-400/25 hover:bg-amber-400/50 border border-amber-400/40") +
+                  ? "bg-[#c6a15b]/80"
+                  : "bg-[#c6a15b]/25 hover:bg-[#c6a15b]/50 border border-[#c6a15b]/40") +
                 (disabled ? " opacity-40 cursor-not-allowed" : " cursor-pointer")
               }
             />
@@ -845,8 +845,8 @@ function RouletteInsideGrid({
                       className={
                         "absolute -right-0.5 top-[14%] bottom-[14%] z-[15] w-1 rounded-sm " +
                         (placements[six]
-                          ? "bg-amber-400/85"
-                          : "bg-violet-400/25 hover:bg-violet-400/50 border border-violet-400/35") +
+                          ? "bg-[#c6a15b]/85"
+                          : "bg-[#8a857a]/25 hover:bg-[#8a857a]/50 border border-[#8a857a]/35") +
                         (disabled ? " opacity-40 cursor-not-allowed" : " cursor-pointer")
                       }
                     />
@@ -888,8 +888,8 @@ function RouletteInsideGrid({
                   className={
                     "absolute -right-1 bottom-0 z-20 w-2.5 h-2.5 rounded-sm " +
                     (placements[cornerKey(bot, mid, next.bot, next.mid)]
-                      ? "bg-amber-300"
-                      : "bg-amber-400/30 hover:bg-amber-400/60 border border-amber-400/50") +
+                      ? "bg-[#d2b781]"
+                      : "bg-[#c6a15b]/30 hover:bg-[#c6a15b]/60 border border-[#c6a15b]/50") +
                     (disabled ? " opacity-40 cursor-not-allowed" : " cursor-pointer")
                   }
                 />
@@ -927,7 +927,7 @@ function InsideEdge({
       }}
       className={
         "h-1 w-full shrink-0 rounded-sm z-10 " +
-        (has ? "bg-amber-400/70" : "bg-amber-400/20 hover:bg-amber-400/45 border border-amber-400/25") +
+        (has ? "bg-[#c6a15b]/70" : "bg-[#c6a15b]/20 hover:bg-[#c6a15b]/45 border border-[#c6a15b]/25") +
         (disabled ? " cursor-not-allowed opacity-50" : " cursor-pointer")
       }
       title="Split"
@@ -964,7 +964,7 @@ function InsideSideEdge({
         "absolute -right-0.5 w-1.5 z-20 rounded-sm " +
         className +
         " " +
-        (has ? "bg-amber-400/70" : "bg-amber-400/20 hover:bg-amber-400/45 border border-amber-400/25") +
+        (has ? "bg-[#c6a15b]/70" : "bg-[#c6a15b]/20 hover:bg-[#c6a15b]/45 border border-[#c6a15b]/25") +
         (disabled ? " cursor-not-allowed opacity-50" : " cursor-pointer")
       }
       title="Split"
@@ -1001,9 +1001,9 @@ function RouletteMobileInsideBar({
 }) {
   const options = insideBetsForPocket(pocket);
   return (
-    <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-2.5 space-y-2">
+    <div className="rounded-xl border border-[#c6a15b]/30 bg-[#c6a15b]/10 p-2.5 space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold text-amber-100">
+        <span className="text-[11px] font-semibold text-[#e8dcc0]">
           Inside bets on <span className="font-mono">{pocket}</span>
         </span>
         <button
@@ -1026,8 +1026,8 @@ function RouletteMobileInsideBar({
               className={
                 "min-h-10 touch-manipulation px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-all " +
                 (has
-                  ? "border-amber-400/60 bg-amber-500/25 text-amber-50"
-                  : "border-white/15 bg-black/30 text-white/80 hover:border-amber-400/40") +
+                  ? "border-[#c6a15b]/60 bg-[#c6a15b]/25 text-[#e8dcc0]"
+                  : "border-white/15 bg-black/30 text-white/80 hover:border-[#c6a15b]/40") +
                 (disabled ? " opacity-50 cursor-not-allowed" : " cursor-pointer active:scale-95")
               }
             >
@@ -1102,11 +1102,11 @@ function NumberCell({
             ? "w-9 sm:w-12 h-[5.5rem] sm:h-[6.5rem] shrink-0 text-sm"
             : "h-9 w-full min-w-[2.125rem] text-xs sm:text-sm") +
         (color === "red"
-          ? "bg-rose-600/40 border-rose-500/40 text-rose-100 hover:bg-rose-600/60"
+          ? "bg-[#a0645a]/40 border-[#a0645a]/40 text-[#dcc0b8] hover:bg-[#a0645a]/60"
           : color === "black"
-            ? "bg-slate-900/70 border-slate-700/40 text-slate-200 hover:bg-slate-900"
-            : "bg-emerald-700/40 border-emerald-600/40 text-emerald-100 hover:bg-emerald-700/60") +
-        (selected ? " ring-2 ring-amber-400 ring-offset-1 ring-offset-emerald-950 " : "") +
+            ? "bg-stone-900/70 border-stone-700/40 text-stone-200 hover:bg-stone-900"
+            : "bg-[#8c9880]/40 border-[#8c9880]/40 text-[#cfd5c4] hover:bg-[#8c9880]/60") +
+        (selected ? " ring-2 ring-[#c6a15b] ring-offset-1 ring-offset-emerald-950 " : "") +
         (disabled ? " cursor-not-allowed opacity-70" : " cursor-pointer active:scale-95")
       }
       title={
@@ -1161,10 +1161,10 @@ function OutsideCell({
         (small ? "h-8 px-0.5 sm:px-1" : "h-9 sm:h-10 px-1 sm:px-2") +
         " " +
         (accent === "red"
-          ? "bg-rose-700/30 border-rose-500/30 text-rose-100 hover:bg-rose-700/50"
+          ? "bg-[#a0645a]/30 border-[#a0645a]/30 text-[#dcc0b8] hover:bg-[#a0645a]/50"
           : accent === "black"
-            ? "bg-slate-900/50 border-slate-700/30 text-slate-200 hover:bg-slate-900/80"
-            : "bg-emerald-900/30 border-emerald-700/30 text-emerald-100 hover:bg-emerald-900/50") +
+            ? "bg-stone-900/50 border-stone-700/30 text-stone-200 hover:bg-stone-900/80"
+            : "bg-[#2a2721]/30 border-[#8c9880]/30 text-[#cfd5c4] hover:bg-[#2a2721]/50") +
         (disabled ? " cursor-not-allowed opacity-70" : " cursor-pointer active:scale-95")
       }
       title={`Tap: place ${chip} ${displaySymbol(token.symbol)} · hold / right-click: remove`}
@@ -1190,7 +1190,7 @@ function ChipBadge({
   const label = human < 1000 ? String(Math.round(human)) : `${(human / 1000).toFixed(human < 10000 ? 1 : 0)}k`;
   if (below) {
     return (
-      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-10 min-w-[14px] h-3.5 px-0.5 rounded-full bg-amber-400 border border-amber-100 text-amber-950 text-[7px] font-bold flex items-center justify-center shadow pointer-events-none">
+      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-10 min-w-[14px] h-3.5 px-0.5 rounded-full bg-[#c6a15b] border border-[#d2b781] text-[#d2b781] text-[7px] font-bold flex items-center justify-center shadow pointer-events-none">
         {label}
       </span>
     );
@@ -1198,7 +1198,7 @@ function ChipBadge({
   return (
     <span
       className={
-        "absolute z-10 rounded-full bg-amber-400 border-2 border-amber-100 text-amber-950 font-bold flex items-center justify-center shadow-md pointer-events-none " +
+        "absolute z-10 rounded-full bg-[#c6a15b] border-2 border-[#d2b781] text-[#d2b781] font-bold flex items-center justify-center shadow-md pointer-events-none " +
         (compact ? " -top-1 -right-1 w-4 h-4 text-[7px]" : " -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 w-5 h-5 sm:w-6 sm:h-6 text-[8px] sm:text-[10px]")
       }
     >
@@ -1220,12 +1220,12 @@ function Wheel({ pocket, spinning }: { pocket: number | null; spinning: boolean 
         className={
           "w-full h-full rounded-full border-4 flex items-center justify-center transition-all " +
           (spinning
-            ? "border-emerald-300/60 animate-pulse shadow-[0_0_24px_rgba(52,211,153,0.4)]"
+            ? "border-[#a9b49c]/60 animate-pulse"
             : pocket !== null
-              ? "border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+              ? "border-white/20"
               : "border-white/10") +
           " " +
-          (pocket !== null ? colorClass(pocket) : "bg-gradient-to-br from-slate-700 to-slate-900")
+          (pocket !== null ? colorClass(pocket) : "bg-gradient-to-br from-stone-700 to-stone-900")
         }
       >
         <div className="text-3xl font-bold font-mono">
@@ -1237,10 +1237,10 @@ function Wheel({ pocket, spinning }: { pocket: number | null; spinning: boolean 
 }
 
 function colorClass(n: number): string {
-  if (n === 0) return "bg-emerald-700 text-emerald-100 border-emerald-500/40";
+  if (n === 0) return "bg-[#8c9880] text-[#cfd5c4] border-[#8c9880]/40";
   return RED_POCKETS.has(n)
-    ? "bg-rose-600 text-rose-50 border-rose-400/40"
-    : "bg-slate-900 text-slate-100 border-slate-600/40";
+    ? "bg-[#a0645a] text-[#dcc0b8] border-[#a0645a]/40"
+    : "bg-stone-900 text-stone-100 border-stone-600/40";
 }
 
 

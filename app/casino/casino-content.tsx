@@ -332,10 +332,10 @@ function FairnessPanel() {
         <p className="text-white/60 leading-relaxed text-sm">
           We use a commit-reveal HMAC-SHA256 scheme — the same protocol Stake,
           BC.Game, and Crash.com use. Before any hand is dealt the server picks
-          a random <span className="text-emerald-300">server seed</span> and
+          a random <span className="text-[#a9b49c]">server seed</span> and
           publishes its SHA-256 hash. The player supplies (or accepts a default)
-          a <span className="text-emerald-300">client seed</span>. Each action
-          consumes a <span className="text-emerald-300">nonce</span> that we hash
+          a <span className="text-[#a9b49c]">client seed</span>. Each action
+          consumes a <span className="text-[#a9b49c]">nonce</span> that we hash
           into the byte stream that picks the next card.
         </p>
         <pre className="mt-4 p-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] font-mono text-white/80 overflow-x-auto">
@@ -350,7 +350,7 @@ card_index = unbiased_mod(stream, 52 - cards_drawn)`}
       <section className={card + " p-6"}>
         <h2 className="text-xl font-semibold mb-2">Verification flow</h2>
         <ol className="text-sm text-white/70 space-y-2 list-decimal list-inside">
-          <li>Open any table — note the <code className="text-emerald-300">server_seed_hash</code> before you bet.</li>
+          <li>Open any table — note the <code className="text-[#a9b49c]">server_seed_hash</code> before you bet.</li>
           <li>Play any number of hands. Each settled hand stores the full action log.</li>
           <li>Rotate your client seed any time — we publish the server seed and every past hand becomes verifiable.</li>
           <li>Re-hash the revealed seed, compare to the originally published hash. Then replay any hand by re-deriving the byte stream.</li>
@@ -361,7 +361,7 @@ card_index = unbiased_mod(stream, 52 - cards_drawn)`}
         <h2 className="text-xl font-semibold mb-2">No-trust mode (Phase 2.2+)</h2>
         <p className="text-white/60 leading-relaxed text-sm">
           For whales who want zero trust in our server, we will support an
-          <span className="text-emerald-300"> on-chain VRF</span> path: Chainlink
+          <span className="text-[#a9b49c]"> on-chain VRF</span> path: Chainlink
           VRF v2 on Ethereum, Switchboard On-Demand or Pyth Entropy on Solana.
           Every random byte for the hand comes from a verifiable on-chain
           source and the vault contract enforces the binding before paying

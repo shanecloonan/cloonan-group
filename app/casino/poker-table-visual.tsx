@@ -28,11 +28,11 @@ export function PokerOvalTable({
 }) {
   return (
     <div className="relative min-h-[min(72vw,420px)] sm:min-h-[480px] w-full">
-      <div className="absolute inset-2 sm:inset-4 rounded-[50%] border-2 border-emerald-800/50 bg-gradient-to-b from-emerald-950/90 via-[#07110e] to-[#06070c] shadow-[inset_0_0_100px_rgba(16,185,129,0.18)]" />
+      <div className="absolute inset-2 sm:inset-4 rounded-[50%] border-2 border-[#8c9880]/50 bg-gradient-to-b from-[#2a2721]/90 via-[#07110e] to-[#06070c] shadow-[inset_0_0_100px_rgba(140,152,128,0.18)]" />
 
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1">
         <span className={pillGold + " text-[9px]"}>{phaseLabel ?? state.phase}</span>
-        <span className="font-mono text-sm text-amber-200/90">
+        <span className="font-mono text-sm text-[#e8dcc0]/90">
           Pot {potLabel ?? fmtMoney(state.pot, token, 1)}
         </span>
       </div>
@@ -70,7 +70,7 @@ function CardFace({ card, small }: { card: { rank: string; suit: string }; small
       className={
         (small ? "w-9 h-12 sm:w-11 sm:h-16 text-xs" : "w-11 h-16 sm:w-14 sm:h-20") +
         " rounded-lg border flex flex-col items-center justify-center font-bold shadow-lg " +
-        (red ? "bg-rose-950/80 border-rose-500/40 text-rose-100" : "bg-slate-900/90 border-white/20 text-white")
+        (red ? "bg-[#2a2721]/80 border-[#a0645a]/40 text-[#dcc0b8]" : "bg-stone-900/90 border-white/20 text-white")
       }
     >
       <span>{card.rank}</span>
@@ -95,7 +95,7 @@ function SeatChip({
       className={
         "rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 min-w-[88px] sm:min-w-[100px] border text-center transition-all " +
         (active
-          ? "border-amber-400/70 bg-amber-500/20 shadow-[0_0_28px_rgba(245,158,11,0.25)] scale-105"
+          ? "border-[#c6a15b]/70 bg-[#c6a15b]/20 scale-105"
           : "border-white/10 bg-black/60 backdrop-blur-sm")
       }
     >
@@ -103,10 +103,10 @@ function SeatChip({
         {player.name}
         {player.isHuman ? " · you" : ""}
       </div>
-      <div className="text-[10px] font-mono text-emerald-300/95">
+      <div className="text-[10px] font-mono text-[#a9b49c]/95">
         {fmtMoney(player.stack, token, 1)}
       </div>
-      {player.folded && <div className="text-[9px] text-rose-300/90">Folded</div>}
+      {player.folded && <div className="text-[9px] text-[#c4938a]/90">Folded</div>}
       {reveal && player.hole.length === 2 && (
         <div className="flex gap-0.5 justify-center mt-1">
           {player.hole.map((c, i) => (
@@ -118,8 +118,8 @@ function SeatChip({
       )}
       {!reveal && !player.folded && (
         <div className="flex gap-0.5 justify-center mt-1">
-          <span className="w-5 h-7 sm:w-6 sm:h-8 rounded bg-amber-900/50 border border-amber-600/40" />
-          <span className="w-5 h-7 sm:w-6 sm:h-8 rounded bg-amber-900/50 border border-amber-600/40" />
+          <span className="w-5 h-7 sm:w-6 sm:h-8 rounded bg-[#2a2721]/50 border border-[#c6a15b]/40" />
+          <span className="w-5 h-7 sm:w-6 sm:h-8 rounded bg-[#2a2721]/50 border border-[#c6a15b]/40" />
         </div>
       )}
     </div>

@@ -36,9 +36,9 @@ const LAST_BET_KEY = "mf_casino_dt_bet";
 const LAST_SPOT_KEY = "mf_casino_dt_spot";
 
 const SPOTS: { id: DragonTigerSpot; label: string; hint: string; accent: string }[] = [
-  { id: "dragon", label: "Dragon", hint: "1:1 · half on tie", accent: "from-rose-600/30 to-rose-900/20 border-rose-400/40" },
-  { id: "tiger", label: "Tiger", hint: "1:1 · half on tie", accent: "from-amber-600/30 to-amber-900/20 border-amber-400/40" },
-  { id: "tie", label: "Tie", hint: "11:1", accent: "from-violet-600/25 to-violet-900/15 border-violet-400/35" },
+  { id: "dragon", label: "Dragon", hint: "1:1 · half on tie", accent: "from-[#a0645a]/30 to-[#2a2721]/20 border-[#a0645a]/40" },
+  { id: "tiger", label: "Tiger", hint: "1:1 · half on tie", accent: "from-[#c6a15b]/30 to-[#2a2721]/20 border-[#c6a15b]/40" },
+  { id: "tie", label: "Tie", hint: "11:1", accent: "from-[#8a857a]/25 to-[#2a2721]/15 border-[#8a857a]/35" },
 ];
 
 interface Props {
@@ -152,7 +152,7 @@ export default function DragonTigerTable({ chainId, token }: Props) {
               <RulesHint>Highest card wins — Ace low, King high. Tie returns half on Dragon/Tiger bets.</RulesHint>
             )}
             {st?.winner === "tie" && (
-              <p className="text-center text-sm text-violet-200/90 font-medium">
+              <p className="text-center text-sm text-[#e6e0d4]/90 font-medium">
                 Tie — both {st.dragonRank}
               </p>
             )}
@@ -167,7 +167,7 @@ export default function DragonTigerTable({ chainId, token }: Props) {
                     "min-h-[72px] touch-manipulation rounded-xl border p-3 text-left transition-all cursor-pointer disabled:opacity-50 bg-gradient-to-br " +
                     s.accent +
                     " " +
-                    (spot === s.id ? "ring-2 ring-amber-400/50" : "opacity-90 hover:opacity-100")
+                    (spot === s.id ? "ring-2 ring-[#c6a15b]/50" : "opacity-90 hover:opacity-100")
                   }
                 >
                   <div className="text-sm font-semibold text-white">{s.label}</div>

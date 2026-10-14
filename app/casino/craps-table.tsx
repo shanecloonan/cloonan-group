@@ -163,7 +163,7 @@ export default function CrapsTable({ chainId, token }: Props) {
                         key={i}
                         className={
                           "text-xs font-mono " +
-                          (i === st.rolls.length - 1 ? "text-amber-200/90" : "text-white/45")
+                          (i === st.rolls.length - 1 ? "text-[#e8dcc0]/90" : "text-white/45")
                         }
                       >
                         Roll {i + 1}: {formatCrapsRoll(r)}

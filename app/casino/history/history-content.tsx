@@ -482,7 +482,7 @@ export default function HistoryContent() {
                       <td
                         className={
                           "px-4 py-2.5 text-right font-mono text-[12px] " +
-                          (won ? "text-emerald-300" : push ? "text-white/60" : "text-rose-300")
+                          (won ? "text-[#a9b49c]" : push ? "text-white/60" : "text-[#c4938a]")
                         }
                       >
                         {fmtPnl(r.pnlUnits, tokenFromParts(r.tokenSymbol, r.tokenDecimals), 2)}
@@ -491,7 +491,7 @@ export default function HistoryContent() {
                         {r.origin === "local" ? (
                           <a
                             href={buildVerifyLink(r.session)}
-                            className="text-[11px] text-emerald-300 hover:text-emerald-200 cursor-pointer"
+                            className="text-[11px] text-[#a9b49c] hover:text-[#cfd5c4] cursor-pointer"
                           >
                             verify →
                           </a>
@@ -510,7 +510,7 @@ export default function HistoryContent() {
         </section>
 
         {remoteError && (
-          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-400/20 text-sm text-amber-200">
+          <div className="p-3 rounded-lg bg-[#c6a15b]/10 border border-[#c6a15b]/20 text-sm text-[#e8dcc0]">
             Couldn&apos;t load cloud history: {remoteError}. Showing local rows only.
           </div>
         )}
@@ -547,7 +547,7 @@ function FilterPills({
             className={
               "h-7 px-2.5 rounded-md text-[11px] font-medium border transition-all cursor-pointer " +
               (value === o.id
-                ? "bg-emerald-500/15 border-emerald-400/40 text-emerald-200"
+                ? "bg-[#8c9880]/15 border-[#8c9880]/40 text-[#cfd5c4]"
                 : "bg-white/[0.03] border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06]")
             }
           >
@@ -658,7 +658,7 @@ function ActivityTab({
       className={
         "h-9 px-4 rounded-full text-sm font-medium border transition-all cursor-pointer " +
         (active
-          ? "bg-emerald-500/15 border-emerald-400/40 text-emerald-100"
+          ? "bg-[#8c9880]/15 border-[#8c9880]/40 text-[#cfd5c4]"
           : "bg-white/[0.03] border-white/[0.08] text-white/55 hover:text-white hover:bg-white/[0.06]")
       }
     >
@@ -695,10 +695,10 @@ function GlobalFeedPanel({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 mr-2">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8c9880] opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8c9880]" />
           </span>
-          <span className="text-[10px] uppercase tracking-wider text-emerald-300/80">
+          <span className="text-[10px] uppercase tracking-wider text-[#a9b49c]/80">
             {realtime ? "Live · realtime" : "Live · polling"}
           </span>
         </div>
@@ -721,7 +721,7 @@ function GlobalFeedPanel({
           type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="text-xs text-amber-300 hover:text-amber-100 border border-amber-400/30 rounded-lg px-3 py-1.5 disabled:opacity-50 cursor-pointer"
+          className="text-xs text-[#d2b781] hover:text-[#e8dcc0] border border-[#c6a15b]/30 rounded-lg px-3 py-1.5 disabled:opacity-50 cursor-pointer"
         >
           {loading ? "Refreshing…" : "Refresh now"}
         </button>
@@ -776,7 +776,7 @@ function GlobalFeedPanel({
                   <span
                     className={
                       "text-right font-mono text-sm font-semibold " +
-                      (pnl >= 0 ? "text-emerald-300" : "text-rose-300")
+                      (pnl >= 0 ? "text-[#a9b49c]" : "text-[#c4938a]")
                     }
                   >
                     {fmtFeedPnl(r.pnl, r.token_symbol)}
@@ -793,11 +793,11 @@ function GlobalFeedPanel({
 
       <p className="text-xs text-white/40">
         All cloud-settled bets appear here; display names require leaderboard opt-in.{" "}
-        <Link href="/casino/leaderboard" className="text-amber-300 hover:underline">
+        <Link href="/casino/leaderboard" className="text-[#d2b781] hover:underline">
           Leaderboard
         </Link>{" "}
         ·{" "}
-        <Link href="/casino/dashboard" className="text-amber-300 hover:underline">
+        <Link href="/casino/dashboard" className="text-[#d2b781] hover:underline">
           Dashboard
         </Link>
       </p>
@@ -820,7 +820,7 @@ function FeedStatCard({
       <div
         className={
           "mt-1 font-mono text-lg font-semibold " +
-          (accent === "emerald" ? "text-emerald-300" : accent === "rose" ? "text-rose-300" : "text-white")
+          (accent === "emerald" ? "text-[#a9b49c]" : accent === "rose" ? "text-[#c4938a]" : "text-white")
         }
       >
         {value}
