@@ -269,7 +269,7 @@ export function TableBalanceHeader({
 }) {
   const isDev = chainId === "dev-mock";
   return (
-    <div className="flex items-center justify-between flex-wrap gap-3 mb-4 sm:mb-5">
+    <div className="cz-balance-head flex items-center justify-between flex-wrap gap-3 mb-4 sm:mb-5">
       <div>
         <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Playing on</div>
         <div className="text-base font-semibold tracking-wide text-[#f6f1e7]">

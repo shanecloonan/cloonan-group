@@ -208,6 +208,117 @@
   color: #fff;
 }
 
+/* ==========================================================================
+ *  Phase 2 — game tables
+ * ========================================================================== */
+
+/* Action strip above tables. */
+.cz-root[data-fun="on"] .cz-strip {
+  background: linear-gradient(90deg, rgba(255, 43, 214, 0.18), rgba(0, 229, 255, 0.14), rgba(255, 230, 0, 0.14));
+  border-color: rgba(255, 43, 214, 0.6);
+  box-shadow: 0 0 14px rgba(255, 43, 214, 0.35);
+}
+
+/* Neon felt with a lit gold rail and a chasing bulb ring. */
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(57, 255, 20, 0.22), transparent 70%),
+    radial-gradient(ellipse at 50% 120%, #00140b, #00663a 55%, #003a22);
+  border: 2px solid var(--fun-pink);
+  box-shadow:
+    0 0 18px rgba(255, 43, 214, 0.7),
+    0 0 44px rgba(180, 75, 255, 0.45),
+    inset 0 0 0 6px rgba(255, 179, 0, 0.55),
+    inset 0 0 26px rgba(255, 230, 0, 0.35),
+    inset 0 0 60px rgba(0, 0, 0, 0.45);
+}
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage)::before,
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 5px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(circle, #fffbe0 0 1.5px, #ffe600 2.3px, transparent 3.2px) 0 0 / 14px 14px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: fun-twinkle 0.8s ease-in-out infinite alternate;
+}
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage)::after {
+  background-position: 7px 7px;
+  animation-direction: alternate-reverse;
+}
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) label,
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) .uppercase {
+  color: #d9fff0;
+  text-shadow: 0 0 6px rgba(57, 255, 20, 0.6);
+}
+
+/* Chips, stake presets and small table buttons glow. */
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) button:not(.cz-btn) {
+  border-color: var(--fun-cyan);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.55);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) button:not(.cz-btn):not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px var(--fun-cyan), 0 0 22px rgba(0, 229, 255, 0.5);
+}
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) button.rounded-full:not(.cz-btn) {
+  background: radial-gradient(circle at 50% 40%, #ff5ce1, #b0008c 60%, #5a0048);
+  border: 3px dashed #fff3fd;
+  color: #fff;
+  box-shadow: 0 0 10px var(--fun-pink), 0 0 20px rgba(255, 43, 214, 0.55);
+}
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) button.rounded-full:not(.cz-btn):nth-of-type(3n + 2) {
+  background: radial-gradient(circle at 50% 40%, #6ff4ff, #0090a8 60%, #00414d);
+  box-shadow: 0 0 10px var(--fun-cyan), 0 0 20px rgba(0, 229, 255, 0.55);
+}
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) button.rounded-full:not(.cz-btn):nth-of-type(3n + 3) {
+  background: radial-gradient(circle at 50% 40%, #fff27a, #d19a00 60%, #6a4a00);
+  color: #1a0236;
+  box-shadow: 0 0 10px var(--fun-yellow), 0 0 20px rgba(255, 230, 0, 0.55);
+}
+
+/* Secondary/ghost buttons get a neon outline; danger gets hot red. */
+.cz-root[data-fun="on"] main .cz-btn:not(.cz-btn-primary):hover {
+  box-shadow: 0 0 14px var(--fun-cyan);
+}
+
+/* Primary action buttons: shine sweep (transform only). */
+.cz-root[data-fun="on"] .cz-btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+.cz-root[data-fun="on"] .cz-btn-primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  transform: translateX(0) skewX(-20deg);
+  animation: fun-shine 2.6s ease-in-out infinite;
+}
+@keyframes fun-shine {
+  0%, 55% { transform: translateX(0) skewX(-20deg); }
+  100% { transform: translateX(450%) skewX(-20deg); }
+}
+
+/* Inner panels on tables (reels, grids) take a deep neon tint. */
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) .bg-black\/40,
+.cz-root[data-fun="on"] :is(.cz-felt, .cz-card:has(.cz-balance-head), .cz-stage) .bg-black\/30 {
+  background-color: rgba(20, 0, 45, 0.6);
+}
+
 /* ---- Reduced motion: keep the colors, drop the movement ---- */
 @media (prefers-reduced-motion: reduce) {
   .cz-root[data-fun="on"],

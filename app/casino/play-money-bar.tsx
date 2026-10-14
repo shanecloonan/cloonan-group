@@ -116,7 +116,7 @@ export function PlayMoneyChipStrip() {
   if (!playMoney.enabled) return null;
 
   return (
-    <div className="-mx-4 sm:-mx-8 px-4 sm:px-8 py-2.5 border-b border-[#c6a15b]/15 bg-[#070806]/80">
+    <div className="cz-strip -mx-4 sm:-mx-8 px-4 sm:px-8 py-2.5 border-b border-[#c6a15b]/15 bg-[#070806]/80">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="text-xs text-[#f6f1e7]/50 shrink-0">
           <span className="text-[#e8d5a3] font-medium">{playMoney.displayName}</span>

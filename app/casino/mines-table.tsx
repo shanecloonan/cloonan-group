@@ -417,7 +417,7 @@ export default function MinesTable({ chainId, token }: Props) {
         )}
 
         {/* Bet panel */}
-        <section className={card + " p-5"}>
+        <section className={card + " cz-stage p-5"}>
           <div className="flex items-end gap-3 flex-wrap">
             <div className="flex-1 min-w-[120px]">
               <label className={labelCls}>Stake ({displaySymbol(token.symbol)})</label>

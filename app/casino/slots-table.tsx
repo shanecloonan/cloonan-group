@@ -360,7 +360,7 @@ export default function SlotsTable({ chainId, token }: Props) {
         </div>
 
         {/* Reel window */}
-        <div className={card + " p-5 sm:p-7"}>
+        <div className={card + " cz-stage p-5 sm:p-7"}>
           <ReelWindow
             grid={displayGrid}
             spinning={reelSpinning}

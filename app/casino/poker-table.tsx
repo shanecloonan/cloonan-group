@@ -178,7 +178,7 @@ export default function PokerTable({ chainId, token }: Props) {
 
   return (
     <WideTableShell>
-      <section className={card + " p-5 flex flex-wrap items-center justify-between gap-4"}>
+      <section className={card + " cz-stage p-5 flex flex-wrap items-center justify-between gap-4"}>
         <div>
           <h2 className="text-xl font-semibold text-white font-heading">Texas Hold&apos;em · 6-Max</h2>
           <div className="flex gap-2 mt-2">

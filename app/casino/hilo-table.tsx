@@ -413,7 +413,7 @@ export default function HiloTable({ chainId, token }: Props) {
 
         {/* Guess buttons */}
         {currentRank !== null && livePreview && (
-          <section className={card + " p-5"}>
+          <section className={card + " cz-stage p-5"}>
             <div className="grid grid-cols-2 gap-3">
               <GuessButton
                 direction="higher"

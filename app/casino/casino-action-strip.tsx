@@ -51,7 +51,7 @@ export function CasinoActionStrip() {
   const walletHref = `/casino/wallet?chain=${encodeURIComponent(chainId)}`;
 
   return (
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 mb-4 border-y border-white/[0.06] bg-white/[0.02]">
+    <div className="cz-strip -mx-4 sm:-mx-6 lg:-mx-8 mb-4 border-y border-white/[0.06] bg-white/[0.02]">
       <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
           <span className="text-xs text-white/50 shrink-0">
