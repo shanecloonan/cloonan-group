@@ -21,6 +21,7 @@ import {
 } from "@/lib/casino";
 import { CasinoProvider } from "./casino-context";
 import { CasinoShell } from "./casino-shell";
+import { FunCelebrations } from "./fun-celebrations";
 import { GameLobby } from "./game-lobby";
 import { GamePlayHeader } from "./game-play-header";
 import type { GameTab } from "./game-types";
@@ -188,6 +189,7 @@ function CasinoContentInner() {
   return (
     <CasinoProvider chainId={chainId} token={token}>
       <CasinoShell>
+        <FunCelebrations />
         {tab === "lobby" && (
           <GameLobby
             chainId={chainId}

@@ -319,6 +319,109 @@
   background-color: rgba(20, 0, 45, 0.6);
 }
 
+/* ==========================================================================
+ *  Phase 3 — win celebrations (fixed overlay: no layout shift, no pointer capture)
+ * ========================================================================== */
+.cz-root[data-fun="on"] .cz-celebrate {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+}
+.cz-confetti span {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: fun-confetti 2.2s cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
+}
+.cz-confetti span:nth-child(3n) { width: 10px; height: 10px; border-radius: 50%; }
+@keyframes fun-confetti {
+  0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--dx), 95vh, 0) rotate(var(--rot)); }
+}
+.cz-coins {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+}
+.cz-coins span {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin: -11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fffbd0, #ffd000 45%, #b37a00);
+  border: 2px solid #fff3a0;
+  box-shadow: 0 0 10px #ffe600;
+  opacity: 0;
+  animation: fun-coin 1.3s ease-out forwards;
+}
+@keyframes fun-coin {
+  0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(0.4); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(-38vmin) scale(1.1); }
+}
+.cz-banner {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 28px;
+  border-radius: 18px;
+  background: rgba(20, 0, 45, 0.88);
+  border: 3px solid var(--fun-yellow);
+  box-shadow: 0 0 24px var(--fun-yellow), 0 0 60px rgba(255, 43, 214, 0.7);
+  animation: fun-banner-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both, fun-banner-pulse 0.7s ease-in-out 0.35s 3 alternate;
+}
+.cz-banner-title {
+  font-weight: 900;
+  font-size: clamp(28px, 6vw, 56px);
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 0 8px var(--fun-pink), 0 0 22px var(--fun-pink), 0 0 40px var(--fun-pink);
+}
+.cz-banner-amount {
+  font-weight: 800;
+  font-size: clamp(16px, 3vw, 26px);
+  color: var(--fun-yellow);
+  text-shadow: 0 0 10px rgba(255, 230, 0, 0.8);
+}
+.cz-celebrate[data-kind="jackpot"] .cz-banner {
+  border-color: var(--fun-pink);
+  background: linear-gradient(135deg, rgba(60, 0, 110, 0.92), rgba(110, 0, 80, 0.92));
+}
+.cz-celebrate[data-kind="jackpot"] .cz-banner-title {
+  font-size: clamp(36px, 9vw, 84px);
+  color: var(--fun-yellow);
+  text-shadow: 0 0 10px #ff7a00, 0 0 28px #ff2bd6, 0 0 50px #ff2bd6;
+}
+.cz-celebrate .cz-banner {
+  animation-fill-mode: both;
+}
+@keyframes fun-banner-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes fun-banner-pulse {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to { transform: translate(-50%, -50%) scale(1.07); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cz-root[data-fun="on"] .cz-confetti,
+  .cz-root[data-fun="on"] .cz-coins {
+    display: none;
+  }
+}
+
 /* ---- Reduced motion: keep the colors, drop the movement ---- */
 @media (prefers-reduced-motion: reduce) {
   .cz-root[data-fun="on"],
