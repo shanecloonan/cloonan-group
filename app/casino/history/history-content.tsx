@@ -25,6 +25,7 @@ import { fetchPublicBetFeed, subscribePublicBetFeed, type FeedRow } from "@/lib/
 import { HistoryVerifyLink } from "../history-verify-link";
 import { buildVerifyLink } from "../share-link";
 import { CasinoFilterPill } from "../casino-filter-pill";
+import { GameIcon } from "../game-icons";
 import { CasinoShell } from "../casino-shell";
 import { ALL_GAMES, GAME_LABELS, card, pillGold, type CasinoGameId } from "../casino-ui";
 import { fmtMoney, fmtPnl, MetricStat, tokenFromParts } from "../table-kit";
@@ -134,9 +135,22 @@ export default function HistoryContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Array<{
+      // CasinoContext writes per-identity keys ("mf_casino_history_v1:<id>"); also read the legacy bare key.
+      const seen = new Set<string>();
+      const all: unknown[] = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (!k || (k !== HISTORY_STORAGE_KEY && !k.startsWith(HISTORY_STORAGE_KEY + ":"))) continue;
+        const arr = JSON.parse(window.localStorage.getItem(k) ?? "[]") as Array<{ game: string; at: string }>;
+        for (const e of arr) {
+          const key = e.game + "|" + e.at;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          all.push(e);
+        }
+      }
+      if (all.length === 0) return;
+      const parsed = all as Array<{
         game: string;
         at: string;
         stakeUnits: string;
@@ -391,16 +405,8 @@ export default function HistoryContent() {
         </section>
 
         {/* Filters bar */}
-        <section className={card + " p-4 flex flex-wrap items-center gap-3"}>
-          <FilterPills
-            label="Game"
-            value={gameFilter}
-            onChange={(v) => setGameFilter(v as GameFilter)}
-            options={[
-              { id: "all", label: "All" },
-              ...ALL_GAMES.map((g) => ({ id: g, label: GAME_LABELS[g] })),
-            ]}
-          />
+        <section className={card + " p-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3"}>
+          <GameSelect value={gameFilter} onChange={(v) => setGameFilter(v as GameFilter)} allLabel="All games" />
           <FilterPills
             label="Result"
             value={resultFilter}
@@ -412,7 +418,7 @@ export default function HistoryContent() {
               { id: "push", label: "Pushes" },
             ]}
           />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="sm:ml-auto flex items-center gap-2">
             <span className="text-[10px] uppercase tracking-[0.12em] text-white/40">Export</span>
             <button
               type="button"
@@ -434,7 +440,55 @@ export default function HistoryContent() {
         </section>
 
         {/* Table */}
-        <section className={card + " overflow-hidden"}>
+        {/* Mobile: stacked cards */}
+        <section className="sm:hidden space-y-2" aria-label="Your sessions">
+          {filtered.length === 0 ? (
+            <div className={card + " px-4 py-10 text-center text-sm text-white/40"}>
+              {loadingRemote ? "Loading sessions…" : "No sessions yet — play a hand at /casino."}
+            </div>
+          ) : (
+            filtered.map((r, i) => {
+              const tok = tokenFromParts(r.tokenSymbol, r.tokenDecimals);
+              const won = r.pnlUnits > 0n;
+              const push = r.pnlUnits === 0n;
+              return (
+                <article key={`${r.game}-${r.at}-${i}`} className={card + " cz-bet-card px-3.5 py-3 flex items-center gap-3"}>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#c6a15b]/25 bg-[#c6a15b]/[0.07] text-[#c6a15b]" aria-hidden>
+                    <GameIcon id={r.game} className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold text-[#f6f1e7] truncate">{GAME_LABELS[r.game as CasinoGameId] ?? r.game}</span>
+                      <span
+                        className={
+                          "font-mono text-sm font-semibold shrink-0 " +
+                          (won ? "text-[#a9b49c]" : push ? "text-white/60" : "text-[#c4938a]")
+                        }
+                      >
+                        {fmtPnl(r.pnlUnits, tok, 2)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-white/45">
+                      <span className="truncate">
+                        {formatTime(r.at)} · <span className="font-mono text-white/70">{fmtMoney(r.stakeUnits, tok, 2)}</span> · {r.multiplier.toFixed(2)}×
+                      </span>
+                      {r.origin === "local" ? (
+                        <a href={buildVerifyLink(r.session)} className="shrink-0 text-[11px] text-[#a9b49c] hover:text-[#cfd5c4]">
+                          verify →
+                        </a>
+                      ) : r.sessionId ? (
+                        <span className="shrink-0"><HistoryVerifyLink sessionId={r.sessionId} /></span>
+                      ) : null}
+                    </div>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </section>
+
+        {/* Desktop: table */}
+        <section className={card + " overflow-hidden hidden sm:block"}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-white/[0.03] border-b border-white/[0.06]">
@@ -536,9 +590,9 @@ function FilterPills({
   options: { id: string; label: string }[];
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] uppercase tracking-[0.12em] text-white/40">{label}</span>
-      <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="text-[10px] uppercase tracking-[0.12em] text-white/40 shrink-0">{label}</span>
+      <div className="flex flex-wrap items-center gap-1">
         {options.map((o) => (
           <button
             key={o.id}
@@ -702,16 +756,8 @@ function GlobalFeedPanel({
             {realtime ? "Live · realtime" : "Live · polling"}
           </span>
         </div>
-        <div className="flex flex-wrap gap-1.5 flex-1">
-          <CasinoFilterPill active={gameFilter === "all"} label="All games" onClick={() => onGameFilter("all")} />
-          {ALL_GAMES.map((g) => (
-            <CasinoFilterPill
-              key={g}
-              active={gameFilter === g}
-              label={GAME_LABELS[g]}
-              onClick={() => onGameFilter(g)}
-            />
-          ))}
+        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+          <GameSelect value={gameFilter} onChange={(v) => onGameFilter(v as "all" | CasinoGameId)} allLabel="All games" />
           <span className="w-px h-6 bg-white/10 mx-0.5 hidden sm:block" />
           <CasinoFilterPill active={outcomeFilter === "all"} label="All outcomes" onClick={() => onOutcomeFilter("all")} />
           <CasinoFilterPill active={outcomeFilter === "wins"} label="Wins" onClick={() => onOutcomeFilter("wins")} />
@@ -754,7 +800,11 @@ function GlobalFeedPanel({
                   key={r.session_id}
                   className="grid grid-cols-[1fr_auto_auto_auto] gap-2 px-4 py-3 items-center hover:bg-white/[0.02] transition-colors"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex items-center gap-3">
+                    <span className="hidden min-[360px]:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#c6a15b]/25 bg-[#c6a15b]/[0.07] text-[#c6a15b]" aria-hidden>
+                      <GameIcon id={r.game_id} className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
                     <div className="text-sm font-medium text-white/90 truncate flex items-center gap-2">
                       {r.display_label}
                       {r.is_public === false && (
@@ -767,7 +817,11 @@ function GlobalFeedPanel({
                       <span className={pillGold + " !text-[9px] !py-0 !px-1.5"}>
                         {GAME_LABELS[r.game_id as CasinoGameId] ?? r.game_id}
                       </span>
-                      <span className="sm:hidden">{fmtFeedStake(r.stake, r.token_symbol)}</span>
+                      <span className="sm:hidden truncate">{fmtFeedStake(r.stake, r.token_symbol)}</span>
+                      <span className="md:hidden shrink-0 text-white/35">
+                        {new Date(r.settled_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                      </span>
+                    </div>
                     </div>
                   </div>
                   <span className="hidden sm:block text-right font-mono text-xs text-white/55">
@@ -840,4 +894,24 @@ function fmtFeedStake(raw: string, symbol: string): string {
   const n = Number(raw);
   if (!Number.isFinite(n)) return raw;
   return `${(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${displaySymbol(symbol)}`;
+}
+
+function GameSelect({ value, onChange, allLabel }: { value: string; onChange: (v: string) => void; allLabel: string }) {
+  return (
+    <label className="flex items-center gap-2 min-w-0">
+      <span className="text-[10px] uppercase tracking-[0.12em] text-white/40 shrink-0">Game</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 min-w-0 flex-1 sm:flex-none sm:w-48 px-2.5 rounded-lg bg-black/40 border border-[#c6a15b]/20 text-[13px] text-[#f6f1e7] outline-none focus:border-[#e8d5a3]/55 cursor-pointer"
+      >
+        <option value="all">{allLabel}</option>
+        {ALL_GAMES.map((g) => (
+          <option key={g} value={g}>
+            {GAME_LABELS[g]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }

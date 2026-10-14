@@ -202,7 +202,8 @@
 }
 
 /* Inputs stay legible. */
-.cz-root[data-fun="on"] input {
+.cz-root[data-fun="on"] input,
+.cz-root[data-fun="on"] select {
   background: rgba(10, 0, 25, 0.85);
   border-color: var(--fun-cyan);
   color: #fff;
