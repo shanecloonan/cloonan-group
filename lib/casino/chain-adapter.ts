@@ -36,7 +36,7 @@ import type {
 /** Native ETH on the dev-mock chain — used for the "play money" tutorial. */
 export const DEV_TOKEN: TokenSpec = {
   symbol: "DEV",
-  display: "Dev Money",
+  display: "FakeMONEY",
   decimals: 6,
   address: "0x0000000000000000000000000000000000000000",
   isNative: true,
@@ -113,7 +113,7 @@ export const SOL_NATIVE: TokenSpec = {
  */
 export class DevMockAdapter implements ChainAdapter {
   readonly id: ChainId = "dev-mock";
-  readonly display = "Dev (play money)";
+  readonly display = "FakeMONEY";
   readonly nativeCurrency = DEV_TOKEN;
   readonly supportedTokens: TokenSpec[] = [DEV_TOKEN];
 

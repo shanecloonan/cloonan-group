@@ -20,7 +20,7 @@ import { fmtMoney, fmtPnl } from "./table-kit";
 import { displaySymbol } from "./token-label";
 
 const CHAIN_TILES = [
-  { id: "dev-mock" as ChainId, display: "Play money", tag: "Free" },
+  { id: "dev-mock" as ChainId, display: "FakeMONEY", tag: "Free" },
   { id: "ethereum-sepolia" as ChainId, display: "Sepolia", tag: "Test" },
   { id: "ethereum-base" as ChainId, display: "Base", tag: "L2" },
   { id: "ethereum-mainnet" as ChainId, display: "Ethereum", tag: "ETH" },

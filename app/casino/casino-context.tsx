@@ -305,7 +305,7 @@ export function CasinoProvider({
   const addChips = useCallback(
     async (amount: bigint) => {
       if (!isPlayMoney) {
-        throw new Error("Free chips are only available on Dev / Play Money.");
+        throw new Error("Free chips are only available on FakeMONEY.");
       }
       if (amount <= 0n) return;
       await ledger.credit({ userId, chainId, token, delta: amount, reason: "deposit" });

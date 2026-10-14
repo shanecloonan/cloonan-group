@@ -496,7 +496,7 @@ export function DevBankrollCard({
   if (chainId !== "dev-mock") return null;
   return (
     <section className={card + " p-5"}>
-      <h3 className="text-sm font-semibold text-white mb-2">Dev bankroll</h3>
+      <h3 className="text-sm font-semibold text-white mb-2">FakeMONEY bankroll</h3>
       <p className="text-[12px] text-white/50 mb-3 leading-relaxed">
         Play money for testing. In production, fund the vault instead.
       </p>

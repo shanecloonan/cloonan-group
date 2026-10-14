@@ -492,7 +492,7 @@ function VaultDeployBanner({
       <strong className="text-amber-200">Vault not live on this chain yet.</strong>{" "}
       {row
         ? `Deploy CasinoVault.sol and set NEXT_PUBLIC_CASINO_VAULT_${chainId.toUpperCase().replaceAll("-", "_")}.`
-        : "Check /api/casino/vault-status or use Dev play money on the lobby."}{" "}
+        : "Check /api/casino/vault-status or use FakeMONEY on the lobby."}{" "}
       {status && !status.anyDeployed && (
         <span className="block mt-1 text-xs text-white/50">
           No chain has a vault address in env — CI builds the contract; deployment is the next step.
@@ -550,7 +550,7 @@ function NotConfiguredBanner({ chainId }: { chainId: ChainId }) {
         <pre className="mt-2 text-[11px] bg-black/40 border border-white/[0.06] rounded p-2 overflow-x-auto">
           {envName}=0x…
         </pre>
-        Until then, use the <strong>Dev (play money)</strong> chain — it
+        Until then, use the <strong>FakeMONEY</strong> chain — it
         works end-to-end against an in-memory ledger so you can verify the
         UX without touching real funds.
       </div>
@@ -640,7 +640,7 @@ function DepositPanel({
           status: "finalized",
           txUrl: `#dev-mock/tx/${fakeHash}`,
         });
-        setStatus(`Dev deposit recorded: ${fmtMoney(amountUnits, token)}`);
+        setStatus(`FakeMONEY deposit recorded: ${fmtMoney(amountUnits, token)}`);
         return;
       }
 
@@ -880,7 +880,7 @@ function WithdrawPanel({
           status: "finalized",
           txUrl: `#dev-mock/tx/${fakeHash}`,
         });
-        setStatus(`Dev withdraw recorded: ${fmtMoney(amountUnits, token)}`);
+        setStatus(`FakeMONEY withdraw recorded: ${fmtMoney(amountUnits, token)}`);
         return;
       }
 

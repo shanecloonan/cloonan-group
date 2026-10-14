@@ -78,7 +78,7 @@ interface ChainTile {
 const CHAIN_TILES: ChainTile[] = [
   {
     id: "dev-mock",
-    display: "Dev / Play Money",
+    display: "FakeMONEY",
     tag: "FakeMONEY",
     status: "live",
     phase: "Phase 0",

@@ -174,7 +174,7 @@ export function PokerMultiplayerPanel({
     if (!uid) return true;
     const buyIn = BigInt(room.buy_in);
     if (balance.available < buyIn) {
-      setMsg("Insufficient balance for buy-in — deposit or use play money.");
+      setMsg("Insufficient balance for buy-in — deposit or use FakeMONEY.");
       return false;
     }
     try {
