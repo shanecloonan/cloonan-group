@@ -14,6 +14,7 @@ import {
   type GameCategory,
 } from "./game-catalog";
 import type { GameTab } from "./game-types";
+import { CasinoChat } from "./casino-chat";
 import { GameIcon } from "./game-icons";
 import { PlayMoneyPanel } from "./play-money-bar";
 import { fmtMoney, fmtPnl } from "./table-kit";
@@ -242,6 +243,8 @@ export function GameLobby({
           </div>
         )}
       </section>
+
+      <CasinoChat />
 
       {history.length > 0 && (
         <section className={card + " p-4"}>

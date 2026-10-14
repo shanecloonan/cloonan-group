@@ -423,14 +423,7 @@
 }
 
 /* ---- Social: comments + live chat in Fun Mode ---- */
-.cz-root[data-fun="on"] .cz-chat-fab {
-  color: #1a0236;
-  border-color: transparent;
-  background: linear-gradient(90deg, var(--fun-cyan), var(--fun-pink));
-  box-shadow: 0 0 16px rgba(255, 43, 214, 0.75);
-  font-weight: 700;
-}
-.cz-root[data-fun="on"] .cz-chat-panel {
+.cz-root[data-fun="on"] .cz-card.cz-chat-panel {
   background: rgba(22, 0, 48, 0.95);
   border: 2px solid var(--fun-cyan);
   box-shadow: 0 0 18px rgba(0, 229, 255, 0.55), 0 0 40px rgba(255, 43, 214, 0.35);
@@ -439,7 +432,7 @@
   color: var(--fun-yellow);
   text-shadow: 0 0 6px rgba(255, 230, 0, 0.55);
 }
-.cz-root[data-fun="on"] .cz-chat textarea,
+.cz-root[data-fun="on"] .cz-chat input,
 .cz-root[data-fun="on"] .cz-comments textarea {
   background: rgba(10, 0, 25, 0.85);
   border-color: var(--fun-cyan);
