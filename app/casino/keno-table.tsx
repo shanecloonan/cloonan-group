@@ -31,6 +31,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_keno_bet";
 const LAST_PICKS_KEY = "mf_casino_keno_picks";
@@ -203,7 +204,7 @@ export default function KenoTable({ chainId, token }: Props) {
             )}
             <RulesHint>Pick up to 10 numbers. Twenty balls are drawn from 1–80.</RulesHint>
             <StakeRow
-              label={`Bet (${token.symbol})`}
+              label={`Bet (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

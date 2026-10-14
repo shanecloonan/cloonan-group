@@ -11,6 +11,7 @@ import {
   type LeaderboardRow,
   type RecordRow,
 } from "@/lib/casino/leaderboard";
+import { displaySymbol } from "../token-label";
 
 type Tab = "winners" | "losers" | "big_wins" | "big_losses";
 
@@ -18,7 +19,7 @@ function fmtUnits(raw: string, symbol: string): string {
   const n = Number(raw);
   if (!Number.isFinite(n)) return raw;
   const sign = n < 0 ? "-" : n > 0 ? "+" : "";
-  return `${sign}${Math.abs(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${symbol}`;
+  return `${sign}${Math.abs(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${displaySymbol(symbol)}`;
 }
 
 export default function LeaderboardContent() {

@@ -32,6 +32,7 @@ import {
   RevealedSeedCard,
   WideTableShell,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 interface Props {
   chainId: ChainId;
@@ -232,7 +233,7 @@ export default function PokerTable({ chainId, token }: Props) {
               Buy in to sit seat 1. Blinds scale with your buy-in. Beat the table and cash out your stack.
             </p>
             <div className="w-48">
-              <label className={labelCls}>Buy-in ({token.symbol})</label>
+              <label className={labelCls}>Buy-in ({displaySymbol(token.symbol)})</label>
               <input
                 type="number"
                 className={inputCls}

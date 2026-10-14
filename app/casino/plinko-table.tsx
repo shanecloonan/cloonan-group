@@ -54,6 +54,7 @@ import {
   InstantSideLayout,
   unitsToHuman,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LS_BET = "mf_casino_plinko_bet";
 const LS_RISK = "mf_casino_plinko_risk";
@@ -311,7 +312,7 @@ export default function PlinkoTable({ chainId, token }: Props) {
         <section className={card + " p-5"}>
           <div className="flex items-end gap-3 flex-wrap">
             <div className="flex-1 min-w-[120px]">
-              <label className={labelCls}>Stake ({token.symbol})</label>
+              <label className={labelCls}>Stake ({displaySymbol(token.symbol)})</label>
               <input
                 type="number"
                 className={inputCls}

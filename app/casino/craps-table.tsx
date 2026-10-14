@@ -31,6 +31,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_craps_bet";
 
@@ -177,7 +178,7 @@ export default function CrapsTable({ chainId, token }: Props) {
             )}
 
             <StakeRow
-              label={`Pass line (${token.symbol})`}
+              label={`Pass line (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

@@ -38,6 +38,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_lir_bet";
 const STEPS = ["Your cards", "1st board", "2nd board", "Result"];
@@ -252,7 +253,7 @@ export default function LetItRideTable({ chainId, token }: Props) {
               </>
             )}
             <StakeRow
-              label={`Per bet (${token.symbol}) · 3× total`}
+              label={`Per bet (${displaySymbol(token.symbol)}) · 3× total`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

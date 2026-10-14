@@ -14,8 +14,10 @@ import {
   type GameCategory,
 } from "./game-catalog";
 import type { GameTab } from "./game-types";
+import { GameIcon } from "./game-icons";
 import { PlayMoneyPanel } from "./play-money-bar";
 import { fmtMoney, fmtPnl } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const CHAIN_TILES = [
   { id: "dev-mock" as ChainId, display: "Play money", tag: "Free" },
@@ -62,8 +64,11 @@ function GameTileButton({ g, onOpen }: { g: (typeof GAME_CATALOG)[0]; onOpen: ()
       }
     >
       <span className="flex w-full items-center justify-between gap-2">
-        <span className="text-[10px] tracking-[0.28em] uppercase text-[#c6a15b]" aria-hidden>
-          {g.mark}
+        <span
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c6a15b]/25 bg-[#c6a15b]/[0.07] text-[#c6a15b] transition-colors group-hover:border-[#c6a15b]/50 group-hover:bg-[#c6a15b]/[0.12]"
+          aria-hidden
+        >
+          <GameIcon id={g.id} className="h-4 w-4" />
         </span>
         <span className="text-[9px] tracking-[0.14em] uppercase text-[#f6f1e7]/35">{g.rtp}</span>
       </span>
@@ -229,7 +234,7 @@ export function GameLobby({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 opacity-50">
               {GAME_CATALOG.filter((g) => g.status === "soon").map((g) => (
                 <div key={g.id} className={card + " px-3.5 py-3 flex flex-col gap-2 min-h-[5.5rem]"} aria-disabled>
-                  <span className="text-[10px] tracking-[0.28em] uppercase text-[#c6a15b]/70">{g.mark}</span>
+                  <GameIcon id={g.id} className="h-4 w-4 text-[#c6a15b]/70" />
                   <span className="text-sm font-heading text-[#f6f1e7]/70">{g.title}</span>
                 </div>
               ))}
@@ -268,7 +273,7 @@ export function GameLobby({
           <div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-semibold">Wallet</p>
             <p className="text-sm font-medium text-white mt-0.5">
-              {CHAIN_TILES.find((c) => c.id === chainId)?.display ?? chainId} · {token.symbol}
+              {CHAIN_TILES.find((c) => c.id === chainId)?.display ?? chainId} · {displaySymbol(token.symbol)}
             </p>
           </div>
           <span className="text-white/40 text-sm" aria-hidden>
@@ -314,7 +319,7 @@ export function GameLobby({
                         : "border-white/[0.1] text-white/60 hover:bg-white/[0.05] cursor-pointer")
                     }
                   >
-                    {t.symbol}
+                    {displaySymbol(t.symbol)}
                   </button>
                 ))}
               </div>

@@ -128,7 +128,7 @@ export class DevMockAdapter implements ChainAdapter {
   }): Promise<UnsignedTx> {
     return {
       chainId: this.id,
-      description: `(dev) deposit ${args.amount} ${args.token.symbol}`,
+      description: `(dev) deposit ${args.amount} ${args.token.symbol === "DEV" ? "FakeMONEY" : args.token.symbol}`,
       payload: { kind: "dev_deposit", ...args, amount: args.amount.toString() },
     };
   }
@@ -156,7 +156,7 @@ export class DevMockAdapter implements ChainAdapter {
   }): Promise<UnsignedTx> {
     return {
       chainId: this.id,
-      description: `(dev) withdraw ${args.amount} ${args.token.symbol}`,
+      description: `(dev) withdraw ${args.amount} ${args.token.symbol === "DEV" ? "FakeMONEY" : args.token.symbol}`,
       payload: { kind: "dev_withdraw", ...args, amount: args.amount.toString() },
     };
   }

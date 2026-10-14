@@ -32,6 +32,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const MULT_COLOR: Record<WheelBetMult, string> = {
   1: "#64748b",
@@ -231,7 +232,7 @@ export default function WheelTable({ chainId, token }: Props) {
           </div>
 
             <StakeRow
-              label={`Bet (${token.symbol})`}
+              label={`Bet (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

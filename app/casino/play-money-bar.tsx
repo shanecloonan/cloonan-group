@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useCasino } from "./casino-context";
 import { btnGold, btnGhost, btnSecondary, card, sectionTitle } from "./casino-ui";
 import { PLAY_MONEY_CHIP_PRESETS, playMoneyUnits } from "@/lib/casino/guest-play";
+import { displaySymbol } from "./token-label";
 
 function useChipActions() {
   const { playMoney, balance, token, refreshBalance } = useCasino();
@@ -29,7 +30,7 @@ function useChipActions() {
   const fmtBal = useCallback(() => {
     const d = 10n ** BigInt(token.decimals);
     const n = Number(balance.available) / Number(d);
-    return `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${token.symbol}`;
+    return `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${displaySymbol(token.symbol)}`;
   }, [balance.available, token]);
 
   const refill100k = useCallback(async () => {

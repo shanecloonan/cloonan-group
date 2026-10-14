@@ -32,6 +32,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_war_bet";
 
@@ -227,7 +228,7 @@ export default function CasinoWarTable({ chainId, token }: Props) {
             )}
             {!needsTieChoice && (
               <StakeRow
-                label={`Bet (${token.symbol})`}
+                label={`Bet (${displaySymbol(token.symbol)})`}
                 betAmount={betAmount}
                 onBetAmount={setBetAmount}
                 token={token}

@@ -34,6 +34,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_ab_bet";
 const LAST_SIDE_KEY = "mf_casino_ab_side";
@@ -222,7 +223,7 @@ export default function AndarBaharTable({ chainId, token }: Props) {
           )}
 
           <StakeRow
-            label={`Bet (${token.symbol})`}
+            label={`Bet (${displaySymbol(token.symbol)})`}
             betAmount={betAmount}
             onBetAmount={setBetAmount}
             token={token}

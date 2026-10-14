@@ -39,6 +39,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_ms_bet";
 const STREETS = ["Ante", "1× street", "2× street", "3× street"];
@@ -258,7 +259,7 @@ export default function MississippiStudTable({ chainId, token }: Props) {
               </>
             )}
             <StakeRow
-              label={`Ante (${token.symbol}) · up to 7× total`}
+              label={`Ante (${displaySymbol(token.symbol)}) · up to 7× total`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

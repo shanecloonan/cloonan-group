@@ -29,6 +29,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_tq_bet";
 const LAST_SPOT_KEY = "mf_casino_tq_spot";
@@ -184,7 +185,7 @@ export default function TrenteEtQuaranteTable({ chainId, token }: Props) {
               })}
             </div>
             <StakeRow
-              label={`Mise (${token.symbol})`}
+              label={`Mise (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

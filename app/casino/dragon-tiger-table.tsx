@@ -30,6 +30,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_dt_bet";
 const LAST_SPOT_KEY = "mf_casino_dt_spot";
@@ -182,7 +183,7 @@ export default function DragonTigerTable({ chainId, token }: Props) {
               />
             )}
             <StakeRow
-              label={`Bet (${token.symbol})`}
+              label={`Bet (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

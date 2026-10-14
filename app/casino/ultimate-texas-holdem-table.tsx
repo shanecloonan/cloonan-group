@@ -35,6 +35,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_uth_bet";
 const STREETS = ["Pre-flop", "Flop", "Turn", "River"];
@@ -264,7 +265,7 @@ export default function UltimateTexasHoldemTable({ chainId, token }: Props) {
               </ActionStack>
             )}
             <StakeRow
-              label={`Ante (${token.symbol})`}
+              label={`Ante (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

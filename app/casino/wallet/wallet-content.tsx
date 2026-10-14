@@ -45,6 +45,7 @@ import {
 } from "@/lib/casino";
 import { btnGhost, btnPrimary, card, inputCls, labelCls } from "../casino-ui";
 import { fmtMoney, humanToUnits } from "../table-kit";
+import { displaySymbol } from "../token-label";
 
 /* ---------------------------------------------------------------------------
  *  Chain catalog (UI side — what the user can pick)
@@ -268,7 +269,7 @@ export default function WalletContent() {
               >
                 {chainEntry.tokens.map((t) => (
                   <option key={t.address} value={t.address}>
-                    {t.symbol} — {t.display}
+                    {displaySymbol(t.symbol)} — {t.display}
                   </option>
                 ))}
               </select>
@@ -765,7 +766,7 @@ function DepositPanel({
     <section className={card + " p-6 space-y-4"}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className={labelCls}>Amount ({token.symbol})</label>
+          <label className={labelCls}>Amount ({displaySymbol(token.symbol)})</label>
           <input
             type="number"
             min="0"
@@ -793,7 +794,7 @@ function DepositPanel({
         onClick={doDeposit}
         disabled={busy || (!adapterReady && chainKind !== "dev")}
       >
-        {busy ? "Submitting…" : `Deposit ${amount} ${token.symbol}`}
+        {busy ? "Submitting…" : `Deposit ${amount} ${displaySymbol(token.symbol)}`}
       </button>
 
       {status && (
@@ -1096,7 +1097,7 @@ function WithdrawPanel({
     <section className={card + " p-6 space-y-4"}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className={labelCls}>Amount ({token.symbol})</label>
+          <label className={labelCls}>Amount ({displaySymbol(token.symbol)})</label>
           <input
             type="number"
             min="0"
@@ -1120,7 +1121,7 @@ function WithdrawPanel({
         onClick={doWithdraw}
         disabled={busy || (!adapterReady && chainKind !== "dev")}
       >
-        {busy ? "Submitting…" : `Withdraw ${amount} ${token.symbol}`}
+        {busy ? "Submitting…" : `Withdraw ${amount} ${displaySymbol(token.symbol)}`}
       </button>
 
       {status && (

@@ -38,6 +38,7 @@ import {
   TableBalanceHeader,
   unitsToHuman,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_bj_last_bet";
 
@@ -481,7 +482,7 @@ function DealForm({
               onClick={() => setBetAmount(q)}
               className="text-[11px] px-2.5 h-7 rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/[0.08] cursor-pointer transition-all"
             >
-              {q} {token.symbol}
+              {q} {displaySymbol(token.symbol)}
             </button>
           ))}
           <button
@@ -575,7 +576,7 @@ function Felt({
                 </div>
                 <div className="flex items-center gap-3 text-[11px]">
                   <span className="text-white/60">
-                    Bet {Number(hand.stake) / 10 ** token.decimals} {token.symbol}
+                    Bet {Number(hand.stake) / 10 ** token.decimals} {displaySymbol(token.symbol)}
                   </span>
                   <span className="text-white/80 font-mono">
                     {val.total}{val.soft ? " (soft)" : ""}

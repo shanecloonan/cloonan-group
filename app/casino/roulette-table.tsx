@@ -50,6 +50,7 @@ import {
   TableBalanceHeader,
   unitsToHuman,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_CHIP_KEY = "mf_casino_roul_chip";
 
@@ -1111,7 +1112,7 @@ function NumberCell({
       title={
         compact
           ? `Select · hold to clear chips on ${number}`
-          : `Tap: place ${chip} ${token.symbol} · hold / right-click: remove`
+          : `Tap: place ${chip} ${displaySymbol(token.symbol)} · hold / right-click: remove`
       }
     >
       <span className={compact ? "leading-none" : ""}>{number}</span>
@@ -1166,7 +1167,7 @@ function OutsideCell({
             : "bg-emerald-900/30 border-emerald-700/30 text-emerald-100 hover:bg-emerald-900/50") +
         (disabled ? " cursor-not-allowed opacity-70" : " cursor-pointer active:scale-95")
       }
-      title={`Tap: place ${chip} ${token.symbol} · hold / right-click: remove`}
+      title={`Tap: place ${chip} ${displaySymbol(token.symbol)} · hold / right-click: remove`}
     >
       {label}
       {has && <ChipBadge stake={stake!} token={token} compact={compact} below={compact} />}

@@ -37,6 +37,7 @@ import {
   TableBalanceHeader,
   unitsToHuman,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_cf_last_bet";
 const LAST_PICK_KEY = "mf_casino_cf_last_pick";
@@ -380,7 +381,7 @@ export default function CoinflipTable({ chainId, token }: Props) {
                     onClick={() => setBetAmount(q)}
                     className="text-[11px] px-2.5 h-7 rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/[0.08] cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {q} {token.symbol}
+                    {q} {displaySymbol(token.symbol)}
                   </button>
                 ))}
                 <button

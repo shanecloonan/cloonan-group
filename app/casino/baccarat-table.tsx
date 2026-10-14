@@ -35,6 +35,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_bac_last_bet";
 const LAST_SPOT_KEY = "mf_casino_bac_last_spot";
@@ -180,7 +181,7 @@ export default function BaccaratTable({ chainId, token }: Props) {
               />
             )}
             <StakeRow
-              label={`Bet (${token.symbol})`}
+              label={`Bet (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

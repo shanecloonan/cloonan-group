@@ -28,6 +28,7 @@ import { CasinoFilterPill } from "../casino-filter-pill";
 import { CasinoShell } from "../casino-shell";
 import { ALL_GAMES, GAME_LABELS, card, pillGold, type CasinoGameId } from "../casino-ui";
 import { fmtMoney, fmtPnl, MetricStat, tokenFromParts } from "../table-kit";
+import { displaySymbol } from "../token-label";
 
 const DEV_HISTORY_TOKEN = tokenFromParts("DEV", 6);
 
@@ -326,7 +327,7 @@ export default function HistoryContent() {
       const rowToken = tokenFromParts(r.tokenSymbol, r.tokenDecimals);
       const stake = fmtMoney(r.stakeUnits, rowToken, 2);
       const pnl = fmtMoney(r.pnlUnits, rowToken, 2);
-      return `${r.at},${r.game},${stake},${r.multiplier.toFixed(4)},${pnl},${r.tokenSymbol}`;
+      return `${r.at},${r.game},${stake},${r.multiplier.toFixed(4)},${pnl},${displaySymbol(r.tokenSymbol)}`;
     });
     const blob = new Blob([header + lines.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -832,11 +833,11 @@ function fmtFeedPnl(raw: string, symbol: string): string {
   const n = Number(raw);
   if (!Number.isFinite(n)) return raw;
   const sign = n < 0 ? "-" : n > 0 ? "+" : "";
-  return `${sign}${Math.abs(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${symbol}`;
+  return `${sign}${Math.abs(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${displaySymbol(symbol)}`;
 }
 
 function fmtFeedStake(raw: string, symbol: string): string {
   const n = Number(raw);
   if (!Number.isFinite(n)) return raw;
-  return `${(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${symbol}`;
+  return `${(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${displaySymbol(symbol)}`;
 }

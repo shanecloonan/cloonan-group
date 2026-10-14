@@ -57,6 +57,7 @@ import {
   RevealedSeedCard,
   unitsToHuman,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_slots_bet";
 
@@ -426,7 +427,7 @@ export default function SlotsTable({ chainId, token }: Props) {
               {perLineHuman.toLocaleString(undefined, {
                 maximumFractionDigits: 4,
               })}{" "}
-              {token.symbol} per line
+              {displaySymbol(token.symbol)} per line
             </div>
           </div>
 
@@ -987,7 +988,7 @@ function AutoPanel({
           />
         </div>
         <div>
-          <label className={labelCls}>Stop profit ({token.symbol})</label>
+          <label className={labelCls}>Stop profit ({displaySymbol(token.symbol)})</label>
           <input
             type="number"
             min="0"
@@ -998,7 +999,7 @@ function AutoPanel({
           />
         </div>
         <div>
-          <label className={labelCls}>Stop loss ({token.symbol})</label>
+          <label className={labelCls}>Stop loss ({displaySymbol(token.symbol)})</label>
           <input
             type="number"
             min="0"

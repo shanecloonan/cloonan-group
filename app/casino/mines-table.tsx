@@ -52,6 +52,7 @@ import {
   SettlementBanner,
   unitsToHuman,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LS_BET = "mf_casino_mines_bet";
 const LS_MINES = "mf_casino_mines_count";
@@ -419,7 +420,7 @@ export default function MinesTable({ chainId, token }: Props) {
         <section className={card + " p-5"}>
           <div className="flex items-end gap-3 flex-wrap">
             <div className="flex-1 min-w-[120px]">
-              <label className={labelCls}>Stake ({token.symbol})</label>
+              <label className={labelCls}>Stake ({displaySymbol(token.symbol)})</label>
               <input
                 type="number"
                 className={inputCls}

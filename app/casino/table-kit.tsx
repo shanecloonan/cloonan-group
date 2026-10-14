@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { Card, ChainId, SeedPair, TokenSpec } from "@/lib/casino";
 import { useCasino } from "./casino-context";
 import { btnGhost, btnPrimary, btnSecondary, card, felt, inputCls, labelCls } from "./casino-ui";
+import { displaySymbol } from "./token-label";
 
 /* ---- Money ---- */
 
@@ -34,7 +35,7 @@ export function devPlayMoneyTopUpUnits(
 export function fmtMoney(units: bigint, token: TokenSpec, maxFrac = 4): string {
   const sign = units < 0n ? "-" : "";
   const abs = units < 0n ? -units : units;
-  return `${sign}${unitsToHuman(abs, token).toLocaleString(undefined, { maximumFractionDigits: maxFrac })} ${token.symbol}`;
+  return `${sign}${unitsToHuman(abs, token).toLocaleString(undefined, { maximumFractionDigits: maxFrac })} ${displaySymbol(token.symbol)}`;
 }
 
 /** PnL display: leading + when units are positive (losses keep fmtMoney minus). */
@@ -186,7 +187,7 @@ export function DevQuickTopUpBar({
             className={btnGhost}
             onClick={() => void onTopUp(BigInt(amt) * denom)}
           >
-            + {amt.toLocaleString()} {token.symbol}
+            + {amt.toLocaleString()} {displaySymbol(token.symbol)}
           </button>
         ))}
       </div>
@@ -272,7 +273,7 @@ export function TableBalanceHeader({
       <div>
         <div className="text-[10px] uppercase tracking-[0.15em] text-white/40">Playing on</div>
         <div className="text-base font-semibold tracking-wide text-[#f6f1e7]">
-          {chainId} · <span className="text-[#e8d5a3]">{token.symbol}</span>
+          {chainId} · <span className="text-[#e8d5a3]">{displaySymbol(token.symbol)}</span>
         </div>
         {onShowRules && (
           <button
@@ -500,7 +501,7 @@ export function DevBankrollCard({
         Play money for testing. In production, fund the vault instead.
       </p>
       <button type="button" className={btnGhost + " w-full"} onClick={onDeposit}>
-        +{amountHuman.toLocaleString()} {token.symbol}
+        +{amountHuman.toLocaleString()} {displaySymbol(token.symbol)}
       </button>
     </section>
   );

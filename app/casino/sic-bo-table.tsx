@@ -32,6 +32,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const TOTAL_PAYS: Record<number, number> = {
   4: 61, 5: 31, 6: 18, 7: 13, 8: 9, 9: 7, 10: 7, 11: 7, 12: 7, 13: 9, 14: 13, 15: 18, 16: 31, 17: 61,
@@ -268,7 +269,7 @@ export default function SicBoTable({ chainId, token }: Props) {
             )}
 
             <StakeRow
-              label={`Bet (${token.symbol})`}
+              label={`Bet (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

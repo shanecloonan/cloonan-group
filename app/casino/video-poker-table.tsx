@@ -31,6 +31,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const PAY_TABLE: { hand: string; pay: string }[] = [
   { hand: "Royal flush", pay: "800×" },
@@ -224,7 +225,7 @@ export default function VideoPokerTable({ chainId, token }: Props) {
               </ActionStack>
             )}
             <StakeRow
-              label={`Bet (${token.symbol})`}
+              label={`Bet (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

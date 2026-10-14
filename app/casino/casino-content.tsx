@@ -79,7 +79,7 @@ const CHAIN_TILES: ChainTile[] = [
   {
     id: "dev-mock",
     display: "Dev / Play Money",
-    tag: "DEV",
+    tag: "FakeMONEY",
     status: "live",
     phase: "Phase 0",
     blurb: "Free chips, random guest name, no sign-up. Instant refills via the chip bar.",

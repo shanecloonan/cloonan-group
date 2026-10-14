@@ -31,6 +31,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_cal_bet";
 const LAST_PICK_KEY = "mf_casino_cal_pick";
@@ -156,7 +157,7 @@ export default function ChuckALuckTable({ chainId, token }: Props) {
             )}
 
             <StakeRow
-              label={`Bet on ${pick} (${token.symbol})`}
+              label={`Bet on ${pick} (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}

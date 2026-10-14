@@ -33,6 +33,7 @@ import {
   TableHead,
   TablePage,
 } from "./table-kit";
+import { displaySymbol } from "./token-label";
 
 const LAST_BET_KEY = "mf_casino_3cp_bet";
 
@@ -212,7 +213,7 @@ export default function ThreeCardPokerTable({ chainId, token }: Props) {
               </ActionStack>
             )}
             <StakeRow
-              label={`Ante (${token.symbol})`}
+              label={`Ante (${displaySymbol(token.symbol)})`}
               betAmount={betAmount}
               onBetAmount={setBetAmount}
               token={token}
