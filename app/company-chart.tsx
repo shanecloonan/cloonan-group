@@ -40,6 +40,11 @@ const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
   { name: "TVN News", desc: "Fake news propaganda platform.", site: "TVNnews.com" },
   { name: "FN Journal", desc: "" },
   { name: "4th Capital", desc: "" },
+  {
+    name: "THC5",
+    desc: "The new way to get high. High-end laboratory cannabis.",
+    site: "thc5.vercel.app",
+  },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
