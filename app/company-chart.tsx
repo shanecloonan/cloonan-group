@@ -22,7 +22,13 @@ const ACCENTS = [
   { accent: "text-rose-300", border: "border-rose-300/40", bg: "bg-rose-300/5", tag: "bg-rose-300/15 text-rose-300" },
 ];
 
-const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
+const SUBSIDIARY_SEED: {
+  name: string;
+  desc: string;
+  site?: string;
+  /** Set when no real site exists. Other entries still link out. */
+  unlinked?: boolean;
+}[] = [
   { name: "Antler Gear", desc: "Premium bowhunting equipment." },
   { name: "PFP Chain", desc: "Permanent Database Blockchain." },
   { name: "Stock FUD", desc: "FUD dissemination platform." },
@@ -45,17 +51,70 @@ const SUBSIDIARY_SEED: { name: string; desc: string; site?: string }[] = [
     desc: "The new way to get high. High-end laboratory cannabis.",
     site: "thc5.vercel.app",
   },
+  {
+    name: "Daily 2x",
+    desc: "Free daily 2x pick, locked on Arweave. Public wins, losses, and streak.",
+    site: "daily2x.vercel.app",
+  },
+  { name: "RCO Real Estate", desc: "Real estate investment.", unlinked: true },
+  { name: "KNA Partners", desc: "Investment partnership.", unlinked: true },
+  { name: "TenX Casino", desc: "Casino and gaming.", unlinked: true },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
-  const site = siteLabel(s.name, s.site);
+  const site = s.unlinked ? undefined : siteLabel(s.name, s.site);
   return {
     ...s,
     ...ACCENTS[i % ACCENTS.length],
-    url: siteUrl(site),
+    url: site ? siteUrl(site) : undefined,
     site,
   };
 });
+
+function SubsidiaryCard({
+  s,
+}: {
+  s: (typeof SUBSIDIARIES)[number];
+}) {
+  const className = `relative border ${s.border} ${s.bg} rounded-sm p-2.5 sm:p-4 text-center flex flex-col w-[calc(50%-0.25rem)] sm:w-[calc(33.333%-0.34rem)] lg:w-[calc(25%-0.375rem)]${s.url ? " transition-all hover:brightness-125 hover:scale-[1.02]" : ""}`;
+  const body = (
+    <>
+      <p className="text-[8px] sm:text-[9px] tracking-[0.15em] uppercase font-semibold text-brand-600 mb-1 sm:mb-1.5">
+        Subsidiary
+      </p>
+      <h4
+        className={`font-heading text-sm sm:text-lg font-bold uppercase tracking-wide ${s.accent} mb-1 sm:mb-1.5`}
+      >
+        {s.name}
+      </h4>
+      {s.site ? (
+        <span
+          className={`block max-w-full self-center text-[8px] sm:text-[11px] font-semibold leading-snug px-2 py-0.5 rounded-full ${s.tag} mb-1.5 sm:mb-2 break-words`}
+        >
+          {s.site}
+        </span>
+      ) : null}
+      {s.desc ? (
+        <p className="text-brand-500 text-[9px] sm:text-[11px] leading-relaxed">
+          {s.desc}
+        </p>
+      ) : null}
+    </>
+  );
+  if (!s.url) {
+    return <div className={className}>{body}</div>;
+  }
+  return (
+    <a
+      href={s.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+    >
+      {body}
+    </a>
+  );
+}
 
 function FlowConnector() {
   return (
@@ -222,32 +281,7 @@ export default function CompanyChart() {
           {/* Level 3: Subsidiaries */}
           <div className="flex flex-wrap justify-center gap-2 max-w-6xl mx-auto mt-1.5 sm:mt-0">
             {SUBSIDIARIES.map((s) => (
-              <a
-                key={s.name}
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`relative border ${s.border} ${s.bg} rounded-sm p-2.5 sm:p-4 text-center flex flex-col w-[calc(50%-0.25rem)] sm:w-[calc(33.333%-0.34rem)] lg:w-[calc(25%-0.375rem)] transition-all hover:brightness-125 hover:scale-[1.02]`}
-              >
-                <p className="text-[8px] sm:text-[9px] tracking-[0.15em] uppercase font-semibold text-brand-600 mb-1 sm:mb-1.5">
-                  Subsidiary
-                </p>
-                <h4
-                  className={`font-heading text-sm sm:text-lg font-bold uppercase tracking-wide ${s.accent} mb-1 sm:mb-1.5`}
-                >
-                  {s.name}
-                </h4>
-                <span
-                  className={`block max-w-full self-center text-[8px] sm:text-[11px] font-semibold leading-snug px-2 py-0.5 rounded-full ${s.tag} mb-1.5 sm:mb-2 break-words`}
-                >
-                  {s.site}
-                </span>
-                {s.desc ? (
-                  <p className="text-brand-500 text-[9px] sm:text-[11px] leading-relaxed">
-                    {s.desc}
-                  </p>
-                ) : null}
-              </a>
+              <SubsidiaryCard key={s.name} s={s} />
             ))}
           </div>
         </div>
