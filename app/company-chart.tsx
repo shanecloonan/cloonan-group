@@ -59,6 +59,8 @@ const SUBSIDIARY_SEED: {
   { name: "RCO Real Estate", desc: "Real estate investment.", unlinked: true },
   { name: "KNA Partners", desc: "Investment partnership.", unlinked: true },
   { name: "TenX Casino", desc: "Casino and gaming.", unlinked: true },
+  { name: "Saint Holland", desc: "", site: "www.saintholland.com" },
+  { name: "NIL Enterprise", desc: "" },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
