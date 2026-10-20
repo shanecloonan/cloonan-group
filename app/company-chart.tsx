@@ -24,46 +24,50 @@ const ACCENTS = [
   { accent: "text-rose-300", border: "border-rose-300/40", bg: "bg-rose-300/5", tag: "bg-rose-300/15 text-rose-300" },
 ];
 
+const CATEGORIES = ["Money", "Clothes", "Tech", "Science", "Other"] as const;
+type Category = (typeof CATEGORIES)[number];
+
 const SUBSIDIARY_SEED: {
   name: string;
+  category: Category;
   desc: string;
   /** Link target when it differs from the .com domain; shown under it if it is a different host. */
   site?: string;
   /** Set when the .com domain doesn't resolve. The domain still shows, unlinked. */
   unlinked?: boolean;
 }[] = [
-  { name: "Antler Gear", desc: "Premium bowhunting equipment." },
+  { name: "Antler Gear", category: "Clothes", desc: "Premium bowhunting equipment." },
   {
-    name: "Daily 2x",
+    name: "Daily 2x", category: "Money",
     desc: "Free daily 2x pick, locked on Arweave. Public wins, losses, and streak.",
     site: "daily2x.vercel.app",
   },
-  { name: "PFP Chain", desc: "Permanent Database Blockchain." },
-  { name: "TVN News", desc: "Fake news propaganda platform.", site: "TVNnews.com" },
-  { name: "Saint Holland", desc: "", site: "www.saintholland.com" },
-  { name: "Stock FUD", desc: "FUD dissemination platform." },
+  { name: "PFP Chain", category: "Tech", desc: "Permanent Database Blockchain." },
+  { name: "TVN News", category: "Other", desc: "Fake news propaganda platform.", site: "TVNnews.com" },
+  { name: "Saint Holland", category: "Clothes", desc: "", site: "www.saintholland.com" },
+  { name: "Stock FUD", category: "Money", desc: "FUD dissemination platform." },
   {
-    name: "THC5",
+    name: "THC5", category: "Other",
     desc: "The new way to get high. High-end laboratory cannabis.",
     site: "thc5.vercel.app",
   },
-  { name: "File Display", desc: "Internal tooling SaaS platform." },
-  { name: "Glycell", desc: "Synthetic biology research." },
-  { name: "Cheaper Brand", desc: "Knockoff products and Chinese bullshit." },
-  { name: "Dirt Shares", desc: "Fractionalized Land Investing." },
-  { name: "Joint Pacific", desc: "" },
-  { name: "DTV Sports", desc: "NIL Agency." },
-  { name: "Wynport", desc: "Casino and Sportsbook." },
-  { name: "Wit Research", desc: "Market analytics platform." },
-  { name: "Deltamorph", desc: "Genomic Discovery Lab." },
-  { name: "Chip Fab", desc: "Semiconductor Research." },
-  { name: "Vix Ventures", desc: "Venture Capital Partners." },
-  { name: "FN Journal", desc: "" },
-  { name: "4th Capital", desc: "" },
-  { name: "RCO Real Estate", desc: "Real estate investment." },
-  { name: "KNA Partners", desc: "Investment partnership." },
-  { name: "TenX Casino", desc: "Casino and gaming." },
-  { name: "NIL Enterprise", desc: "" },
+  { name: "File Display", category: "Tech", desc: "Internal tooling SaaS platform." },
+  { name: "Glycell", category: "Science", desc: "Synthetic biology research." },
+  { name: "Cheaper Brand", category: "Other", desc: "Knockoff products and Chinese bullshit." },
+  { name: "Dirt Shares", category: "Money", desc: "Fractionalized Land Investing." },
+  { name: "Joint Pacific", category: "Other", desc: "" },
+  { name: "DTV Sports", category: "Other", desc: "NIL Agency." },
+  { name: "Wynport", category: "Money", desc: "Casino and Sportsbook." },
+  { name: "Wit Research", category: "Money", desc: "Market analytics platform." },
+  { name: "Deltamorph", category: "Science", desc: "Genomic Discovery Lab." },
+  { name: "Chip Fab", category: "Science", desc: "Semiconductor Research." },
+  { name: "Vix Ventures", category: "Money", desc: "Venture Capital Partners." },
+  { name: "FN Journal", category: "Other", desc: "" },
+  { name: "4th Capital", category: "Money", desc: "" },
+  { name: "RCO Real Estate", category: "Other", desc: "Real estate investment." },
+  { name: "KNA Partners", category: "Money", desc: "Investment partnership." },
+  { name: "TenX Casino", category: "Money", desc: "Casino and gaming." },
+  { name: "NIL Enterprise", category: "Other", desc: "" },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
@@ -84,7 +88,7 @@ function SubsidiaryCard({
 }: {
   s: (typeof SUBSIDIARIES)[number];
 }) {
-  const className = `relative border ${s.border} ${s.bg} rounded-sm p-2.5 sm:p-4 text-center flex flex-col h-full min-h-[9rem] sm:min-h-[11rem]${s.url ? " transition-all hover:brightness-125 hover:scale-[1.02]" : ""}`;
+  const className = `relative border ${s.border} ${s.bg} rounded-sm p-2.5 sm:p-4 text-center flex flex-col h-full min-h-[9rem] sm:min-h-[12.5rem] ${s.url ? "transition-all hover:brightness-125 hover:scale-[1.02]" : ""}`;
   const body = (
     <>
       <p className="text-[8px] sm:text-[9px] tracking-[0.15em] uppercase font-semibold text-brand-600 mb-1 sm:mb-1.5">
@@ -284,16 +288,28 @@ export default function CompanyChart() {
             <FlowConnector />
           </div>
 
-          {/* Branch line across the first row of subsidiaries */}
-          <div className="hidden sm:block relative mx-auto max-w-6xl h-3">
-            <div className="absolute top-0 left-[16.666%] right-[16.666%] lg:left-[12.5%] lg:right-[12.5%] h-px bg-brand-700" />
-          </div>
-
-          {/* Level 3: Subsidiaries */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-fr gap-2 max-w-6xl mx-auto mt-1.5 sm:mt-0">
-            {SUBSIDIARIES.map((s) => (
-              <SubsidiaryCard key={s.name} s={s} />
-            ))}
+          {/* Level 3: Subsidiaries, grouped by category */}
+          <div className="max-w-6xl mx-auto mt-1.5 sm:mt-2 space-y-6 sm:space-y-8">
+            {CATEGORIES.map((category) => {
+              const items = SUBSIDIARIES.filter((s) => s.category === category);
+              if (items.length === 0) return null;
+              return (
+                <div key={category}>
+                  <div className="flex items-center gap-3 mb-2 sm:mb-3">
+                    <div className="h-px flex-1 bg-brand-700" />
+                    <h3 className="font-heading text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-brand-300">
+                      {category}
+                    </h3>
+                    <div className="h-px flex-1 bg-brand-700" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-fr gap-2">
+                    {items.map((s) => (
+                      <SubsidiaryCard key={s.name} s={s} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
