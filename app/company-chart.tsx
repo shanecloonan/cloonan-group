@@ -45,7 +45,7 @@ const SUBSIDIARY_SEED: {
   { name: "Stock FUD", category: "Money", desc: "FUD dissemination platform." },
   {
     name: "THC5",
-    category: "Other",
+    category: "Science",
     desc: "The new way to get high. High-end laboratory cannabis.",
   },
   { name: "File Display", category: "Tech", desc: "Internal tooling SaaS platform." },
@@ -57,7 +57,7 @@ const SUBSIDIARY_SEED: {
   { name: "Wynport", category: "Money", desc: "Casino and Sportsbook." },
   { name: "Wit Research", category: "Money", desc: "Market analytics platform." },
   { name: "Deltamorph", category: "Science", desc: "Genomic Discovery Lab." },
-  { name: "Chip Fab", category: "Science", desc: "Semiconductor Research." },
+  { name: "Chip Fab", category: "Other", desc: "Semiconductor Research." },
   { name: "Vix Ventures", category: "Money", desc: "Venture Capital Partners." },
   { name: "FN Journal", category: "Other", desc: "" },
   { name: "4th Capital", category: "Money", desc: "" },
