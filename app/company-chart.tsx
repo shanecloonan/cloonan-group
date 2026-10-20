@@ -4,12 +4,14 @@ import { useRef, useCallback, useState } from "react";
 import { toPng } from "html-to-image";
 import { Download, Loader2 } from "lucide-react";
 
-function siteLabel(name: string, site?: string) {
-  return site ?? `${name.replace(/\s+/g, "")}.com`;
+/** Exact-match .com domain: brand name lowercased, spaces removed. */
+function comDomain(name: string) {
+  return `${name.replace(/\s+/g, "").toLowerCase()}.com`;
 }
 
-function siteUrl(label: string) {
-  return `https://${label.toLowerCase()}`;
+/** Bare host for comparison: lowercased, without a leading "www.". */
+function bareHost(host: string) {
+  return host.toLowerCase().replace(/^www\./, "");
 }
 
 const ACCENTS = [
@@ -25,13 +27,26 @@ const ACCENTS = [
 const SUBSIDIARY_SEED: {
   name: string;
   desc: string;
+  /** Link target when it differs from the .com domain; shown under it if it is a different host. */
   site?: string;
-  /** Set when no real site exists. Other entries still link out. */
+  /** Set when the .com domain doesn't resolve. The domain still shows, unlinked. */
   unlinked?: boolean;
 }[] = [
   { name: "Antler Gear", desc: "Premium bowhunting equipment." },
+  {
+    name: "Daily 2x",
+    desc: "Free daily 2x pick, locked on Arweave. Public wins, losses, and streak.",
+    site: "daily2x.vercel.app",
+  },
   { name: "PFP Chain", desc: "Permanent Database Blockchain." },
+  { name: "TVN News", desc: "Fake news propaganda platform.", site: "TVNnews.com" },
+  { name: "Saint Holland", desc: "", site: "www.saintholland.com" },
   { name: "Stock FUD", desc: "FUD dissemination platform." },
+  {
+    name: "THC5",
+    desc: "The new way to get high. High-end laboratory cannabis.",
+    site: "thc5.vercel.app",
+  },
   { name: "File Display", desc: "Internal tooling SaaS platform." },
   { name: "Glycell", desc: "Synthetic biology research." },
   { name: "Cheaper Brand", desc: "Knockoff products and Chinese bullshit." },
@@ -43,33 +58,24 @@ const SUBSIDIARY_SEED: {
   { name: "Deltamorph", desc: "Genomic Discovery Lab." },
   { name: "Chip Fab", desc: "Semiconductor Research." },
   { name: "Vix Ventures", desc: "Venture Capital Partners." },
-  { name: "TVN News", desc: "Fake news propaganda platform.", site: "TVNnews.com" },
   { name: "FN Journal", desc: "" },
   { name: "4th Capital", desc: "" },
-  {
-    name: "THC5",
-    desc: "The new way to get high. High-end laboratory cannabis.",
-    site: "thc5.vercel.app",
-  },
-  {
-    name: "Daily 2x",
-    desc: "Free daily 2x pick, locked on Arweave. Public wins, losses, and streak.",
-    site: "daily2x.vercel.app",
-  },
-  { name: "RCO Real Estate", desc: "Real estate investment.", unlinked: true },
-  { name: "KNA Partners", desc: "Investment partnership.", unlinked: true },
-  { name: "TenX Casino", desc: "Casino and gaming.", unlinked: true },
-  { name: "Saint Holland", desc: "", site: "www.saintholland.com" },
+  { name: "RCO Real Estate", desc: "Real estate investment." },
+  { name: "KNA Partners", desc: "Investment partnership." },
+  { name: "TenX Casino", desc: "Casino and gaming." },
   { name: "NIL Enterprise", desc: "" },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
-  const site = s.unlinked ? undefined : siteLabel(s.name, s.site);
+  const domain = comDomain(s.name);
+  const altSite =
+    s.site && bareHost(s.site) !== bareHost(domain) ? s.site.toLowerCase() : undefined;
   return {
     ...s,
     ...ACCENTS[i % ACCENTS.length],
-    url: site ? siteUrl(site) : undefined,
-    site,
+    domain,
+    altSite,
+    url: s.unlinked ? undefined : `https://${(s.site ?? domain).toLowerCase()}`,
   };
 });
 
@@ -78,7 +84,7 @@ function SubsidiaryCard({
 }: {
   s: (typeof SUBSIDIARIES)[number];
 }) {
-  const className = `relative border ${s.border} ${s.bg} rounded-sm p-2.5 sm:p-4 text-center flex flex-col w-[calc(50%-0.25rem)] sm:w-[calc(33.333%-0.34rem)] lg:w-[calc(25%-0.375rem)]${s.url ? " transition-all hover:brightness-125 hover:scale-[1.02]" : ""}`;
+  const className = `relative border ${s.border} ${s.bg} rounded-sm p-2.5 sm:p-4 text-center flex flex-col h-full min-h-[9rem] sm:min-h-[11rem]${s.url ? " transition-all hover:brightness-125 hover:scale-[1.02]" : ""}`;
   const body = (
     <>
       <p className="text-[8px] sm:text-[9px] tracking-[0.15em] uppercase font-semibold text-brand-600 mb-1 sm:mb-1.5">
@@ -89,11 +95,14 @@ function SubsidiaryCard({
       >
         {s.name}
       </h4>
-      {s.site ? (
-        <span
-          className={`block max-w-full self-center text-[8px] sm:text-[11px] font-semibold leading-snug px-2 py-0.5 rounded-full ${s.tag} mb-1.5 sm:mb-2 break-words`}
-        >
-          {s.site}
+      <span
+        className={`block max-w-full self-center text-[8px] sm:text-[11px] font-semibold leading-snug px-2 py-0.5 rounded-full ${s.tag} mb-1.5 sm:mb-2 break-words`}
+      >
+        {s.domain}
+      </span>
+      {s.altSite ? (
+        <span className="block max-w-full self-center text-[8px] sm:text-[10px] leading-snug text-brand-600 -mt-1 mb-1.5 sm:mb-2 break-words">
+          {s.altSite}
         </span>
       ) : null}
       {s.desc ? (
@@ -281,7 +290,7 @@ export default function CompanyChart() {
           </div>
 
           {/* Level 3: Subsidiaries */}
-          <div className="flex flex-wrap justify-center gap-2 max-w-6xl mx-auto mt-1.5 sm:mt-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-fr gap-2 max-w-6xl mx-auto mt-1.5 sm:mt-0">
             {SUBSIDIARIES.map((s) => (
               <SubsidiaryCard key={s.name} s={s} />
             ))}
