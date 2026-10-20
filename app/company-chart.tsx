@@ -9,18 +9,20 @@ function comDomain(name: string) {
   return `${name.replace(/\s+/g, "").toLowerCase()}.com`;
 }
 
-const ACCENTS = [
-  { accent: "text-gold", border: "border-gold/40", bg: "bg-gold/5", tag: "bg-gold/15 text-gold" },
-  { accent: "text-emerald-400", border: "border-emerald-400/40", bg: "bg-emerald-400/5", tag: "bg-emerald-400/15 text-emerald-400" },
-  { accent: "text-sky-400", border: "border-sky-400/40", bg: "bg-sky-400/5", tag: "bg-sky-400/15 text-sky-400" },
-  { accent: "text-violet-400", border: "border-violet-400/40", bg: "bg-violet-400/5", tag: "bg-violet-400/15 text-violet-400" },
-  { accent: "text-amber-300", border: "border-amber-300/40", bg: "bg-amber-300/5", tag: "bg-amber-300/15 text-amber-300" },
-  { accent: "text-cyan-300", border: "border-cyan-300/40", bg: "bg-cyan-300/5", tag: "bg-cyan-300/15 text-cyan-300" },
-  { accent: "text-rose-300", border: "border-rose-300/40", bg: "bg-rose-300/5", tag: "bg-rose-300/15 text-rose-300" },
-];
-
 const CATEGORIES = ["Money", "Clothes", "Tech", "Science", "Other"] as const;
 type Category = (typeof CATEGORIES)[number];
+
+/** One accent per category, so every card in a section shares a color. */
+const CATEGORY_ACCENTS: Record<
+  Category,
+  { accent: string; border: string; bg: string; tag: string }
+> = {
+  Money: { accent: "text-gold", border: "border-gold/40", bg: "bg-gold/5", tag: "bg-gold/15 text-gold" },
+  Clothes: { accent: "text-rose-300", border: "border-rose-300/40", bg: "bg-rose-300/5", tag: "bg-rose-300/15 text-rose-300" },
+  Tech: { accent: "text-sky-400", border: "border-sky-400/40", bg: "bg-sky-400/5", tag: "bg-sky-400/15 text-sky-400" },
+  Science: { accent: "text-emerald-400", border: "border-emerald-400/40", bg: "bg-emerald-400/5", tag: "bg-emerald-400/15 text-emerald-400" },
+  Other: { accent: "text-brand-300", border: "border-brand-400/40", bg: "bg-brand-400/5", tag: "bg-brand-400/15 text-brand-300" },
+};
 
 const SUBSIDIARY_SEED: {
   name: string;
@@ -65,11 +67,11 @@ const SUBSIDIARY_SEED: {
   { name: "NIL Enterprise", category: "Other", desc: "" },
 ];
 
-const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
+const SUBSIDIARIES = SUBSIDIARY_SEED.map((s) => {
   const domain = comDomain(s.name);
   return {
     ...s,
-    ...ACCENTS[i % ACCENTS.length],
+    ...CATEGORY_ACCENTS[s.category],
     domain,
     url: s.unlinked ? undefined : `https://${(s.site ?? domain).toLowerCase()}`,
   };
@@ -284,7 +286,9 @@ export default function CompanyChart() {
                 <div key={category}>
                   <div className="flex items-center gap-3 mb-2 sm:mb-3">
                     <div className="h-px flex-1 bg-brand-700" />
-                    <h3 className="font-heading text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-brand-300">
+                    <h3
+                      className={`font-heading text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] ${CATEGORY_ACCENTS[category].accent}`}
+                    >
                       {category}
                     </h3>
                     <div className="h-px flex-1 bg-brand-700" />
