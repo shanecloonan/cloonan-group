@@ -9,11 +9,6 @@ function comDomain(name: string) {
   return `${name.replace(/\s+/g, "").toLowerCase()}.com`;
 }
 
-/** Bare host for comparison: lowercased, without a leading "www.". */
-function bareHost(host: string) {
-  return host.toLowerCase().replace(/^www\./, "");
-}
-
 const ACCENTS = [
   { accent: "text-gold", border: "border-gold/40", bg: "bg-gold/5", tag: "bg-gold/15 text-gold" },
   { accent: "text-emerald-400", border: "border-emerald-400/40", bg: "bg-emerald-400/5", tag: "bg-emerald-400/15 text-emerald-400" },
@@ -31,25 +26,25 @@ const SUBSIDIARY_SEED: {
   name: string;
   category: Category;
   desc: string;
-  /** Link target when it differs from the .com domain; shown under it if it is a different host. */
+  /** Link override on the same .com domain (e.g. its www host). Defaults to the .com domain. */
   site?: string;
   /** Set when the .com domain doesn't resolve. The domain still shows, unlinked. */
   unlinked?: boolean;
 }[] = [
   { name: "Antler Gear", category: "Clothes", desc: "Premium bowhunting equipment." },
   {
-    name: "Daily 2x", category: "Money",
+    name: "Daily 2x",
+    category: "Money",
     desc: "Free daily 2x pick, locked on Arweave. Public wins, losses, and streak.",
-    site: "daily2x.vercel.app",
   },
   { name: "PFP Chain", category: "Tech", desc: "Permanent Database Blockchain." },
-  { name: "TVN News", category: "Other", desc: "Fake news propaganda platform.", site: "TVNnews.com" },
+  { name: "TVN News", category: "Other", desc: "Fake news propaganda platform." },
   { name: "Saint Holland", category: "Clothes", desc: "", site: "www.saintholland.com" },
   { name: "Stock FUD", category: "Money", desc: "FUD dissemination platform." },
   {
-    name: "THC5", category: "Other",
+    name: "THC5",
+    category: "Other",
     desc: "The new way to get high. High-end laboratory cannabis.",
-    site: "thc5.vercel.app",
   },
   { name: "File Display", category: "Tech", desc: "Internal tooling SaaS platform." },
   { name: "Glycell", category: "Science", desc: "Synthetic biology research." },
@@ -72,13 +67,10 @@ const SUBSIDIARY_SEED: {
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s, i) => {
   const domain = comDomain(s.name);
-  const altSite =
-    s.site && bareHost(s.site) !== bareHost(domain) ? s.site.toLowerCase() : undefined;
   return {
     ...s,
     ...ACCENTS[i % ACCENTS.length],
     domain,
-    altSite,
     url: s.unlinked ? undefined : `https://${(s.site ?? domain).toLowerCase()}`,
   };
 });
@@ -104,11 +96,6 @@ function SubsidiaryCard({
       >
         {s.domain}
       </span>
-      {s.altSite ? (
-        <span className="block max-w-full self-center text-[8px] sm:text-[10px] leading-snug text-brand-600 -mt-1 mb-1.5 sm:mb-2 break-words">
-          {s.altSite}
-        </span>
-      ) : null}
       {s.desc ? (
         <p className="text-brand-500 text-[9px] sm:text-[11px] leading-relaxed">
           {s.desc}
