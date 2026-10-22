@@ -56,6 +56,8 @@ const SUBSIDIARY_SEED: {
   { name: "WEA Health", desc: "Health and wellness." },
   { name: "QD Mart", desc: "Online marketplace." },
   { name: "ANM Store", desc: "Online store." },
+  { name: "Beigefield", desc: "Cloonan Group brand." },
+  { name: "Lynico", desc: "Cloonan Group brand." },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s) => {
