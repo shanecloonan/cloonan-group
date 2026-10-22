@@ -52,6 +52,10 @@ const SUBSIDIARY_SEED: {
   { name: "FN Journal", desc: "" },
   { name: "RCO Real Estate", desc: "Real estate investment." },
   { name: "NIL Enterprise", desc: "" },
+  { name: "ABY Global", desc: "Global holdings and ventures." },
+  { name: "WEA Health", desc: "Health and wellness." },
+  { name: "QD Mart", desc: "Online marketplace." },
+  { name: "ANM Store", desc: "Online store." },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s) => {
