@@ -9,69 +9,56 @@ function comDomain(name: string) {
   return `${name.replace(/\s+/g, "").toLowerCase()}.com`;
 }
 
-const CATEGORIES = ["Money", "Clothes", "Tech", "Science", "Other"] as const;
-type Category = (typeof CATEGORIES)[number];
-
-/** One accent per category, so every card in a section shares a color. */
-const CATEGORY_ACCENTS: Record<
-  Category,
-  { accent: string; border: string; bg: string; tag: string }
-> = {
-  Money: { accent: "text-gold", border: "border-gold/40", bg: "bg-gold/5", tag: "bg-gold/15 text-gold" },
-  Clothes: { accent: "text-rose-300", border: "border-rose-300/40", bg: "bg-rose-300/5", tag: "bg-rose-300/15 text-rose-300" },
-  Tech: { accent: "text-sky-400", border: "border-sky-400/40", bg: "bg-sky-400/5", tag: "bg-sky-400/15 text-sky-400" },
-  Science: { accent: "text-emerald-400", border: "border-emerald-400/40", bg: "bg-emerald-400/5", tag: "bg-emerald-400/15 text-emerald-400" },
-  Other: { accent: "text-brand-300", border: "border-brand-400/40", bg: "bg-brand-400/5", tag: "bg-brand-400/15 text-brand-300" },
+/** Single accent shared by every subsidiary card. */
+const SUBSIDIARY_ACCENT = {
+  accent: "text-gold",
+  border: "border-gold/40",
+  bg: "bg-gold/5",
+  tag: "bg-gold/15 text-gold",
 };
 
 const SUBSIDIARY_SEED: {
   name: string;
-  category: Category;
   desc: string;
   /** Link override on the same .com domain (e.g. its www host). Defaults to the .com domain. */
   site?: string;
   /** Set when the .com domain doesn't resolve. The domain still shows, unlinked. */
   unlinked?: boolean;
 }[] = [
-  { name: "Antler Gear", category: "Clothes", desc: "Premium bowhunting equipment." },
+  { name: "Antler Gear", desc: "Premium bowhunting equipment." },
   {
     name: "Daily 2x",
-    category: "Money",
     desc: "Free daily 2x pick, locked on Arweave. Public wins, losses, and streak.",
   },
-  { name: "PFP Chain", category: "Tech", desc: "Permanent Database Blockchain." },
-  { name: "TVN News", category: "Other", desc: "Fake news propaganda platform." },
-  { name: "Saint Holland", category: "Clothes", desc: "", site: "www.saintholland.com" },
-  { name: "Stock FUD", category: "Money", desc: "FUD dissemination platform." },
-  {
-    name: "THC5",
-    category: "Science",
-    desc: "The new way to get high. High-end laboratory cannabis.",
-  },
-  { name: "File Display", category: "Tech", desc: "Internal tooling SaaS platform." },
-  { name: "Glycell", category: "Science", desc: "Synthetic biology research." },
-  { name: "Cheaper Brand", category: "Other", desc: "Knockoff products and Chinese bullshit." },
-  { name: "Dirt Shares", category: "Money", desc: "Fractionalized Land Investing." },
-  { name: "Joint Pacific", category: "Other", desc: "" },
-  { name: "DTV Sports", category: "Other", desc: "NIL Agency." },
-  { name: "Wynport", category: "Money", desc: "Casino and Sportsbook." },
-  { name: "Wit Research", category: "Money", desc: "Market analytics platform." },
-  { name: "Deltamorph", category: "Science", desc: "Genomic Discovery Lab." },
-  { name: "Chip Fab", category: "Other", desc: "Semiconductor Research." },
-  { name: "Vix Ventures", category: "Money", desc: "Venture Capital Partners." },
-  { name: "FN Journal", category: "Other", desc: "" },
-  { name: "4th Capital", category: "Money", desc: "" },
-  { name: "RCO Real Estate", category: "Other", desc: "Real estate investment." },
-  { name: "KNA Partners", category: "Money", desc: "Investment partnership." },
-  { name: "TenX Casino", category: "Money", desc: "Casino and gaming." },
-  { name: "NIL Enterprise", category: "Other", desc: "" },
+  { name: "PFP Chain", desc: "Permanent Database Blockchain." },
+  { name: "TVN News", desc: "Fake news propaganda platform." },
+  { name: "Saint Holland", desc: "", site: "www.saintholland.com" },
+  { name: "Stock FUD", desc: "FUD dissemination platform." },
+  { name: "THC5", desc: "The new way to get high. High-end laboratory cannabis." },
+  { name: "Dirt Shares", desc: "Fractionalized Land Investing." },
+  { name: "Wynport", desc: "Casino and Sportsbook." },
+  { name: "Wit Research", desc: "Market analytics platform." },
+  { name: "Vix Ventures", desc: "Venture Capital Partners." },
+  { name: "4th Capital", desc: "" },
+  { name: "KNA Partners", desc: "Investment partnership." },
+  { name: "TenX Casino", desc: "Casino and gaming." },
+  { name: "File Display", desc: "Internal tooling SaaS platform." },
+  { name: "Glycell", desc: "Synthetic biology research." },
+  { name: "Deltamorph", desc: "Genomic Discovery Lab." },
+  { name: "Cheaper Brand", desc: "Knockoff products and Chinese bullshit." },
+  { name: "Joint Pacific", desc: "" },
+  { name: "DTV Sports", desc: "NIL Agency." },
+  { name: "Chip Fab", desc: "Semiconductor Research." },
+  { name: "FN Journal", desc: "" },
+  { name: "RCO Real Estate", desc: "Real estate investment." },
+  { name: "NIL Enterprise", desc: "" },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s) => {
   const domain = comDomain(s.name);
   return {
     ...s,
-    ...CATEGORY_ACCENTS[s.category],
+    ...SUBSIDIARY_ACCENT,
     domain,
     url: s.unlinked ? undefined : `https://${(s.site ?? domain).toLowerCase()}`,
   };
@@ -277,30 +264,11 @@ export default function CompanyChart() {
             <FlowConnector />
           </div>
 
-          {/* Level 3: Subsidiaries, grouped by category */}
-          <div className="max-w-6xl mx-auto mt-1.5 sm:mt-2 space-y-6 sm:space-y-8">
-            {CATEGORIES.map((category) => {
-              const items = SUBSIDIARIES.filter((s) => s.category === category);
-              if (items.length === 0) return null;
-              return (
-                <div key={category}>
-                  <div className="flex items-center gap-3 mb-2 sm:mb-3">
-                    <div className="h-px flex-1 bg-brand-700" />
-                    <h3
-                      className={`font-heading text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] ${CATEGORY_ACCENTS[category].accent}`}
-                    >
-                      {category}
-                    </h3>
-                    <div className="h-px flex-1 bg-brand-700" />
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-fr gap-2">
-                    {items.map((s) => (
-                      <SubsidiaryCard key={s.name} s={s} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+          {/* Level 3: Subsidiaries */}
+          <div className="max-w-6xl mx-auto mt-1.5 sm:mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-fr gap-2">
+            {SUBSIDIARIES.map((s) => (
+              <SubsidiaryCard key={s.name} s={s} />
+            ))}
           </div>
         </div>
       </div>
