@@ -13,21 +13,29 @@ export type SubsidiarySeed = {
 };
 
 export const SUBSIDIARY_SEED: SubsidiarySeed[] = [
-  { name: "Antler Gear", desc: "Premium bowhunting equipment." },
+  { name: "Antler Gear", desc: "Premium Hunting Apparel & Gear." },
   {
     name: "Daily 2x",
     desc: "Free daily 2x pick, locked on Arweave. Public wins, losses, and streak.",
   },
-  { name: "PFP Chain", desc: "Permanent Database Blockchain." },
+  { name: "PFP Chain", desc: "Privacy-Funded Permanence.", site: "www.pfpchain.com" },
   { name: "TVN News", desc: "Fake news propaganda platform." },
   { name: "Saint Holland", desc: "", site: "www.saintholland.com" },
-  { name: "Stock FUD", desc: "FUD dissemination platform." },
+  {
+    name: "Stock FUD",
+    desc: "Write a headline, subheadline, or picture and share it as a parody of a financial newspaper.",
+    site: "www.stockfud.com",
+  },
   { name: "THC5", desc: "The new way to get high. High-end laboratory cannabis." },
   { name: "Dirt Shares", desc: "Fractionalized Land Investing." },
   { name: "Wynport", desc: "Casino and Sportsbook." },
   { name: "Wit Research", desc: "AI research lab.", site: "www.witresearch.com" },
   { name: "Vix Ventures", desc: "Venture Capital Partners." },
-  { name: "4th Capital", desc: "" },
+  {
+    name: "4th Capital",
+    desc: "We worship money as the one true god.",
+    site: "www.4thcapital.com",
+  },
   { name: "KNA Partners", desc: "Law firm.", site: "www.knapartners.com" },
   { name: "TenX Casino", desc: "Casino and gaming.", site: "www.tenxcasino.com" },
   { name: "File Display", desc: "Internal tooling SaaS platform." },
