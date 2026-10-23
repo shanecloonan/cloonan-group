@@ -25,7 +25,7 @@ export const SUBSIDIARY_SEED: SubsidiarySeed[] = [
   { name: "THC5", desc: "The new way to get high. High-end laboratory cannabis." },
   { name: "Dirt Shares", desc: "Fractionalized Land Investing." },
   { name: "Wynport", desc: "Casino and Sportsbook." },
-  { name: "Wit Research", desc: "Market analytics platform." },
+  { name: "Wit Research", desc: "AI research lab.", site: "www.witresearch.com" },
   { name: "Vix Ventures", desc: "Venture Capital Partners." },
   { name: "4th Capital", desc: "" },
   { name: "KNA Partners", desc: "Law firm.", site: "www.knapartners.com" },
