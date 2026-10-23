@@ -70,6 +70,11 @@ const SUBSIDIARY_SEED: {
     site: "www.topparlays.com",
   },
   { name: "Dakbot", desc: "Dakbot.", site: "www.dakbot.com" },
+  {
+    name: "RandomPPL",
+    desc: "Anonymous chat with random strangers.",
+    site: "www.randomppl.com",
+  },
 ];
 
 const SUBSIDIARIES = SUBSIDIARY_SEED.map((s) => {
