@@ -11,6 +11,7 @@ const SHARE_IMAGE: Record<string, string> = {
   "TVN News": "/brands/share/tvnnews.jpg",
   "Saint Holland": "/brands/share/saintholland.jpg",
   THC5: "/brands/share/thc5.png",
+  "KNA Partners": "/brands/share/knapartners.png",
   "TenX Casino": "/brands/share/tenxcasino.png",
   "File Display": "/brands/share/filedisplay.png",
   "NIL Enterprise": "/brands/share/nilenterprise.png",

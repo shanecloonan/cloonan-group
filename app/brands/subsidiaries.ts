@@ -28,7 +28,7 @@ export const SUBSIDIARY_SEED: SubsidiarySeed[] = [
   { name: "Wit Research", desc: "Market analytics platform." },
   { name: "Vix Ventures", desc: "Venture Capital Partners." },
   { name: "4th Capital", desc: "" },
-  { name: "KNA Partners", desc: "Investment partnership." },
+  { name: "KNA Partners", desc: "Law firm.", site: "www.knapartners.com" },
   { name: "TenX Casino", desc: "Casino and gaming.", site: "www.tenxcasino.com" },
   { name: "File Display", desc: "Internal tooling SaaS platform." },
   { name: "Glycell", desc: "Synthetic biology research." },
