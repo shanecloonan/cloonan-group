@@ -2,15 +2,19 @@ import Image from "next/image";
 import { comDomain, SUBSIDIARY_SEED, subsidiaryUrl } from "./subsidiaries";
 
 /**
- * Local copies of verified 1200×630 og:image files.
+ * Local copies of each live brand's og:image.
  * Served from this site so the grid does not hotlink deployment-hashed URLs.
  * Linked brands with no real share image are omitted.
  */
 const SHARE_IMAGE: Record<string, string> = {
+  "Antler Gear": "/brands/share/antlergear.png",
   "Daily 2x": "/brands/share/daily2x.png",
+  "PFP Chain": "/brands/share/pfpchain.png",
   "TVN News": "/brands/share/tvnnews.jpg",
   "Saint Holland": "/brands/share/saintholland.jpg",
+  "Stock FUD": "/brands/share/stockfud.png",
   THC5: "/brands/share/thc5.png",
+  "4th Capital": "/brands/share/4thcapital.png",
   "Wit Research": "/brands/share/witresearch.png",
   "KNA Partners": "/brands/share/knapartners.png",
   "TenX Casino": "/brands/share/tenxcasino.png",
@@ -25,11 +29,17 @@ const SHARE_IMAGE: Record<string, string> = {
   RandomPPL: "/brands/share/randomppl.png",
 };
 
+/** Intrinsic size when the live og:image is not 1200×630. */
+const SHARE_SIZE: Record<string, { width: number; height: number }> = {
+  "Antler Gear": { width: 872, height: 516 },
+};
+
 const SHARE_CARDS = SUBSIDIARY_SEED.flatMap((seed) => {
   const url = subsidiaryUrl(seed);
   const image = SHARE_IMAGE[seed.name];
   if (!url || !image) return [];
-  return [{ name: seed.name, domain: comDomain(seed.name), url, image }];
+  const size = SHARE_SIZE[seed.name] ?? { width: 1200, height: 630 };
+  return [{ name: seed.name, domain: comDomain(seed.name), url, image, ...size }];
 });
 
 export default function ShareCards() {
@@ -57,8 +67,8 @@ export default function ShareCards() {
                 <Image
                   src={card.image}
                   alt=""
-                  width={1200}
-                  height={630}
+                  width={card.width}
+                  height={card.height}
                   sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw"
                   style={{ width: "100%", height: "auto" }}
                 />
