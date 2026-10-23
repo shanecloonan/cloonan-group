@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { comDomain, SUBSIDIARY_SEED, subsidiaryUrl } from "./subsidiaries";
+import { SUBSIDIARY_SEED, subsidiaryUrl } from "./subsidiaries";
 
 /**
  * Local copies of each live brand's og:image.
@@ -34,12 +34,17 @@ const SHARE_SIZE: Record<string, { width: number; height: number }> = {
   "Antler Gear": { width: 872, height: 516 },
 };
 
+/** Host only: no scheme, no www. */
+function bareDomain(url: string) {
+  return url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
+}
+
 const SHARE_CARDS = SUBSIDIARY_SEED.flatMap((seed) => {
   const url = subsidiaryUrl(seed);
   const image = SHARE_IMAGE[seed.name];
   if (!url || !image) return [];
   const size = SHARE_SIZE[seed.name] ?? { width: 1200, height: 630 };
-  return [{ name: seed.name, domain: comDomain(seed.name), url, image, ...size }];
+  return [{ name: seed.name, domain: bareDomain(url), url, image, ...size }];
 });
 
 export default function ShareCards() {
@@ -72,14 +77,9 @@ export default function ShareCards() {
                   sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw"
                   style={{ width: "100%", height: "auto" }}
                 />
-                <div className="px-3 py-3 sm:px-4 sm:py-3.5 text-center">
-                  <h3 className="font-heading text-sm sm:text-lg font-bold uppercase tracking-wide text-gold mb-1.5">
-                    {card.name}
-                  </h3>
-                  <span className="inline-block max-w-full text-[10px] sm:text-[11px] font-semibold leading-snug px-2.5 py-0.5 rounded-full bg-gold/15 text-gold break-words">
-                    {card.domain}
-                  </span>
-                </div>
+                <p className="px-4 py-5 sm:px-5 sm:py-6 text-center font-heading text-xl sm:text-2xl font-bold tracking-wide text-gold break-words">
+                  {card.domain}
+                </p>
               </a>
             </li>
           ))}
