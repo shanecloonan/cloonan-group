@@ -40,7 +40,7 @@ export const SUBSIDIARY_SEED: SubsidiarySeed[] = [
   { name: "FN Journal", desc: "" },
   { name: "RCO Real Estate", desc: "Real estate investment." },
   { name: "NIL Enterprise", desc: "The name, image, and likeness experts." },
-  { name: "ABY Global", desc: "Global holdings and ventures." },
+  { name: "ABY Global", desc: "Global holdings and ventures.", site: "www.abyglobal.com" },
   { name: "WEA Health", desc: "Health and wellness." },
   { name: "QD Mart", desc: "Online marketplace." },
   { name: "ANM Store", desc: "Online store." },

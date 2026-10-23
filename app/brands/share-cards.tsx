@@ -14,6 +14,7 @@ const SHARE_IMAGE: Record<string, string> = {
   "TenX Casino": "/brands/share/tenxcasino.png",
   "File Display": "/brands/share/filedisplay.png",
   "NIL Enterprise": "/brands/share/nilenterprise.png",
+  "ABY Global": "/brands/share/abyglobal.png",
   Beigefield: "/brands/share/beigefield.png",
   "Salmon Salad": "/brands/share/salmonsalad.png",
   BusinessVend: "/brands/share/businessvend.png",
