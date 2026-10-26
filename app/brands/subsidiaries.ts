@@ -71,6 +71,16 @@ export const SUBSIDIARY_SEED: SubsidiarySeed[] = [
     desc: "Anonymous chat with random strangers.",
     site: "www.randomppl.com",
   },
+  {
+    name: "Daeland",
+    desc: "Territorial Acquisition Initiative.",
+    site: "www.daeland.com",
+  },
+  {
+    name: "SDK",
+    desc: "Technology Company.",
+    site: "www.sdktechnology.com",
+  },
 ];
 
 export function subsidiaryUrl(seed: SubsidiarySeed) {

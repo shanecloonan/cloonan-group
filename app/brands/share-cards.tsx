@@ -27,6 +27,8 @@ const SHARE_IMAGE: Record<string, string> = {
   "Top Parlays": "/brands/share/topparlays.png",
   Dakbot: "/brands/share/dakbot.png",
   RandomPPL: "/brands/share/randomppl.png",
+  Daeland: "/brands/share/daeland.png",
+  SDK: "/brands/share/sdk.png",
 };
 
 /** Intrinsic size when the live og:image is not 1200×630. */
