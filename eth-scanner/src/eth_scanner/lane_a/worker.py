@@ -20,6 +20,7 @@ from eth_scanner.ingest.etherscan import (
     has_runtime_code,
     parse_source_result,
 )
+from eth_scanner.ingest.unpack import materialize_source, select_ir_artifact
 from eth_scanner.ir.normalize import normalize
 from eth_scanner.store.supabase import ScanStore, artifact_payload, normalize_address, open_store
 from eth_scanner.types import FunnelResult, SourceArtifact, Target, to_plain
@@ -127,8 +128,10 @@ def _ingest(
                 src_confidence="high", verified_match="exact", tool="local",
                 notes=["local source (--source); treated as verified for dry-run"],
             )
-            # Pass the file, not the parent dir — a fixtures folder would mix contracts.
-            return art, bytecode, None
+            dest = settings.work_dir / "sources" / address
+            art, src_dir = materialize_source(art, dest)
+            # Pass unpacked dir when the file was Etherscan JSON; else scan the string.
+            return art, bytecode, src_dir
         if p.is_dir():
             files = list(p.rglob("*.sol")) + list(p.rglob("*.vy"))
             text = "\n\n".join(f.read_text(encoding="utf-8", errors="replace") for f in files[:40])
@@ -144,7 +147,9 @@ def _ingest(
             kind="source", language="solidity", content=source_text,
             src_confidence="high", verified_match="exact", tool="local",
         )
-        return art, bytecode, None
+        dest = settings.work_dir / "sources" / address
+        art, src_dir = materialize_source(art, dest)
+        return art, bytecode, src_dir
 
     code = bytecode
     if settings.eth_rpc_url and not code:
@@ -164,20 +169,27 @@ def _ingest(
                     code = client.get_code(address)
                 except IngestError:
                     pass
-            if art.src_confidence == "low" or art.kind == "decompile" or not art.content:
-                art = decompile(address, code)
-            if art.is_proxy and art.implementation:
+            impl_addr = art.implementation
+            # Resolve implementation *before* decompile fallback so IR lifts impl source.
+            if impl_addr:
                 try:
-                    impl_raw = client.get_source(art.implementation)
-                    impl = parse_source_result(art.implementation, impl_raw)
+                    impl_raw = client.get_source(impl_addr)
+                    impl = parse_source_result(impl_addr, impl_raw)
                     if impl.content:
-                        impl.notes.append("resolved EIP-1967/etherscan implementation %s" % art.implementation)
-                        impl.is_proxy = True
-                        impl.implementation = art.implementation
-                        return impl, code, None
+                        impl.notes.append("resolved EIP-1967/etherscan implementation %s" % impl_addr)
+                    art = select_ir_artifact(art, impl)
                 except IngestError:
                     art.notes.append("implementation source fetch failed; staying on proxy artifact")
-            return art, code, None
+            if art.src_confidence == "low" or art.kind == "decompile" or not art.content:
+                stub = decompile(address, code)
+                if impl_addr:
+                    stub.is_proxy = True
+                    stub.implementation = impl_addr
+                    stub.notes.append("decompile fallback; implementation %s source unavailable" % impl_addr)
+                art = stub
+            dest = settings.work_dir / "sources" / address
+            art, src_dir = materialize_source(art, dest)
+            return art, code, src_dir
         except IngestError as exc:
             stub = decompile(address, code)
             stub.notes.append("etherscan ingest failed: %s" % exc)

@@ -35,6 +35,14 @@ eth-scanner/
 
 Wired into the repo migration path as `infra/supabase/migrations/2026-10-27-eth-scanner-queue.sql` (`npm run db:migrate:all`).
 
+## Multi-file / standard-json ingest
+
+Etherscan verified sources are often **Standard-JSON-Input** (`{{ "language":"Solidity", "sources": { "File.sol": { "content": "..." } } }}`) or a `{ "sources": ... }` map — not a single `.sol` blob. Lane A unpacks those files into `work/sources/<address>/` (or a temp dir during `normalize`) and runs the heuristic IR lift on the unpacked tree. Flattened Solidity is also written onto `SourceArtifact.content` so pattern skim still sees real functions.
+
+If Etherscan marks the address as a proxy (`Proxy=1` / `Implementation`), the **implementation** source is fetched and used for the IR lift (not only stored). Proxy-only bytecode/source is not treated as the custody surface.
+
+Vanilla ERC20 `transfer` / `approve` / `transferFrom` are recorded as leads, not I1 custody movers. WETH-like wrap/unwrap is tagged `wrap-unwrap` (still never auto-yes; unsure withdraws stay `manual-review`).
+
 ## Env
 
 | Variable | Required | Purpose |

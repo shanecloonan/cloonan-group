@@ -43,9 +43,43 @@ FUND = {
 FUND_NAME = re.compile(
     r"(transfer|withdraw|redeem|mint|burn|borrow|repay|liquidat|swap|claim|"
     r"harvest|flash|sweep|rescue|skim|exit|unstake|release|bridge|payout|"
-    r"collect|refund|settle|execute)",
+    r"collect|refund|settle|execute|deposit|join|"
+    r"exactInput|exactOutput|unoswap|clipperSwap|"
+    r"\bfrob\b|\bflux\b|\bslip\b|\bsuck\b|\bgrab\b|\bfold\b|\bheal\b|\bmove\b)",
     re.I,
 )
+ERC20_STANDARD_NAMES = {
+    "transfer", "transferfrom", "approve", "allowance",
+    "increaseallowance", "decreaseallowance",
+    "increaseapproval", "decreaseapproval",
+}
+WRAP_UNWRAP_NAMES = {"deposit", "withdraw", "wrap", "unwrap"}
+ERC20_ONLY_SIGNAL = re.compile(
+    r"^(safeTransfer(From)?|safeApprove|\.transfer\s*\(|\.transferFrom\s*\(|"
+    r"\.approve\s*\(|\(name only: )",
+    re.I,
+)
+CUSTODY_BODY = re.compile(
+    r"\.call\s*\{\s*value|selfdestruct\s*\(|address\s*\(\s*this\s*\)\s*\.balance",
+    re.I,
+)
+SENDER_BAL = re.compile(
+    r"balanceOf\s*\[\s*msg\.sender\s*\]|balanceOf\s*\(\s*msg\.sender|"
+    r"_balances\s*\[\s*msg\.sender\s*\]|balances\s*\[\s*msg\.sender\s*\]",
+    re.I,
+)
+BURN_SELF = re.compile(r"_burn\s*\(\s*(msg\.sender|_msgSender\(\))", re.I)
+MINT_SELF = re.compile(
+    r"_mint\s*\(\s*(msg\.sender|_msgSender\(\))|"
+    r"(balanceOf|_balances|balances)\s*\[\s*msg\.sender\s*\]\s*\+",
+    re.I,
+)
+ETH_TO_SENDER = re.compile(
+    r"(payable\s*\(\s*msg\.sender\s*\)|msg\.sender)\s*\.(transfer|send)\s*\(|"
+    r"(payable\s*\(\s*msg\.sender\s*\)|msg\.sender)\.call\s*\{\s*value",
+    re.I,
+)
+DRAIN_ALL = re.compile(r"address\s*\(\s*this\s*\)\s*\.balance", re.I)
 AUTH = {
     "solidity": [
         r"\bonly[A-Z]\w*", r"require\s*\([^;]*msg\.sender", r"msg\.sender\s*[!=]=",
@@ -215,6 +249,37 @@ def hits(patterns: list[str], text: str) -> list[str]:
     return sorted(set(found))
 
 
+def is_wrap_unwrap(name: str, body: str) -> bool:
+    """High-confidence WETH-like wrap/unwrap. Unsure → False (stay ambiguous)."""
+    n = (name or "").lower()
+    if n not in WRAP_UNWRAP_NAMES:
+        return False
+    if DRAIN_ALL.search(body or ""):
+        return False
+    if n in ("withdraw", "unwrap"):
+        return bool((SENDER_BAL.search(body) or BURN_SELF.search(body)) and ETH_TO_SENDER.search(body))
+    return bool(MINT_SELF.search(body) or (SENDER_BAL.search(body) and re.search(r"msg\.value", body)))
+
+
+def _signals_erc20_only(f_hits: list[str], body: str) -> bool:
+    if CUSTODY_BODY.search(body or ""):
+        return False
+    for h in f_hits:
+        if str(h).startswith("(name only:"):
+            continue
+        if not ERC20_ONLY_SIGNAL.search(str(h)):
+            return False
+    return True
+
+
+def _classify_mover(name: str, body: str, f_hits: list[str]) -> str:
+    if is_wrap_unwrap(name, body):
+        return "wrap-unwrap"
+    if (name or "").lower() in ERC20_STANDARD_NAMES and _signals_erc20_only(f_hits, body):
+        return "erc20-standard"
+    return "custody"
+
+
 def analyse_file(path: str, rel: str) -> dict[str, Any]:
     lang = EXT_LANG[os.path.splitext(path)[1]]
     try:
@@ -256,15 +321,25 @@ def analyse_source(src: str, rel: str, lang: str) -> dict[str, Any]:
                 strength = "SELF-SCOPED?"
             else:
                 strength = "MISSING" if exposed else "MISSING(internal — check callers)"
+            signals = f_hits or ["(name only: %s)" % fn["name"]]
+            role = _classify_mover(fn["name"], body, signals)
+            if role == "wrap-unwrap" and strength in (
+                "MISSING", "SELF-SCOPED?", "AMBIGUOUS", "MISSING(internal — check callers)",
+            ):
+                # High-confidence self-custody wrap/unwrap is not an open drain.
+                # Unsure cases never get this role — they stay AMBIGUOUS.
+                strength = "PRESENT"
+                a_hits = list(a_hits) + ["(wrap-unwrap self-custody)"]
             res["fund_movers"].append(dict(
                 fn=fn["name"],
                 line=fn["line"],
                 end=fn["end"],
                 visibility=fn["vis"],
-                fund_signals=f_hits or ["(name only: %s)" % fn["name"]],
+                fund_signals=signals,
                 auth_signals=a_hits,
                 auth_heuristic=strength,
                 accounting_touched=sorted(set(m.group(0) for m in ACCT.finditer(body)))[:12],
+                role=role,
             ))
     lines = clean.split("\n")
     src_lines = src.split("\n")

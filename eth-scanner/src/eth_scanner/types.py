@@ -100,6 +100,8 @@ class FunctionIR:
     accounting_touched: list[str] = field(default_factory=list)
     is_value_mover: bool = False
     exposed: bool = False
+    # custody | erc20-standard | wrap-unwrap — ranking only, never a verdict.
+    role: str = ""
 
 
 @dataclass

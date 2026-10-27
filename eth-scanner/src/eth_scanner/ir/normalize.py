@@ -20,6 +20,7 @@ from typing import Any, Optional
 
 from eth_scanner.heuristics.invariant_pass import run_scan, run_scan_source
 from eth_scanner.heuristics.patterns import detect_fork_family, detect_weird_signals, skim_known_patterns
+from eth_scanner.ingest.unpack import looks_like_etherscan_json, materialize_source
 from eth_scanner.types import FunctionIR, IRDocument, SourceArtifact
 
 
@@ -33,27 +34,40 @@ def normalize(
     language = artifact.language or _guess_lang(artifact)
     src_conf = artifact.src_confidence
 
+    tmp_holder = None
+    if (source_dir is None or not source_dir.exists()) and looks_like_etherscan_json(src):
+        tmp_holder = tempfile.TemporaryDirectory(prefix="eth-scanner-unpack-")
+        artifact, unpacked = materialize_source(artifact, Path(tmp_holder.name))
+        src = artifact.content or src
+        if unpacked and unpacked.exists():
+            source_dir = unpacked
+            notes.append("normalize unpacked Etherscan multi-file / standard-json source")
+
     surface: dict[str, Any]
     lift_failed = False
-    if source_dir and source_dir.exists():
-        try:
-            surface = run_scan([str(source_dir)])
-        except Exception as exc:  # noqa: BLE001 — lift failure is a first-class outcome
+    try:
+        if source_dir and source_dir.exists():
+            try:
+                surface = run_scan([str(source_dir)])
+            except Exception as exc:  # noqa: BLE001 — lift failure is a first-class outcome
+                lift_failed = True
+                surface = {"error": str(exc), "files": [], "summary": {}}
+                notes.append("heuristic lift from directory failed: %s" % exc)
+        elif src.strip():
+            filename = "Contract.vy" if language == "vyper" else "Contract.sol"
+            try:
+                surface = run_scan_source(src, filename=filename, language=language)
+            except Exception as exc:  # noqa: BLE001
+                lift_failed = True
+                surface = {"error": str(exc), "files": [], "summary": {}}
+                notes.append("heuristic lift from source string failed: %s" % exc)
+        else:
             lift_failed = True
-            surface = {"error": str(exc), "files": [], "summary": {}}
-            notes.append("heuristic lift from directory failed: %s" % exc)
-    elif src.strip():
-        filename = "Contract.vy" if language == "vyper" else "Contract.sol"
-        try:
-            surface = run_scan_source(src, filename=filename, language=language)
-        except Exception as exc:  # noqa: BLE001
-            lift_failed = True
-            surface = {"error": str(exc), "files": [], "summary": {}}
-            notes.append("heuristic lift from source string failed: %s" % exc)
-    else:
-        lift_failed = True
-        surface = {"error": "empty source", "files": [], "summary": {}}
-        notes.append("no source or decompile text to lift")
+            surface = {"error": "empty source", "files": [], "summary": {}}
+            notes.append("no source or decompile text to lift")
+    finally:
+        if tmp_holder is not None:
+            tmp_holder.cleanup()
 
     functions = _functions_from_surface(surface)
     if not lift_failed and not functions and not src.strip():
@@ -118,11 +132,17 @@ def _guess_lang(artifact: SourceArtifact) -> str:
 
 def _functions_from_surface(surface: dict[str, Any]) -> list[FunctionIR]:
     out: list[FunctionIR] = []
+    seen: set[tuple[str, str, int]] = set()
     for f in surface.get("files") or []:
         fname = f.get("file") or ""
         for m in f.get("fund_movers") or []:
             vis = m.get("visibility") or ""
             exposed = vis in ("external", "public")
+            role = m.get("role") or "custody"
+            key = (fname, str(m.get("fn") or "unknown"), int(m.get("line") or 0))
+            if key in seen:
+                continue
+            seen.add(key)
             out.append(FunctionIR(
                 name=m.get("fn") or "unknown",
                 visibility=vis,
@@ -133,8 +153,9 @@ def _functions_from_surface(surface: dict[str, Any]) -> list[FunctionIR]:
                 auth_signals=list(m.get("auth_signals") or []),
                 auth_heuristic=m.get("auth_heuristic") or "AMBIGUOUS",
                 accounting_touched=list(m.get("accounting_touched") or []),
-                is_value_mover=True,
+                is_value_mover=role != "erc20-standard",
                 exposed=exposed,
+                role=role,
             ))
     return out
 
