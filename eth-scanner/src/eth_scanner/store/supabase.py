@@ -38,6 +38,7 @@ class ScanStore(Protocol):
     def claim_lane_b(self, limit: int, worker_id: str) -> list[dict[str, Any]]: ...
     def list_targets(self, bucket: Optional[str] = None, limit: int = 200) -> list[dict[str, Any]]: ...
     def list_results(self, address: Optional[str] = None, limit: int = 200) -> list[dict[str, Any]]: ...
+    def list_artifacts(self, address: Optional[str] = None, kind: Optional[str] = None, limit: int = 50) -> list[dict[str, Any]]: ...
 
 
 class MemoryStore:
@@ -172,6 +173,16 @@ class MemoryStore:
         rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
         return rows[:limit]
 
+    def list_artifacts(self, address: Optional[str] = None, kind: Optional[str] = None, limit: int = 50) -> list[dict[str, Any]]:
+        rows = list(self.artifacts)
+        if address:
+            addr = normalize_address(address)
+            rows = [r for r in rows if r.get("address") == addr]
+        if kind:
+            rows = [r for r in rows if r.get("kind") == kind]
+        rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+        return rows[:limit]
+
     def _path(self) -> Optional[Path]:
         if not self.work_dir:
             return None
@@ -286,6 +297,14 @@ class SupabaseStore:
         if address:
             q["address"] = "eq.%s" % normalize_address(address)
         return self._req("GET", "eth_scan_results", query=q)
+
+    def list_artifacts(self, address: Optional[str] = None, kind: Optional[str] = None, limit: int = 50) -> list[dict[str, Any]]:
+        q: dict[str, str] = {"order": "created_at.desc", "limit": str(limit)}
+        if address:
+            q["address"] = "eq.%s" % normalize_address(address)
+        if kind:
+            q["kind"] = "eq.%s" % kind
+        return self._req("GET", "eth_scan_artifacts", query=q)
 
     def _mark_running(self, rows: list[dict[str, Any]], worker_id: str) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []

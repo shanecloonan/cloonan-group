@@ -1,10 +1,13 @@
 /**
  * Read-only ETH scanner triage feed for /test.
  * Uses the service-role key server-side only. Never a scanner runtime.
+ * When the key is unset, surfaces the local dry-run store if present.
  */
 
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { loadDryRunStore } from "@/lib/eth-scanner/local-store";
+import { BUCKETS } from "@/lib/eth-scanner/receipt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,14 +16,6 @@ const SUPABASE_URL =
   process.env.SUPABASE_URL ||
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
   "https://xvjqxjakckkbfsdrntwk.supabase.co";
-
-const BUCKETS = [
-  "lane-a-cool",
-  "lane-b-queue",
-  "manual-review",
-  "human-no-candidate",
-  "human-yes-candidate",
-] as const;
 
 function serviceClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,14 +32,27 @@ export async function GET(req: Request) {
   const sb = serviceClient();
 
   if (!sb) {
+    const local = loadDryRunStore();
+    const targets = local?.targets ?? [];
+    const results = local?.results ?? [];
+    const counts: Record<string, number> = Object.fromEntries(BUCKETS.map((b) => [b, 0]));
+    for (const t of targets) {
+      const b = typeof t.bucket === "string" ? t.bucket : "";
+      if (b && counts[b] != null) counts[b] += 1;
+    }
+    const filtered = bucket && (BUCKETS as readonly string[]).includes(bucket)
+      ? targets.filter((t) => t.bucket === bucket)
+      : targets;
     return NextResponse.json({
       ok: true,
       dry_run: true,
       buckets: BUCKETS,
-      counts: Object.fromEntries(BUCKETS.map((b) => [b, 0])),
-      targets: [],
-      results: [],
-      note: "SUPABASE_SERVICE_ROLE_KEY unset — /test is read-only and empty. Lane A/B dry-run writes eth-scanner/work/ instead.",
+      counts,
+      targets: filtered.slice(0, limit),
+      results: results.slice(0, limit),
+      note: local
+        ? "SUPABASE_SERVICE_ROLE_KEY unset — showing eth-scanner/work/dry-run-store.json. Download receipt is Markdown from work/receipts/ when present."
+        : "SUPABASE_SERVICE_ROLE_KEY unset — /test is read-only and empty. Lane A/B dry-run writes eth-scanner/work/ instead.",
     });
   }
 
