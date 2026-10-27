@@ -14,6 +14,7 @@
     "smoke:validator-wire": "npx tsx scripts/smoke-validator-wire.ts",
     "db:migrate": "node scripts/apply-supabase-migration.mjs",
     "db:migrate:all": "node scripts/apply-all-migrations.mjs",
+    "test:eth-scanner": "python3 -m unittest discover -s eth-scanner/tests -v",
     "codebase-stats": "node scripts/codebase-stats.mjs"
   },
   "dependencies": {

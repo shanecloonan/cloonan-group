@@ -1,0 +1,16 @@
+[project]
+name = "eth-scanner"
+version = "0.1.0"
+description = "Ethereum-only defensive invariant scanner (Lane A/B). Buckets, never verdicts."
+requires-python = ">=3.10"
+readme = "README.md"
+
+[project.scripts]
+eth-scanner = "eth_scanner.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
