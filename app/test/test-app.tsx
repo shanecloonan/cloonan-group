@@ -163,12 +163,13 @@ export default function TestApp() {
                 <th className="px-3 py-2 font-medium">Src / IR</th>
                 <th className="px-3 py-2 font-medium">TVL</th>
                 <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Receipt</th>
               </tr>
             </thead>
             <tbody>
               {shown.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-brand-500">
+                  <td colSpan={7} className="px-3 py-8 text-center text-brand-500">
                     No targets in this view. Run Lane A (dry-run writes{" "}
                     <code className="text-brand-300">eth-scanner/work/</code>
                     ) or apply the migration and persist with the service role.
@@ -185,6 +186,14 @@ export default function TestApp() {
                   </td>
                   <td className="px-3 py-2 tabular-nums">{t.tvl_usd ?? "—"}</td>
                   <td className="px-3 py-2 text-brand-400">{t.status ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    <a
+                      href={`/api/test/receipt?address=${encodeURIComponent(t.address)}`}
+                      className="text-[11px] tracking-[0.08em] uppercase font-semibold text-gold hover:text-gold/80"
+                    >
+                      Download .md
+                    </a>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -194,6 +203,7 @@ export default function TestApp() {
         <p className="mt-8 text-[11px] text-brand-600 leading-relaxed max-w-2xl">
           Buckets are ranking outputs from §6.0, not disclosure.{" "}
           {bucket !== "all" ? BUCKET_META[bucket].hint + " " : ""}
+          Download receipt is Markdown only — paste into another AI as the full scan context.
           See <code className="text-brand-400">eth-scanner/README.md</code> and{" "}
           <code className="text-brand-400">docs/ETH_SWEEP_SCANNING_REFERENCE.md</code>.
         </p>

@@ -28,6 +28,7 @@ eth-scanner/
     lane_a/worker.py         # S0–S5 + S6 gate
     lane_b/worker.py         # S7 on lane-b-queue + manual-review
     store/supabase.py        # service-role or local dry-run
+    receipt.py               # Markdown scan receipts (downloadable .md)
     cli.py
   supabase/migrations/20261027_eth_scanner_queue.sql
   tests/test_funnel_buckets.py
@@ -110,3 +111,56 @@ Lane A never emits `human-yes-candidate`. Lane B never marks BROKEN from heurist
 - `ir_confidence`: `high` Slither SSA on verified Solidity · `med` heuristic/Vyper · `low` decompile / failed lift
 
 Low or failed IR **always** → `manual-review`.
+
+## Scan receipts (Markdown)
+
+Every Lane A / Lane B run writes a **self-contained Markdown receipt** (`.md` only — that is the downloadable format). Paste the file into another AI chat as the full scan context. There is no dedicated per-run receipt in the dry-run JSON store; `work/dry-run-store.json` remains the machine log, and the receipt is the human/AI handoff.
+
+### What it contains
+
+- Contract address, bytecode hash, TVL, target status
+- Source provenance (verified Etherscan / local `--source` / decompile stub, tool, `src_confidence`, `verified_match`) — **source body is omitted**
+- Lanes run (A / B) and S0–S7 `stage_trace`
+- Leads (pattern skim, value movers, I1–I8 stubs) — **never findings**
+- Routing **bucket** (clearly labeled: automation emits buckets, not a human verdict) plus the human stamp still required
+- Confidence, notes, timestamps, scanner id / version / worker
+- A “Handoff for another AI” section so a later model can continue without this repo
+
+Env secrets and API keys are redacted and never written into receipts.
+
+### Where it is saved
+
+Default: `eth-scanner/work/receipts/receipt-<address>-lane-<a|b>-<timestamp>.md`  
+(`work/` is gitignored.)
+
+### CLI
+
+```bash
+cd eth-scanner
+export PYTHONPATH=src
+
+# After any lane-a / lane-b run the path is printed on stderr
+# and included as receipt_path in the JSON payload.
+python -m eth_scanner lane-a \
+  --address 0x1111111111111111111111111111111111111111 \
+  --source tests/fixtures/gated_vault.sol \
+  --dry-run
+# stderr: receipt /…/eth-scanner/work/receipts/receipt-0x1111…-lane-a-….md
+
+# Named file
+python -m eth_scanner lane-a --address 0x… --source path/to.sol --dry-run \
+  --receipt /tmp/my-receipt.md
+
+# Directory of .md files (default is <work>/receipts/)
+python -m eth_scanner lane-b --address 0x… --dry-run --receipt-dir ./work/receipts
+
+# Rebuild from the store
+python -m eth_scanner receipt --address 0x… --dry-run
+
+# Skip writing
+python -m eth_scanner lane-a --address 0x… --source path/to.sol --dry-run --no-receipt
+```
+
+### /test UI
+
+Read-only triage at **`/test`** (noindex, not in public nav). Each row has **Download .md**, which hits `GET /api/test/receipt?address=0x…` and returns `text/markdown` with `Content-Disposition: attachment`. When the service-role key is unset, the API serves the latest file under `eth-scanner/work/receipts/` if present, otherwise it rebuilds Markdown from `dry-run-store.json`.
