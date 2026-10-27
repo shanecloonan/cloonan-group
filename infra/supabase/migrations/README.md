@@ -79,6 +79,18 @@ token or service-role key can alter schema.
 
 ---
 
+## ETH invariant scanner (2026-10-27)
+
+`2026-10-27-eth-scanner-queue.sql` creates `eth_scan_targets`,
+`eth_scan_artifacts`, and `eth_scan_results` for the Ethereum-only
+defensive scanner (`eth-scanner/`). RLS is on; service-role writes only.
+Canonical copy: `eth-scanner/supabase/migrations/20261027_eth_scanner_queue.sql`.
+Triage UI is the read-only `/test` route — not a public marketing page.
+
+```bash
+npm run db:migrate -- infra/supabase/migrations/2026-10-27-eth-scanner-queue.sql
+```
+
 ## Conventions
 
 - File name format: `YYYY-MM-DD-short-summary.sql`.
