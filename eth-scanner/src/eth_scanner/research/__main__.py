@@ -1,0 +1,4 @@
+from eth_scanner.research.cli import main
+
+if __name__ == "__main__":
+    raise SystemExit(main())
