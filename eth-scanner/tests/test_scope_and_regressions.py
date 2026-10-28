@@ -37,7 +37,24 @@ _ADDR = {
     "maker_vat_like.sol": "0x" + "c7" * 20,
     "uni_v3_router_like.sol": "0x" + "c8" * 20,
     "open_vault.sol": "0x" + "c9" * 20,
+    "fiat_token_v2_2_like.json": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
 }
+
+LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+
+
+def _live_usdc_fns() -> list[FunctionIR]:
+    """Movers from the live USDC dry-run after PR #25: mint/burn/rescueERC20."""
+    std = dict(visibility="public", is_value_mover=False, exposed=True, role="erc20-standard", auth_heuristic="PRESENT")
+    admin = dict(visibility="external", is_value_mover=True, exposed=True, role="custody", auth_heuristic="PRESENT")
+    return [
+        FunctionIR(name="transfer", line=10, **std),
+        FunctionIR(name="approve", line=20, **std),
+        FunctionIR(name="transferFrom", line=30, **std),
+        FunctionIR(name="mint", line=40, **admin),
+        FunctionIR(name="burn", line=50, **admin),
+        FunctionIR(name="rescueERC20", line=60, **admin),
+    ]
 
 
 def _lane(name: str, tvl: float = 0.0):
@@ -60,6 +77,10 @@ class MoverNoise(unittest.TestCase):
         self.assertTrue(name_is_fund_mover("joinPool"))
         self.assertTrue(name_is_fund_mover("uniswapV3SwapCallback"))
         self.assertFalse(name_is_fund_mover("transferOwnership"))
+        # Live USDC admin is rescueERC20 — name is not word-bounded `rescue`.
+        # It becomes a mover via IERC20.transfer in the body, not the name.
+        self.assertFalse(name_is_fund_mover("rescueERC20"))
+        self.assertTrue(name_is_fund_mover("rescue"))
 
     def test_usdt_like_constant_totalsupply_not_a_mover(self):
         src = (FIXTURES / "usdt_like.sol").read_text(encoding="utf-8")
@@ -125,8 +146,57 @@ class ScopeFilter(unittest.TestCase):
         r = _lane("usdc_like.sol", tvl=1_000_000)
         self.assertEqual(r.bucket, "lane-a-cool")
         self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.contract_class, "token")
         self.assertNotEqual(r.bucket, "lane-b-queue")
         self.assertNotIn("totalSupply", r.value_movers)
+        self.assertIn("rescueERC20", r.value_movers)
+
+    def test_live_usdc_rescueerc20_shape_demotes(self):
+        """Would have caught the live USDC gap: rescueERC20 is admin, not custody.
+
+        PR #25 fixture used `rescue` (exact TOKEN_ADMIN_NAMES hit). Live
+        FiatTokenV2_2 / USDC `0xA0b86991…` lifted mint/burn/rescueERC20 and
+        stayed `custody` / `lane-b-queue` via the TVL gate.
+        """
+        fns = _live_usdc_fns()
+        d = classify_scope(
+            source="",
+            functions=fns,
+            extra_names=[fn.name for fn in fns] + [
+                "balanceOf", "allowance", "totalSupply", "name", "symbol", "decimals",
+            ],
+        )
+        self.assertEqual(d.contract_class, "token")
+        self.assertEqual(d.scope, "demoted-token")
+        self.assertIn("token-admin-only", d.signals)
+        self.assertFalse(d.promote)
+
+        ir = IRDocument(
+            functions=fns,
+            ir_confidence="high",
+            src_confidence="high",
+            language="solidity",
+            lift_tool="test",
+        )
+        r = run_lane_a(FunnelContext(
+            target=Target(address=LIVE_USDC, has_code=True, tvl_usd=30_000_000_000),
+            artifact=_art("pragma solidity ^0.8.20;\ncontract FiatTokenV2_2 {}"),
+            ir=ir,
+            source_text="pragma solidity ^0.8.20;\ncontract FiatTokenV2_2 {}",
+        ))
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(set(r.value_movers), {"mint", "burn", "rescueERC20"})
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+
+    def test_fiat_token_v2_2_multifile_demoted(self):
+        r = _lane("fiat_token_v2_2_like.json", tvl=30_000_000_000)
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.contract_class, "token")
+        self.assertTrue(set(r.value_movers) >= {"mint", "burn", "rescueERC20"})
+        self.assertNotEqual(r.bucket, "lane-b-queue")
 
     def test_usdt_like_demoted_and_no_totalsupply_mover(self):
         r = _lane("usdt_like.sol", tvl=1_000_000)
@@ -176,6 +246,40 @@ class ScopeFilter(unittest.TestCase):
         self.assertEqual(r.scope, "in-scope")
         self.assertEqual(r.contract_class, "custody")
         self.assertNotEqual(r.bucket, "human-yes-candidate")
+
+    def test_lending_plus_rescueerc20_stays_lending(self):
+        src = (FIXTURES / "aave_v2_like.sol").read_text(encoding="utf-8")
+        src = src.replace(
+            "    function flashLoan",
+            "    function rescueERC20(address token, address to, uint256 value) external {\n"
+            "        IERC20V2(token).transfer(to, value);\n"
+            "    }\n\n    function flashLoan",
+        )
+        d = classify_scope(source=src, functions=normalize(_art(src), try_slither=False).functions)
+        self.assertEqual(d.contract_class, "lending")
+        self.assertEqual(d.scope, "in-scope")
+        self.assertTrue(d.promote)
+
+    def test_erc20_plus_non_admin_withdraw_stays_custody(self):
+        src = """pragma solidity ^0.8.20;
+interface IERC20X { function transfer(address, uint256) external returns (bool); }
+contract HybridTokenVault {
+    string public name = "Hybrid";
+    string public symbol = "HYB";
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+    function transfer(address to, uint256 value) public returns (bool) { balanceOf[to] += value; return true; }
+    function approve(address spender, uint256 value) public returns (bool) { allowance[msg.sender][spender] = value; return true; }
+    function transferFrom(address from, address to, uint256 value) public returns (bool) { balanceOf[to] += value; from; return true; }
+    function withdraw(address token, uint256 amt) external {
+        IERC20X(token).transfer(msg.sender, amt);
+    }
+}
+"""
+        d = classify_scope(source=src, functions=normalize(_art(src), try_slither=False).functions)
+        self.assertEqual(d.contract_class, "custody")
+        self.assertEqual(d.scope, "in-scope")
+        self.assertFalse(d.promote)
 
     def test_token_high_tvl_does_not_promote(self):
         ir = IRDocument(

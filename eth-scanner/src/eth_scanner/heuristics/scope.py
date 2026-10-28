@@ -35,7 +35,14 @@ TOKEN_ADMIN_NAMES = frozenset({
     "updatemasterminter", "blacklist", "unblacklist", "wipefrozenaddress",
     "increaseallowance", "decreaseallowance", "increaseapproval", "decreaseapproval",
     "permit", "receivewithauthorization", "transferwithauthorization",
+    # Circle FiatToken V2 / USDC — live name is rescueERC20, not rescue.
+    "rescueerc20", "rescuetoken", "recovererc20", "recovertoken",
+    "updaterescuer", "updateblacklister", "updatepauser", "removeminter",
+    "cancelauthorization",
 })
+# Compound admin verbs (rescueERC20, mintTo, recoverToken). Keep tight —
+# do not prefix-match generic custody names like withdraw/sweep.
+TOKEN_ADMIN_PREFIXES = ("mint", "burn", "rescue", "recover")
 
 _FN_NAME = re.compile(r"\bfunction\s+(\w+)\s*\(", re.I)
 _PUBLIC_GETTER = re.compile(
@@ -93,11 +100,9 @@ def classify_scope(
 
     erc20 = _interface_score(src, names, ERC20_INTERFACE)
     erc721 = _interface_score(src, names, ERC721_INTERFACE)
-    token_admin_only = bool(custody) and all(
-        n in TOKEN_ADMIN_NAMES or n.startswith("mint") or n.startswith("burn") for n in custody
-    )
+    token_admin_only = bool(custody) and all(_is_token_admin(n) for n in custody)
     wrap_only = wrap and all(
-        roles.get(n) in {"wrap-unwrap", "erc20-standard", ""} or n in TOKEN_ADMIN_NAMES
+        roles.get(n) in {"wrap-unwrap", "erc20-standard", ""} or _is_token_admin(n)
         for n in custody
     )
 
@@ -155,6 +160,20 @@ def classify_scope(
         signals=["no-custody-movers"],
         promote=False,
     )
+
+
+def _is_token_admin(name: str) -> bool:
+    """Mint/burn/rescue-style admin on an ERC-20 is still a token, not custody.
+
+    Live USDC (FiatTokenV2_2) exposes `rescueERC20`, not `rescue`. Exact-name
+    matching missed that and kept the token on the main lane.
+    """
+    n = (name or "").lower()
+    if not n:
+        return False
+    if n in TOKEN_ADMIN_NAMES:
+        return True
+    return any(n.startswith(p) for p in TOKEN_ADMIN_PREFIXES)
 
 
 def _collect_names(src: str, fns: list[Any], extra: Optional[Iterable[str]]) -> set[str]:
