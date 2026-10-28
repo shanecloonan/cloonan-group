@@ -76,6 +76,16 @@ _ADDR = {
     "metamorpho_like.sol": "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
     "metamorpho_tree_like.sol": "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
     "convex_booster_like.sol": "0xF403C135812408BFbE8713b5A23a04b3D48AAE31",
+    "yearn_yvusdc_vyper_live_shape.vy": "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE",
+    "yearn_vyper_public_getter_like.vy": "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE",
+    "across_hub_live_shape.json": "0xc186fA914353c44b2E33eBE05f21846F1048bEda",
+    "pendle_router_v4_live_shape.json": "0x888888888889758F76e7103c6CbF23ABbF58F946",
+    "diamond_loupe_only_like.sol": "0x" + "e5" * 20,
+    "diamond_router_like.json": "0x" + "e6" * 20,
+    "dai_like.sol": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+    "weeth_like.sol": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+    "eeth_like.sol": "0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+    "sdai_like.sol": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -85,6 +95,11 @@ LIVE_PENDLE_MARKET = "0x34280882267ffa6383b363e278b027be083bbe3b"
 LIVE_YEARN_YVUSDC = "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE"
 LIVE_ACROSS_HUB = "0xc186fA914353c44b2E33eBE05f21846F1048bEda"
 LIVE_GMX_TOKEN = "0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a"
+LIVE_DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+LIVE_WEETH = "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
+LIVE_EETH = "0x35fA164735182de50811E8e2E824cFb9B6118ac2"
+LIVE_SDAI = "0x83F20F44975D03b1b09e64809B757c47f942BEeA"
+LIVE_PENDLE_ROUTER = "0x888888888889758F76e7103c6CbF23ABbF58F946"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -761,6 +776,10 @@ class LiveDeFiPass(unittest.TestCase):
         self.assertFalse(_ident_match("MetaMorpho", "Morpho"))
         self.assertFalse(_ident_match("LendingPool", "Pool"))
         self.assertFalse(_ident_match("YearnVault", "Vault"))
+        # yVault vs Vault is intentionally NOT aliased (Yearn Etherscan name).
+        self.assertFalse(_ident_match("yVault", "Vault"))
+        self.assertFalse(_ident_match("Vault", "yVault"))
+        self.assertFalse(_ident_match("Dai", "Vat"))
 
     def test_convex_booster_is_staking(self):
         r = _lane("convex_booster_like.sol")
@@ -981,10 +1000,146 @@ class Pass7LiveLocks(unittest.TestCase):
             "gmx_token_like.sol": ("token", "demoted-token", "lane-a-cool"),
             "gmx_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "maker_vat_like.sol": ("maker", "in-scope", "lane-b-queue"),
+            "yearn_yvusdc_vyper_live_shape.vy": ("vault", "in-scope", "lane-b-queue"),
+            "across_hub_live_shape.json": ("bridge", "in-scope", "lane-b-queue"),
+            "pendle_router_v4_live_shape.json": ("router", "demoted-passthrough", "lane-a-cool"),
+            "dai_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "weeth_like.sol": ("wrap-token", "demoted-token", "lane-a-cool"),
+            "eeth_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "sdai_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "diamond_router_like.json": ("router", "demoted-passthrough", "lane-a-cool"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
             self.assertEqual((r.contract_class, r.scope, r.bucket), (klass, scope, bucket), name)
+
+
+class Pass8LiveLocks(unittest.TestCase):
+    """Pass 8: live Yearn Vyper, Across HubPool file movers, diamonds, DAI/weETH."""
+
+    def test_yearn_vyper_live_shape_is_yearn_share_price(self):
+        src = (FIXTURES / "yearn_yvusdc_vyper_live_shape.vy").read_text(encoding="utf-8")
+        ir = normalize(_art(src, language="vyper", contract_name="yVault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        d = classify_scope(
+            source=src,
+            functions=ir.functions,
+            extra_names=ir.function_names,
+            contract_name="yVault",
+        )
+        self.assertEqual(d.contract_class, "vault")
+        self.assertEqual(d.scope, "in-scope")
+        self.assertIn("yearn-share-price", d.signals)
+        self.assertNotIn("share-accounting", d.signals)
+        r = _lane("yearn_yvusdc_vyper_live_shape.vy")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["yearn_yvusdc_vyper_live_shape.vy"], LIVE_YEARN_YVUSDC)
+        self.assertTrue(set(r.value_movers) & {"deposit", "withdraw"})
+
+    def test_yearn_vyper_public_getter_tags_yearn_share_price(self):
+        src = (FIXTURES / "yearn_vyper_public_getter_like.vy").read_text(encoding="utf-8")
+        ir = normalize(_art(src, language="vyper", contract_name="yVault"), try_slither=False)
+        d = classify_scope(
+            source=src,
+            functions=ir.functions,
+            extra_names=ir.function_names,
+            contract_name="yVault",
+        )
+        self.assertEqual(d.contract_class, "vault")
+        self.assertIn("yearn-share-price", d.signals)
+        self.assertNotIn("share-accounting", d.signals)
+
+    def test_across_hub_sourcify_live_shape_hubpool_file_movers(self):
+        src = (FIXTURES / "across_hub_live_shape.json").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="HubPool"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        movers = {fn.name for fn in ir.functions if fn.is_value_mover and fn.exposed}
+        self.assertTrue(movers & {"addLiquidity", "removeLiquidity"})
+        self.assertTrue(movers & {"proposeRootBundle", "executeRootBundle", "disputeRootBundle"})
+        hub_files = {fn.file.replace("\\", "/") for fn in ir.functions if fn.name in movers}
+        self.assertTrue(any(p.endswith("HubPool.sol") for p in hub_files))
+        self.assertFalse(any("relayTokens" == n for n in movers))
+        r = _lane("across_hub_live_shape.json")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["across_hub_live_shape.json"], LIVE_ACROSS_HUB)
+        self.assertTrue(set(r.value_movers) & {"addLiquidity", "proposeRootBundle", "executeRootBundle"})
+
+    def test_pendle_router_v4_thin_diamond_cools(self):
+        src = (FIXTURES / "pendle_router_v4_live_shape.json").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="PendleRouterV4"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertEqual(ir.scope, "demoted-passthrough")
+        r = _lane("pendle_router_v4_live_shape.json", tvl=9_999_999)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["pendle_router_v4_live_shape.json"], LIVE_PENDLE_ROUTER)
+
+    def test_diamond_router_facet_still_cools(self):
+        src = (FIXTURES / "diamond_router_like.json").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Diamond"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertEqual(ir.scope, "demoted-passthrough")
+        r = _lane("diamond_router_like.json", tvl=50_000)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+
+    def test_diamond_loupe_only_is_false_keep(self):
+        src = (FIXTURES / "diamond_loupe_only_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Diamond"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        self.assertEqual(ir.scope, "in-scope")
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        r = _lane("diamond_loupe_only_like.sol")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertNotEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.bucket, "human-no-candidate")
+        self.assertIn(r.bucket, {"lane-b-queue", "manual-review"})
+
+    def test_dai_is_token_not_maker(self):
+        r = _lane("dai_like.sol", tvl=5_000_000_000)
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "maker")
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+        src = (FIXTURES / "dai_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Dai"), try_slither=False)
+        self.assertEqual(ir.contract_class, "token")
+        self.assertIn("dss-token", ir.scope_signals)
+        self.assertEqual(_ADDR["dai_like.sol"], LIVE_DAI)
+
+    def test_weeth_is_wrap_token_not_custody(self):
+        r = _lane("weeth_like.sol", tvl=3_000_000_000)
+        self.assertEqual(r.contract_class, "wrap-token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "custody")
+        self.assertNotEqual(r.contract_class, "staking")
+        self.assertEqual(_ADDR["weeth_like.sol"], LIVE_WEETH)
+
+    def test_eeth_share_token_is_token_not_staking(self):
+        r = _lane("eeth_like.sol", tvl=3_000_000_000)
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "staking")
+        self.assertEqual(_ADDR["eeth_like.sol"], LIVE_EETH)
+
+    def test_sdai_stays_vault(self):
+        r = _lane("sdai_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["sdai_like.sol"], LIVE_SDAI)
+
+    def test_maker_vat_still_maker_after_dai_fix(self):
+        r = _lane("maker_vat_like.sol")
+        self.assertEqual(r.contract_class, "maker")
+        self.assertEqual(r.bucket, "lane-b-queue")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
