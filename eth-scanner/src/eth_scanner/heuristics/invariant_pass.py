@@ -69,7 +69,8 @@ FUND_NAME = re.compile(
     r"receiveMessage|"
     r"requestL2Transaction|bridgehubRequestL2Transaction|"
     r"absorb|buyCollateral|buyUSDG|sellUSDG|increasePosition|decreasePosition|"
-    r"earmarkRewards|earmarkFees"
+    r"earmarkRewards|earmarkFees|"
+    r"sellGem|buyGem|openCreditAccount|closeCreditAccount"
     r")(?![A-Za-z])"
 )
 ERC20_STANDARD_NAMES = {

@@ -139,6 +139,14 @@ _ADDR = {
     "liquity_borrower_ops_like.sol": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
     "maker_pot_like.sol": "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7",
     "weth_gateway_like.sol": "0xBD7D6a9ad7865463DE44B05F04559f65e3B11704",
+    "dai_join_like.sol": "0x9759A6Ac90977b93B58547b4A71c78317f391A28",
+    "gem_join_like.sol": "0x2F0b23f53734252Bda2277357e97e1517d6B042A",
+    "dss_lite_psm_like.sol": "0xf6e72Db5454dd049d0788e411b06CfAF16853042",
+    "dsr_manager_like.sol": "0x373238337Bfe1146fb49989fc222523f83081dDb",
+    "gearbox_credit_manager_like.sol": "0x3EB95430FdB99439A86d3c6D7D01C3c561393556",
+    "cow_settlement_like.sol": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
+    "frxeth_like.sol": "0x5E8422345238F34275888049021821E8E08Caa1f",
+    "uni_v4_pool_manager_like.sol": "0x000000000004444c5dc75cB358380D2e3dE08A90",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -191,6 +199,14 @@ LIVE_RENZO_RM = "0x74a09653A083691711cF8215a6ab074BB4e99ef5"
 LIVE_LIQUITY_BO = "0x24179CD81c9e782A4096035f7eC97fB8B783e007"
 LIVE_MAKER_POT = "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7"
 LIVE_SPARK_WETH_GW = "0xBD7D6a9ad7865463DE44B05F04559f65e3B11704"
+LIVE_DAI_JOIN = "0x9759A6Ac90977b93B58547b4A71c78317f391A28"
+LIVE_ETH_JOIN = "0x2F0b23f53734252Bda2277357e97e1517d6B042A"
+LIVE_LITE_PSM = "0xf6e72Db5454dd049d0788e411b06CfAF16853042"
+LIVE_DSR_MANAGER = "0x373238337Bfe1146fb49989fc222523f83081dDb"
+LIVE_GEARBOX_CM = "0x3EB95430FdB99439A86d3c6D7D01C3c561393556"
+LIVE_COW_SETTLEMENT = "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+LIVE_FRXETH = "0x5E8422345238F34275888049021821E8E08Caa1f"
+LIVE_UNI_V4_PM = "0x000000000004444c5dc75cB358380D2e3dE08A90"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1162,6 +1178,14 @@ class Pass7LiveLocks(unittest.TestCase):
             "liquity_borrower_ops_like.sol": ("lending", "in-scope", "lane-b-queue"),
             "maker_pot_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "weth_gateway_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "dai_join_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "gem_join_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "dss_lite_psm_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "dsr_manager_like.sol": ("custody", "in-scope", "lane-b-queue"),
+            "gearbox_credit_manager_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "cow_settlement_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "frxeth_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "uni_v4_pool_manager_like.sol": ("pool", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -1828,6 +1852,108 @@ class Pass12FluidFacetsAndSiblingRoles(unittest.TestCase):
         r = _lane("weeth_like.sol")
         self.assertEqual(r.contract_class, "wrap-token")
         self.assertEqual(r.bucket, "lane-a-cool")
+
+
+class Pass13CustodyVenues(unittest.TestCase):
+    """Pass 13: Maker Join/PSM, Gearbox, CoW settle, frxETH, Uni V4 pin."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_dai_join_is_vault_not_sibling_vat(self):
+        src = (FIXTURES / "dai_join_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DaiJoin"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("maker-join", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "maker")
+        r = _lane("dai_join_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["dai_join_like.sol"], LIVE_DAI_JOIN)
+
+    def test_gem_join_is_vault_not_sibling_vat(self):
+        src = (FIXTURES / "gem_join_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="GemJoin"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("maker-join", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "maker")
+        r = _lane("gem_join_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["gem_join_like.sol"], LIVE_ETH_JOIN)
+
+    def test_lite_psm_is_vault_not_utility(self):
+        src = (FIXTURES / "dss_lite_psm_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DssLitePsm"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("maker-psm", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "utility")
+        self.assertNotEqual(ir.contract_class, "maker")
+        r = _lane("dss_lite_psm_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["dss_lite_psm_like.sol"], LIVE_LITE_PSM)
+
+    def test_dsr_manager_is_not_maker_join(self):
+        src = (FIXTURES / "dsr_manager_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DsrManager"), try_slither=False)
+        self.assertNotIn("maker-join", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "vault")
+        r = _lane("dsr_manager_like.sol")
+        self.assertEqual(r.contract_class, "custody")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(_ADDR["dsr_manager_like.sol"], LIVE_DSR_MANAGER)
+
+    def test_gearbox_credit_manager_is_lending(self):
+        src = (FIXTURES / "gearbox_credit_manager_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="CreditManagerV3"), try_slither=False)
+        self.assertEqual(ir.contract_class, "lending")
+        self.assertIn("gearbox-credit", ir.scope_signals)
+        r = _lane("gearbox_credit_manager_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["gearbox_credit_manager_like.sol"], LIVE_GEARBOX_CM)
+
+    def test_cow_settlement_is_passthrough(self):
+        src = (FIXTURES / "cow_settlement_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="GPv2Settlement"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertEqual(ir.scope, "demoted-passthrough")
+        self.assertIn("cow-settlement", ir.scope_signals)
+        r = _lane("cow_settlement_like.sol", tvl=9_999_999)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["cow_settlement_like.sol"], LIVE_COW_SETTLEMENT)
+
+    def test_frxeth_is_token_not_custody(self):
+        src = (FIXTURES / "frxeth_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="frxETH"), try_slither=False)
+        self.assertEqual(ir.contract_class, "token")
+        self.assertEqual(ir.scope, "demoted-token")
+        r = _lane("frxeth_like.sol", tvl=500_000_000)
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["frxeth_like.sol"], LIVE_FRXETH)
+
+    def test_uni_v4_pool_manager_is_pool_not_cow(self):
+        src = (FIXTURES / "uni_v4_pool_manager_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="PoolManager"), try_slither=False)
+        self.assertEqual(ir.contract_class, "pool")
+        self.assertNotEqual(ir.contract_class, "router")
+        self.assertNotIn("cow-settlement", ir.scope_signals)
+        r = _lane("uni_v4_pool_manager_like.sol")
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["uni_v4_pool_manager_like.sol"], LIVE_UNI_V4_PM)
+
+    def test_maker_pot_still_vault(self):
+        r = _lane("maker_pot_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        src = (FIXTURES / "maker_pot_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Pot"), try_slither=False)
+        self.assertIn("maker-pot", ir.scope_signals)
+        self.assertNotIn("maker-join", ir.scope_signals)
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
