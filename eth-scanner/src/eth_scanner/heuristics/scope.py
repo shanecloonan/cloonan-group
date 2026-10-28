@@ -1536,6 +1536,11 @@ def _funds_at_risk_family(
     # (bridgeToken + completeBridging).
     if {"receivefromotherlayer", "burnalllockedusdc"} <= (declared | probe):
         return "bridge", ["linea-usdc-bridge"]
+    # Sonic Gateway TokenDeposit (`0xa1E2…ec20` / impl `0xAdE2…ADe9`).
+    # L1 ERC-20 lock. withdrawWhileDead + cancelDepositWhileDead —
+    # not Linea burnAllLockedUSDC.
+    if {"withdrawwhiledead", "canceldepositwhiledead"} <= (declared | probe):
+        return "bridge", ["sonic-token-deposit"]
 
     if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
