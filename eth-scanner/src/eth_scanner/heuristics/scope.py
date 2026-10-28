@@ -1546,6 +1546,12 @@ def _funds_at_risk_family(
     # not Sonic withdrawWhileDead / Linea burnAllLockedUSDC.
     if {"gatewayburn", "initiatewithdrawal"} <= (declared | probe):
         return "bridge", ["circle-gateway-wallet"]
+    # Arbitrum Nitro ETH Bridge (`0x8315…ed3a` / impl `0xfE47…2418`).
+    # ETH escrow for delayed/sequencer messages. Same family as
+    # Robinhood Chain Bridge (`0xDf87…64b3`). enqueueDelayedMessage +
+    # acceptFundsFromOldBridge — not Inbox createRetryableTicket.
+    if {"enqueuedelayedmessage", "acceptfundsfromoldbridge"} <= (declared | probe):
+        return "bridge", ["arbitrum-nitro-bridge"]
 
     if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
