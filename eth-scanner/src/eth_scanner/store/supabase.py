@@ -114,6 +114,13 @@ class MemoryStore:
             "stage_trace": to_plain(result.stage_trace),
             "hypotheses": to_plain(result.hypotheses),
             "notes": "\n".join(result.notes),
+            "value_movers": list(result.value_movers),
+            "contract_class": result.contract_class,
+            "scope": result.scope,
+            "src_confidence": result.src_confidence,
+            "ir_confidence": result.ir_confidence,
+            "dropped": result.dropped,
+            "drop_reason": result.drop_reason,
             "created_at": _now(),
         }
         self.results.append(row)

@@ -6,7 +6,11 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from eth_scanner.types import DEFAULT_HEAT_THRESHOLD, DEFAULT_TVL_FLOOR_USD
+from eth_scanner.types import (
+    DEFAULT_ETHERSCAN_INTERVAL_S,
+    DEFAULT_HEAT_THRESHOLD,
+    DEFAULT_TVL_FLOOR_USD,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WORK_DIR = ROOT / "work"
@@ -54,7 +58,7 @@ class Settings:
     work_dir: Path = DEFAULT_WORK_DIR
     heat_threshold: int = DEFAULT_HEAT_THRESHOLD
     tvl_floor_usd: float = DEFAULT_TVL_FLOOR_USD
-    etherscan_min_interval_s: float = 0.25
+    etherscan_min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S
     worker_id: str = "eth-scanner"
     claim_stale_seconds: int = 900
 
@@ -80,6 +84,11 @@ def load_settings() -> Settings:
         tvl = float(os.environ.get("ETH_SCANNER_TVL_FLOOR") or DEFAULT_TVL_FLOOR_USD)
     except ValueError:
         tvl = DEFAULT_TVL_FLOOR_USD
+    try:
+        interval = float(os.environ.get("ETH_SCANNER_ETHERSCAN_INTERVAL") or DEFAULT_ETHERSCAN_INTERVAL_S)
+    except ValueError:
+        interval = DEFAULT_ETHERSCAN_INTERVAL_S
+    interval = max(0.2, min(interval, 5.0))
     return Settings(
         etherscan_api_keys=_split_keys(os.environ.get("ETHERSCAN_API_KEYS", "")),
         supabase_url=url.rstrip("/"),
@@ -89,5 +98,6 @@ def load_settings() -> Settings:
         work_dir=work,
         heat_threshold=heat,
         tvl_floor_usd=tvl,
+        etherscan_min_interval_s=interval,
         worker_id=os.environ.get("ETH_SCANNER_WORKER_ID", "eth-scanner"),
     )

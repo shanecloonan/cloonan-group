@@ -15,6 +15,25 @@ Triage UI (read-only): **`/test`** on this site. Scanner runtime lives here, not
 
 Filtration: `docs/ETH_SWEEP_SCANNING_REFERENCE.md` §6.0 (also copied under this package’s parent `docs/`).
 
+## Scope — what the main lane actually works
+
+Lane A is a **picker**, not a funds-at-risk oracle. It looks for regularity on surfaces where other people’s value is held or routed. Plain tokens do not repay that work.
+
+| Lane scope | Contract class | What happens |
+|---|---|---|
+| **in-scope** (main path) | `lending` · `vault` · `pool` · `router` · `dex` · `bridge` · `maker` | Can promote to `lane-b-queue` |
+| **in-scope** | `custody` (generic value-mover, no family) | Existing S5/S6 heat / TVL / weirdness |
+| **demoted-token** | `token` · `wrap-token` | Cool-archive (`lane-a-cool`). **TVL does not promote.** Not a verdict. |
+| **utility** | no custody movers | Existing S4 close / cool |
+
+**In-scope examples:** Aave V2/V3 pools, Balancer Vault, Uniswap routers, Maker VAT, ERC-4626 / join-exit vaults, flash-loan venues, bridges.
+
+**Demoted / excluded from the main lane:** plain ERC-20 (USDT, USDC, …) including mint/burn/rescue admin tokens; WETH-like wrap/unwrap; ERC-721/1155 with no marketplace/custody surface. `transfer` / `approve` / `totalSupply` / `transferOwnership` are noise here.
+
+**Do Not Auto-Dismiss:** unverified / failed IR / failed unpack / rate-limited ingest / truly ambiguous *non-token* auth still go to `manual-review`, never silent `no`.
+
+Signals live in `heuristics/scope.py` (ERC-20 interface shape vs lending/router/vault/bridge/Maker patterns). Family tags are checked *before* ERC-20 shape so a pool that calls `IERC20.transferFrom` is never demoted as a token.
+
 ## Layout
 
 ```
@@ -25,6 +44,7 @@ eth-scanner/
     ir/normalize.py          # IR + ir_confidence high|med|low
     funnel/s0_s7.py          # §6.0 cheap-first scoring funnel
     heuristics/invariant_pass.py
+    heuristics/scope.py      # token demote vs in-scope family
     lane_a/worker.py         # S0–S5 + S6 gate
     lane_b/worker.py         # S7 on lane-b-queue + manual-review
     store/supabase.py        # service-role or local dry-run
@@ -32,6 +52,10 @@ eth-scanner/
     cli.py
   supabase/migrations/20261027_eth_scanner_queue.sql
   tests/test_funnel_buckets.py
+  tests/test_unpack_and_movers.py
+  tests/test_receipts.py
+  tests/test_scope_and_regressions.py
+  tests/test_etherscan_resilience.py
 ```
 
 Wired into the repo migration path as `infra/supabase/migrations/2026-10-27-eth-scanner-queue.sql` (`npm run db:migrate:all`).
@@ -42,19 +66,20 @@ Etherscan verified sources are often **Standard-JSON-Input** (`{{ "language":"So
 
 If Etherscan marks the address as a proxy (`Proxy=1` / `Implementation`), the **implementation** source is fetched and used for the IR lift (not only stored). Proxy-only bytecode/source is not treated as the custody surface. Unpacked trees keep `lib/` paths (Aave V3 and similar store the pool under `lib/<pkg>/...`).
 
-Vanilla ERC20 `transfer` / `approve` / `transferFrom` are recorded as leads, not I1 custody movers. WETH-like wrap/unwrap is tagged `wrap-unwrap` (still never auto-yes; unsure withdraws stay `manual-review`).
+Vanilla ERC20 `transfer` / `approve` / `transferFrom` are recorded as leads, not I1 custody movers, and the whole token is **demoted** from the main lane. WETH-like wrap/unwrap is tagged `wrap-unwrap` and likewise demoted (never auto-yes).
 
 ## Env
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `ETHERSCAN_API_KEYS` | for live ingest | Comma-separated keys; rotated; ~0.25s min interval |
+| `ETHERSCAN_API_KEYS` | for live ingest | Comma-separated keys; rotated; default **0.4s** min interval |
 | `SUPABASE_SERVICE_ROLE_KEY` | for remote persist | Server-side only. Absent → **dry-run** JSON under `eth-scanner/work/` |
 | `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL` | optional | Defaults to `https://xvjqxjakckkbfsdrntwk.supabase.co` |
 | `ETH_RPC_URL` | optional | Read-only `eth_getCode` |
 | `ETH_SCANNER_DRY_RUN=1` | optional | Force local store |
 | `ETH_SCANNER_HEAT_THRESHOLD` | optional | Default `3` |
 | `ETH_SCANNER_TVL_FLOOR` | optional | Default `10000` |
+| `ETH_SCANNER_ETHERSCAN_INTERVAL` | optional | Seconds between key uses (default `0.4`, min `0.2`) |
 
 See `.env.example` here and the repo-root `.env.example`.
 

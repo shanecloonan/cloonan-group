@@ -13,9 +13,11 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from eth_scanner.heuristics.patterns import detect_fork_family, detect_weird_signals, skim_known_patterns
+from eth_scanner.heuristics.scope import PROMOTE_CLASSES, ScopeDecision, classify_scope
 from eth_scanner.types import (
     DEFAULT_HEAT_THRESHOLD,
     DEFAULT_TVL_FLOOR_USD,
+    MAX_HEAT,
     Bucket,
     FunnelResult,
     Hypothesis,
@@ -67,6 +69,24 @@ def _auth_for(ir: IRDocument, name: str) -> str:
     return "AMBIGUOUS"
 
 
+def _scope_of(ctx: FunnelContext) -> ScopeDecision:
+    ir = ctx.ir
+    if ir is not None and ir.contract_class and ir.contract_class != "unknown":
+        return ScopeDecision(
+            contract_class=ir.contract_class,
+            scope=ir.scope or "unknown",
+            signals=list(ir.scope_signals or []),
+            promote=ir.contract_class in PROMOTE_CLASSES,
+        )
+    source = ctx.source_text or (ctx.artifact.content if ctx.artifact else "")
+    extra = list(ir.function_names) if ir is not None else []
+    return classify_scope(source=source, functions=(ir.functions if ir else []), extra_names=extra)
+
+
+def _cap_heat(heat: int) -> int:
+    return min(max(0, int(heat)), MAX_HEAT)
+
+
 def run_lane_a(ctx: FunnelContext) -> FunnelResult:
     """S0–S6. Lane A emits a bucket; it never stamps yes/no."""
     notes: list[str] = [
@@ -107,14 +127,19 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
     # --- S2 IR confidence --------------------------------------------------
     # Failed lift or low IR → manual-review. Low src (decompile) also
     # forces manual-review after S2 (heat override + S1 prefer-manual).
-    if ir is None or ir.lift_failed or ir_conf == "low":
-        reason = "ir_failed_or_low"
-        traces.append(_trace("S2", "manual-review", reason, ir_confidence=ir_conf, lift_failed=bool(ir and ir.lift_failed)))
+    if ir is None or ir.lift_failed or ir_conf == "low" or (ir and ir.unpack_failed):
+        reason = "ir_failed_or_low" if not (ir and ir.unpack_failed) else "unpack_failed"
+        traces.append(_trace(
+            "S2", "manual-review", reason,
+            ir_confidence=ir_conf, lift_failed=bool(ir and ir.lift_failed),
+            unpack_failed=bool(ir and ir.unpack_failed),
+        ))
         return _done(
             "manual-review", traces, src_conf, ir_conf, heat, notes,
-            extra="Do Not Auto-Dismiss: IR build failed or ir_confidence=low.",
+            extra="Do Not Auto-Dismiss: IR build failed, unpack failed, or ir_confidence=low.",
             pattern_leads=pattern_leads,
             movers=_exposed_movers(ir) if ir else [],
+            scope=_scope_of(ctx),
         )
     if src_conf == "low":
         traces.append(_trace("S2", "manual-review", "src_confidence=low override", src_confidence=src_conf))
@@ -123,6 +148,7 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             extra="Do Not Auto-Dismiss: src_confidence=low (decompile / unverified) → manual-review.",
             pattern_leads=pattern_leads,
             movers=_exposed_movers(ir),
+            scope=_scope_of(ctx),
         )
     traces.append(_trace("S2", "continue", "ir_confidence=%s" % ir_conf, ir_confidence=ir_conf, lift_tool=ir.lift_tool))
 
@@ -135,21 +161,61 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         lead_ids=[p.get("id") for p in pattern_leads],
     ))
 
-    # --- S4 Value-mover presence -------------------------------------------
+    # --- S4 Value-mover presence + scope filter ----------------------------
     movers = _exposed_movers(ir)
     erc20_leads = _erc20_standard_names(ir)
+    scope = _scope_of(ctx)
     erc20_note = ""
     if erc20_leads:
         erc20_note = (
             " ERC20-standard transfer/approve surfaces %s recorded as leads, "
             "not I1 custody movers." % ",".join(erc20_leads[:12])
         )
+
+    if ctx.target.ingest_incomplete and not movers:
+        traces.append(_trace(
+            "S4", "manual-review",
+            "ingest incomplete; movers unknown (not a confirmed empty surface)",
+            incomplete_reason=ctx.target.ingest_incomplete_reason,
+        ))
+        return _done(
+            "manual-review", traces, src_conf, ir_conf, heat, notes,
+            extra="Do Not Auto-Dismiss: Etherscan/proxy ingest incomplete — not a no-mover close.",
+            pattern_leads=pattern_leads,
+            scope=scope,
+        )
+
+    if scope.demoted:
+        traces.append(_trace(
+            "S4", "lane-a-cool",
+            "plain token / wrap-token demoted from the main Lane A path",
+            contract_class=scope.contract_class,
+            scope=scope.scope,
+            signals=scope.signals,
+            erc20_standard=erc20_leads,
+            movers=movers,
+        ))
+        traces.append(_trace("S5", "skip", "token demoted — not competing for Lane B"))
+        traces.append(_trace("S6", "lane-a-cool", "cool-archive for tokens (TVL does not promote)"))
+        return _done(
+            "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
+            extra=(
+                "Demoted %s from the main scan lane. Tokens (including mint/burn/rescue "
+                "admin tokens and WETH-like wrap) do not compete for Lane B. Not a verdict."
+                % scope.contract_class
+            ) + erc20_note,
+            pattern_leads=pattern_leads,
+            movers=movers,
+            scope=scope,
+        )
+
     if not movers:
         if ir_conf == "high" and src_conf == "high":
             traces.append(_trace(
                 "S4", "human-no-candidate",
                 "no custody movers + high IR + verified",
                 erc20_standard=erc20_leads,
+                contract_class=scope.contract_class,
             ))
             traces.append(_trace("S5", "skip", "no custody movers"))
             traces.append(_trace("S6", "skip", "S4 closed as human-no-candidate (still needs human stamp)"))
@@ -157,51 +223,78 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
                 "human-no-candidate", traces, src_conf, ir_conf, heat, notes,
                 extra="Candidate auto-no only: high IR + verified + no custody movers. Human still stamps no." + erc20_note,
                 pattern_leads=pattern_leads,
+                scope=scope,
             )
         traces.append(_trace(
             "S4", "lane-a-cool",
             "no custody movers; IR not high+verified so not a close",
             erc20_standard=erc20_leads,
+            contract_class=scope.contract_class,
         ))
         traces.append(_trace("S5", "skip", "no custody movers"))
-        traces.append(_trace("S6", "lane-a-cool", "utility / non-custody / vanilla ERC20 with usable IR"))
+        traces.append(_trace("S6", "lane-a-cool", "utility / non-custody with usable IR"))
         return _done(
             "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
             extra="No exposed custody movers; absence is only a close when IR is high and source verified." + erc20_note,
             pattern_leads=pattern_leads,
+            scope=scope,
         )
-    traces.append(_trace("S4", "continue", "exposed value movers=%d" % len(movers), movers=movers))
+    traces.append(_trace(
+        "S4", "continue",
+        "exposed value movers=%d class=%s" % (len(movers), scope.contract_class),
+        movers=movers, contract_class=scope.contract_class, scope=scope.scope,
+    ))
 
     # --- S5 Cheap I1 auth heat ---------------------------------------------
-    ambiguous = False
+    # SELF-SCOPED? is treated as WEAK (clear class). True AMBIGUOUS only
+    # forces manual-review when *no* mover has a clear PRESENT/WEAK/MISSING
+    # bind — high heat + clear movers + weak/missing → keep walking to S6.
+    ambiguous_n = 0
     missing_or_weak = False
     all_strong = True
+    clear_n = 0
     auth_map: dict[str, str] = {}
     for name in movers:
         auth = _auth_for(ir, name)
+        if auth == "SELF-SCOPED?":
+            auth = "WEAK"
         auth_map[name] = auth
-        if auth in ("AMBIGUOUS", "SELF-SCOPED?"):
-            ambiguous = True
+        if auth == "AMBIGUOUS":
+            ambiguous_n += 1
             all_strong = False
         elif auth.startswith("MISSING") or auth == "WEAK":
             missing_or_weak = True
             all_strong = False
+            clear_n += 1
             if ir_conf == "high":
                 heat += 2
-        elif auth != "PRESENT":
-            ambiguous = True
+        elif auth == "PRESENT":
+            clear_n += 1
+        else:
+            ambiguous_n += 1
             all_strong = False
 
-    if ambiguous:
-        traces.append(_trace("S5", "manual-review", "ambiguous cheap auth parse", auth=auth_map, heat=heat))
+    only_ambiguous = ambiguous_n > 0 and clear_n == 0
+    if only_ambiguous:
+        traces.append(_trace(
+            "S5", "manual-review",
+            "all cheap auth parses are truly ambiguous",
+            auth=auth_map, heat=_cap_heat(heat),
+        ))
         return _done(
-            "manual-review", traces, src_conf, ir_conf, heat, notes,
+            "manual-review", traces, src_conf, ir_conf, _cap_heat(heat), notes,
             extra="Ambiguous cheap I1 check → manual-review, never discard.",
             pattern_leads=pattern_leads,
             movers=movers,
+            scope=scope,
         )
-
-    if missing_or_weak:
+    if ambiguous_n and clear_n:
+        traces.append(_trace(
+            "S5", "continue",
+            "mixed auth: %d clear / %d ambiguous — not a dismiss" % (clear_n, ambiguous_n),
+            auth=auth_map, heat=heat,
+        ))
+    elif missing_or_weak:
         traces.append(_trace("S5", "heat+", "missing/weak bind on a value mover", auth=auth_map, heat=heat))
     elif all_strong and ir_conf == "high":
         traces.append(_trace("S5", "cool-candidate", "strong bind on all movers + high IR", auth=auth_map, heat=heat))
@@ -223,21 +316,28 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         heat += 1
     if "first-deposit-edge" in weird:
         heat += 1
-    heat = min(heat, 12)
+    heat = _cap_heat(heat)
 
     # --- S6 Deep-lane gate -------------------------------------------------
+    # Tokens never reach here (S4 demote). In-scope families (lending / vault /
+    # router / …) promote on regularity — Lane A's job is picking interesting
+    # surfaces, not scoring funds-at-risk.
     tvl = float(ctx.target.tvl_usd or 0)
+    family_promote = scope.contract_class in PROMOTE_CLASSES
     promote = (
-        heat >= ctx.config.heat_threshold
+        family_promote
+        or heat >= ctx.config.heat_threshold
         or tvl >= ctx.config.tvl_floor_usd
         or bool(set(weird) & {"bridge-mint-release", "custom-share-math", "proxy-delegatecall"})
         or bool(fork and missing_or_weak)
     )
     if promote:
+        why = "in-scope %s" % scope.contract_class if family_promote else "heat/TVL/weirdness gate"
         traces.append(_trace(
             "S6", "lane-b-queue",
-            "heat/TVL/weirdness gate",
+            why,
             heat=heat, tvl_usd=tvl, weird=weird, fork_family=fork,
+            contract_class=scope.contract_class,
             heat_threshold=ctx.config.heat_threshold, tvl_floor=ctx.config.tvl_floor_usd,
         ))
         return _done(
@@ -245,18 +345,20 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             extra="Promoted to Lane B (deep invariants). Not a finding.",
             pattern_leads=pattern_leads,
             movers=movers,
+            scope=scope,
         )
 
     traces.append(_trace(
         "S6", "lane-a-cool",
         "below deep-lane gate",
-        heat=heat, tvl_usd=tvl, weird=weird,
+        heat=heat, tvl_usd=tvl, weird=weird, contract_class=scope.contract_class,
     ))
     return _done(
         "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
         extra="Lane A archive with score trail. Human spot-check sample.",
         pattern_leads=pattern_leads,
         movers=movers,
+        scope=scope,
     )
 
 
@@ -286,6 +388,7 @@ def run_lane_b(ctx: FunnelContext) -> FunnelResult:
             extra="Low IR/src residual → needs-look / manual-review. Not a silent no.",
             hypotheses=list(ctx.hypotheses),
             movers=movers,
+            scope=_scope_of(ctx),
         )
 
     hyps = list(ctx.hypotheses)
@@ -429,6 +532,13 @@ def _funds_axis(tvl_usd: Optional[float]) -> int:
 def _stage_s0(target: Target) -> StageTrace:
     if getattr(target, "chain", "ethereum") != "ethereum":
         return _trace("S0", "drop", "non-ethereum chain (this environment is Ethereum-only)", chain=target.chain)
+    if not target.has_code and target.ingest_incomplete:
+        return _trace(
+            "S0", "keep",
+            "ingest incomplete — not a confirmed empty EOA",
+            ingest_incomplete=True,
+            incomplete_reason=target.ingest_incomplete_reason,
+        )
     if not target.has_code:
         return _trace("S0", "drop", "empty EOA / zero-code", has_code=False, tvl_usd=target.tvl_usd)
     if target.prior_closed_no and target.bytecode_hash:
@@ -457,6 +567,7 @@ def _done(
     pattern_leads: Optional[list[dict[str, Any]]] = None,
     hypotheses: Optional[list[Hypothesis]] = None,
     movers: Optional[list[str]] = None,
+    scope: Optional[ScopeDecision] = None,
 ) -> FunnelResult:
     n = list(notes)
     if extra:
@@ -465,7 +576,7 @@ def _done(
         bucket=bucket,
         dropped=False,
         drop_reason=None,
-        heat=heat,
+        heat=_cap_heat(heat),
         src_confidence=src_conf,  # type: ignore[arg-type]
         ir_confidence=ir_conf,  # type: ignore[arg-type]
         stage_trace=traces,
@@ -473,4 +584,7 @@ def _done(
         hypotheses=hypotheses or [],
         notes=n,
         value_movers=movers or [],
+        contract_class=scope.contract_class if scope else "unknown",
+        scope=scope.scope if scope else "unknown",
+        scope_signals=list(scope.signals) if scope else [],
     )

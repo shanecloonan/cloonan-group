@@ -248,6 +248,9 @@ def render_markdown(ctx: ReceiptContext) -> str:
         f"- **TVL USD (override / stored):** {_fmt(tvl)}",
         f"- **Target status:** `{_fmt(tgt.get('status'))}`",
         f"- **Has code:** {_fmt(tgt.get('has_code'), empty='unknown')}",
+        f"- **Contract class:** `{_fmt(res.get('contract_class') or tgt.get('contract_class'))}`",
+        f"- **Lane scope:** `{_fmt(res.get('scope') or tgt.get('scope'))}`"
+        " — `in-scope` (main lane) · `demoted-token` (cool-archive) · `utility`",
         "",
         "## Source provenance",
         "",
@@ -383,7 +386,7 @@ def render_markdown(ctx: ReceiptContext) -> str:
     else:
         lines.append("- none recorded")
 
-    next_step = _handoff_next(bucket, src_conf, ir_conf)
+    next_step = _handoff_next(bucket, src_conf, ir_conf, res.get("scope"))
     lines += [
         "",
         "## Handoff for another AI",
@@ -408,7 +411,12 @@ def render_markdown(ctx: ReceiptContext) -> str:
     return "\n".join(lines)
 
 
-def _handoff_next(bucket: Any, src_conf: Any, ir_conf: Any) -> str:
+def _handoff_next(bucket: Any, src_conf: Any, ir_conf: Any, scope: Any = None) -> str:
+    if scope == "demoted-token" and bucket == "lane-a-cool":
+        return (
+            "Token / wrap-token demoted from the main Lane A path. "
+            "Not competing for Lane B. Optional spot-check only."
+        )
     if bucket == "manual-review" or src_conf == "low" or ir_conf == "low":
         return (
             "Manual read of movers + provenance. Do not close as no. "

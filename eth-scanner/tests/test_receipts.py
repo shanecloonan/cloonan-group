@@ -90,6 +90,8 @@ class ReceiptShape(unittest.TestCase):
         self.assertIn("do not auto-yes", md.lower())
         self.assertIn("lead for manual reading", md.lower())
         self.assertIn("## Leads (not findings)", md)
+        self.assertIn("**Contract class:**", md)
+        self.assertIn("**Lane scope:**", md)
 
     def test_write_run_receipt_creates_md_under_receipts(self):
         result = run_lane_a(FunnelContext(

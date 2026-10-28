@@ -43,13 +43,20 @@ FUND = {
         r"\b_mint\s*\(", r"\b_burn\s*\(", r"selfdestruct\s*\(",
     ],
 }
+# Word-bounded. `supply` must not match `totalSupply` (USDT noise).
+# `transfer` must not match `transferOwnership`. `transferFrom` / `joinPool`
+# are listed as full tokens (longer alternative first).
 FUND_NAME = re.compile(
-    r"(transfer|withdraw|redeem|mint|burn|borrow|repay|liquidat|swap|claim|"
-    r"harvest|flash|sweep|rescue|skim|exit|unstake|release|bridge|payout|"
-    r"collect|refund|settle|execute|deposit|supply|join|"
-    r"exactInput|exactOutput|unoswap|clipperSwap|"
-    r"\bfrob\b|\bflux\b|\bslip\b|\bsuck\b|\bgrab\b|\bfold\b|\bheal\b|\bmove\b)",
-    re.I,
+    r"(?i)(?<![A-Za-z])(?:"
+    r"transferFrom|transfer|"
+    r"withdraw|redeem|mint|burn|issue|borrow|repay|"
+    r"liquidat\w*|swap\w*|claim|harvest|flash\w*|sweep|rescue|skim|"
+    r"exit\w*|unstake|release|bridge|payout|collect|refund|settle|execute|"
+    r"deposit|supply|join\w*|"
+    r"exactInput\w*|exactOutput\w*|unoswap|clipperSwap|"
+    r"uniswapV3\w*Callback|uniswapV2Call|receiveFlashLoan|onFlashLoan|"
+    r"frob|flux|slip|suck|grab|fold|heal|move"
+    r")(?![A-Za-z])"
 )
 ERC20_STANDARD_NAMES = {
     "transfer", "transferfrom", "approve", "allowance",
@@ -57,6 +64,25 @@ ERC20_STANDARD_NAMES = {
     "increaseapproval", "decreaseapproval",
 }
 WRAP_UNWRAP_NAMES = {"deposit", "withdraw", "wrap", "unwrap"}
+# Getters / metadata — never I1 movers, even on Solidity 0.4 `constant`.
+VIEW_META_NAMES = {
+    "totalsupply", "balanceof", "allowance", "name", "symbol", "decimals",
+    "owner", "getowner", "paused", "nonces", "domain_separator",
+    "eip712domain", "version", "implementation", "admin", "pendingowner",
+    "getreserves", "slot0", "factory", "previewdeposit", "previewmint",
+    "previewwithdraw", "previewredeem", "converttoshares", "converttoassets",
+    "asset", "totalassets", "totalshares", "permit",
+}
+CALLBACK_NAMES = {
+    "uniswapv3swapcallback", "uniswapv2call", "uniswapv3mintcallback",
+    "uniswapv3flashcallback", "uniswapv3swapcallback", "pancakecall",
+    "lockacquired", "receiveflashloan", "onflashloan",
+    "algebraSwapCallback", "algebraswapcallback",
+}
+WEAK_AUTH_ONLY = re.compile(
+    r"(initializer|reinitializer|whenNotPaused|whenPaused)",
+    re.I,
+)
 ERC20_ONLY_SIGNAL = re.compile(
     r"^(safeTransfer(From)?|safeApprove|\.transfer\s*\(|\.transferFrom\s*\(|"
     r"\.approve\s*\(|\(name only: )",
@@ -88,6 +114,10 @@ AUTH = {
         r"\bonly[A-Z]\w*", r"require\s*\([^;]*msg\.sender", r"msg\.sender\s*[!=]=",
         r"_checkOwner|_checkRole|hasRole\s*\(|_msgSender\(\)\s*[!=]=",
         r"\bauth\b|\brequiresAuth\b",
+        r"wards\s*\[\s*(msg\.sender|_msgSender\(\))",
+        r"\bwish\s*\(",
+        r"CallbackValidation\.verifyCallback|verifyCallback\s*\(",
+        r"IUniswapV3Pool\s*\(\s*msg\.sender",
         r"ecrecover\s*\(|ECDSA\.recover|SignatureChecker|isValidSignature",
         r"\binitializer\b|\breinitializer\b|\bwhenNotPaused\b",
         r"if\s*\([^)]*msg\.sender[^)]*\)\s*revert", r"MerkleProof\.verify",
@@ -180,7 +210,7 @@ def visibility(lang: str, header: str, _pre: str) -> str:
             (x for x in ("external", "public", "internal", "private") if re.search(r"\b%s\b" % x, header)),
             "public",
         )
-        if re.search(r"\b(view|pure)\b", header):
+        if re.search(r"\b(view|pure|constant)\b", header):
             v += " view"
         if re.search(r"\b(constructor)\b", header):
             v = "constructor"
@@ -275,6 +305,71 @@ def _signals_erc20_only(f_hits: list[str], body: str) -> bool:
     return True
 
 
+def name_is_fund_mover(name: str) -> bool:
+    """True when the function *name* is a value-moving verb (word-bounded)."""
+    return bool(name) and bool(FUND_NAME.search(name))
+
+
+def classify_auth(
+    name: str,
+    header: str,
+    body: str,
+    ctx: str,
+    a_hits: list[str],
+    exposed: bool,
+) -> str:
+    """Cheap I1 bind class. Clear cases → PRESENT / WEAK / MISSING.
+
+    True ambiguity is rare and reserved for unreadable surfaces. Self-scoped
+    user ops (Aave withdraw, router exactInput) are WEAK, not AMBIGUOUS —
+    that keeps V2/V3 and similar families in the same bucket.
+    """
+    lname = (name or "").lower()
+    header = header or ""
+    body = body or ""
+    ctx = ctx or ""
+
+    if re.search(r"\bauth\b|\brequiresAuth\b|\bonlyOwner\b|\bonlyRole\b", header):
+        return "PRESENT"
+    onlys = re.findall(r"\bonly[A-Z]\w+", header)
+    if onlys and not all(WEAK_AUTH_ONLY.search(x) for x in onlys):
+        return "PRESENT"
+    if re.search(r"wards\s*\[\s*(msg\.sender|_msgSender\(\))", ctx):
+        return "PRESENT"
+    if re.search(r"\bwish\s*\(", ctx):
+        return "PRESENT"
+    if re.search(r"CallbackValidation\.verifyCallback|verifyCallback\s*\(", ctx):
+        return "PRESENT"
+    if re.search(r"_checkOwner|_checkRole|hasRole\s*\(", ctx):
+        return "PRESENT"
+    if re.search(r"IUniswapV3Pool\s*\(\s*msg\.sender|msg\.sender\s*==\s*\w*(pool|factory|vault)", ctx, re.I):
+        return "PRESENT"
+
+    strong_hits = [h for h in a_hits if not WEAK_AUTH_ONLY.search(str(h))]
+    if strong_hits:
+        if len(strong_hits) == 1 and re.match(
+            r"(seeds|constraint|address|\bowner\s*=)",
+            strong_hits[0],
+        ):
+            return "WEAK"
+        return "PRESENT"
+    if a_hits:
+        return "WEAK"
+
+    if lname in {n.lower() for n in CALLBACK_NAMES}:
+        if re.search(r"msg\.sender|_msgSender\(\)", ctx):
+            return "PRESENT"
+        return "WEAK"
+
+    if re.search(r"msg\.sender|_msgSender\(\)", body):
+        # Self-scoped user op — a clear (weak) bind, not an ambiguous parse.
+        return "WEAK"
+
+    if exposed:
+        return "MISSING"
+    return "MISSING(internal — check callers)"
+
+
 def _classify_mover(name: str, body: str, f_hits: list[str]) -> str:
     if is_wrap_unwrap(name, body):
         return "wrap-unwrap"
@@ -298,39 +393,36 @@ def analyse_source(src: str, rel: str, lang: str) -> dict[str, Any]:
     mods = solidity_modifiers(clean) if lang == "solidity" else {}
     fund_p = FUND.get(lang, [])
     auth_p = AUTH.get(lang, [])
-    res: dict[str, Any] = dict(file=rel, lang=lang, fund_movers=[], accounting=[], external_calls=[], functions=0)
+    res: dict[str, Any] = dict(
+        file=rel, lang=lang, fund_movers=[], accounting=[], external_calls=[],
+        functions=0, function_names=[],
+    )
     for fn in functions(src, clean, lang):
         res["functions"] += 1
+        res["function_names"].append(fn["name"])
         body = fn["body"]
+        view = "view" in fn["vis"] or "pure" in fn["vis"]
+        lname = (fn["name"] or "").lower()
+        if view or lname in VIEW_META_NAMES or fn["vis"] == "constructor":
+            continue
         f_hits = hits(fund_p, body)
-        name_hit = bool(FUND_NAME.search(fn["name"]))
-        view = "view" in fn["vis"]
-        if (f_hits or (name_hit and not view)) and fn["vis"] != "constructor":
+        name_hit = name_is_fund_mover(fn["name"]) or lname in {n.lower() for n in CALLBACK_NAMES}
+        if f_hits or name_hit:
             ctx = fn["header"] + body
             if lang == "solidity":
                 for mname, mbody in mods.items():
-                    if re.search(r"\b%s\b" % mname, fn["header"]):
+                    if re.search(r"\b%s\b" % re.escape(mname), fn["header"]):
                         ctx += mbody
             a_hits = hits(auth_p, ctx)
             exposed = fn["vis"] in ("external", "public")
-            if a_hits:
-                strength = "PRESENT"
-                if len(a_hits) == 1 and re.match(
-                    r"(seeds|constraint|address|\binitializer|whenNotPaused|owner\s*=)",
-                    a_hits[0],
-                ):
-                    strength = "WEAK"
-            elif re.search(r"msg\.sender|_msgSender\(\)", body):
-                strength = "SELF-SCOPED?"
-            else:
-                strength = "MISSING" if exposed else "MISSING(internal — check callers)"
+            strength = classify_auth(fn["name"], fn["header"], body, ctx, a_hits, exposed)
             signals = f_hits or ["(name only: %s)" % fn["name"]]
             role = _classify_mover(fn["name"], body, signals)
             if role == "wrap-unwrap" and strength in (
-                "MISSING", "SELF-SCOPED?", "AMBIGUOUS", "MISSING(internal — check callers)",
+                "MISSING", "SELF-SCOPED?", "AMBIGUOUS", "WEAK",
+                "MISSING(internal — check callers)",
             ):
                 # High-confidence self-custody wrap/unwrap is not an open drain.
-                # Unsure cases never get this role — they stay AMBIGUOUS.
                 strength = "PRESENT"
                 a_hits = list(a_hits) + ["(wrap-unwrap self-custody)"]
             res["fund_movers"].append(dict(

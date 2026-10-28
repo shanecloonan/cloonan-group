@@ -59,6 +59,8 @@ export type ReceiptInput = {
     hypotheses?: HypothesisRow[] | null;
     notes?: string | string[] | null;
     value_movers?: string[] | null;
+    contract_class?: string | null;
+    scope?: string | null;
     pattern_leads?: { id?: string; name?: string; detail?: string; text?: string }[] | null;
     created_at?: string | null;
   } | null;
@@ -138,7 +140,15 @@ function lanesFromTrace(trace: StageStep[], lane: string): string[] {
   return found.length ? [...new Set(found)] : [lane || "A"];
 }
 
-function handoffNext(bucket: string | null | undefined, src: unknown, ir: unknown): string {
+function handoffNext(
+  bucket: string | null | undefined,
+  src: unknown,
+  ir: unknown,
+  scope?: string | null,
+): string {
+  if (scope === "demoted-token" && bucket === "lane-a-cool") {
+    return "Token / wrap-token demoted from the main Lane A path. Not competing for Lane B. Optional spot-check only.";
+  }
   if (bucket === "manual-review" || src === "low" || ir === "low") {
     return "Manual read of movers + provenance. Do not close as no. If source is missing, fetch verified Etherscan or local --source and re-run Lane A.";
   }
@@ -186,7 +196,7 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
   const heat = res.heat ?? tgt.heat;
   const generatedAt = input.generatedAt || res.created_at || new Date().toISOString();
   const scannerId = input.scannerId || "eth-scanner";
-  const scannerVersion = input.scannerVersion || "0.1.0";
+  const scannerVersion = input.scannerVersion || "0.2.0";
   const workerId = input.workerId || "eth-scanner";
 
   const stageRows =
@@ -229,7 +239,7 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
 
   const meaning = BUCKET_MEANING[String(bucket)] || "Unknown / dropped before a bucket.";
   const stamp = BUCKET_STAMP[String(bucket)] || "human decides; automation does not";
-  const next = handoffNext(bucket, src, ir);
+  const next = handoffNext(bucket, src, ir, res.scope);
   const kind = art.kind || (src === "low" ? "decompile" : "unavailable");
 
   return [
@@ -262,6 +272,8 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
     `- **TVL USD (override / stored):** ${fmt(tgt.tvl_usd)}`,
     `- **Target status:** \`${fmt(tgt.status)}\``,
     `- **Has code:** ${fmt(tgt.has_code, "unknown")}`,
+    `- **Contract class:** \`${fmt(res.contract_class)}\``,
+    `- **Lane scope:** \`${fmt(res.scope)}\` — \`in-scope\` (main lane) · \`demoted-token\` (cool-archive) · \`utility\``,
     "",
     "## Source provenance",
     "",

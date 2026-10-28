@@ -6,6 +6,7 @@ Emits heat + bucket. Never a verdict. Never auto-yes. Low IR → manual-review.
 from __future__ import annotations
 
 import hashlib
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -15,6 +16,7 @@ from eth_scanner.funnel.s0_s7 import FunnelConfig, FunnelContext, run_lane_a
 from eth_scanner.ingest.etherscan import (
     EtherscanClient,
     IngestError,
+    RateLimitError,
     fetch_rpc_code,
     fingerprint_bytecode,
     has_runtime_code,
@@ -41,7 +43,7 @@ def run_one(
     addr = normalize_address(address)
     closed = store.closed_no_hashes()
 
-    artifact, code, src_dir = _ingest(
+    artifact, code, src_dir, incomplete, incomplete_reason = _ingest(
         addr,
         settings=settings,
         source_path=source_path,
@@ -49,14 +51,20 @@ def run_one(
         bytecode=bytecode,
     )
     code_hash = fingerprint_bytecode(code) if code else _source_fingerprint(artifact.content)
+    has_code = has_runtime_code(code) if code else bool(artifact.content)
+    if incomplete and not has_code:
+        # Rate-limit starvation is not a confirmed EOA — S0 must keep the row.
+        has_code = True
     target = Target(
         address=addr,
         bytecode_hash=code_hash or None,
         bytecode=code or None,
         tvl_usd=tvl_usd,
         status="running",
-        has_code=has_runtime_code(code) if code else bool(artifact.content),
+        has_code=has_code,
         prior_closed_no=bool(code_hash and code_hash in closed),
+        ingest_incomplete=incomplete,
+        ingest_incomplete_reason=incomplete_reason,
     )
     store.upsert_target(target)
     store.save_artifact(addr, artifact.kind, artifact_payload(artifact), artifact.src_confidence)
@@ -117,7 +125,8 @@ def _ingest(
     source_path: Optional[Path],
     source_text: Optional[str],
     bytecode: str,
-) -> tuple[SourceArtifact, str, Optional[Path]]:
+) -> tuple[SourceArtifact, str, Optional[Path], bool, str]:
+    """Return (artifact, bytecode, source_dir, incomplete, incomplete_reason)."""
     if source_path:
         p = Path(source_path)
         if p.is_file():
@@ -130,8 +139,7 @@ def _ingest(
             )
             dest = settings.work_dir / "sources" / address
             art, src_dir = materialize_source(art, dest)
-            # Pass unpacked dir when the file was Etherscan JSON; else scan the string.
-            return art, bytecode, src_dir
+            return art, bytecode, src_dir, False, ""
         if p.is_dir():
             files = list(p.rglob("*.sol")) + list(p.rglob("*.vy"))
             text = "\n\n".join(f.read_text(encoding="utf-8", errors="replace") for f in files[:40])
@@ -140,7 +148,7 @@ def _ingest(
                 src_confidence="high", verified_match="exact", tool="local",
                 notes=["local source directory"],
             )
-            return art, bytecode, p
+            return art, bytecode, p, False, ""
 
     if source_text:
         art = SourceArtifact(
@@ -149,7 +157,7 @@ def _ingest(
         )
         dest = settings.work_dir / "sources" / address
         art, src_dir = materialize_source(art, dest)
-        return art, bytecode, src_dir
+        return art, bytecode, src_dir, False, ""
 
     code = bytecode
     if settings.eth_rpc_url and not code:
@@ -167,19 +175,26 @@ def _ingest(
             if not code:
                 try:
                     code = client.get_code(address)
+                except RateLimitError as exc:
+                    art.notes.append("eth_getCode rate-limited: %s" % exc)
                 except IngestError:
                     pass
             impl_addr = art.implementation
+            incomplete = False
+            incomplete_reason = ""
             # Resolve implementation *before* decompile fallback so IR lifts impl source.
             if impl_addr:
-                try:
-                    impl_raw = client.get_source(impl_addr)
-                    impl = parse_source_result(impl_addr, impl_raw)
-                    if impl.content:
-                        impl.notes.append("resolved EIP-1967/etherscan implementation %s" % impl_addr)
+                impl, impl_err = _fetch_impl(client, impl_addr)
+                if impl is not None and impl.content:
+                    impl.notes.append("resolved EIP-1967/etherscan implementation %s" % impl_addr)
                     art = select_ir_artifact(art, impl)
-                except IngestError:
-                    art.notes.append("implementation source fetch failed; staying on proxy artifact")
+                else:
+                    art.notes.append(
+                        "implementation source fetch failed (%s); not treating proxy-only as a full surface"
+                        % (impl_err or "empty")
+                    )
+                    incomplete = True
+                    incomplete_reason = "implementation fetch failed for %s" % impl_addr
             if art.src_confidence == "low" or art.kind == "decompile" or not art.content:
                 stub = decompile(address, code)
                 if impl_addr:
@@ -189,15 +204,35 @@ def _ingest(
                 art = stub
             dest = settings.work_dir / "sources" / address
             art, src_dir = materialize_source(art, dest)
-            return art, code, src_dir
+            return art, code, src_dir, incomplete, incomplete_reason
+        except RateLimitError as exc:
+            stub = decompile(address, code)
+            stub.notes.append(
+                "etherscan rate-limited after retries: %s — not a confirmed empty contract" % exc
+            )
+            return stub, code, None, True, "etherscan rate-limited"
         except IngestError as exc:
             stub = decompile(address, code)
             stub.notes.append("etherscan ingest failed: %s" % exc)
-            return stub, code, None
+            return stub, code, None, True, "etherscan ingest failed"
 
     stub = decompile(address, code)
     stub.notes.append("no ETHERSCAN_API_KEYS and no --source; low-confidence stub")
-    return stub, code, None
+    return stub, code, None, False, ""
+
+
+def _fetch_impl(client: EtherscanClient, impl_addr: str) -> tuple[Optional[SourceArtifact], str]:
+    last = ""
+    for attempt in range(3):
+        try:
+            impl_raw = client.get_source(impl_addr)
+            return parse_source_result(impl_addr, impl_raw), ""
+        except RateLimitError as exc:
+            last = str(exc)
+            time.sleep(min(8.0, 1.5 * (attempt + 1)))
+        except IngestError as exc:
+            return None, str(exc)
+    return None, last or "implementation fetch failed"
 
 
 def _source_fingerprint(text: str) -> str:
