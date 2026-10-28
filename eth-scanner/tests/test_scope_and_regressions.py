@@ -213,6 +213,7 @@ _ADDR = {
     "linea_usdc_bridge_like.sol": "0x504A330327A089d8364C4ab3811Ee26976d388ce",
     "lido_withdrawal_vault_like.sol": "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f",
     "sonic_token_deposit_like.sol": "0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20",
+    "circle_gateway_wallet_like.sol": "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -396,6 +397,8 @@ LIVE_LIDO_WV = "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f"
 LIVE_LIDO_WV_IMPL = "0xfB4521BD151BFB45DB6045D2d07e58e0f597e340"
 LIVE_SONIC_TD = "0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20"
 LIVE_SONIC_TD_IMPL = "0xAdE2eF0101278fe11490F2EE2aaD7915a094ADe9"
+LIVE_CIRCLE_GW = "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE"
+LIVE_CIRCLE_GW_IMPL = "0xF7a6D9D7Df917c072ac8987A820c58aA27A0e798"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -3311,6 +3314,47 @@ class Pass31SonicTokenDeposit(unittest.TestCase):
         self.assertEqual(_lane("lido_withdrawal_vault_like.sol").contract_class, "staking")
 
     def test_pass30_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("lido_withdrawal_vault_like.sol").contract_class, "staking")
+        self.assertEqual(_lane("lido_withdrawal_queue_like.sol").contract_class, "staking")
+        self.assertEqual(_lane("linea_usdc_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("voting_escrow_like.vy").contract_class, "staking")
+        self.assertEqual(_lane("tokemak_eth_pool_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertEqual(LIVE_STAKEDAO_FXS_LOCKER.lower()[0:6], "0xcd3a")
+        self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
+
+
+class Pass32CircleGatewayWallet(unittest.TestCase):
+    """Pass 32: Circle GatewayWallet USDC lock. New hunt."""
+
+    def test_circle_gateway_wallet_is_bridge_not_sonic(self):
+        src = (FIXTURES / "circle_gateway_wallet_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="GatewayWallet"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("circle-gateway-wallet", ir.scope_signals)
+        self.assertNotIn("sonic-token-deposit", ir.scope_signals)
+        self.assertNotIn("linea-usdc-bridge", ir.scope_signals)
+        r = _lane("circle_gateway_wallet_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["circle_gateway_wallet_like.sol"], LIVE_CIRCLE_GW)
+        self.assertEqual(LIVE_CIRCLE_GW_IMPL.lower()[0:6], "0xf7a6")
+
+    def test_sonic_linea_and_lido_still_separate(self):
+        self.assertEqual(_lane("sonic_token_deposit_like.sol").contract_class, "bridge")
+        src = (FIXTURES / "sonic_token_deposit_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TokenDeposit"), try_slither=False)
+        self.assertIn("sonic-token-deposit", ir.scope_signals)
+        self.assertNotIn("circle-gateway-wallet", ir.scope_signals)
+        self.assertEqual(_lane("linea_usdc_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("lido_withdrawal_vault_like.sol").contract_class, "staking")
+
+    def test_pass31_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("sonic_token_deposit_like.sol").contract_class, "bridge")
         self.assertEqual(_lane("lido_withdrawal_vault_like.sol").contract_class, "staking")
         self.assertEqual(_lane("lido_withdrawal_queue_like.sol").contract_class, "staking")
         self.assertEqual(_lane("linea_usdc_bridge_like.sol").contract_class, "bridge")
