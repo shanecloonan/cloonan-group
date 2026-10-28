@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 /// Contango Vault impl (`0x3cab…861a`; proxy `0x3F37…F36b`).
-/// Holds per-account token balances. Generic custody keep is correct —
-/// do not invent a weak vault family. Fixture only — not a finding.
+/// Holds per-account token balances. depositNative + withdrawNative +
+/// depositTo — Fluid uses operate. Fixture only — not a finding.
 contract Vault {
     mapping(address => uint256) public totalBalanceOf;
 

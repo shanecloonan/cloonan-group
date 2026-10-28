@@ -195,6 +195,8 @@ _ADDR = {
     "upshift_vault_like.sol": "0x3EAa4b3e8967c02cE1304C1EB35e8C5409838DFC",
     "mellow_vault_like.sol": "0x76001faFd4a8d3E8Cd399e19B91296Bc8bD0bb84",
     "clearpool_pool_like.sol": "0x2E1CE0F2ab6B61d5A3d1682a77496c4611860B57",
+    "mellow_root_vault_like.sol": "0xa1eeEb677a121327Ea2643Fb47a23fec304Edd00",
+    "concrete_async_vault_like.sol": "0xd57588c73715b65e0ead36ae06c15644169501b7",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -332,6 +334,10 @@ LIVE_MELLOW_VAULT = "0x76001faFd4a8d3E8Cd399e19B91296Bc8bD0bb84"
 LIVE_CLEARPOOL_IMPL = "0x2E1CE0F2ab6B61d5A3d1682a77496c4611860B57"
 LIVE_CLEARPOOL_WINTERMUTE = "0xcb288b6d30738db7e3998159d192615769794b5b"
 LIVE_UPSHIFT_POOL_IMPL = "0xc0026E559dA7F2d4eE573616C09A8F721fa599bd"
+LIVE_MELLOW_ROOT_VAULT = "0xa1eeEb677a121327Ea2643Fb47a23fec304Edd00"
+LIVE_CONCRETE_WSTETH = "0xd57588c73715b65e0ead36ae06c15644169501b7"
+LIVE_CONCRETE_WSTETH_IMPL = "0x438d1eb241F866A91EbD0cc148FDa9ac9b09093E"
+LIVE_CONCRETE_DELTA_WEETH = "0xb9dc54c8261745cb97070cefbe3d3d815aee8f20"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1317,7 +1323,7 @@ class Pass7LiveLocks(unittest.TestCase):
             "gearbox_pool_v3_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "crvusd_controller_like.sol": ("lending", "in-scope", "lane-b-queue"),
             "crvusd_llamma_like.vy": ("pool", "in-scope", "lane-b-queue"),
-            "contango_vault_like.sol": ("custody", "in-scope", "lane-b-queue"),
+            "contango_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "comet_rewards_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
             "pool_addresses_provider_like.sol": ("utility", "utility", "human-no-candidate"),
             "usde_like.sol": ("token", "demoted-token", "lane-a-cool"),
@@ -2192,14 +2198,15 @@ class Pass14CrvusdEulerVenues(unittest.TestCase):
         self.assertEqual(r.bucket, "lane-b-queue")
         self.assertEqual(_ADDR["crvusd_llamma_like.vy"], LIVE_CRVUSD_LLAMMA_IMPL)
 
-    def test_contango_vault_stays_custody(self):
+    def test_contango_vault_is_vault(self):
         src = (FIXTURES / "contango_vault_like.sol").read_text(encoding="utf-8")
         ir = normalize(_art(src, contract_name="Vault"), try_slither=False)
-        self.assertEqual(ir.contract_class, "custody")
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("contango-vault", ir.scope_signals)
         self.assertEqual(ir.scope, "in-scope")
         r = _lane("contango_vault_like.sol")
-        self.assertEqual(r.contract_class, "custody")
-        self.assertNotEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
         self.assertEqual(_ADDR["contango_vault_like.sol"], LIVE_CONTANGO_VAULT)
 
 
@@ -2287,7 +2294,7 @@ class Pass15MorphoEthenaVenues(unittest.TestCase):
         self.assertEqual(_lane("metamorpho_like.sol").contract_class, "vault")
 
     def test_contango_and_euler_proxy_still_honest_keep(self):
-        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "vault")
         self.assertEqual(_ADDR["euler_evault_like.sol"], LIVE_EULER_EVAULT)
         self.assertEqual(LIVE_EULER_USDC_PROXY.lower()[0:6], "0x797d")
 
@@ -2355,7 +2362,7 @@ class Pass16LiquityEigenVenues(unittest.TestCase):
 
     def test_dsr_and_ethena_minting_stay_custody(self):
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
-        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "vault")
 
     def test_weeth_still_wrap(self):
         r = _lane("weeth_like.sol")
@@ -2455,7 +2462,7 @@ class Pass17MaplePendleVenues(unittest.TestCase):
 
     def test_dsr_ethena_contango_stay_custody(self):
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
-        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "vault")
         self.assertEqual(LIVE_ETHENA_MINT.lower()[0:6], "0xe349")
 
 
@@ -2547,7 +2554,7 @@ class Pass18UsualTreehouseEtherfi(unittest.TestCase):
         self.assertEqual(_lane("sweth_like.sol").contract_class, "staking")
         self.assertEqual(_lane("meth_like.sol").contract_class, "token")
         self.assertEqual(_lane("susds_like.sol").contract_class, "vault")
-        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "vault")
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
         self.assertEqual(LIVE_STAKED_LBTC.lower()[0:6], "0x8236")
         self.assertEqual(LIVE_ETHERFI_WRNFT.lower()[0:6], "0x7d57")
@@ -2634,7 +2641,7 @@ class Pass19FolioMantleCcip(unittest.TestCase):
         self.assertEqual(_lane("usds_like.sol").contract_class, "token")
         self.assertEqual(_lane("sdai_like.sol").contract_class, "vault")
         self.assertEqual(_lane("meth_like.sol").contract_class, "token")
-        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "vault")
         self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
         self.assertEqual(_lane("rtoken_like.sol").contract_class, "token")
         self.assertEqual(LIVE_FLUID_VAULT_T1.lower()[0:6], "0x348a")
@@ -2704,7 +2711,7 @@ class Pass20FraxlendSommelierTerm(unittest.TestCase):
         self.assertEqual(_lane("mantle_unstake_queue_like.sol").contract_class, "staking")
         self.assertEqual(_lane("ccip_lock_release_like.sol").contract_class, "bridge")
         self.assertEqual(_lane("treehouse_redemption_like.sol").contract_class, "vault")
-        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "vault")
         self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
         self.assertEqual(_lane("fluid_liquidity_dummy_like.sol").contract_class, "lending")
@@ -2786,10 +2793,70 @@ class Pass21VedaUpshiftMellow(unittest.TestCase):
         self.assertEqual(_lane("term_repo_collateral_like.sol").contract_class, "vault")
         self.assertEqual(_lane("term_repo_locker_like.sol").contract_class, "vault")
         self.assertEqual(_lane("liquid_collective_like.sol").contract_class, "staking")
-        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "vault")
         self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
         self.assertEqual(LIVE_CONTANGO_IMPL.lower()[0:6], "0x3cab")
+        self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
+        self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass22ConcreteMellowContango(unittest.TestCase):
+    """Pass 22: Mellow ERC20RootVault, Concrete async, Contango unique pair."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_mellow_root_vault_is_vault(self):
+        src = (FIXTURES / "mellow_root_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="ERC20RootVault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("mellow-root-vault", ir.scope_signals)
+        r = _lane("mellow_root_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["mellow_root_vault_like.sol"], LIVE_MELLOW_ROOT_VAULT)
+
+    def test_concrete_async_vault_is_vault(self):
+        src = (FIXTURES / "concrete_async_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="ConcreteAsyncVaultImpl"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("concrete-async-vault", ir.scope_signals)
+        self.assertNotIn("erc4626", ir.scope_signals)
+        r = _lane("concrete_async_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["concrete_async_vault_like.sol"], LIVE_CONCRETE_WSTETH)
+        self.assertEqual(LIVE_CONCRETE_WSTETH_IMPL.lower()[0:6], "0x438d")
+        self.assertEqual(LIVE_CONCRETE_DELTA_WEETH.lower()[0:6], "0xb9dc")
+
+    def test_contango_unique_pair_not_fluid(self):
+        src = (FIXTURES / "contango_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Vault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("contango-vault", ir.scope_signals)
+        fluid_src = (FIXTURES / "fluid_liquidity_dummy_like.sol").read_text(encoding="utf-8")
+        fluid_ir = normalize(_art(fluid_src, contract_name="FluidLiquidityDummyImpl"), try_slither=False)
+        self.assertEqual(fluid_ir.contract_class, "lending")
+        self.assertNotIn("contango-vault", fluid_ir.scope_signals)
+        self.assertEqual(_lane("fluid_liquidity_dummy_like.sol").contract_class, "lending")
+        self.assertEqual(_lane("contango_vault_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["contango_vault_like.sol"], LIVE_CONTANGO_VAULT)
+        self.assertEqual(LIVE_CONTANGO_IMPL.lower()[0:6], "0x3cab")
+
+    def test_pass21_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("veda_boring_vault_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("veda_teller_like.sol").contract_class, "router")
+        self.assertEqual(_lane("veda_queue_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("upshift_vault_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("mellow_vault_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("clearpool_pool_like.sol").contract_class, "lending")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("erc4626_vault_like.sol").contract_class, "vault")
         self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
         self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
         self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
