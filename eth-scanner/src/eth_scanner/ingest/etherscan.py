@@ -14,20 +14,56 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from eth_scanner.types import SourceArtifact
+from eth_scanner.types import DEFAULT_ETHERSCAN_INTERVAL_S, SourceArtifact
 
 ETHERSCAN_V2 = "https://api.etherscan.io/v2/api"
 CHAIN_ID = 1  # Ethereum mainnet only
+RATE_HINTS = (
+    "rate limit", "max rate", "too many requests", "max calls per",
+    "rate limiter", "max rate limit reached",
+)
 
 
 class IngestError(RuntimeError):
     pass
 
 
+class RateLimitError(IngestError):
+    """Free-tier starvation — not an unverified or empty contract."""
+
+
+def is_rate_limited_payload(message: Any = "", result: Any = None, status_code: int = 0) -> bool:
+    if status_code == 429:
+        return True
+    parts = [str(message or "")]
+    if isinstance(result, str):
+        parts.append(result)
+    elif isinstance(result, dict):
+        parts.append(str(result.get("message") or ""))
+        parts.append(str(result.get("result") or ""))
+    blob = " ".join(parts).lower()
+    return any(h in blob for h in RATE_HINTS)
+
+
+def _retry_after_s(headers: Any, attempt: int, cap: float = 30.0) -> float:
+    raw = None
+    if headers is not None:
+        try:
+            raw = headers.get("Retry-After")
+        except Exception:  # noqa: BLE001
+            raw = None
+    if raw:
+        try:
+            return min(cap, max(0.4, float(raw)))
+        except (TypeError, ValueError):
+            pass
+    return min(cap, 1.5 ** (attempt + 1))
+
+
 @dataclass
 class KeyRotator:
     keys: list[str]
-    min_interval_s: float = 0.25
+    min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S
     _last: dict[str, float] = field(default_factory=dict)
     _i: int = 0
 
@@ -48,56 +84,86 @@ class KeyRotator:
 
 
 class EtherscanClient:
-    def __init__(self, keys: list[str], min_interval_s: float = 0.25, timeout_s: float = 20.0):
+    def __init__(
+        self,
+        keys: list[str],
+        min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S,
+        timeout_s: float = 20.0,
+        max_attempts: int = 8,
+    ):
         self.rotator = KeyRotator(keys=list(keys), min_interval_s=min_interval_s)
         self.timeout_s = timeout_s
+        self.max_attempts = max(3, int(max_attempts))
 
-    def get_source(self, address: str) -> dict[str, Any]:
+    def get_source(self, address: str) -> Any:
         return self._get({"module": "contract", "action": "getsourcecode", "address": address})
 
     def get_code(self, address: str) -> str:
         data = self._get({"module": "proxy", "action": "eth_getCode", "address": address, "tag": "latest"})
         if isinstance(data, str):
             return data
-        return str(data.get("result") or data.get("json") or "")
+        if isinstance(data, dict):
+            return str(data.get("result") or data.get("json") or "")
+        return str(data or "")
 
     def _get(self, params: dict[str, Any]) -> Any:
         last_err: Optional[Exception] = None
-        keys_tried = max(1, len(self.rotator.keys))
-        for attempt in range(keys_tried + 2):
+        saw_rate_limit = False
+        retry_hdr = None
+        for attempt in range(self.max_attempts):
             key = self.rotator.acquire()
             q = dict(params)
             q["chainid"] = CHAIN_ID
             q["apikey"] = key
             url = ETHERSCAN_V2 + "?" + urllib.parse.urlencode(q)
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner/0.1 (defensive; read-only)"})
+                req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner/0.2 (defensive; read-only)"})
                 with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
                     raw = resp.read().decode("utf-8", errors="replace")
+                    retry_hdr = resp.headers
                 body = json.loads(raw)
             except urllib.error.HTTPError as exc:
                 last_err = exc
                 if exc.code == 429:
-                    time.sleep(min(8.0, 1.5 * (attempt + 1)))
+                    saw_rate_limit = True
+                    time.sleep(_retry_after_s(exc.headers, attempt))
+                    last_err = RateLimitError("HTTP 429")
+                    continue
+                if exc.code >= 500:
+                    time.sleep(min(16.0, 0.8 * (2 ** attempt)))
                     continue
                 raise IngestError("etherscan HTTP %s" % exc.code) from exc
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
                 last_err = exc
-                time.sleep(0.5)
+                time.sleep(min(8.0, 0.4 * (2 ** attempt)))
                 continue
             status = str(body.get("status", ""))
             message = str(body.get("message") or "")
-            if "rate limit" in message.lower() or "max rate" in message.lower():
-                time.sleep(min(8.0, 1.5 * (attempt + 1)))
+            result = body.get("result", body)
+            if is_rate_limited_payload(message, result):
+                saw_rate_limit = True
+                last_err = RateLimitError(message or str(result)[:120] or "rate limit")
+                time.sleep(_retry_after_s(retry_hdr, attempt))
                 continue
             if status == "0" and "NOTOK" in message.upper():
+                # Real "not verified" is an empty source, not a retry loop.
+                low = message.lower()
+                if "not verified" in low or "not found" in low:
+                    return result
                 last_err = IngestError(message)
+                time.sleep(min(4.0, 0.5 * (attempt + 1)))
                 continue
-            return body.get("result", body)
+            return result
+        if saw_rate_limit:
+            raise RateLimitError("etherscan rate-limited after %d attempts: %s" % (self.max_attempts, last_err))
         raise IngestError("etherscan failed after rotation: %s" % last_err)
 
 
 def parse_source_result(address: str, result: Any) -> SourceArtifact:
+    if is_rate_limited_payload(result=result) or (
+        isinstance(result, str) and is_rate_limited_payload(message=result)
+    ):
+        raise RateLimitError("etherscan result is a rate-limit payload, not source (%s)" % address)
     row: dict[str, Any]
     if isinstance(result, list) and result:
         row = result[0] if isinstance(result[0], dict) else {}
@@ -190,7 +256,7 @@ def fetch_rpc_code(rpc_url: str, address: str, timeout_s: float = 15.0) -> str:
     req = urllib.request.Request(
         rpc_url,
         data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner/0.1 (defensive; read-only)"},
+        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner/0.2 (defensive; read-only)"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:

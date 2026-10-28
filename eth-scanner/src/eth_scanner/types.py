@@ -42,6 +42,9 @@ BUCKETS: tuple[Bucket, ...] = (
 # §6.0 heat ranking only — never used to auto-dismiss.
 DEFAULT_HEAT_THRESHOLD = 3
 DEFAULT_TVL_FLOOR_USD = 10_000.0
+MAX_HEAT = 12
+# Free-tier Etherscan starves under ~0.25s; verified iteration-2 used ~0.4s.
+DEFAULT_ETHERSCAN_INTERVAL_S = 0.4
 
 
 def to_plain(obj: Any) -> Any:
@@ -67,6 +70,9 @@ class Target:
     # Prior closed-no hashes for this exact bytecode (S0 dedupe).
     prior_closed_no: bool = False
     prior_verdict: Optional[str] = None
+    # Rate-limit / proxy-impl fetch failure — NOT a confirmed empty EOA.
+    ingest_incomplete: bool = False
+    ingest_incomplete_reason: Optional[str] = None
 
 
 @dataclass
@@ -120,6 +126,11 @@ class IRDocument:
     external_calls: list[dict[str, Any]] = field(default_factory=list)
     abi_mismatch_hint: bool = False
     fork_family: Optional[str] = None
+    unpack_failed: bool = False
+    contract_class: str = "unknown"
+    scope: str = "unknown"  # in-scope | demoted-token | utility | unknown
+    scope_signals: list[str] = field(default_factory=list)
+    function_names: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -154,6 +165,9 @@ class FunnelResult:
     hypotheses: list[Hypothesis] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     value_movers: list[str] = field(default_factory=list)
+    contract_class: str = "unknown"
+    scope: str = "unknown"
+    scope_signals: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return to_plain(self)

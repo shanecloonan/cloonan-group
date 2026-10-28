@@ -20,7 +20,8 @@ from typing import Any, Optional
 
 from eth_scanner.heuristics.invariant_pass import run_scan, run_scan_source
 from eth_scanner.heuristics.patterns import detect_fork_family, detect_weird_signals, skim_known_patterns
-from eth_scanner.ingest.unpack import looks_like_etherscan_json, materialize_source
+from eth_scanner.heuristics.scope import classify_scope
+from eth_scanner.ingest.unpack import looks_like_etherscan_json, materialize_source, parse_etherscan_sources
 from eth_scanner.types import FunctionIR, IRDocument, SourceArtifact
 
 
@@ -35,18 +36,30 @@ def normalize(
     src_conf = artifact.src_confidence
 
     tmp_holder = None
-    if (source_dir is None or not source_dir.exists()) and looks_like_etherscan_json(src):
-        tmp_holder = tempfile.TemporaryDirectory(prefix="eth-scanner-unpack-")
-        artifact, unpacked = materialize_source(artifact, Path(tmp_holder.name))
-        src = artifact.content or src
-        if unpacked and unpacked.exists():
-            source_dir = unpacked
-            notes.append("normalize unpacked Etherscan multi-file / standard-json source")
-
-    surface: dict[str, Any]
+    unpack_failed = False
     lift_failed = False
+    if looks_like_etherscan_json(src):
+        files = parse_etherscan_sources(src)
+        if not files:
+            unpack_failed = True
+            lift_failed = True
+            notes.append(
+                "Etherscan JSON payload did not unpack to Solidity/Vyper — "
+                "not a no-mover close (Do Not Auto-Dismiss)"
+            )
+        elif source_dir is None or not source_dir.exists():
+            tmp_holder = tempfile.TemporaryDirectory(prefix="eth-scanner-unpack-")
+            artifact, unpacked = materialize_source(artifact, Path(tmp_holder.name))
+            src = artifact.content or src
+            if unpacked and unpacked.exists():
+                source_dir = unpacked
+                notes.append("normalize unpacked Etherscan multi-file / standard-json source")
+
+    surface: dict[str, Any] = {"files": [], "summary": {}}
     try:
-        if source_dir and source_dir.exists():
+        if unpack_failed:
+            surface = {"error": "unpack_failed", "files": [], "summary": {}}
+        elif source_dir and source_dir.exists():
             try:
                 surface = run_scan([str(source_dir)])
             except Exception as exc:  # noqa: BLE001 — lift failure is a first-class outcome
@@ -104,6 +117,10 @@ def normalize(
     if artifact.kind == "decompile":
         notes.append("Decompile is a hypothesis generator only. Never proof of safety or theft.")
 
+    fn_names = _function_names_from_surface(surface)
+    scope = classify_scope(source=src, functions=functions, extra_names=fn_names)
+    notes.append("scope=%s class=%s signals=%s" % (scope.scope, scope.contract_class, ",".join(scope.signals) or "—"))
+
     return IRDocument(
         functions=functions,
         ir_confidence=ir_conf,
@@ -119,6 +136,11 @@ def normalize(
         external_calls=ext,
         abi_mismatch_hint=bool(artifact.is_proxy and not artifact.implementation),
         fork_family=fork,
+        unpack_failed=unpack_failed,
+        contract_class=scope.contract_class,
+        scope=scope.scope,
+        scope_signals=list(scope.signals),
+        function_names=fn_names,
     )
 
 
@@ -158,6 +180,23 @@ def _functions_from_surface(surface: dict[str, Any]) -> list[FunctionIR]:
                 role=role,
             ))
     return out
+
+
+def _function_names_from_surface(surface: dict[str, Any]) -> list[str]:
+    names: list[str] = []
+    seen: set[str] = set()
+    for f in surface.get("files") or []:
+        for raw in f.get("function_names") or []:
+            key = str(raw)
+            if key and key not in seen:
+                seen.add(key)
+                names.append(key)
+        for m in f.get("fund_movers") or []:
+            key = str(m.get("fn") or "")
+            if key and key not in seen:
+                seen.add(key)
+                names.append(key)
+    return names
 
 
 def _ir_confidence(*, src_conf: str, language: str, lift_failed: bool, slither_ok: bool, kind: str) -> str:

@@ -102,9 +102,11 @@ def detect_fork_family(source: str) -> str | None:
     for name, rx in (
         ("erc4626", r"\bERC4626\b|\bconvertToShares\b"),
         ("compound", r"\bCErc20\b|\bComptroller\b"),
-        ("aave", r"\bLendingPool\b|\bAToken\b"),
+        ("aave", r"\bLendingPool\b|\bAToken\b|\bexecuteSupply\b|\bPoolConfigurator\b|\bIPool\b"),
+        ("balancer", r"\bjoinPool\b|\bexitPool\b|\bmanageUserBalance\b"),
+        ("maker", r"\bmodifier\s+auth\b|\bfunction\s+frob\s*\("),
         ("uniswap-v2", r"\bUniswapV2\b|\bgetReserves\b"),
-        ("uniswap-v3", r"\bUniswapV3\b|\bslot0\b"),
+        ("uniswap-v3", r"\bUniswapV3\b|\buniswapV3SwapCallback\b|\bslot0\b"),
         ("masterchef", r"\bMasterChef\b"),
     ):
         if re.search(rx, source):

@@ -224,6 +224,8 @@ def _print_results(results, settings, paths: Optional[list[Optional[Path]]] = No
             "src_confidence": res.src_confidence,
             "ir_confidence": res.ir_confidence,
             "value_movers": res.value_movers,
+            "contract_class": res.contract_class,
+            "scope": res.scope,
             "stage_trace": to_plain(res.stage_trace),
             "notes": res.notes,
             "receipt_path": str(path) if path else None,

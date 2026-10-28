@@ -135,12 +135,21 @@ class ManualReviewOnWeakIR(unittest.TestCase):
         ))
         self.assertEqual(r.bucket, "manual-review")
 
-    def test_self_scoped_is_ambiguous(self):
+    def test_self_scoped_is_weak_not_manual_review(self):
         r = run_lane_a(FunnelContext(
             target=_target(),
             artifact=_art("high"),
             ir=_ir("high", movers=[_mover(auth="SELF-SCOPED?")]),
         ))
+        self.assertNotEqual(r.bucket, "manual-review")
+        self.assertIn(r.bucket, {"lane-a-cool", "lane-b-queue"})
+
+    def test_ingest_incomplete_empty_eoa_not_dropped(self):
+        t = _target(has_code=False)
+        t.ingest_incomplete = True
+        t.ingest_incomplete_reason = "etherscan rate-limited"
+        r = run_lane_a(FunnelContext(target=t, artifact=_art("low", kind="decompile", content=""), ir=None))
+        self.assertFalse(r.dropped)
         self.assertEqual(r.bucket, "manual-review")
 
 
@@ -185,6 +194,18 @@ class LaneARouting(unittest.TestCase):
             ir=_ir("high", movers=[_mover(auth="PRESENT")], weird=["bridge-mint-release"]),
         ))
         self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_mixed_ambiguous_and_weak_does_not_force_manual_review(self):
+        r = run_lane_a(FunnelContext(
+            target=_target(tvl_usd=0),
+            artifact=_art("high"),
+            ir=_ir("high", movers=[
+                _mover(name="borrow", auth="WEAK"),
+                _mover(name="repay", auth="AMBIGUOUS"),
+            ]),
+        ))
+        self.assertNotEqual(r.bucket, "manual-review")
+        self.assertNotEqual(r.bucket, "human-yes-candidate")
 
     def test_lane_a_never_emits_human_yes(self):
         cases = [

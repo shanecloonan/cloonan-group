@@ -232,25 +232,29 @@ class LaneADryRunBuckets(unittest.TestCase):
         self.assertTrue(set(result.value_movers) & {"deposit", "borrow"})
         self.assertNotEqual(result.bucket, "human-yes-candidate")
 
-    def test_vanilla_erc20_prefers_cool_or_human_no(self):
+    def test_vanilla_erc20_demoted_cool(self):
         result = lane_a_one(
             "0x" + "55" * 20,
             store=MemoryStore(),
             source_path=ROOT / "tests" / "fixtures" / "vanilla_erc20.sol",
-            tvl_usd=0,
+            tvl_usd=50_000,
         )
-        self.assertIn(result.bucket, {"lane-a-cool", "human-no-candidate"})
+        self.assertEqual(result.bucket, "lane-a-cool")
+        self.assertEqual(result.scope, "demoted-token")
         self.assertNotIn("transfer", result.value_movers)
         self.assertNotEqual(result.bucket, "human-yes-candidate")
+        self.assertNotEqual(result.bucket, "lane-b-queue")
 
-    def test_weth_unwrap_not_forced_manual_review(self):
+    def test_weth_unwrap_demoted_not_lane_b(self):
         result = lane_a_one(
             "0x" + "66" * 20,
             store=MemoryStore(),
             source_path=ROOT / "tests" / "fixtures" / "weth_like.sol",
-            tvl_usd=0,
+            tvl_usd=9_999_999,
         )
-        self.assertIn(result.bucket, {"lane-a-cool", "human-no-candidate", "lane-b-queue"})
+        self.assertEqual(result.bucket, "lane-a-cool")
+        self.assertEqual(result.scope, "demoted-token")
+        self.assertEqual(result.contract_class, "wrap-token")
         self.assertNotEqual(result.bucket, "human-yes-candidate")
         self.assertTrue(set(result.value_movers) & {"withdraw", "deposit"})
 
