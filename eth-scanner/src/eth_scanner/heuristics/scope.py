@@ -48,6 +48,9 @@ TOKEN_ADMIN_NAMES = frozenset({
     "updaterescuer", "updateblacklister", "updatepauser", "removeminter",
     "cancelauthorization",
     "mintto", "mintbatch", "burnfrom", "burnbatch",
+    # Reserve RToken (`issueTo` / `redeemTo` / `melt`) — token, not a hold.
+    # Basket sits on BackingManager / Folio; monetizeDonations forwards dust.
+    "issueto", "redeemto", "redeemcustom", "melt", "monetizedonations",
     # Mantle mETH / similar LST receipts — admin, not custody.
     "forcemint", "forceburn",
     # Frax frxETH permissioned mint — receipt token, not a hold.
@@ -1169,6 +1172,22 @@ def _passthrough_family(
         and not _own_reserves(src, names, focus)
     ):
         return "router", ["stargate-token-messaging"]
+    # TreehouseRouter (`0xeFA3…8F5`): wrap ETH/stETH/WETH to wstETH and
+    # mint tETH into the vault. Assets are forwarded — nothing sits here.
+    if (
+        {"deposit", "depositeth"} <= (declared | probe)
+        and {"tasset", "iau"} <= declared
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["treehouse-router"]
+    # Usual DaoCollateral (`0xde6e…8b04` / impl `0x0eEc…AF4e`): swap RWA
+    # to the treasury and mint USD0. Collateral sits on the treasury.
+    if (
+        {"swaprwatostbc"} & (declared | probe)
+        and {"swap", "redeem"} <= (declared | probe)
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["usual-dao-collateral"]
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "router", ["passthrough-router"]
     if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
@@ -1625,10 +1644,17 @@ def _funds_at_risk_family(
     swell = bool({"deposit", "depositwithreferral"} & (declared | probe)) and bool(
         SWELL_LST_NAMES & (declared | names)
     )
+    # ether.fi LiquidityPool (`0x3088…F216` / impl `0x17A1…4a45`) holds ETH
+    # for eETH. Unique getTotalPooledEther + deposit + requestWithdraw.
+    # Must not steal Lido WQ (plural requestWithdrawals) or Origin OETH
+    # (requestWithdrawal + addWithdrawalQueueLiquidity).
+    etherfi_lp = bool({"gettotalpooledether"} & (declared | probe)) and bool(
+        {"deposit", "requestwithdraw"} <= (declared | probe)
+    )
     synth_rewards = bool({"deposit", "withdraw"} <= (declared | probe | names)) and bool(
         {"earned", "getreward", "rewardpertoken"} & (declared | probe | names)
     )
-    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or rocket_dp or lido_wq or renzo or swell or synth_rewards or gauge:
+    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or rocket_dp or lido_wq or renzo or swell or etherfi_lp or synth_rewards or gauge:
         if eigen:
             return "staking", ["eigenlayer"]
         if lido:
@@ -1643,6 +1669,8 @@ def _funds_at_risk_family(
             return "staking", ["renzo-restake"]
         if swell:
             return "staking", ["swell-lst"]
+        if etherfi_lp:
+            return "staking", ["etherfi-liquidity-pool"]
         if convex:
             return "staking", ["convex-booster"]
         if lrt_pool:
@@ -1653,8 +1681,14 @@ def _funds_at_risk_family(
             return "staking", ["curve-gauge"]
         return "staking", ["stake/reward"]
 
-    curve = bool({"add_liquidity", "remove_liquidity", "exchange"} & (declared | probe | names)) or bool(
-        re.search(r"\b(add_liquidity|remove_liquidity)\s*\(", _family_search(src, focus))
+    # `exchange` in the global name set is an imported-iface leak
+    # (live ether.fi LiquidityPool imports EigenLayer IStrategy with
+    # exchange / exchange_underlying and used to win as curve-pool).
+    curve = bool({"add_liquidity", "remove_liquidity", "exchange"} & (declared | probe)) or bool(
+        re.search(
+            r"\b(add_liquidity|remove_liquidity)\s*\(|\b(?:function|def)\s+exchange\b",
+            _family_search(src, focus),
+        )
     )
     if curve:
         return "pool", ["curve-pool"]

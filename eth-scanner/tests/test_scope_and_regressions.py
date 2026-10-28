@@ -170,6 +170,13 @@ _ADDR = {
     "stargate_token_messaging_like.sol": "0x6d6620eFa72948C5f68A3C8646d58C00d3f4A980",
     "enzyme_vault_like.sol": "0x891dee0483eBAA922E274ddD2eBBaA2D33468A38",
     "origin_oeth_vault_like.sol": "0x0E979edF516f88119fa2843fA3f08A9643F8e575",
+    "etherfi_liquidity_pool_like.sol": "0x308861A430be4cce5502d0A12724771Fc6DaF216",
+    "treehouse_router_like.sol": "0xeFA3fa8e85D2b3CfdB250CdeA156c2c6C90628F5",
+    "usual_dao_collateral_like.sol": "0xde6e1F680C4816446C8D515989E2358636A38b04",
+    "rtoken_like.sol": "0xA0d69E286B938e21CBf7E51D71F6A4c8918f482F",
+    "teth_vault_like.sol": "0x551d155760ae96050439AD24Ae98A96c765d761B",
+    "teth_tasset_like.sol": "0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8",
+    "usd0pp_like.sol": "0x35D8949372D46B7a3D5A56006AE77B215fc69bC0",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -270,6 +277,17 @@ LIVE_OETH_VAULT_IMPL = "0x0E979edF516f88119fa2843fA3f08A9643F8e575"
 LIVE_PENDLE_SY_STETH = "0xcbC72d92b2dc8187414F6734718563898740C0BC"
 LIVE_CONVEX_CVXCRV = "0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e"
 LIVE_ETHENA_MINT = "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3"
+LIVE_ETHERFI_LP = "0x308861A430be4cce5502d0A12724771Fc6DaF216"
+LIVE_ETHERFI_LP_IMPL = "0x17A16747D03006c9754548AC0d0afF48783A4a45"
+LIVE_TREEHOUSE_ROUTER = "0xeFA3fa8e85D2b3CfdB250CdeA156c2c6C90628F5"
+LIVE_DAO_COLLATERAL = "0xde6e1F680C4816446C8D515989E2358636A38b04"
+LIVE_EUSD = "0xA0d69E286B938e21CBf7E51D71F6A4c8918f482F"
+LIVE_TETH_VAULT = "0x551d155760ae96050439AD24Ae98A96c765d761B"
+LIVE_TETH_TOKEN = "0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8"
+LIVE_USD0 = "0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5"
+LIVE_USD0PP = "0x35D8949372D46B7a3D5A56006AE77B215fc69bC0"
+LIVE_STAKED_LBTC = "0x8236A87084F8B84306F72007F36F2618A5634494"
+LIVE_ETHERFI_WRNFT = "0x7d5706f6ef3F89B3951E23e557CDFBC3239D4E2c"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1272,6 +1290,13 @@ class Pass7LiveLocks(unittest.TestCase):
             "stargate_token_messaging_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
             "enzyme_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "origin_oeth_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "etherfi_liquidity_pool_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "treehouse_router_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "usual_dao_collateral_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "rtoken_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "teth_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "teth_tasset_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "usd0pp_like.sol": ("custody", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -2381,6 +2406,101 @@ class Pass17MaplePendleVenues(unittest.TestCase):
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
         self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
         self.assertEqual(LIVE_ETHENA_MINT.lower()[0:6], "0xe349")
+
+
+class Pass18UsualTreehouseEtherfi(unittest.TestCase):
+    """Pass 18: ether.fi LP, Treehouse router, Usual converter, Reserve RToken."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_etherfi_lp_is_staking_not_curve(self):
+        src = (FIXTURES / "etherfi_liquidity_pool_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="LiquidityPool"), try_slither=False)
+        self.assertEqual(ir.contract_class, "staking")
+        self.assertIn("etherfi-liquidity-pool", ir.scope_signals)
+        self.assertNotIn("curve-pool", ir.scope_signals)
+        r = _lane("etherfi_liquidity_pool_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["etherfi_liquidity_pool_like.sol"], LIVE_ETHERFI_LP)
+        self.assertEqual(LIVE_ETHERFI_LP_IMPL.lower()[0:6], "0x17a1")
+
+    def test_treehouse_router_is_passthrough(self):
+        src = (FIXTURES / "treehouse_router_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TreehouseRouter"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertIn("treehouse-router", ir.scope_signals)
+        r = _lane("treehouse_router_like.sol")
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["treehouse_router_like.sol"], LIVE_TREEHOUSE_ROUTER)
+
+    def test_usual_dao_collateral_is_passthrough(self):
+        src = (FIXTURES / "usual_dao_collateral_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DaoCollateral"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertIn("usual-dao-collateral", ir.scope_signals)
+        r = _lane("usual_dao_collateral_like.sol")
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["usual_dao_collateral_like.sol"], LIVE_DAO_COLLATERAL)
+
+    def test_eusd_rtoken_is_token(self):
+        src = (FIXTURES / "rtoken_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="RTokenP1"), try_slither=False)
+        self.assertEqual(ir.contract_class, "token")
+        self.assertEqual(ir.scope, "demoted-token")
+        r = _lane("rtoken_like.sol")
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["rtoken_like.sol"], LIVE_EUSD)
+
+    def test_teth_vault_and_tasset_are_vaults(self):
+        vault = normalize(
+            _art((FIXTURES / "teth_vault_like.sol").read_text(encoding="utf-8"), contract_name="Vault"),
+            try_slither=False,
+        )
+        self.assertEqual(vault.contract_class, "vault")
+        self.assertIn("eth-custody-withdraw", vault.scope_signals)
+        tasset = normalize(
+            _art((FIXTURES / "teth_tasset_like.sol").read_text(encoding="utf-8"), contract_name="TAsset"),
+            try_slither=False,
+        )
+        self.assertEqual(tasset.contract_class, "vault")
+        self.assertIn("erc4626", tasset.scope_signals)
+        self.assertEqual(_lane("teth_vault_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_lane("teth_tasset_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["teth_vault_like.sol"], LIVE_TETH_VAULT)
+        self.assertEqual(_ADDR["teth_tasset_like.sol"], LIVE_TETH_TOKEN)
+
+    def test_usd0pp_stays_custody(self):
+        src = (FIXTURES / "usd0pp_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Usd0PP"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        r = _lane("usd0pp_like.sol")
+        self.assertEqual(r.contract_class, "custody")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["usd0pp_like.sol"], LIVE_USD0PP)
+        self.assertEqual(LIVE_USD0.lower()[0:6], "0x73a1")
+
+    def test_curve_llamma_and_pool_still_pool(self):
+        self.assertEqual(_lane("curve_pool_like.sol").contract_class, "pool")
+        self.assertEqual(_lane("crvusd_llamma_like.vy").contract_class, "pool")
+
+    def test_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("weeth_like.sol").contract_class, "wrap-token")
+        self.assertEqual(_lane("eeth_like.sol").contract_class, "token")
+        self.assertEqual(_lane("sweth_like.sol").contract_class, "staking")
+        self.assertEqual(_lane("meth_like.sol").contract_class, "token")
+        self.assertEqual(_lane("susds_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        self.assertEqual(LIVE_STAKED_LBTC.lower()[0:6], "0x8236")
+        self.assertEqual(LIVE_ETHERFI_WRNFT.lower()[0:6], "0x7d57")
+        self.assertEqual(LIVE_SUSDS.lower()[0:6], "0xa393")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
