@@ -87,6 +87,18 @@ def _art(content: str, **kw) -> SourceArtifact:
 
 
 class UnpackEtherscanJson(unittest.TestCase):
+    def test_truncated_double_brace_still_unpacks(self):
+        inner = json.dumps({"language": "Solidity", "sources": {"Pool.sol": {"content": POOL_SOL}}})
+        raw = "{" + inner  # missing closing extra brace
+        self.assertTrue(looks_like_etherscan_json(raw))
+        files = parse_etherscan_sources(raw)
+        self.assertIn("Pool.sol", files)
+
+    def test_bom_prefixed_sources_map(self):
+        raw = "\ufeff" + json.dumps({"sources": {"A.sol": {"content": POOL_SOL}}})
+        files = parse_etherscan_sources(raw)
+        self.assertEqual(set(files), {"A.sol"})
+
     def test_standard_json_double_brace(self):
         raw = _standard_json(("contracts/LendingPool.sol", POOL_SOL), ("contracts/IERC20.sol", IERC20_SOL))
         self.assertTrue(raw.startswith("{{"))

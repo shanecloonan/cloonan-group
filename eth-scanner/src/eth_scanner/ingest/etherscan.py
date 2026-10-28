@@ -117,7 +117,7 @@ class EtherscanClient:
             q["apikey"] = key
             url = ETHERSCAN_V2 + "?" + urllib.parse.urlencode(q)
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner/0.2 (defensive; read-only)"})
+                req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner/0.3 (defensive; read-only)"})
                 with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
                     raw = resp.read().decode("utf-8", errors="replace")
                     retry_hdr = resp.headers
@@ -256,7 +256,7 @@ def fetch_rpc_code(rpc_url: str, address: str, timeout_s: float = 15.0) -> str:
     req = urllib.request.Request(
         rpc_url,
         data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner/0.2 (defensive; read-only)"},
+        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner/0.3 (defensive; read-only)"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:

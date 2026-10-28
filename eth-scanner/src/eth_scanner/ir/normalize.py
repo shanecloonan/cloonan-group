@@ -3,7 +3,8 @@
 Slither-class SSA is used when the `slither` CLI is present and the
 source is verified Solidity (`ir_confidence=high`). Otherwise:
 
-- verified Solidity / Vyper → heuristic CFG (`med`)
+- verified Solidity / Vyper with a parsed function inventory → heuristic CFG (`high`; Slither optional)
+- partial / unparsed verified source → heuristic CFG (`med`)
 - decompile / failed lift → `low` (never treated as proof)
 
 `ir_confidence` is always set. Weak IR cannot claim yes or auto-no.
@@ -92,18 +93,26 @@ def normalize(
         if slither_ok:
             notes.append("slither CLI present; treating verified Solidity as high-confidence IR")
         else:
-            notes.append("slither CLI missing or failed — heuristic IR only (med)")
+            notes.append("slither CLI missing or failed — falling back to heuristic IR")
 
+    fn_count = _surface_function_count(surface)
     ir_conf = _ir_confidence(
         src_conf=src_conf,
         language=language,
         lift_failed=lift_failed,
         slither_ok=slither_ok,
         kind=artifact.kind,
+        unpack_failed=unpack_failed,
+        function_count=fn_count,
     )
     if lift_failed:
         ir_conf = "low"
         notes.append("IR lift failed → ir_confidence=low → manual-review (Do Not Auto-Dismiss)")
+    elif ir_conf == "high" and not slither_ok:
+        notes.append(
+            "heuristic IR treated as high: verified source + parsed function inventory "
+            "(Slither not required)"
+        )
 
     weird = detect_weird_signals(src)
     fork = detect_fork_family(src)
@@ -199,10 +208,28 @@ def _function_names_from_surface(surface: dict[str, Any]) -> list[str]:
     return names
 
 
-def _ir_confidence(*, src_conf: str, language: str, lift_failed: bool, slither_ok: bool, kind: str) -> str:
-    if lift_failed or kind == "decompile" or src_conf == "low":
+def _surface_function_count(surface: dict[str, Any]) -> int:
+    return sum(int(f.get("functions") or 0) for f in (surface.get("files") or []))
+
+
+def _ir_confidence(
+    *,
+    src_conf: str,
+    language: str,
+    lift_failed: bool,
+    slither_ok: bool,
+    kind: str,
+    unpack_failed: bool = False,
+    function_count: int = 0,
+) -> str:
+    if lift_failed or unpack_failed or kind == "decompile" or src_conf == "low":
         return "low"
     if slither_ok and language == "solidity" and src_conf == "high":
+        return "high"
+    # Clear heuristic inventory on verified Solidity/Vyper. Slither is optional.
+    # Zero parsed functions is not a closeable surface — stay med (S4 will cool,
+    # not human-no-candidate).
+    if src_conf == "high" and language in {"solidity", "vyper"} and function_count > 0:
         return "high"
     return "med"
 

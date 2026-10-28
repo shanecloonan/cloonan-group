@@ -15,24 +15,27 @@ Triage UI (read-only): **`/test`** on this site. Scanner runtime lives here, not
 
 Filtration: `docs/ETH_SWEEP_SCANNING_REFERENCE.md` §6.0 (also copied under this package’s parent `docs/`).
 
-## Scope — what the main lane actually works
+## Scope — funds at risk only
 
-Lane A is a **picker**, not a funds-at-risk oracle. It looks for regularity on surfaces where other people’s value is held or routed. Plain tokens do not repay that work.
+Lane A is a **picker** for venues that regularly *hold or account* other people’s value. It is not a funds-at-risk oracle and never a verdict. If the contract does not look like a place where third-party funds sit, it is cool-archived.
 
 | Lane scope | Contract class | What happens |
 |---|---|---|
-| **in-scope** (main path) | `lending` · `vault` · `pool` · `router` · `dex` · `bridge` · `maker` | Can promote to `lane-b-queue` |
-| **in-scope** | `custody` (generic value-mover, no family) | Existing S5/S6 heat / TVL / weirdness |
-| **demoted-token** | `token` · `wrap-token` | Cool-archive (`lane-a-cool`). **TVL does not promote.** Not a verdict. |
-| **utility** | no custody movers | Existing S4 close / cool |
+| **in-scope** (main path) | `lending` · `vault` · `staking` · `pool` · `bridge` · `maker` | Family promote → `lane-b-queue` |
+| **in-scope** | `custody` (generic hold, no family) | S5/S6 heat / TVL / weirdness. Prefer false keep. |
+| **demoted-token** | `token` · `wrap-token` · `nft` | Cool-archive (`lane-a-cool`). **TVL does not promote.** |
+| **demoted-passthrough** | `router` · `nft-market` | Cool-archive. Pass-through swap routers and atomic NFT settlement do not hold funds. |
+| **utility** | no custody movers | S4 close / cool |
 
-**In-scope examples:** Aave V2/V3 pools, Balancer Vault, Uniswap routers, Maker VAT, ERC-4626 / join-exit vaults, flash-loan venues, bridges.
+**In-scope examples:** Aave V2/V3 pools, Compound cTokens, Balancer Vault, ERC-4626 / Yearn vaults, staking / MasterChef / Lido-style pooled ETH, Uni V2 pairs / Uni V3 *pools* / Curve (reserve custody), Maker VAT, bridges that lock/release, unnamed ETH/token piggy-banks (`withdraw` of `address(this).balance`).
 
-**Demoted / excluded from the main lane:** plain ERC-20 (USDT, USDC, …) including mint/burn/rescue admin tokens (`rescueERC20`, `recoverToken`, …); WETH-like wrap/unwrap; ERC-721/1155 with no marketplace/custody surface. `transfer` / `approve` / `totalSupply` / `transferOwnership` are noise here.
+**Hybrids stay in-scope:** a token that is also a vault, lending market, AMM, or staking pool (cToken, 4626 share token, Curve LP, stETH) is classified as the venue, never demoted as a token. Prefer false keep.
+
+**Demoted / excluded:** plain ERC-20 (USDT, USDC, …) including mint/burn/rescue admin tokens (`rescueERC20`, …); WETH-like wrap/unwrap; Uni V3 *SwapRouter* and similar exact-input pass-throughs; ERC-721/1155 collections; Seaport-style atomic fulfill/match with no escrow. `transfer` / `approve` / `totalSupply` / `transferOwnership` are noise here.
 
 **Do Not Auto-Dismiss:** unverified / failed IR / failed unpack / rate-limited ingest / truly ambiguous *non-token* auth still go to `manual-review`, never silent `no`.
 
-Signals live in `heuristics/scope.py` (ERC-20 interface shape vs lending/router/vault/bridge/Maker patterns). Family tags are checked *before* ERC-20 shape so a pool that calls `IERC20.transferFrom` is never demoted as a token.
+Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *before* ERC-20/721 shape so a pool that calls `IERC20.transferFrom` is never demoted as a token.
 
 ## Layout
 
@@ -66,7 +69,7 @@ Etherscan verified sources are often **Standard-JSON-Input** (`{{ "language":"So
 
 If Etherscan marks the address as a proxy (`Proxy=1` / `Implementation`), the **implementation** source is fetched and used for the IR lift (not only stored). Proxy-only bytecode/source is not treated as the custody surface. Unpacked trees keep `lib/` paths (Aave V3 and similar store the pool under `lib/<pkg>/...`).
 
-Vanilla ERC20 `transfer` / `approve` / `transferFrom` are recorded as leads, not I1 custody movers, and the whole token is **demoted** from the main lane. WETH-like wrap/unwrap is tagged `wrap-unwrap` and likewise demoted (never auto-yes).
+Vanilla ERC20 `transfer` / `approve` / `transferFrom` are recorded as leads, not I1 custody movers, and the whole token is **demoted** from the main lane. WETH-like wrap/unwrap is tagged `wrap-unwrap` and likewise demoted (never auto-yes). Pass-through routers (`exactInput`) and atomic NFT markets (`fulfillOrder`) are `demoted-passthrough`.
 
 ## Env
 
@@ -141,7 +144,7 @@ Lane A never emits `human-yes-candidate`. Lane B never marks BROKEN from heurist
 ## Confidence
 
 - `src_confidence`: `high` exact verified match · `med` partial · `low` decompile only
-- `ir_confidence`: `high` Slither SSA on verified Solidity · `med` heuristic/Vyper · `low` decompile / failed lift
+- `ir_confidence`: `high` Slither SSA **or** clear heuristic inventory on verified Solidity/Vyper · `med` partial / unparsed · `low` decompile / failed lift
 
 Low or failed IR **always** → `manual-review`.
 

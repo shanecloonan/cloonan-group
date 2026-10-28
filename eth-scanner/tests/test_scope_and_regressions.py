@@ -38,6 +38,17 @@ _ADDR = {
     "uni_v3_router_like.sol": "0x" + "c8" * 20,
     "open_vault.sol": "0x" + "c9" * 20,
     "fiat_token_v2_2_like.json": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "staking_pool_like.sol": "0x" + "d1" * 20,
+    "erc4626_vault_like.sol": "0x" + "d2" * 20,
+    "yearn_v2_like.sol": "0x" + "d3" * 20,
+    "compound_ctoken_like.sol": "0x" + "d4" * 20,
+    "uni_v2_pair_like.sol": "0x" + "d5" * 20,
+    "curve_pool_like.sol": "0x" + "d6" * 20,
+    "seaport_like.sol": "0x" + "d7" * 20,
+    "nft_collection_like.sol": "0x" + "d8" * 20,
+    "nft_escrow_market_like.sol": "0x" + "d9" * 20,
+    "flash_adapter_like.sol": "0x" + "da" * 20,
+    "router_with_pool_interface.sol": "0x" + "db" * 20,
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -76,6 +87,12 @@ class MoverNoise(unittest.TestCase):
         self.assertTrue(name_is_fund_mover("transferFrom"))
         self.assertTrue(name_is_fund_mover("joinPool"))
         self.assertTrue(name_is_fund_mover("uniswapV3SwapCallback"))
+        self.assertTrue(name_is_fund_mover("stake"))
+        self.assertTrue(name_is_fund_mover("add_liquidity"))
+        self.assertTrue(name_is_fund_mover("repayBorrow"))
+        self.assertTrue(name_is_fund_mover("exchange"))
+        self.assertFalse(name_is_fund_mover("exchangeRate"))
+        self.assertFalse(name_is_fund_mover("exchangeRateStored"))
         self.assertFalse(name_is_fund_mover("transferOwnership"))
         # Live USDC admin is rescueERC20 — name is not word-bounded `rescue`.
         # It becomes a mover via IERC20.transfer in the body, not the name.
@@ -234,17 +251,31 @@ class ScopeFilter(unittest.TestCase):
         self.assertNotEqual(r.bucket, "manual-review")
         self.assertTrue(set(r.value_movers) & {"frob", "flux", "move"})
 
-    def test_uni_router_lane_b_not_ambiguous(self):
-        r = _lane("uni_v3_router_like.sol")
+    def test_uni_router_passthrough_demoted(self):
+        """Policy (iter 4): pure exactInput routers do not hold funds — cool-archive.
+
+        Earlier iterations promoted SwapRouter to lane-b as `router`. Money is
+        not at rest there; the pool holds reserves.
+        """
+        r = _lane("uni_v3_router_like.sol", tvl=9_999_999)
         self.assertEqual(r.contract_class, "router")
-        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.bucket, "lane-b-queue")
         self.assertNotEqual(r.bucket, "manual-review")
         self.assertTrue(set(r.value_movers) & {"exactInputSingle", "exactInput", "uniswapV3SwapCallback"})
 
-    def test_open_vault_stays_in_scope_custody(self):
+    def test_router_with_embedded_pool_iface_still_passthrough(self):
+        r = _lane("router_with_pool_interface.sol", tvl=50_000)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.bucket, "lane-a-cool")
+
+    def test_open_vault_is_eth_custody_vault(self):
         r = _lane("open_vault.sol")
         self.assertEqual(r.scope, "in-scope")
-        self.assertEqual(r.contract_class, "custody")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
         self.assertNotEqual(r.bucket, "human-yes-candidate")
 
     def test_lending_plus_rescueerc20_stays_lending(self):
@@ -281,6 +312,72 @@ contract HybridTokenVault {
         self.assertEqual(d.scope, "in-scope")
         self.assertFalse(d.promote)
 
+    def test_staking_pool_lane_b(self):
+        r = _lane("staking_pool_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"stake", "unstake", "getReward"})
+
+    def test_erc4626_hybrid_token_stays_vault(self):
+        r = _lane("erc4626_vault_like.sol", tvl=0)
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"deposit", "withdraw"})
+
+    def test_yearn_v2_hybrid_stays_vault(self):
+        r = _lane("yearn_v2_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_compound_ctoken_hybrid_stays_lending(self):
+        r = _lane("compound_ctoken_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"mint", "borrow", "repayBorrow"})
+
+    def test_uni_v2_pair_hybrid_stays_pool(self):
+        r = _lane("uni_v2_pair_like.sol")
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"swap"})
+
+    def test_curve_pool_hybrid_stays_pool(self):
+        r = _lane("curve_pool_like.sol")
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"add_liquidity", "exchange"})
+
+    def test_seaport_atomic_market_demoted(self):
+        r = _lane("seaport_like.sol", tvl=1_000_000)
+        self.assertEqual(r.contract_class, "nft-market")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+
+    def test_nft_collection_demoted(self):
+        r = _lane("nft_collection_like.sol", tvl=50_000)
+        self.assertEqual(r.contract_class, "nft")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+
+    def test_nft_escrow_market_kept(self):
+        r = _lane("nft_escrow_market_like.sol")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_flash_adapter_without_reserves_demoted(self):
+        r = _lane("flash_adapter_like.sol")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "lending")
+
     def test_token_high_tvl_does_not_promote(self):
         ir = IRDocument(
             functions=[
@@ -302,6 +399,38 @@ contract HybridTokenVault {
         ))
         self.assertEqual(r.bucket, "lane-a-cool")
         self.assertEqual(r.scope, "demoted-token")
+
+
+class HeuristicIRQuality(unittest.TestCase):
+    def test_clear_verified_surface_is_high_without_slither(self):
+        src = (FIXTURES / "aave_v3_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src), try_slither=False)
+        self.assertEqual(ir.ir_confidence, "high")
+        self.assertEqual(ir.lift_tool, "heuristic")
+        self.assertFalse(ir.lift_failed)
+        self.assertTrue(any("Slither not required" in n for n in ir.notes))
+
+    def test_empty_contract_stays_med_not_a_close(self):
+        src = "pragma solidity ^0.8.20;\ncontract Empty {}\n"
+        ir = normalize(_art(src), try_slither=False)
+        self.assertEqual(ir.ir_confidence, "med")
+        r = run_lane_a(FunnelContext(
+            target=Target(address="0x" + "ee" * 20, has_code=True, tvl_usd=0),
+            artifact=_art(src),
+            ir=ir,
+            source_text=src,
+        ))
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.bucket, "human-no-candidate")
+
+    def test_dsauth_cancall_is_present(self):
+        strength = classify_auth(
+            "withdraw", "function withdraw() external",
+            "require(canCall(msg.sender, address(this), msg.sig));",
+            "function withdraw() external{require(canCall(msg.sender, address(this), msg.sig));}",
+            ["canCall("], True,
+        )
+        self.assertEqual(strength, "PRESENT")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):

@@ -250,7 +250,7 @@ def render_markdown(ctx: ReceiptContext) -> str:
         f"- **Has code:** {_fmt(tgt.get('has_code'), empty='unknown')}",
         f"- **Contract class:** `{_fmt(res.get('contract_class') or tgt.get('contract_class'))}`",
         f"- **Lane scope:** `{_fmt(res.get('scope') or tgt.get('scope'))}`"
-        " — `in-scope` (main lane) · `demoted-token` (cool-archive) · `utility`",
+        " — `in-scope` (funds-at-risk) · `demoted-token` · `demoted-passthrough` · `utility`",
         "",
         "## Source provenance",
         "",
@@ -373,8 +373,8 @@ def render_markdown(ctx: ReceiptContext) -> str:
         "",
         f"- **src_confidence:** `{_fmt(src_conf)}`",
         f"- **ir_confidence:** `{_fmt(ir_conf)}`",
-        "- Scale: `high` Slither SSA / exact verified · `med` heuristic/Vyper / partial · "
-        "`low` decompile or failed lift",
+        "- Scale: `high` Slither SSA *or* clear heuristic on verified Solidity/Vyper · "
+        "`med` partial / unparsed · `low` decompile or failed lift",
         "- Heimdall / Panoramix decompiles are hypothesis generators only (`src_confidence=low`).",
         "",
         "## Notes",
@@ -412,10 +412,10 @@ def render_markdown(ctx: ReceiptContext) -> str:
 
 
 def _handoff_next(bucket: Any, src_conf: Any, ir_conf: Any, scope: Any = None) -> str:
-    if scope == "demoted-token" and bucket == "lane-a-cool":
+    if scope in {"demoted-token", "demoted-passthrough"} and bucket == "lane-a-cool":
         return (
-            "Token / wrap-token demoted from the main Lane A path. "
-            "Not competing for Lane B. Optional spot-check only."
+            "Out of Lane A funds-at-risk scope (token / wrap-token / pass-through router "
+            "/ atomic NFT market). Not competing for Lane B. Optional spot-check only."
         )
     if bucket == "manual-review" or src_conf == "low" or ir_conf == "low":
         return (
