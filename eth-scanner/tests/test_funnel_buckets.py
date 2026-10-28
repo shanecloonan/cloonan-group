@@ -207,6 +207,24 @@ class LaneARouting(unittest.TestCase):
         self.assertNotEqual(r.bucket, "manual-review")
         self.assertNotEqual(r.bucket, "human-yes-candidate")
 
+    def test_in_scope_family_without_movers_promotes(self):
+        r = run_lane_a(FunnelContext(
+            target=_target(tvl_usd=0),
+            artifact=_art("high"),
+            ir=IRDocument(
+                functions=[],
+                ir_confidence="high",
+                src_confidence="high",
+                language="solidity",
+                lift_tool="test",
+                contract_class="bridge",
+                scope="in-scope",
+                scope_signals=["bridge-surface"],
+            ),
+        ))
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.bucket, "human-no-candidate")
+
     def test_passthrough_router_not_promoted_by_tvl(self):
         from eth_scanner.heuristics.scope import classify_scope
         src = (ROOT / "tests" / "fixtures" / "uni_v3_router_like.sol").read_text(encoding="utf-8")

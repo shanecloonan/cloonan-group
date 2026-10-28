@@ -8,10 +8,18 @@ not the wrapper. Defensive / local filesystem only — no network.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Optional
 
 from eth_scanner.types import SourceArtifact
+
+_FACET_OR_ADAPTER = re.compile(
+    r"(Action|Adapter|Facet|Module|Callback|Hook)",
+    re.I,
+)
+_FN_COUNT_SOL = re.compile(r"\bfunction\s+\w+\s*\(")
+_FN_COUNT_VY = re.compile(r"^[ \t]*def\s+\w+\s*\(", re.M)
 
 MAX_UNPACK_FILES = 400
 _SOL_EXTS = (".sol", ".vy", ".vyper")
@@ -21,7 +29,8 @@ def looks_like_etherscan_json(content: str) -> bool:
     s = (content or "").lstrip()
     if not s.startswith("{"):
         return False
-    head = s[:800]
+    # Compiler `settings` can precede `sources` and exceed 800 chars.
+    head = s[:65536]
     return '"sources"' in head or s.startswith("{{") or '"content"' in head
 
 
@@ -107,16 +116,63 @@ def materialize_source(
     return artifact, src_dir
 
 
+def _source_text_for_count(content: str) -> str:
+    text = content or ""
+    if looks_like_etherscan_json(text):
+        files = parse_etherscan_sources(text)
+        if files:
+            return flatten_sources(files)
+    return text
+
+
+def _function_count(content: str) -> int:
+    text = _source_text_for_count(content)
+    return len(_FN_COUNT_SOL.findall(text)) + len(_FN_COUNT_VY.findall(text))
+
+
+def _substantial_protocol_source(content: str) -> bool:
+    """True when the blob looks like a real venue, not a 2-fn proxy stub."""
+    text = _source_text_for_count(content)
+    n = _function_count(content)
+    if n < 4:
+        return False
+    if n <= 8 and re.search(r"\bdelegatecall\b", text) and re.search(r"\bfallback\b", text):
+        return False
+    return True
+
+
 def select_ir_artifact(proxy: SourceArtifact, impl: Optional[SourceArtifact]) -> SourceArtifact:
-    """IR lift must use implementation source when Etherscan names one."""
+    """IR lift must use implementation source when Etherscan names one.
+
+    Diamond / Across-style proxies sometimes list a single Action* / Adapter
+    facet as `Implementation`. That facet is incomplete. If the proxy address
+    also has a substantial verified payload, merge both so HubPool / router
+    surfaces are not replaced by `relayTokens` or `addLiquiditySinglePt` alone.
+    """
     if impl is not None and (impl.content or "").strip():
         impl.notes = list(impl.notes)
-        impl.notes.append(
-            "IR lift uses implementation source (proxy → impl); not proxy-only bytecode/source"
-        )
         impl.is_proxy = True
         if not impl.implementation:
             impl.implementation = proxy.implementation
+        impl_name = impl.contract_name or ""
+        facet_like = bool(_FACET_OR_ADAPTER.search(impl_name)) or not _substantial_protocol_source(impl.content)
+        if facet_like and _substantial_protocol_source(proxy.content or ""):
+            proxy_body = _source_text_for_count(proxy.content or "")
+            impl.notes.append(
+                "IR lift merges implementation with proxy verified source "
+                "(facet/adapter impl is incomplete)"
+            )
+            impl.content = (
+                _source_text_for_count(impl.content)
+                + "\n\n// ----- file: proxy-verified -----\n"
+                + proxy_body
+            )
+            if proxy.contract_name and not _FACET_OR_ADAPTER.search(proxy.contract_name or ""):
+                impl.contract_name = proxy.contract_name
+            return impl
+        impl.notes.append(
+            "IR lift uses implementation source (proxy → impl); not proxy-only bytecode/source"
+        )
         return impl
     if impl is not None:
         proxy.notes.append("implementation source empty; IR lift stays on proxy artifact")

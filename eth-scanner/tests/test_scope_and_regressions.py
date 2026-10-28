@@ -20,11 +20,13 @@ from eth_scanner.funnel.s0_s7 import FunnelContext, run_lane_a
 FIXTURES = ROOT / "tests" / "fixtures"
 
 
-def _art(content: str) -> SourceArtifact:
-    return SourceArtifact(
+def _art(content: str, **kw) -> SourceArtifact:
+    base = dict(
         kind="source", language="solidity", content=content,
         src_confidence="high", verified_match="exact", tool="test",
     )
+    base.update(kw)
+    return SourceArtifact(**base)  # type: ignore[arg-type]
 
 
 _ADDR = {
@@ -52,6 +54,20 @@ _ADDR = {
     "uni_v3_swaprouter_live_shape.json": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     "uni_v3_pool_live_shape.sol": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
     "uni_v3_pool_live_shape.json": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
+    "wsteth_like.sol": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+    "compound_comet_like.sol": "0xc3d688B66703497DAA19211EEdff47f25384cdc3",
+    "morpho_blue_like.sol": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+    "eigen_delegation_like.sol": "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+    "eigen_strategy_like.sol": "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    "across_spoke_like.sol": "0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5",
+    "across_hub_adapter_like.sol": "0xc186fA914353c44b2E33eBE05f21846F1048bEda",
+    "pendle_router_like.sol": "0x888888888889758F76e7103c6CbF23ABbF58F946",
+    "pendle_market_like.sol": "0x" + "e1" * 20,
+    "uni_v2_router_like.sol": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    "gmx_vault_like.sol": "0x" + "e2" * 20,
+    "metamorpho_like.sol": "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
+    "metamorpho_tree_like.sol": "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
+    "convex_booster_like.sol": "0xF403C135812408BFbE8713b5A23a04b3D48AAE31",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -159,6 +175,16 @@ class MoverNoise(unittest.TestCase):
         self.assertTrue(name_is_fund_mover("add_liquidity"))
         self.assertTrue(name_is_fund_mover("repayBorrow"))
         self.assertTrue(name_is_fund_mover("exchange"))
+        self.assertTrue(name_is_fund_mover("submit"))
+        self.assertTrue(name_is_fund_mover("depositIntoStrategy"))
+        self.assertTrue(name_is_fund_mover("queueWithdrawals"))
+        self.assertTrue(name_is_fund_mover("completeQueuedWithdrawal"))
+        self.assertTrue(name_is_fund_mover("undelegate"))
+        self.assertTrue(name_is_fund_mover("depositV3"))
+        self.assertTrue(name_is_fund_mover("fillV3Relay"))
+        self.assertTrue(name_is_fund_mover("addLiquiditySinglePt"))
+        self.assertTrue(name_is_fund_mover("absorb"))
+        self.assertTrue(name_is_fund_mover("earmarkRewards"))
         self.assertFalse(name_is_fund_mover("exchangeRate"))
         self.assertFalse(name_is_fund_mover("exchangeRateStored"))
         self.assertFalse(name_is_fund_mover("transferOwnership"))
@@ -651,6 +677,165 @@ class HeuristicIRQuality(unittest.TestCase):
             ["canCall("], True,
         )
         self.assertEqual(strength, "PRESENT")
+
+
+class LiveDeFiPass(unittest.TestCase):
+    """Regressions for the post-#29 live hunt. Prefer false keep for true custody."""
+
+    def test_wsteth_is_wrap_token_not_staking(self):
+        r = _lane("wsteth_like.sol", tvl=10_000_000_000)
+        self.assertEqual(r.contract_class, "wrap-token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "staking")
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+
+    def test_comet_is_lending_not_custody(self):
+        r = _lane("compound_comet_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"supply", "withdraw", "absorb"})
+
+    def test_metamorpho_stays_vault_not_lending(self):
+        r = _lane("metamorpho_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.contract_class, "lending")
+
+    def test_metamorpho_sourcify_tree_primary_is_vault(self):
+        src = (FIXTURES / "metamorpho_tree_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="MetaMorpho"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertNotEqual(ir.contract_class, "lending")
+        d = classify_scope(
+            source=src,
+            functions=ir.functions,
+            extra_names=ir.function_names,
+            contract_name="MetaMorpho",
+        )
+        self.assertEqual(d.contract_class, "vault")
+        self.assertNotEqual(d.contract_class, "lending")
+
+    def test_morpho_in_same_tree_stays_lending(self):
+        src = (FIXTURES / "metamorpho_tree_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Morpho"), try_slither=False)
+        self.assertEqual(ir.contract_class, "lending")
+        self.assertNotEqual(ir.contract_class, "vault")
+
+    def test_metamorpho_tree_without_name_still_vault(self):
+        # Prefer vault over leaked sibling borrow when 4626 deposit/redeem
+        # are present and repay/accrue are not this address.
+        src = (FIXTURES / "metamorpho_tree_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertNotEqual(ir.contract_class, "lending")
+
+    def test_ident_match_does_not_confuse_morpho_and_metamorpho(self):
+        from eth_scanner.heuristics.scope import _ident_match
+        self.assertTrue(_ident_match("MetaMorpho", "MetaMorpho"))
+        self.assertTrue(_ident_match("PoolInstance", "Pool"))
+        self.assertFalse(_ident_match("Morpho", "MetaMorpho"))
+        self.assertFalse(_ident_match("MetaMorpho", "Morpho"))
+
+    def test_convex_booster_is_staking(self):
+        r = _lane("convex_booster_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"earmarkRewards", "deposit", "withdraw"})
+
+    def test_morpho_blue_is_lending_not_vault(self):
+        r = _lane("morpho_blue_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.contract_class, "vault")
+        self.assertTrue(set(r.value_movers) & {"borrow", "liquidate"})
+
+    def test_eigen_delegation_stays_staking_not_human_no(self):
+        r = _lane("eigen_delegation_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.bucket, "human-no-candidate")
+        self.assertTrue(set(r.value_movers) & {"undelegate", "queueWithdrawals", "completeQueuedWithdrawal"})
+
+    def test_eigen_strategy_is_staking(self):
+        r = _lane("eigen_strategy_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"depositIntoStrategy", "withdrawSharesAsTokens"})
+
+    def test_across_spoke_is_bridge(self):
+        r = _lane("across_spoke_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"depositV3", "fillV3Relay"})
+
+    def test_across_adapter_relaytokens_is_bridge(self):
+        r = _lane("across_hub_adapter_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_pendle_action_router_demoted(self):
+        r = _lane("pendle_router_like.sol", tvl=1_000_000)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+
+    def test_pendle_market_stays_pool(self):
+        r = _lane("pendle_market_like.sol")
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_uni_v2_router_is_passthrough_not_pool(self):
+        r = _lane("uni_v2_router_like.sol", tvl=9_999_999)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "pool")
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+
+    def test_gmx_like_vault_in_scope(self):
+        r = _lane("gmx_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_mint_py_from_sy_is_not_token_admin_prefix(self):
+        from eth_scanner.heuristics.scope import _is_token_admin
+        self.assertFalse(_is_token_admin("mintPyFromSy"))
+        self.assertFalse(_is_token_admin("burnPyToSy"))
+        self.assertTrue(_is_token_admin("mint"))
+        self.assertTrue(_is_token_admin("mintTo"))
+        self.assertTrue(_is_token_admin("rescueERC20"))
+
+    def test_family_without_movers_is_not_human_no(self):
+        ir = IRDocument(
+            functions=[],
+            ir_confidence="high",
+            src_confidence="high",
+            language="solidity",
+            lift_tool="test",
+            contract_class="staking",
+            scope="in-scope",
+            scope_signals=["eigenlayer"],
+        )
+        r = run_lane_a(FunnelContext(
+            target=Target(address="0x" + "ef" * 20, has_code=True, tvl_usd=0),
+            artifact=_art("pragma solidity ^0.8.20;\ncontract DelegationManager {}"),
+            ir=ir,
+            source_text="pragma solidity ^0.8.20;\ncontract DelegationManager {}",
+        ))
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.bucket, "human-no-candidate")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):

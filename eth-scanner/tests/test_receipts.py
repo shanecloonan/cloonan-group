@@ -92,6 +92,23 @@ class ReceiptShape(unittest.TestCase):
         self.assertIn("## Leads (not findings)", md)
         self.assertIn("**Contract class:**", md)
         self.assertIn("**Lane scope:**", md)
+        self.assertIn("**Scope signals:**", md)
+        self.assertIn("Picker:", md)
+
+    def test_pattern_lead_uses_description(self):
+        ir = _ir()
+        result = run_lane_a(FunnelContext(
+            target=Target(address=ADDR, has_code=True, tvl_usd=0),
+            artifact=_art(),
+            ir=ir,
+        ))
+        payload = result.to_dict()
+        payload["pattern_leads"] = [{"id": "erc4626-rounding", "description": "ERC4626 convert/preview surface"}]
+        md = render_markdown(build_context(
+            address=ADDR, lane="A", result=payload, artifact=_art(),
+            target=Target(address=ADDR, tvl_usd=0, status="done"),
+        ))
+        self.assertIn("ERC4626 convert/preview surface", md)
 
     def test_write_run_receipt_creates_md_under_receipts(self):
         result = run_lane_a(FunnelContext(

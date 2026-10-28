@@ -21,7 +21,7 @@ from typing import Any, Optional
 
 from eth_scanner.heuristics.invariant_pass import run_scan, run_scan_source
 from eth_scanner.heuristics.patterns import detect_fork_family, detect_weird_signals, skim_known_patterns
-from eth_scanner.heuristics.scope import classify_scope
+from eth_scanner.heuristics.scope import _focus_chain, _ident_match, classify_scope
 from eth_scanner.ingest.unpack import looks_like_etherscan_json, materialize_source, parse_etherscan_sources
 from eth_scanner.types import FunctionIR, IRDocument, SourceArtifact
 
@@ -83,7 +83,11 @@ def normalize(
         if tmp_holder is not None:
             tmp_holder.cleanup()
 
-    functions = _functions_from_surface(surface)
+    functions = _prefer_primary_functions(
+        _functions_from_surface(surface),
+        src,
+        artifact.contract_name,
+    )
     if not lift_failed and not functions and not src.strip():
         lift_failed = True
 
@@ -127,7 +131,12 @@ def normalize(
         notes.append("Decompile is a hypothesis generator only. Never proof of safety or theft.")
 
     fn_names = _function_names_from_surface(surface)
-    scope = classify_scope(source=src, functions=functions, extra_names=fn_names)
+    scope = classify_scope(
+        source=src,
+        functions=functions,
+        extra_names=fn_names,
+        contract_name=artifact.contract_name,
+    )
     notes.append("scope=%s class=%s signals=%s" % (scope.scope, scope.contract_class, ",".join(scope.signals) or "—"))
 
     return IRDocument(
@@ -189,6 +198,43 @@ def _functions_from_surface(surface: dict[str, Any]) -> list[FunctionIR]:
                 role=role,
             ))
     return out
+
+
+def _prefer_primary_functions(
+    functions: list[FunctionIR],
+    src: str,
+    contract_name: Optional[str],
+) -> list[FunctionIR]:
+    """Keep movers from the Etherscan primary + its parents.
+
+    Sourcify / standard-json trees ship sibling venues (MetaMorpho + Morpho).
+    Those siblings are not *this* address. Diamonds with no matching file
+    keep the full set (prefer false keep).
+    """
+    if not contract_name or not functions:
+        return functions
+    chain = _focus_chain(src, contract_name)
+    keep: list[FunctionIR] = []
+    focus = (contract_name or "").strip()
+    for fn in functions:
+        path = (fn.file or "").replace("\\", "/")
+        stem = path.rsplit("/", 1)[-1]
+        if "." in stem:
+            stem = stem.rsplit(".", 1)[0]
+        if _ident_match(stem, focus) or (chain and stem.lower() in chain):
+            keep.append(fn)
+            continue
+        blob = f"/{path.lower()}"
+        key = focus.lower()
+        if f"/{key}.sol" in blob or f"/{key}.vy" in blob:
+            keep.append(fn)
+    if not keep:
+        return functions
+    focused_movers = [f for f in keep if f.is_value_mover and f.exposed]
+    all_movers = [f for f in functions if f.is_value_mover and f.exposed]
+    if not focused_movers and all_movers:
+        return functions
+    return keep
 
 
 def _function_names_from_surface(surface: dict[str, Any]) -> list[str]:
