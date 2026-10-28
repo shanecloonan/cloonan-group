@@ -1151,6 +1151,24 @@ def _passthrough_family(
         and not _own_reserves(src, names, focus)
     ):
         return "router", ["comet-rewards"]
+    # Maple SyrupRouter (`0x134c…df76`): permissioned entry. Pulls assets,
+    # deposits into MaplePool, routes shares back. Nothing sits here.
+    if (
+        {"authorizeanddeposit"} & (declared | probe)
+        and {"depositwithpermit", "authorizeanddepositwithpermit"} & (declared | probe)
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["maple-syrup-router"]
+    # Stargate V2 TokenMessaging (`0x6d66…A980`): bus/taxi packets only.
+    # Liquidity sits on StargatePool (`addTreasuryFee`). Messaging also
+    # exposes `rideBus` (ticket enqueue) — that is not a lock.
+    if (
+        {"drivebus"} & (declared | probe)
+        and {"checktickets", "encodetaxi", "encodebus"} & (declared | probe)
+        and "addtreasuryfee" not in (declared | probe)
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["stargate-token-messaging"]
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "router", ["passthrough-router"]
     if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
@@ -1350,6 +1368,15 @@ def _funds_at_risk_family(
     # Sky / Maker Pot: DSR pie accounting. join/exit hold DAI in Vat.
     if {"join", "exit"} <= (declared | probe) and {"dsr", "chi", "pie"} <= (declared | names):
         return "vault", ["maker-pot"]
+    # Stargate V2 TokenMessaging is lzReceive + driveBus — not a lock.
+    # Pools that actually hold (`addTreasuryFee`) stay bridge. Messaging
+    # also exposes `rideBus` (ticket enqueue) so that verb is not a hold.
+    stargate_msg_only = (
+        bool({"drivebus"} & (declared | probe))
+        and bool({"checktickets", "encodetaxi", "encodebus"} & (declared | probe))
+        and "addtreasuryfee" not in (declared | probe)
+    )
+
     # Fluid Liquidity dummy / user module: operate is supply+borrow+withdraw.
     # Etherscan Implementation is DummyImpl (ABI surface); money sits on the proxy.
     if {"operate", "operateonbehalfof"} <= (declared | names) and bool(
@@ -1360,27 +1387,31 @@ def _funds_at_risk_family(
     ):
         return "lending", ["fluid-liquidity"]
 
-    if (probe | declared | (set() if movers else names)) & BRIDGE_NAMES or re.search(
-        r"\b(lzReceive|finalizeWithdrawalTransaction\w*|proveWithdrawalTransaction\w*|"
-        r"finalizeWithdrawal\b|proveWithdrawal\b|bridgeMint|"
-        r"depositV3|fillV3Relay|fillRelay|relayTokens|proposeRootBundle|"
-        r"SpokePool|HubPool|claimRelayerRefund|"
-        r"sendToL2|bondTransferRoot|confirmTransferRoot|challengeTransferRoot|"
-        r"bondWithdrawal\w*|settleBondedWithdrawal\w*|"
-        r"depositTransaction|OptimismPortal|"
-        r"finalizeETHWithdrawal|finalizeERC20Withdrawal|finalizeBridgeETH|finalizeBridgeERC20|"
-        r"finalizeWithdrawETH|finalizeWithdrawERC20|"
-        r"bridgeETH\w*|bridgeERC20\w*|"
-        r"createRetryableTicket|unsafeCreateRetryableTicket|depositEtherFor|"
-        r"lockTokens|exitTokens|function\s+depositEther|"
-        r"relayMessageWithProof|depositWithMessage|"
-        r"requestL2Transaction|bridgehubRequestL2Transaction|finalizeEthWithdrawal|"
-        r"receiveMessage|_processMessageFromChild)\b",
-        _family_search(src, focus),
-    ) or (
-        {"maptoken"} & (declared | probe | names)
-        and {"deposit", "depositether"} & (declared | probe | names)
-        and {"receivemessage", "processmessagefromchild"} & (declared | names)
+    if not stargate_msg_only and (
+        (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
+        or re.search(
+            r"\b(lzReceive|finalizeWithdrawalTransaction\w*|proveWithdrawalTransaction\w*|"
+            r"finalizeWithdrawal\b|proveWithdrawal\b|bridgeMint|"
+            r"depositV3|fillV3Relay|fillRelay|relayTokens|proposeRootBundle|"
+            r"SpokePool|HubPool|claimRelayerRefund|"
+            r"sendToL2|bondTransferRoot|confirmTransferRoot|challengeTransferRoot|"
+            r"bondWithdrawal\w*|settleBondedWithdrawal\w*|"
+            r"depositTransaction|OptimismPortal|"
+            r"finalizeETHWithdrawal|finalizeERC20Withdrawal|finalizeBridgeETH|finalizeBridgeERC20|"
+            r"finalizeWithdrawETH|finalizeWithdrawERC20|"
+            r"bridgeETH\w*|bridgeERC20\w*|"
+            r"createRetryableTicket|unsafeCreateRetryableTicket|depositEtherFor|"
+            r"lockTokens|exitTokens|function\s+depositEther|"
+            r"relayMessageWithProof|depositWithMessage|"
+            r"requestL2Transaction|bridgehubRequestL2Transaction|finalizeEthWithdrawal|"
+            r"receiveMessage|_processMessageFromChild)\b",
+            _family_search(src, focus),
+        )
+        or (
+            {"maptoken"} & (declared | probe | names)
+            and {"deposit", "depositether"} & (declared | probe | names)
+            and {"receivemessage", "processmessagefromchild"} & (declared | names)
+        )
     ):
         return "bridge", ["bridge-surface"]
 
@@ -1478,6 +1509,17 @@ def _funds_at_risk_family(
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "", []
 
+    # Enzyme VaultLib (`0x891d…8A38`): tracked-asset vault. withdrawAssetTo
+    # + buybackProtocolFeeShares are unique — not a generic deposit/withdraw.
+    if {"withdrawassetto", "buybackprotocolfeeshares"} <= (declared | probe):
+        return "vault", ["enzyme-vault"]
+    # Origin OETH vault impl (`0x0E97…e575`). Async queue + rebase/allocate.
+    # Must not be stolen by Lido WQ (`requestWithdrawal` singular vs plural).
+    if (
+        {"requestwithdrawal", "addwithdrawalqueueliquidity"} <= (declared | probe)
+        and {"rebase", "allocate"} & (declared | probe)
+    ):
+        return "vault", ["origin-oeth-vault"]
     erc4626 = _is_erc4626(src, names, focus)
     # Live Yearn yvUSDC tagged share-accounting: `uint256 public pricePerShare`
     # (and Vyper `pricePerShare: public`) is a getter, not `function pricePerShare`.
@@ -1571,8 +1613,10 @@ def _funds_at_risk_family(
         & (declared | names)
     )
     # Lido WithdrawalQueue holds unstETH claims — not a wstETH wrap.
-    lido_wq = bool({"requestwithdrawals", "requestwithdrawal"} & (declared | probe | names)) and bool(
-        {"claimwithdrawals", "finalize", "_enqueue", "_claim"} & (declared | names)
+    # Require *this* contract's plural `requestWithdrawals` + finalize/enqueue.
+    # Origin OETH vault uses singular `requestWithdrawal` + rebase (vault).
+    lido_wq = bool({"requestwithdrawals"} & (declared | probe)) and bool(
+        {"finalize", "_enqueue"} & (declared | probe)
     )
     # Renzo RestakeManager holds collaterals for ezETH.
     renzo = bool({"depositeth", "deposit"} & (declared | probe)) and bool(
