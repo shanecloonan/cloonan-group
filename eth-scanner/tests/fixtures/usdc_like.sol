@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// USDC-shaped ERC20 with mint/burn/rescue. Still a token — demote. Fixture only.
+interface IERC20Admin {
+    function transfer(address to, uint256 value) external returns (bool);
+}
+
+/// USDC-shaped ERC20 with mint/burn/rescueERC20 (live FiatToken name). Still a token — demote. Fixture only.
 contract FiatToken {
     string public name = "USD Coin";
     string public symbol = "USDC";
@@ -42,7 +46,8 @@ contract FiatToken {
         totalSupply -= value;
     }
 
-    function rescue(address token, address to, uint256 value) external {
-        token; to; value;
+    function rescueERC20(address token, address to, uint256 value) external {
+        // Live Circle FiatTokenV2_1 body: IERC20(token).transfer(to, amount).
+        IERC20Admin(token).transfer(to, value);
     }
 }

@@ -1,0 +1,17 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/v1/IERC20.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ninterface IERC20 {\n    function totalSupply() external view returns (uint256);\n    function balanceOf(address account) external view returns (uint256);\n    function transfer(address to, uint256 value) external returns (bool);\n    function allowance(address owner, address spender) external view returns (uint256);\n    function approve(address spender, uint256 value) external returns (bool);\n    function transferFrom(address from, address to, uint256 value) external returns (bool);\n}\n"
+    },
+    "contracts/v1/FiatTokenV1.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\nimport \"./IERC20.sol\";\n\n/// Circle FiatToken V1-shaped ERC-20. Fixture only — not live source.\ncontract FiatTokenV1 is IERC20 {\n    string public name = \"USD Coin\";\n    string public symbol = \"USDC\";\n    uint8 public decimals = 6;\n    uint256 public totalSupply;\n    mapping(address => uint256) public balanceOf;\n    mapping(address => mapping(address => uint256)) public allowance;\n    address public masterMinter;\n\n    function transfer(address to, uint256 value) public returns (bool) {\n        require(balanceOf[msg.sender] >= value);\n        balanceOf[msg.sender] -= value;\n        balanceOf[to] += value;\n        return true;\n    }\n\n    function approve(address spender, uint256 value) public returns (bool) {\n        allowance[msg.sender][spender] = value;\n        return true;\n    }\n\n    function transferFrom(address from, address to, uint256 value) public returns (bool) {\n        require(allowance[from][msg.sender] >= value);\n        allowance[from][msg.sender] -= value;\n        balanceOf[from] -= value;\n        balanceOf[to] += value;\n        return true;\n    }\n\n    function mint(address to, uint256 value) external {\n        require(msg.sender == masterMinter);\n        totalSupply += value;\n        balanceOf[to] += value;\n    }\n\n    function burn(uint256 value) external {\n        balanceOf[msg.sender] -= value;\n        totalSupply -= value;\n    }\n\n    function configureMinter(address minter, uint256 allowance_) external {\n        masterMinter = minter;\n        allowance_;\n    }\n}\n"
+    },
+    "contracts/v2/FiatTokenV2_1.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\nimport \"../v1/FiatTokenV1.sol\";\nimport \"../v1/IERC20.sol\";\n\n/// FiatTokenV2_1 adds rescueERC20 — the live USDC admin surface. Fixture only.\ncontract FiatTokenV2_1 is FiatTokenV1 {\n    address public rescuer;\n\n    function rescueERC20(IERC20 token, address to, uint256 amount) external {\n        require(msg.sender == rescuer);\n        token.transfer(to, amount);\n    }\n\n    function updateRescuer(address newRescuer) external {\n        rescuer = newRescuer;\n    }\n}\n"
+    },
+    "contracts/v2/FiatTokenV2_2.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\nimport \"./FiatTokenV2_1.sol\";\n\n/// Leaf implementation behind the USDC proxy. Fixture only.\ncontract FiatTokenV2_2 is FiatTokenV2_1 {\n    function initializeV2_2(address[] calldata accountsToBlacklist, string calldata newSymbol) external {\n        symbol = newSymbol;\n        accountsToBlacklist;\n    }\n\n    function version() external pure returns (string memory) {\n        return \"2\";\n    }\n}\n"
+    }
+  }
+}

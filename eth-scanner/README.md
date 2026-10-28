@@ -28,7 +28,7 @@ Lane A is a **picker**, not a funds-at-risk oracle. It looks for regularity on s
 
 **In-scope examples:** Aave V2/V3 pools, Balancer Vault, Uniswap routers, Maker VAT, ERC-4626 / join-exit vaults, flash-loan venues, bridges.
 
-**Demoted / excluded from the main lane:** plain ERC-20 (USDT, USDC, …) including mint/burn/rescue admin tokens; WETH-like wrap/unwrap; ERC-721/1155 with no marketplace/custody surface. `transfer` / `approve` / `totalSupply` / `transferOwnership` are noise here.
+**Demoted / excluded from the main lane:** plain ERC-20 (USDT, USDC, …) including mint/burn/rescue admin tokens (`rescueERC20`, `recoverToken`, …); WETH-like wrap/unwrap; ERC-721/1155 with no marketplace/custody surface. `transfer` / `approve` / `totalSupply` / `transferOwnership` are noise here.
 
 **Do Not Auto-Dismiss:** unverified / failed IR / failed unpack / rate-limited ingest / truly ambiguous *non-token* auth still go to `manual-review`, never silent `no`.
 
