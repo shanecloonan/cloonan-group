@@ -27,15 +27,15 @@ Lane A is a **picker** for venues that regularly *hold or account* other people�
 | **demoted-passthrough** | `router` · `nft-market` | Cool-archive. Pass-through swap routers and atomic NFT settlement do not hold funds. |
 | **utility** | no custody movers | S4 close / cool |
 
-**In-scope examples:** Aave V2/V3 pools, Compound cTokens, Balancer Vault, ERC-4626 / Yearn vaults, staking / MasterChef / Lido-style pooled ETH, Uni V2 pairs / Uni V3 *pools* / Curve (reserve custody), Maker VAT, bridges that lock/release, unnamed ETH/token piggy-banks (`withdraw` of `address(this).balance`).
+**In-scope examples:** Aave V2/V3 pools, Compound cTokens / Comet, Morpho Blue, Balancer Vault, ERC-4626 / Yearn vaults, staking / MasterChef / Convex / EigenLayer / Lido-style pooled ETH, Uni V2 pairs / Uni V3 *pools* / Curve / Pendle *markets* (reserve custody), Maker VAT, Across / lock-release bridges, GMX-like GLP vaults, unnamed ETH/token piggy-banks (`withdraw` of `address(this).balance`).
 
 **Hybrids stay in-scope:** a token that is also a vault, lending market, AMM, or staking pool (cToken, 4626 share token, Curve LP, stETH) is classified as the venue, never demoted as a token. Prefer false keep.
 
-**Demoted / excluded:** plain ERC-20 (USDT, USDC, …) including mint/burn/rescue admin tokens (`rescueERC20`, …); WETH-like wrap/unwrap; Uni V3 *SwapRouter* and similar exact-input pass-throughs; ERC-721/1155 collections; Seaport-style atomic fulfill/match with no escrow. `transfer` / `approve` / `totalSupply` / `transferOwnership` are noise here.
+**Demoted / excluded:** plain ERC-20 (USDT, USDC, …) including mint/burn/rescue admin tokens (`rescueERC20`, …); WETH / wstETH-like wrap/unwrap; Uni V3 *SwapRouter*, Uni V2 *Router02*, 1inch / Universal Router, Pendle *Action* router facets, and similar pass-throughs; ERC-721/1155 collections; Seaport-style atomic fulfill/match with no escrow. `transfer` / `approve` / `totalSupply` / `transferOwnership` are noise here.
 
 **Do Not Auto-Dismiss:** unverified / failed IR / failed unpack / rate-limited ingest / truly ambiguous *non-token* auth still go to `manual-review`, never silent `no`.
 
-Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *before* ERC-20/721 shape so a pool that calls `IERC20.transferFrom` is never demoted as a token. Imported `IERC20` / `IUniswapV3Pool` / `IWETH9` on a Uni V3 *SwapRouter* do not flip it to `custody` — pass-through still demotes. Imported `IUniswapV3SwapCallback` / `uniswapV2Call` on a Uni V3 *pool* or Uni V2 pair do not flip it to `router` — reserve AMMs stay in-scope as `pool` (`Slot0 public override slot0`, mint/collect/burn/swap/flash). Prefer false keep for true reserves.
+Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *before* ERC-20/721 shape so a pool that calls `IERC20.transferFrom` is never demoted as a token. Imported `IERC20` / `IUniswapV3Pool` / `IWETH9` on a Uni V3 *SwapRouter* do not flip it to `custody` — pass-through still demotes. Imported `IUniswapV3SwapCallback` / `uniswapV2Call` on a Uni V3 *pool* or Uni V2 pair do not flip it to `router` — reserve AMMs stay in-scope as `pool` (`Slot0 public override slot0`, mint/collect/burn/swap/flash). Etherscan `ContractName` scopes family identity to that contract plus `is` parents — a Sourcify tree that also ships sibling `Morpho.sol` must not flip MetaMorpho to lending. Prefer false keep for true reserves.
 
 ## Layout
 

@@ -59,7 +59,7 @@ EVM_PATTERN_SKIM: list[tuple[str, str, list[str]]] = [
 
 WEIRD_SIGNALS: list[tuple[str, list[str]]] = [
     ("bridge-mint-release", [r"\b(lzReceive|onRecv|proveWithdrawal|finalizeWithdrawal|bridgeMint)\b",
-                             r"\b(mailbox|outbox|inbox|l1Bridge|l2Bridge)\b"]),
+                             r"\b(mailbox|outbox|inbox|l1Bridge|l2Bridge|depositV3|fillV3Relay|SpokePool|HubPool)\b"]),
     ("custom-share-math", [r"\bexchangeRate\w*\b", r"\bpricePerShare\b", r"\bvirtualPrice\b"]),
     ("proxy-delegatecall", [r"\bdelegatecall\b", r"\bERC1967\b", r"\bimplementation\s*\("]),
     ("fork-family", [r"\b(Compound|Aave|Uniswap|ERC4626|MasterChef|CErc20|LendingPool)\b"]),
@@ -110,7 +110,14 @@ def detect_fork_family(source: str) -> str | None:
         ("uniswap-v3", r"\bUniswapV3\b|\buniswapV3SwapCallback\b|\bslot0\b"),
         ("masterchef", r"\bMasterChef\b"),
         ("lido", r"\bgetPooledEthByShares\b|\bgetSharesByPooledEth\b"),
-        ("convex", r"\bstakingToken\b|\bnotifyRewardAmount\b"),
+        ("convex", r"\bstakingToken\b|\bnotifyRewardAmount\b|\bearmarkRewards\b"),
+        ("morpho", r"\bMarketParams\b|\bfunction\s+supplyCollateral\b"),
+        ("eigenlayer", r"\bdepositIntoStrategy\b|\bqueueWithdrawals\b|\bDelegationManager\b"),
+        ("pendle", r"\bswapExactPtForSy\b|\baddLiquiditySinglePt\b"),
+        ("across", r"\bSpokePool\b|\bfillV3Relay\b|\bdepositV3\b"),
+        ("curve", r"\badd_liquidity\b|\bremove_liquidity\b"),
+        ("gmx", r"\bbuyUSDG\b|\bguaranteedUsd\b"),
+        ("comet", r"\bborrowBalanceOf\b|\bfunction\s+absorb\b"),
     ):
         if re.search(rx, source):
             return name

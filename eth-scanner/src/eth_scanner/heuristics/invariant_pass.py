@@ -49,13 +49,18 @@ FUND = {
 FUND_NAME = re.compile(
     r"(?i)(?<![A-Za-z])(?:"
     r"transferFrom|transfer|"
-    r"withdraw|redeem|mint|burn|issue|borrow|repayBorrow|repay|"
+    r"withdraw\w*|redeem|mint|burn|issue|borrow|repayBorrow|repay|"
     r"liquidat\w*|swap\w*|claim|harvest|flash\w*|sweep|rescue|skim|"
     r"exit\w*|stake|unstake|release|bridge|payout|collect|refund|settle|execute|"
-    r"deposit|supply|join\w*|add_liquidity|remove_liquidity|addLiquidity|removeLiquidity|"
-    r"exactInput\w*|exactOutput\w*|unoswap|clipperSwap|"
+    r"deposit\w*|submit|supply\w*|join\w*|add_liquidity|remove_liquidity|"
+    r"addLiquidity\w*|removeLiquidity\w*|"
+    r"exactInput\w*|exactOutput\w*|unoswap\w*|clipperSwap|"
     r"uniswapV3\w*Callback|uniswapV2Call|receiveFlashLoan|onFlashLoan|"
-    r"frob|flux|slip|suck|grab|fold|heal|move|exchange"
+    r"frob|flux|slip|suck|grab|fold|heal|move|exchange|"
+    r"undelegate|queueWithdrawals|completeQueuedWithdrawal\w*|delegateTo|"
+    r"fillV3Relay|fillRelay|relayTokens|claimRelayerRefund|speedUpV3Deposit|"
+    r"absorb|buyCollateral|buyUSDG|sellUSDG|increasePosition|decreasePosition|"
+    r"earmarkRewards|earmarkFees"
     r")(?![A-Za-z])"
 )
 ERC20_STANDARD_NAMES = {
@@ -117,6 +122,8 @@ AUTH = {
         r"wards\s*\[\s*(msg\.sender|_msgSender\(\))",
         r"\bwish\s*\(",
         r"\bcanCall\s*\(",
+        r"\bonlyBooster\b|\bonlyOperator\b|\bonlyMorpho\b|\bonlyHubPool\b|"
+        r"\bonlyStrategyManager\b|\bonlyDelegationManager\b|\bonlyConvex\b",
         r"CallbackValidation\.verifyCallback|verifyCallback\s*\(",
         r"IUniswapV3Pool\s*\(\s*msg\.sender",
         r"ecrecover\s*\(|ECDSA\.recover|SignatureChecker|isValidSignature",
@@ -332,7 +339,9 @@ def classify_auth(
 
     if re.search(
         r"\bauth\b|\brequiresAuth\b|\bonlyOwner\b|\bonlyRole\b|"
-        r"\bonlyGuardian\b|\bonlyPoolAdmin\b|\bonlyLendingPool\b",
+        r"\bonlyGuardian\b|\bonlyPoolAdmin\b|\bonlyLendingPool\b|"
+        r"\bonlyBooster\b|\bonlyOperator\b|\bonlyMorpho\b|\bonlyHubPool\b|"
+        r"\bonlyStrategyManager\b|\bonlyDelegationManager\b|\bonlyConvex\b",
         header,
     ):
         return "PRESENT"

@@ -80,7 +80,12 @@ def _scope_of(ctx: FunnelContext) -> ScopeDecision:
         )
     source = ctx.source_text or (ctx.artifact.content if ctx.artifact else "")
     extra = list(ir.function_names) if ir is not None else []
-    return classify_scope(source=source, functions=(ir.functions if ir else []), extra_names=extra)
+    return classify_scope(
+        source=source,
+        functions=(ir.functions if ir else []),
+        extra_names=extra,
+        contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
+    )
 
 
 def _cap_heat(heat: int) -> int:
@@ -212,7 +217,17 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         )
 
     if not movers:
-        if ir_conf == "high" and src_conf == "high":
+        # Live Eigen DelegationManager (`0x3905…f37A`) was a funds-at-risk
+        # family with zero lifted movers → human-no-candidate. Prefer keep.
+        if scope.contract_class in FUNDS_AT_RISK_CLASSES:
+            traces.append(_trace(
+                "S4", "continue",
+                "in-scope %s with no lifted movers — prefer keep (Do Not Auto-Dismiss)"
+                % scope.contract_class,
+                contract_class=scope.contract_class,
+                erc20_standard=erc20_leads,
+            ))
+        elif ir_conf == "high" and src_conf == "high":
             traces.append(_trace(
                 "S4", "human-no-candidate",
                 "no custody movers + high IR + verified",
@@ -227,20 +242,21 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
                 pattern_leads=pattern_leads,
                 scope=scope,
             )
-        traces.append(_trace(
-            "S4", "lane-a-cool",
-            "no custody movers; IR not high+verified so not a close",
-            erc20_standard=erc20_leads,
-            contract_class=scope.contract_class,
-        ))
-        traces.append(_trace("S5", "skip", "no custody movers"))
-        traces.append(_trace("S6", "lane-a-cool", "utility / non-custody with usable IR"))
-        return _done(
-            "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
-            extra="No exposed custody movers; absence is only a close when IR is high and source verified." + erc20_note,
-            pattern_leads=pattern_leads,
-            scope=scope,
-        )
+        else:
+            traces.append(_trace(
+                "S4", "lane-a-cool",
+                "no custody movers; IR not high+verified so not a close",
+                erc20_standard=erc20_leads,
+                contract_class=scope.contract_class,
+            ))
+            traces.append(_trace("S5", "skip", "no custody movers"))
+            traces.append(_trace("S6", "lane-a-cool", "utility / non-custody with usable IR"))
+            return _done(
+                "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
+                extra="No exposed custody movers; absence is only a close when IR is high and source verified." + erc20_note,
+                pattern_leads=pattern_leads,
+                scope=scope,
+            )
     traces.append(_trace(
         "S4", "continue",
         "exposed value movers=%d class=%s" % (len(movers), scope.contract_class),

@@ -251,6 +251,10 @@ def render_markdown(ctx: ReceiptContext) -> str:
         f"- **Contract class:** `{_fmt(res.get('contract_class') or tgt.get('contract_class'))}`",
         f"- **Lane scope:** `{_fmt(res.get('scope') or tgt.get('scope'))}`"
         " — `in-scope` (funds-at-risk) · `demoted-token` · `demoted-passthrough` · `utility`",
+        f"- **Scope signals:** `{_fmt(','.join(res.get('scope_signals') or tgt.get('scope_signals') or []) or None)}`",
+        "- **Picker:** `in-scope` = venue where money sits at rest (vault/staking/lending/"
+        "pool/bridge/maker). `demoted-token` / `demoted-passthrough` do not compete for Lane B. "
+        "Buckets, never a verdict.",
         "",
         "## Source provenance",
         "",
@@ -320,7 +324,10 @@ def render_markdown(ctx: ReceiptContext) -> str:
         for lead in leads:
             if isinstance(lead, dict):
                 lid = lead.get("id") or lead.get("name") or "lead"
-                detail = lead.get("detail") or lead.get("text") or lead.get("note") or ""
+                detail = (
+                    lead.get("description") or lead.get("detail") or lead.get("text")
+                    or lead.get("note") or ""
+                )
                 lines.append(f"- `{_md_escape(lid)}` — {_md_escape(detail) or 'see extras'} *(lead only)*")
             else:
                 lines.append(f"- {_md_escape(lead)} *(lead only)*")

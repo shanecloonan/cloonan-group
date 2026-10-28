@@ -87,6 +87,17 @@ def _art(content: str, **kw) -> SourceArtifact:
 
 
 class UnpackEtherscanJson(unittest.TestCase):
+    def test_sources_after_long_settings_still_detected(self):
+        settings = {"optimizer": {"enabled": True, "runs": 200}, "pad": "x" * 2000}
+        raw = json.dumps({
+            "language": "Solidity",
+            "settings": settings,
+            "sources": {"Pool.sol": {"content": POOL_SOL}},
+        })
+        self.assertTrue(looks_like_etherscan_json(raw))
+        files = parse_etherscan_sources(raw)
+        self.assertIn("Pool.sol", files)
+
     def test_truncated_double_brace_still_unpacks(self):
         inner = json.dumps({"language": "Solidity", "sources": {"Pool.sol": {"content": POOL_SOL}}})
         raw = "{" + inner  # missing closing extra brace
@@ -164,6 +175,35 @@ class UnpackEtherscanJson(unittest.TestCase):
         self.assertIn("function deposit", art.content)
         self.assertTrue(art.content.strip().startswith("// ----- file:"))
 
+    def test_primary_contract_drops_sibling_morpho_movers(self):
+        morpho = (
+            "pragma solidity ^0.8.20;\n"
+            "contract Morpho {\n"
+            "    function borrow(uint256 a, address o) external { a; o; }\n"
+            "    function liquidate(address b, uint256 s) external { b; s; }\n"
+            "    function repay(uint256 a, address o) external { a; o; }\n"
+            "}\n"
+        )
+        vault = (
+            "pragma solidity ^0.8.20;\n"
+            "contract MetaMorpho {\n"
+            "    function totalAssets() public view returns (uint256) { return 1; }\n"
+            "    function convertToShares(uint256 a) public view returns (uint256) { return a; }\n"
+            "    function deposit(uint256 a, address r) external returns (uint256) { r; return a; }\n"
+            "    function withdraw(uint256 a, address r) external returns (uint256) { r; return a; }\n"
+            "    function mint(uint256 s, address r) external returns (uint256) { r; return s; }\n"
+            "    function redeem(uint256 s, address r) external returns (uint256) { r; return s; }\n"
+            "}\n"
+        )
+        raw = _standard_json(("lib/morpho-blue/src/Morpho.sol", morpho), ("src/MetaMorpho.sol", vault))
+        ir = normalize(_art(raw, contract_name="MetaMorpho"), try_slither=False)
+        movers = {fn.name.lower() for fn in ir.functions if fn.is_value_mover and fn.exposed}
+        self.assertIn("deposit", movers)
+        self.assertNotIn("borrow", movers)
+        self.assertNotIn("liquidate", movers)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertNotEqual(ir.contract_class, "lending")
+
 
 class ProxyImplForIR(unittest.TestCase):
     def test_impl_source_wins_for_lift(self):
@@ -174,6 +214,29 @@ class ProxyImplForIR(unittest.TestCase):
         self.assertTrue(chosen.is_proxy)
         self.assertEqual(chosen.implementation, "0x" + "ab" * 20)
         self.assertTrue(any("implementation" in n.lower() for n in chosen.notes))
+
+    def test_adapter_impl_merges_substantial_proxy(self):
+        hub = (
+            "pragma solidity ^0.8.20;\n"
+            "contract HubPool {\n"
+            "    function proposeRootBundle(bytes32 root) external { root; }\n"
+            "    function executeRootBundle(uint256 i) external { i; }\n"
+            "    function bond(uint256 amt) external { amt; }\n"
+            "    function liquidityUtilization(address t) external view returns (uint256) { t; return 0; }\n"
+            "}\n"
+        )
+        adapter = (
+            "pragma solidity ^0.8.20;\n"
+            "contract Ethereum_Adapter {\n"
+            "    function relayTokens(address t, uint256 amt) external { t; amt; }\n"
+            "}\n"
+        )
+        proxy = _art(hub, is_proxy=True, implementation="0x" + "ab" * 20, contract_name="HubPool")
+        impl = _art(adapter, contract_name="Ethereum_Adapter")
+        chosen = select_ir_artifact(proxy, impl)
+        self.assertIn("relayTokens", chosen.content)
+        self.assertIn("proposeRootBundle", chosen.content)
+        self.assertTrue(any("merges" in n.lower() for n in chosen.notes))
 
     def test_empty_impl_keeps_proxy(self):
         proxy = _art("contract Proxy { fallback() external {} }", is_proxy=True, implementation="0x" + "cd" * 20)

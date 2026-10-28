@@ -47,15 +47,53 @@ TOKEN_ADMIN_NAMES = frozenset({
     "rescueerc20", "rescuetoken", "recovererc20", "recovertoken",
     "updaterescuer", "updateblacklister", "updatepauser", "removeminter",
     "cancelauthorization",
+    "mintto", "mintbatch", "burnfrom", "burnbatch",
 })
-TOKEN_ADMIN_PREFIXES = ("mint", "burn", "rescue", "recover")
+# Prefixes must stay tight. `mint` as a prefix demoted Pendle `mintPyFromSy`
+# as token-admin. Exact mint/burn stay in TOKEN_ADMIN_NAMES.
+TOKEN_ADMIN_PREFIXES = ("rescue", "recover")
 
 # Unique pass-through verbs. Shared AMM *callbacks* are not unique —
 # Uni V3 Pool *calls* uniswapV3SwapCallback; Uni V2 pair *calls* uniswapV2Call.
 UNIQUE_ROUTER_NAMES = frozenset({
     "exactinput", "exactinputsingle", "exactoutput", "exactoutputsingle",
     "swapexacttokensfortokens", "swapexactethfortokens", "swapexacttokensforeth",
-    "swaptokensforexacttokens", "unoswap", "clipperswap",
+    "swaptokensforexacttokens", "swapethforexacttokens", "swaptokensforexacteth",
+    "unoswap", "unoswap2", "unoswap3", "clipperswap",
+    # Pendle Action* router facets (live Implementation is one diamond facet).
+    "addliquiditysinglept", "addliquiditysingletoken", "addliquiditysinglesy",
+    "addliquiditydualtokenandpt", "addliquiditydualsyandpt",
+    "addliquiditysingletokenkeepyt", "addliquiditysinglesykeepyt",
+    "removeliquiditysinglept", "removeliquiditysingletoken", "removeliquiditysinglesy",
+    "removeliquiditydualtokenandpt", "removeliquiditydualsyandpt",
+    "swapexacttokenforpt", "swapexactsyforpt", "swapexacttokenforyt", "swapexactsyforyt",
+    "addliquiditysingleptsimple", "swapexacttokenforptsimple",
+})
+EIGEN_NAMES = frozenset({
+    "depositintostrategy", "depositintostrategywithsignature",
+    "queuewithdrawals", "completequeuedwithdrawal", "completequeuedwithdrawals",
+    "undelegate", "withdrawsharesastokens",
+})
+COMET_NAMES = frozenset({
+    "absorb", "buycollateral", "borrowbalanceof", "accrueaccount",
+})
+GMX_NAMES = frozenset({
+    "buyusdg", "sellusdg", "increaseposition", "decreaseposition",
+    "guaranteedusd", "poolamounts",
+})
+BRIDGE_NAMES = frozenset({
+    "depositv3", "depositv3now", "fillv3relay", "fillrelay", "relaytokens",
+    "proposerootbundle", "executerootbundle", "claimrelayerrefund",
+    "speedupv3deposit",
+})
+SHARE_WRAP_NAMES = frozenset({
+    "getwstethbysteth", "getstethbywsteth", "stethpertoken", "tokenspersteth",
+})
+PENDLE_MARKET_NAMES = frozenset({
+    "swapexactptforsy", "swapexactsyforpt", "readstate",
+})
+CONVEX_NAMES = frozenset({
+    "earmarkrewards", "earmarkfees",
 })
 ROUTER_CALLBACK_NAMES = frozenset({
     "uniswapv3swapcallback", "uniswapv2call",
@@ -86,6 +124,7 @@ ESCROW_NAMES = frozenset({
 })
 
 _FN_NAME = re.compile(r"\bfunction\s+(\w+)\s*\(", re.I)
+_VYPER_DEF = re.compile(r"(?m)^[ \t]*def\s+(\w+)\s*\(")
 # `Slot0 public override slot0` / `uint128 public override liquidity` — live
 # Uni V3 Pool storage. The old type-list + `public (\w+)` captured `override`.
 _PUBLIC_GETTER = re.compile(
@@ -117,6 +156,7 @@ def classify_scope(
     source: str = "",
     functions: Optional[Iterable[Any]] = None,
     extra_names: Optional[Iterable[str]] = None,
+    contract_name: Optional[str] = None,
 ) -> ScopeDecision:
     """Classify a contract from source text + lifted functions.
 
@@ -137,8 +177,17 @@ def classify_scope(
     wrap = any((getattr(fn, "role", "") == "wrap-unwrap") for fn in fns) or bool(
         {"deposit", "withdraw", "wrap", "unwrap"} & names and _weth_shape(src, names)
     )
+    # wstETH-like share wrap holds the inner token the same way WETH holds ETH.
+    # Live wstETH (`0x7f39…Ca0`) imported `getPooledEthByShares` and became staking.
+    if _is_share_wrap(src, names, custody, contract_name):
+        return ScopeDecision(
+            contract_class="wrap-token",
+            scope="demoted-token",
+            signals=["share-wrap"],
+            promote=False,
+        )
 
-    family, family_signals = _funds_at_risk_family(src, names, custody)
+    family, family_signals = _funds_at_risk_family(src, names, custody, contract_name)
     if family:
         return ScopeDecision(
             contract_class=family,
@@ -147,9 +196,9 @@ def classify_scope(
             promote=family in FUNDS_AT_RISK_CLASSES,
         )
 
-    erc20 = _interface_score(src, names, ERC20_INTERFACE)
-    erc721 = _interface_score(src, names, ERC721_INTERFACE)
-    erc1155 = _interface_score(src, names, ERC1155_INTERFACE)
+    erc20 = _interface_score(src, names, ERC20_INTERFACE, contract_name)
+    erc721 = _interface_score(src, names, ERC721_INTERFACE, contract_name)
+    erc1155 = _interface_score(src, names, ERC1155_INTERFACE, contract_name)
     token_admin_only = bool(custody) and all(_is_token_admin(n) for n in custody)
     wrap_only = wrap and all(
         roles.get(n) in {"wrap-unwrap", "erc20-standard", ""} or _is_token_admin(n)
@@ -162,7 +211,7 @@ def classify_scope(
 
     # Second-chance hybrid: ERC-20 shape plus a hold signal the first pass missed.
     if token_shaped:
-        hybrid, hybrid_signals = _hybrid_hold(src, names, custody)
+        hybrid, hybrid_signals = _hybrid_hold(src, names, custody, contract_name)
         if hybrid:
             return ScopeDecision(
                 contract_class=hybrid,
@@ -187,7 +236,7 @@ def classify_scope(
         # Live Uni V3 Pool after #28 also looked ERC-20 shaped (IERC20Minimal
         # in the blob) *and* `_is_router` fired on IUniswapV3SwapCallback —
         # that is a keep (reserves), not a passthrough.
-        passthru, pass_signals = _passthrough_family(src, names, custody)
+        passthru, pass_signals = _passthrough_family(src, names, custody, contract_name)
         if passthru:
             return ScopeDecision(
                 contract_class=passthru,
@@ -203,7 +252,7 @@ def classify_scope(
             promote=False,
         )
 
-    passthru, pass_signals = _passthrough_family(src, names, custody)
+    passthru, pass_signals = _passthrough_family(src, names, custody, contract_name)
     if passthru:
         return ScopeDecision(
             contract_class=passthru,
@@ -239,7 +288,7 @@ def classify_scope(
     if custody:
         # Last-chance pass-through: custody movers that are only router verbs.
         # Own reserves / pool-cluster (mint/collect/burn/swap/flash) stay in.
-        if _is_router(src, names, custody) and not _hold_signal(src, names, include_amm=False):
+        if _is_router(src, names, custody, contract_name) and not _hold_signal(src, names, include_amm=False, focus=contract_name):
             return ScopeDecision(
                 contract_class="router",
                 scope="demoted-passthrough",
@@ -249,7 +298,7 @@ def classify_scope(
         flash_only = set(custody) <= {
             "flashloan", "receiveflashloan", "onflashloan", "uniswapv3flashcallback",
         }
-        if flash_only and not _hold_signal(src, names):
+        if flash_only and not _hold_signal(src, names, focus=contract_name):
             return ScopeDecision(
                 contract_class="utility",
                 scope="demoted-passthrough",
@@ -291,13 +340,19 @@ def _is_token_admin(name: str) -> bool:
 def _collect_names(src: str, fns: list[Any], extra: Optional[Iterable[str]]) -> set[str]:
     names = {(getattr(fn, "name", "") or "").lower() for fn in fns}
     names.update(n.lower() for n in _FN_NAME.findall(src or ""))
+    names.update(n.lower() for n in _VYPER_DEF.findall(src or ""))
     names.update(n.lower() for n in _PUBLIC_GETTER.findall(src or ""))
     if extra:
         names.update(str(n).lower() for n in extra if n)
     return {n.lower() for n in names if n}
 
 
-def _interface_score(src: str, names: set[str], interface: Iterable[str]) -> int:
+def _interface_score(
+    src: str,
+    names: set[str],
+    interface: Iterable[str],
+    focus: Optional[str] = None,
+) -> int:
     """Count *this* contract's ERC interface, not IERC20 on imported files.
 
     Live Uni V3 SwapRouter is a multi-file Etherscan blob (IERC20 + pool
@@ -307,9 +362,9 @@ def _interface_score(src: str, names: set[str], interface: Iterable[str]) -> int
     When source is empty (IR-only extra_names, e.g. live USDC), fall back
     to the collected name set so token demotion still works.
     """
-    implemented = _contract_declared_names(src)
+    implemented = _contract_declared_names(src, focus)
     pool = implemented if implemented else names
-    search_src = _contract_bodies(src) if implemented else (src or "")
+    search_src = _contract_bodies(src, focus) if implemented else (src or "")
     score = 0
     for item in interface:
         if item in pool:
@@ -347,6 +402,84 @@ def _type_blocks(src: str) -> list[tuple[str, str, str]]:
     return out
 
 
+def _norm_ident(name: str) -> str:
+    return (name or "").strip().lower()
+
+
+def _ident_match(declared: str, primary: str) -> bool:
+    """True when `declared` is the Etherscan primary (or a versioned alias).
+
+    `Morpho` must not match `MetaMorpho`. `Pool` may match `PoolInstance`.
+    """
+    a, b = _norm_ident(declared), _norm_ident(primary)
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+
+    def _extends(long: str, short: str) -> bool:
+        if not long.startswith(short) or len(long) <= len(short):
+            return False
+        rest = long[len(short):]
+        return rest[0] in "._-vV" or rest.startswith(("instance", "proxy", "impl", "upgradeable"))
+
+    return _extends(a, b) or _extends(b, a)
+
+
+def _contract_bases(src: str) -> dict[str, list[str]]:
+    """Map lowercase contract name → inherited type names."""
+    out: dict[str, list[str]] = {}
+    for m in re.finditer(
+        r"\b(?:abstract\s+)?contract\s+(\w+)\s+is\s+([^{]+)\s*\{",
+        src or "",
+        re.I,
+    ):
+        bases: list[str] = []
+        for part in (m.group(2) or "").split(","):
+            ident = re.match(r"\s*(\w+)", part)
+            if ident:
+                bases.append(ident.group(1))
+        out[_norm_ident(m.group(1))] = bases
+    return out
+
+
+def _focus_chain(src: str, focus: Optional[str]) -> set[str]:
+    """Primary contract + `is` inheritance, lowercase. Empty = no match."""
+    if not focus:
+        return set()
+    names = [n for kind, n, _body in _type_blocks(src) if kind == "contract"]
+    roots = [n for n in names if _ident_match(n, focus)]
+    if not roots:
+        return set()
+    bases = _contract_bases(src)
+    chain = {_norm_ident(n) for n in roots}
+    stack = list(chain)
+    while stack:
+        cur = stack.pop()
+        for raw in bases.get(cur, []):
+            key = _norm_ident(raw)
+            if key and key not in chain:
+                chain.add(key)
+                stack.append(key)
+    return chain
+
+
+def _focused_blocks(src: str, focus: Optional[str]) -> list[tuple[str, str, str]]:
+    """`contract` blocks for the primary + parents. No match → all contracts.
+
+    Prefer false keep: if Etherscan's ContractName does not appear in the
+    blob, do not drop the tree (diamonds / renamed impls).
+    """
+    blocks = [(k, n, b) for k, n, b in _type_blocks(src) if k == "contract"]
+    if not focus or not blocks:
+        return blocks
+    chain = _focus_chain(src, focus)
+    if not chain:
+        return blocks
+    hit = [(k, n, b) for k, n, b in blocks if _norm_ident(n) in chain]
+    return hit or blocks
+
+
 def _brace_span(src: str, open_idx: int) -> tuple[Optional[str], int]:
     depth = 0
     for i in range(open_idx, len(src)):
@@ -360,18 +493,16 @@ def _brace_span(src: str, open_idx: int) -> tuple[Optional[str], int]:
     return None, open_idx
 
 
-def _contract_declared_names(src: str) -> set[str]:
+def _contract_declared_names(src: str, focus: Optional[str] = None) -> set[str]:
     names: set[str] = set()
-    for kind, _name, body in _type_blocks(src):
-        if kind != "contract":
-            continue
+    for _kind, _name, body in _focused_blocks(src, focus):
         names.update(n.lower() for n in _FN_NAME.findall(body))
         names.update(n.lower() for n in _PUBLIC_GETTER.findall(body))
     return names
 
 
-def _contract_bodies(src: str) -> str:
-    return "\n".join(body for kind, _name, body in _type_blocks(src) if kind == "contract")
+def _contract_bodies(src: str, focus: Optional[str] = None) -> str:
+    return "\n".join(body for _kind, _name, body in _focused_blocks(src, focus))
 
 
 def _has_meta(src: str, names: set[str]) -> bool:
@@ -388,6 +519,7 @@ def _probe_names(
     src: str,
     names: set[str],
     custody: Optional[Iterable[str]] = None,
+    focus: Optional[str] = None,
 ) -> set[str]:
     """Prefer this-contract movers / declared names over imported interfaces.
 
@@ -395,11 +527,13 @@ def _probe_names(
     IERC20 + IUniswapV3Pool + callback ifaces. The global name set is the
     union of every file. Custody movers and `contract` bodies are *this*
     address. Fall back to the collected set only for IR-only (empty source).
+    Movers stay unfiltered here (diamond facets). Lending identity intersects
+    them with the primary contract separately.
     """
     movers = {str(n).lower() for n in (custody or []) if n}
     if movers:
         return movers
-    implemented = _contract_declared_names(src)
+    implemented = _contract_declared_names(src, focus)
     if implemented:
         return implemented
     return set(names)
@@ -409,21 +543,29 @@ def _unique_router(
     src: str,
     names: set[str],
     custody: Optional[Iterable[str]] = None,
+    focus: Optional[str] = None,
 ) -> bool:
     """True when *this* contract is an exactInput-style pass-through."""
-    if _probe_names(src, names, custody) & UNIQUE_ROUTER_NAMES:
+    if _probe_names(src, names, custody, focus) & UNIQUE_ROUTER_NAMES:
         return True
+    # Diamond / Action* facets: scan every contract name, not only primary.
     implemented = _contract_declared_names(src)
     if implemented:
         for kind, name, _body in _type_blocks(src):
-            if kind == "contract" and re.search(r"(SwapRouter|UniversalRouter)", name):
+            if kind == "contract" and re.search(
+                r"(SwapRouter|UniversalRouter|UniswapV2Router|PendleRouter|"
+                r"ActionAddRemoveLiq|ActionSwap|AggregationRouter)",
+                name,
+            ):
                 return True
         search = _contract_bodies(src)
     else:
         search = src or ""
     return bool(re.search(
         r"\b(exactInput(Single)?|exactOutput(Single)?|swapExactTokensForTokens|"
-        r"SwapRouter|UniversalRouter|unoswap|clipperSwap)\b",
+        r"swapExactETHForTokens|SwapRouter|UniversalRouter|UniswapV2Router|"
+        r"PendleRouter|ActionAddRemoveLiq|unoswap|clipperSwap|"
+        r"addLiquiditySingle(Pt|Token|Sy)|swapExactTokenForPt)\b",
         search,
     ))
 
@@ -450,6 +592,7 @@ def _is_router(
     src: str,
     names: set[str],
     custody: Optional[Iterable[str]] = None,
+    focus: Optional[str] = None,
 ) -> bool:
     """Pass-through swap router, not an AMM that *invokes* a callback.
 
@@ -460,11 +603,13 @@ def _is_router(
     USDC/WETH 0.05% pool (`0x88e6…5640`) demoted as `router`. Callback
     names are shared; unique exactInput verbs are not.
     """
-    if _pool_cluster(custody, names) or _own_reserves(src, names):
+    if _own_reserves(src, names, focus):
         return False
-    if _unique_router(src, names, custody):
+    if _unique_router(src, names, custody, focus):
         return True
-    probe = _probe_names(src, names, custody)
+    if _pool_cluster(custody, names):
+        return False
+    probe = _probe_names(src, names, custody, focus)
     return bool(probe & ROUTER_CALLBACK_NAMES)
 
 
@@ -487,7 +632,13 @@ def _nft_escrow(src: str, names: set[str]) -> bool:
     ))
 
 
-def _hold_signal(src: str, names: set[str], *, include_amm: bool = True) -> bool:
+def _hold_signal(
+    src: str,
+    names: set[str],
+    *,
+    include_amm: bool = True,
+    focus: Optional[str] = None,
+) -> bool:
     """True when the source shows share / reserve / stake / vault accounting.
 
     `include_amm=False` ignores imported pool interfaces (`slot0` / `getReserves`)
@@ -507,8 +658,11 @@ def _hold_signal(src: str, names: set[str], *, include_amm: bool = True) -> bool
     }
     if include_amm:
         hold_names = set(hold_names) | {"getreserves", "slot0", "reserve0", "reserve1"}
-    if names & hold_names:
+    declared = _contract_declared_names(src, focus)
+    pool = declared if declared else names
+    if pool & hold_names:
         return True
+    search = _contract_bodies(src, focus) or src
     pats = (
         r"\b(totalAssets|convertToShares|convertToAssets|pricePerShare|"
         r"getPricePerFullShare|exchangeRateStored|stakingToken|getReward|"
@@ -521,7 +675,7 @@ def _hold_signal(src: str, names: set[str], *, include_amm: bool = True) -> bool
             r"uint\d*\s+(?:public\s+|private\s+|internal\s+)?(reserve0|reserve1)|"
             r"getPooledEthByShares|joinPool|exitPool|accrueInterest)\b"
         )
-    return bool(re.search(pats, src))
+    return bool(re.search(pats, search))
 
 
 def _reserve_storage(text: str) -> bool:
@@ -537,7 +691,7 @@ def _reserve_storage(text: str) -> bool:
     ))
 
 
-def _own_reserves(src: str, names: set[str]) -> bool:
+def _own_reserves(src: str, names: set[str], focus: Optional[str] = None) -> bool:
     """AMM reserve surface on *this* contract, not an imported pool interface.
 
     A router file often embeds `function slot0` on IUniswapV3Pool. That is
@@ -550,11 +704,11 @@ def _own_reserves(src: str, names: set[str]) -> bool:
     so `_FN_NAME` / the old visibility regex missed them. Prefer the pool
     tag; custody keep is OK.
     """
-    implemented = _contract_declared_names(src)
+    implemented = _contract_declared_names(src, focus)
     if implemented:
         if {"getreserves", "slot0", "reserve0", "reserve1", "liquidity"} & implemented:
             return True
-        return _reserve_storage(_contract_bodies(src))
+        return _reserve_storage(_contract_bodies(src, focus))
     # No contract blocks (IR-only / raw JSON). Do not trust `slot0` in the
     # collected name set — SwapRouter extra_names include the pool iface.
     # V2-shaped reserve0/getReserves in names is still a keep.
@@ -567,11 +721,14 @@ def _passthrough_family(
     src: str,
     names: set[str],
     custody: Optional[Iterable[str]] = None,
+    focus: Optional[str] = None,
 ) -> tuple[str, list[str]]:
     """Pass-through surfaces that do not hold third-party funds."""
     if _is_nft_market(src, names) and not _nft_escrow(src, names):
         return "nft-market", ["atomic-nft-market"]
-    if _is_router(src, names, custody) and not _hold_signal(src, names, include_amm=False):
+    if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
+        return "router", ["passthrough-router"]
+    if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
         return "router", ["passthrough-router"]
     return "", []
 
@@ -580,15 +737,89 @@ def _hybrid_hold(
     src: str,
     names: set[str],
     custody: Optional[Iterable[str]] = None,
+    focus: Optional[str] = None,
 ) -> tuple[str, list[str]]:
     """Looser hold check used after ERC-20 shape so hybrids are not demoted."""
-    return _funds_at_risk_family(src, names, custody)
+    return _funds_at_risk_family(src, names, custody, focus)
+
+
+def _this_or_names(src: str, names: set[str], focus: Optional[str] = None) -> set[str]:
+    """Prefer names this contract implements. Fall back for IR-only / Vyper."""
+    implemented = _contract_declared_names(src, focus)
+    return implemented if implemented else set(names)
+
+
+def _is_share_wrap(
+    src: str,
+    names: set[str],
+    custody: Optional[Iterable[str]] = None,
+    focus: Optional[str] = None,
+) -> bool:
+    """wstETH-shaped wrap of a share token. Money sits in Lido / the inner token.
+
+    Live wstETH movers are wrap / unwrap / receive. The flattened blob also
+    *calls* `stETH.getPooledEthByShares`, which used to fire Lido staking.
+    """
+    probe = _probe_names(src, names, custody, focus) | _this_or_names(src, names, focus)
+    if not ({"wrap", "unwrap"} & probe or {"wrap", "unwrap"} & names):
+        return False
+    if SHARE_WRAP_NAMES & names or bool(re.search(
+        r"\b(getWstETHByStETH|getStETHByWstETH|stEthPerToken|tokensPerStEth)\b",
+        src,
+    )):
+        # Real Lido stETH implements submit + getPooledEthByShares here.
+        declared = _contract_declared_names(src, focus)
+        if declared and {"getpooledethbyshares", "submit"} & declared:
+            return False
+        return True
+    return False
+
+
+def _is_erc4626(src: str, names: set[str], focus: Optional[str] = None) -> bool:
+    """ERC-4626 surface on *this* contract.
+
+    Live Morpho Blue (`0xBBBB…FFCb`) was tagged vault because SharesMathLib
+    uses `totalAssets` as a *parameter*. Require a 4626 verb, not a bare word.
+    Sourcify trees may include IERC4626 / SY on a sibling — prefer focused
+    contract bodies when Etherscan named the primary.
+    """
+    declared = _contract_declared_names(src, focus)
+    pool = declared if declared else names
+    if {"converttoshares", "converttoassets", "previewdeposit", "previewredeem"} & pool:
+        return True
+    search = _contract_bodies(src, focus) or src
+    return bool(re.search(
+        r"\b(ERC4626|function\s+convertToShares|function\s+convertToAssets|"
+        r"function\s+totalAssets|function\s+previewDeposit)\b",
+        search,
+    ))
+
+
+def _split_4626_and_lending_tree(src: str, lending_needles: set[str]) -> bool:
+    """True when the blob has a 4626-only contract and a separate lending contract."""
+    vault_only = False
+    lending_only = False
+    for kind, _name, body in _type_blocks(src):
+        if kind != "contract":
+            continue
+        fns = {n.lower() for n in _FN_NAME.findall(body)}
+        lending = bool(lending_needles & fns)
+        vaultish = bool(
+            {"converttoshares", "converttoassets", "previewdeposit", "previewredeem", "totalassets"}
+            & fns
+        )
+        if vaultish and not lending:
+            vault_only = True
+        if lending and not vaultish:
+            lending_only = True
+    return vault_only and lending_only
 
 
 def _funds_at_risk_family(
     src: str,
     names: set[str],
     custody: Optional[Iterable[str]] = None,
+    focus: Optional[str] = None,
 ) -> tuple[str, list[str]]:
     """Most-specific venue that regularly holds or accounts third-party value.
 
@@ -597,21 +828,117 @@ def _funds_at_risk_family(
     Imported callback ifaces on a reserve AMM are a keep, not a router.
     """
     signals: list[str] = []
+    movers = {str(n).lower() for n in (custody or []) if n}
+    declared = _this_or_names(src, names, focus)
+    probe = _probe_names(src, names, custody, focus)
+    lending_search = _contract_bodies(src, focus) or (
+        _contract_bodies(src) if _contract_declared_names(src) else src
+    )
 
-    maker = bool({"frob", "flux", "suck", "grab", "heal", "fold", "slip"} & names) or (
+    maker = bool({"frob", "flux", "suck", "grab", "heal", "fold", "slip"} & (declared | probe)) or (
         bool(re.search(r"\bmodifier\s+auth\b", src)) and bool(re.search(r"\bwards\s*\[", src))
     )
     if maker:
         return "maker", ["maker-vat/wards"]
 
-    if re.search(r"\b(lzReceive|finalizeWithdrawal|proveWithdrawal|bridgeMint|l1Bridge|l2Bridge)\b", src):
+    if (probe | declared | (set() if movers else names)) & BRIDGE_NAMES or re.search(
+        r"\b(lzReceive|finalizeWithdrawal|proveWithdrawal|bridgeMint|l1Bridge|l2Bridge|"
+        r"depositV3|fillV3Relay|fillRelay|relayTokens|proposeRootBundle|"
+        r"SpokePool|HubPool|claimRelayerRefund)\b",
+        src,
+    ):
         return "bridge", ["bridge-surface"]
 
-    join_exit = bool({"joinpool", "exitpool"} & names) or bool(re.search(r"\b(joinPool|exitPool)\b", src))
-    erc4626 = bool(re.search(r"\b(ERC4626|convertToShares|convertToAssets|totalAssets)\b", src))
-    yearn = bool(re.search(r"\b(pricePerShare|getPricePerFullShare)\b", src))
-    share_acct = bool(re.search(r"\b(totalShares|convertToShares|pricePerShare)\b", src))
-    has_dw = bool({"deposit", "withdraw", "redeem"} & names)
+    # Lending before generic 4626: Morpho Blue has borrow/liquidate *and*
+    # a SharesMathLib `totalAssets` parameter that used to win as vault.
+    # Live MetaMorpho (`0xBEEF…64CB`) Sourcify-trees include Morpho.sol —
+    # do not union sibling `contract` bodies or leaked movers.
+    lending_needles = {
+        "borrow", "repay", "repayborrow", "liquidationcall", "liquidate", "liquidateborrow",
+    }
+    if movers:
+        # This-address movers, intersected with the primary when we have one.
+        here = (movers & declared) if (focus and declared) else movers
+        lending_ix = bool(lending_needles & here)
+        src_rx = ""
+    else:
+        here = declared if declared else names
+        lending_ix = bool(lending_needles & here) or bool(
+            re.search(
+                r"\b(function\s+borrow|function\s+repay|liquidationCall|LendingPool|"
+                r"executeSupply|repayBorrow|function\s+liquidate)\b",
+                lending_search,
+            )
+        )
+        src_rx = lending_search
+    # Sourcify trees ship a 4626-only MetaMorpho *and* sibling Morpho.sol.
+    # Union movers then look like Morpho Blue (borrow+repay). Split-contract
+    # blobs without a primary name prefer the 4626 vault. A single Morpho /
+    # Aave / cToken contract has no 4626-only sibling and stays lending.
+    if lending_ix and not focus and _split_4626_and_lending_tree(src, lending_needles):
+        lending_ix = False
+    # Same-contract leak: 4626 deposit/redeem plus borrowed `borrow` name,
+    # no repay/accrue on this mover set.
+    if (
+        lending_ix
+        and _is_erc4626(src, names, focus)
+        and {"deposit", "mint", "withdraw", "redeem"} & here
+        and not ({"repay", "repayborrow", "accrueinterest", "liquidationcall"} & here)
+    ):
+        lending_ix = False
+    flash = "flashloan" in here or bool(src_rx and re.search(r"\bflashLoan\s*\(", lending_search))
+    aave_supply = "supply" in here or bool(src_rx and re.search(r"\bfunction\s+supply\s*\(", lending_search))
+    # mint+redeem on a 4626 plus sibling Morpho.borrow is not a cToken.
+    compound = False
+    if {"mint", "redeem"} <= here:
+        same = False
+        for kind, _n, body in _type_blocks(src):
+            if kind != "contract":
+                continue
+            fns = {n.lower() for n in _FN_NAME.findall(body)}
+            if {"mint", "redeem"} <= fns and (
+                {"borrow", "repayborrow", "accrueinterest"} & fns
+            ):
+                same = True
+                break
+        compound = same or bool(
+            src_rx and re.search(r"\b(exchangeRateStored|accrueInterest)\b", lending_search)
+        )
+    comet = bool({"supply", "withdraw"} & here) and bool(
+        COMET_NAMES & here
+        or (src_rx and re.search(r"\b(function\s+absorb|buyCollateral|borrowBalanceOf|accrueAccount)\b", lending_search))
+    )
+    join_exit = bool({"joinpool", "exitpool"} & here) or bool(
+        src_rx and re.search(r"\b(joinPool|exitPool)\b", lending_search or src)
+    )
+    if lending_ix or compound or comet or (
+        flash and (aave_supply or "deposit" in here) and not join_exit
+    ):
+        if comet and not lending_ix:
+            return "lending", ["compound-comet"]
+        if compound and not lending_ix:
+            return "lending", ["compound-ctoken"]
+        return "lending", ["lending-ix"] if lending_ix else ["flash+supply/deposit"]
+
+    # Pendle Action* / Uni V2 Router02: unique pass-through verbs beat imported
+    # ERC-4626 / SY ifaces in the diamond or periphery blob.
+    if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
+        return "", []
+
+    erc4626 = _is_erc4626(src, names, focus)
+    yearn = bool(re.search(
+        r"\b(pricePerShare|getPricePerFullShare)\b",
+        _contract_bodies(src, focus) or src,
+    ))
+    # `totalShares` + imported IStrategy.deposit used to tag Eigen Delegation
+    # as vault. Require this-contract deposit/withdraw/redeem.
+    share_acct = bool({"totalshares", "converttoshares", "pricepershare"} & declared) or bool(
+        re.search(
+            r"\bfunction\s+(totalShares|convertToShares|pricePerShare)\b",
+            _contract_bodies(src, focus) or src,
+        )
+    )
+    has_dw = bool({"deposit", "withdraw", "redeem"} & declared)
     if join_exit or erc4626 or yearn or (share_acct and has_dw):
         if join_exit:
             signals.append("join/exit")
@@ -625,61 +952,82 @@ def _funds_at_risk_family(
     if _is_nft_market(src, names) and _nft_escrow(src, names):
         return "vault", ["nft-escrow"]
 
-    lending_ix = bool({"borrow", "repay", "repayborrow", "liquidationcall", "liquidate", "liquidateborrow"} & names) or bool(
-        re.search(r"\b(function\s+borrow|function\s+repay|liquidationCall|LendingPool|executeSupply|repayBorrow)\b", src)
-    )
-    flash = "flashloan" in names or bool(re.search(r"\bflashLoan\s*\(", src))
-    aave_supply = "supply" in names or bool(re.search(r"\bfunction\s+supply\s*\(", src))
-    compound = (
-        {"mint", "redeem"} <= names
-        and (
-            bool({"borrow", "repayborrow", "accrueinterest"} & names)
-            or bool(re.search(r"\b(exchangeRateStored|accrueInterest)\b", src))
+    if (probe | declared) & GMX_NAMES or bool(re.search(
+        r"\b(function\s+buyUSDG|function\s+sellUSDG|function\s+increasePosition|guaranteedUsd)\b",
+        src,
+    )):
+        return "vault", ["gmx-glp-vault"]
+
+    staking_ix = bool({"stake", "unstake", "getreward"} & (declared | probe)) or bool(
+        re.search(
+            r"\b(function\s+stake|function\s+unstake|function\s+getReward|stakingToken)\b",
+            _contract_bodies(src, focus) or src,
         )
     )
-    if lending_ix or compound or (flash and (aave_supply or "deposit" in names) and not join_exit):
-        if compound and not lending_ix:
-            return "lending", ["compound-ctoken"]
-        return "lending", ["lending-ix"] if lending_ix else ["flash+supply/deposit"]
-
-    staking_ix = bool({"stake", "unstake", "getreward"} & names) or bool(
-        re.search(r"\b(function\s+stake|function\s+unstake|function\s+getReward|stakingToken)\b", src)
+    masterchef = bool(re.search(
+        r"\b(poolInfo|userInfo|MasterChef|pendingSushi|pendingRewards)\b",
+        _contract_bodies(src, focus) or src,
+    )) and ("deposit" in (declared | probe) or "withdraw" in (declared | probe))
+    convex = bool((probe | declared) & CONVEX_NAMES) or bool(re.search(
+        r"\b(function\s+earmarkRewards|function\s+earmarkFees)\b",
+        src,
+    ))
+    # Live wstETH *calls* stETH.getPooledEthByShares — require it *here*.
+    lido = bool({"getpooledethbyshares", "getsharesbypooledeth", "submit"} & declared) or (
+        not _contract_declared_names(src, focus)
+        and bool(re.search(r"\bfunction\s+(getPooledEthByShares|submit)\b", src))
     )
-    masterchef = bool(re.search(r"\b(poolInfo|userInfo|MasterChef|pendingSushi|pendingRewards)\b", src)) and (
-        "deposit" in names or "withdraw" in names
+    eigen = bool((probe | declared) & EIGEN_NAMES) or bool(re.search(
+        r"\b(function\s+depositIntoStrategy|function\s+queueWithdrawals|"
+        r"function\s+completeQueuedWithdrawal|function\s+undelegate)\b",
+        src,
+    ))
+    synth_rewards = bool({"deposit", "withdraw"} <= (declared | probe | names)) and bool(
+        {"earned", "getreward", "rewardpertoken"} & (declared | probe | names)
     )
-    lido = bool(re.search(r"\b(getPooledEthByShares|getSharesByPooledEth)\b", src))
-    synth_rewards = bool({"deposit", "withdraw"} <= names) and bool({"earned", "getreward", "rewardpertoken"} & names)
-    if staking_ix or masterchef or lido or synth_rewards:
+    if staking_ix or masterchef or lido or eigen or convex or synth_rewards:
+        if eigen:
+            return "staking", ["eigenlayer"]
         if lido:
             return "staking", ["lido-pooled-eth"]
+        if convex:
+            return "staking", ["convex-booster"]
         if masterchef:
             return "staking", ["masterchef"]
         return "staking", ["stake/reward"]
 
-    curve = bool({"add_liquidity", "remove_liquidity", "exchange"} & names) or bool(
+    curve = bool({"add_liquidity", "remove_liquidity", "exchange"} & (declared | probe | names)) or bool(
         re.search(r"\b(add_liquidity|remove_liquidity)\s*\(", src)
     )
     if curve:
         return "pool", ["curve-pool"]
+    pendle_mkt = bool(PENDLE_MARKET_NAMES & (declared | probe | names)) and not _unique_router(
+        src, names, custody, focus,
+    )
+    if pendle_mkt and ({"swapexactptforsy", "swapexactsyforpt", "readstate"} & (declared | probe | names)):
+        return "pool", ["pendle-market"]
+    # Uni V2 Router02 (`0x7a25…488D`) has addLiquidity + swapExact* — that is
+    # pass-through, not a reserve AMM. Unique router verbs beat pool-cluster.
+    if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
+        return "", []
     # Custody AMM movers beat imported callback-iface "router" names.
     if _pool_cluster(custody, names):
         return "pool", ["amm-pool-movers"]
-    has_swap = "swap" in _probe_names(src, names, custody) or bool(
-        re.search(r"\bfunction\s+swap\s*\(", _contract_bodies(src) or src)
+    has_swap = "swap" in _probe_names(src, names, custody, focus) or bool(
+        re.search(r"\bfunction\s+swap\s*\(", _contract_bodies(src, focus) or src)
     )
-    if has_swap and _own_reserves(src, names) and not _unique_router(src, names, custody):
+    if has_swap and _own_reserves(src, names, focus) and not _unique_router(src, names, custody, focus):
         return "pool", ["amm-reserves"]
 
     # Ungated ETH piggy-bank: *this* contract withdraws address(this).balance
     # and is not WETH. Do not fire on a SwapRouter that imports IWETH9.withdraw
     # and refunds leftover ETH in `refundETH` (`address(this).balance`).
-    implemented = _contract_declared_names(src)
+    implemented = _contract_declared_names(src, focus)
     if (
         "withdraw" in names
         and re.search(r"address\s*\(\s*this\s*\)\s*\.balance", src)
         and not _weth_shape(src, names)
-        and not _unique_router(src, names, custody)
+        and not _unique_router(src, names, custody, focus)
         and (not implemented or "withdraw" in implemented)
     ):
         return "vault", ["eth-custody-withdraw"]

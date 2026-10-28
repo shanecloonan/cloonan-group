@@ -61,7 +61,8 @@ export type ReceiptInput = {
     value_movers?: string[] | null;
     contract_class?: string | null;
     scope?: string | null;
-    pattern_leads?: { id?: string; name?: string; detail?: string; text?: string }[] | null;
+    scope_signals?: string[] | null;
+    pattern_leads?: { id?: string; name?: string; detail?: string; text?: string; description?: string }[] | null;
     created_at?: string | null;
   } | null;
   artifact?: {
@@ -196,7 +197,7 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
   const heat = res.heat ?? tgt.heat;
   const generatedAt = input.generatedAt || res.created_at || new Date().toISOString();
   const scannerId = input.scannerId || "eth-scanner";
-  const scannerVersion = input.scannerVersion || "0.3.0";
+  const scannerVersion = input.scannerVersion || "0.3.3";
   const workerId = input.workerId || "eth-scanner";
 
   const stageRows =
@@ -213,7 +214,7 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
   const leadLines = leads.length
     ? leads.map((lead) => {
         const id = lead.id || lead.name || "lead";
-        const detail = lead.detail || lead.text || "";
+        const detail = lead.description || lead.detail || lead.text || "";
         return `- \`${esc(id)}\` — ${esc(detail) || "see extras"} *(lead only)*`;
       })
     : ["- none recorded"];
@@ -274,6 +275,8 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
     `- **Has code:** ${fmt(tgt.has_code, "unknown")}`,
     `- **Contract class:** \`${fmt(res.contract_class)}\``,
     `- **Lane scope:** \`${fmt(res.scope)}\` — \`in-scope\` (funds-at-risk) · \`demoted-token\` · \`demoted-passthrough\` · \`utility\``,
+    `- **Scope signals:** \`${fmt((res.scope_signals || []).join(",") || null)}\``,
+    "- **Picker:** `in-scope` = venue where money sits at rest (vault/staking/lending/pool/bridge/maker). `demoted-token` / `demoted-passthrough` do not compete for Lane B. Buckets, never a verdict.",
     "",
     "## Source provenance",
     "",
