@@ -164,6 +164,12 @@ _ADDR = {
     "bold_like.sol": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
     "yearn_v3_vault_like.sol": "0xc1F484Dee9a586c122D658B8AFE3436c2F4290be",
     "puffer_vault_like.sol": "0x3b2fdFdEFE919dBcCE0bc5ac426097d5523B8AFA",
+    "maple_pool_like.sol": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+    "maple_syrup_router_like.sol": "0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76",
+    "stargate_pool_like.sol": "0xc026395860Db2d07ee33e05fE50ed7bD583189C7",
+    "stargate_token_messaging_like.sol": "0x6d6620eFa72948C5f68A3C8646d58C00d3f4A980",
+    "enzyme_vault_like.sol": "0x891dee0483eBAA922E274ddD2eBBaA2D33468A38",
+    "origin_oeth_vault_like.sol": "0x0E979edF516f88119fa2843fA3f08A9643F8e575",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -249,6 +255,21 @@ LIVE_YEARN_V3_VAULT = "0xc1F484Dee9a586c122D658B8AFE3436c2F4290be"
 LIVE_PUFFER_VAULT = "0x3b2fdFdEFE919dBcCE0bc5ac426097d5523B8AFA"
 LIVE_ACROSS_SPOKE = "0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5"
 LIVE_EIGEN_POD_MGR = "0x91E677b07F7AF907ec9a428aafA9fc14a0d3A338"
+LIVE_LQ2_TM_WSTETH = "0xA2895d6A3bf110561Dfe4b71cA539d84e1928B22"
+LIVE_LQ2_SP_WSTETH = "0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b"
+LIVE_LQ2_TM_RETH = "0xb2B2ABEb5C357a234363FF5D180912D319e3e19e"
+LIVE_LQ2_SP_RETH = "0xd442e41019b7f5c4dd78f50dc03726c446148695"
+LIVE_SYRUP_USDC = "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b"
+LIVE_SYRUP_USDT = "0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D"
+LIVE_SYRUP_ROUTER = "0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76"
+LIVE_STARGATE_USDC = "0xc026395860Db2d07ee33e05fE50ed7bD583189C7"
+LIVE_STARGATE_NATIVE = "0x77b2043768d28E9C9aB44E1aBfC95944bcE57931"
+LIVE_STARGATE_MSG = "0x6d6620eFa72948C5f68A3C8646d58C00d3f4A980"
+LIVE_ENZYME_VAULTLIB = "0x891dee0483eBAA922E274ddD2eBBaA2D33468A38"
+LIVE_OETH_VAULT_IMPL = "0x0E979edF516f88119fa2843fA3f08A9643F8e575"
+LIVE_PENDLE_SY_STETH = "0xcbC72d92b2dc8187414F6734718563898740C0BC"
+LIVE_CONVEX_CVXCRV = "0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e"
+LIVE_ETHENA_MINT = "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1245,6 +1266,12 @@ class Pass7LiveLocks(unittest.TestCase):
             "bold_like.sol": ("token", "demoted-token", "lane-a-cool"),
             "yearn_v3_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "puffer_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "maple_pool_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "maple_syrup_router_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "stargate_pool_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "stargate_token_messaging_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "enzyme_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "origin_oeth_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -2258,6 +2285,102 @@ class Pass16LiquityEigenVenues(unittest.TestCase):
         r = _lane("weeth_like.sol")
         self.assertEqual(r.contract_class, "wrap-token")
         self.assertEqual(_ADDR["weeth_like.sol"], LIVE_WEETH)
+
+
+class Pass17MaplePendleVenues(unittest.TestCase):
+    """Pass 17: Maple syrup, Stargate messaging, Enzyme, Origin OETH, LQ2 branches."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_maple_pool_is_vault(self):
+        src = (FIXTURES / "maple_pool_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="MaplePool"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("erc4626", ir.scope_signals)
+        r = _lane("maple_pool_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["maple_pool_like.sol"], LIVE_SYRUP_USDC)
+        self.assertEqual(LIVE_SYRUP_USDT.lower()[0:6], "0x356b")
+
+    def test_maple_syrup_router_is_passthrough(self):
+        src = (FIXTURES / "maple_syrup_router_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="SyrupRouter"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertIn("maple-syrup-router", ir.scope_signals)
+        r = _lane("maple_syrup_router_like.sol")
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["maple_syrup_router_like.sol"], LIVE_SYRUP_ROUTER)
+
+    def test_stargate_pool_is_bridge(self):
+        src = (FIXTURES / "stargate_pool_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="StargatePoolUSDC"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        r = _lane("stargate_pool_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["stargate_pool_like.sol"], LIVE_STARGATE_USDC)
+        self.assertEqual(LIVE_STARGATE_NATIVE.lower()[0:6], "0x77b2")
+
+    def test_stargate_messaging_is_passthrough(self):
+        src = (FIXTURES / "stargate_token_messaging_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TokenMessaging"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertIn("stargate-token-messaging", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "bridge")
+        r = _lane("stargate_token_messaging_like.sol")
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["stargate_token_messaging_like.sol"], LIVE_STARGATE_MSG)
+
+    def test_enzyme_vault_is_vault(self):
+        src = (FIXTURES / "enzyme_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="VaultLib"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("enzyme-vault", ir.scope_signals)
+        r = _lane("enzyme_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["enzyme_vault_like.sol"], LIVE_ENZYME_VAULTLIB)
+
+    def test_origin_oeth_is_vault_not_lido_wq(self):
+        src = (FIXTURES / "origin_oeth_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="OETHVault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("origin-oeth-vault", ir.scope_signals)
+        self.assertNotIn("lido-withdrawal-queue", ir.scope_signals)
+        r = _lane("origin_oeth_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["origin_oeth_vault_like.sol"], LIVE_OETH_VAULT_IMPL)
+
+    def test_lido_wq_still_staking(self):
+        r = _lane("lido_withdrawal_queue_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(_ADDR["lido_withdrawal_queue_like.sol"], LIVE_LIDO_WQ)
+
+    def test_liquity_v2_other_branches_reuse_families(self):
+        self.assertEqual(_lane("liquity_v2_trove_like.sol").contract_class, "lending")
+        self.assertEqual(_lane("liquity_v2_stability_like.sol").contract_class, "vault")
+        self.assertEqual(LIVE_LQ2_TM_WSTETH.lower()[0:6], "0xa289")
+        self.assertEqual(LIVE_LQ2_SP_WSTETH.lower()[0:6], "0x9502")
+        self.assertEqual(LIVE_LQ2_TM_RETH.lower()[0:6], "0xb2b2")
+        self.assertEqual(LIVE_LQ2_SP_RETH.lower()[0:6], "0xd442")
+
+    def test_pendle_and_convex_still_correct(self):
+        self.assertEqual(_lane("pendle_market_like.sol").contract_class, "pool")
+        self.assertEqual(_lane("pendle_router_like.sol").contract_class, "router")
+        self.assertEqual(_ADDR["pendle_market_like.sol"], LIVE_PENDLE_MARKET)
+        self.assertEqual(LIVE_PENDLE_SY_STETH.lower()[0:6], "0xcbc7")
+        self.assertEqual(_lane("convex_booster_like.sol").contract_class, "staking")
+        self.assertEqual(LIVE_CONVEX_CVXCRV.lower()[0:6], "0x3fe6")
+
+    def test_dsr_ethena_contango_stay_custody(self):
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(LIVE_ETHENA_MINT.lower()[0:6], "0xe349")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
