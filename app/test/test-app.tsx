@@ -62,6 +62,67 @@ type RunResponse = {
   receipt_url?: string;
 };
 
+type Tab = "lane-a" | "research";
+
+type ResearchFinding = {
+  id: string;
+  severity: string;
+  layer: string;
+  title: string;
+  evidence: string;
+  address: string;
+  detector: string;
+  defensive_only: boolean;
+};
+
+type ResearchResult = {
+  address: string;
+  gated: boolean;
+  gate_reason: string;
+  role: string | null;
+  scope: string | null;
+  layers_run: string[];
+  layers_skipped: { layer: string; reason: string }[];
+  findings: ResearchFinding[];
+  notes: string[];
+  receipt_md_path: string | null;
+  receipt_json_path: string | null;
+  defensive_only: boolean;
+};
+
+type ResearchResponse = {
+  ok: boolean;
+  error?: string;
+  dry_run?: boolean;
+  fixture?: string | null;
+  note?: string;
+  result?: ResearchResult;
+  receipt_url?: string;
+};
+
+type ResearchFeed = {
+  ok: boolean;
+  fixtures?: FixtureOpt[];
+  receipts?: { filename: string; address: string; mtime: number }[];
+  latest?: {
+    address: string;
+    filename: string;
+    gated: boolean;
+    gate_reason: string;
+    role: string | null;
+    scope: string | null;
+    layers_run: string[];
+    layers_skipped: { layer?: string; reason?: string }[];
+    findings_count: number;
+    findings: ResearchFinding[];
+    notes: string[];
+    receipt_url: string | null;
+    stack_version: string | null;
+  } | null;
+  note?: string;
+  python_runtime?: { available?: boolean; error?: string };
+};
+
 const BUCKET_META: Record<Bucket, { label: string; hint: string; cls: string }> = {
   "lane-a-cool": {
     label: "Lane A cool",
@@ -111,6 +172,14 @@ export default function TestApp() {
   const [runError, setRunError] = useState<string | null>(null);
   const [lastRun, setLastRun] = useState<RunResponse | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("lane-a");
+  const [researchFixture, setResearchFixture] = useState("erc4626_vault");
+  const [researchAddress, setResearchAddress] = useState("");
+  const [researchRunning, setResearchRunning] = useState(false);
+  const [researchError, setResearchError] = useState<string | null>(null);
+  const [lastResearch, setLastResearch] = useState<ResearchResponse | null>(null);
+  const [researchFeed, setResearchFeed] = useState<ResearchFeed | null>(null);
+  const [uploadedReceipt, setUploadedReceipt] = useState<ResearchResult | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -149,6 +218,57 @@ export default function TestApp() {
     setFixture("");
     setRunError(null);
   }, []);
+
+  const loadResearch = useCallback(async () => {
+    try {
+      const res = await fetch("/api/test/research", { cache: "no-store" });
+      if (!res.ok) return;
+      setResearchFeed((await res.json()) as ResearchFeed);
+    } catch {
+      /* keep last feed */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "research") void loadResearch();
+  }, [tab, loadResearch]);
+
+  const runResearch = useCallback(async () => {
+    const addr = researchAddress.trim();
+    const fx = researchFixture;
+    if (!fx && !ADDRESS_RE.test(addr)) {
+      setResearchError("Enter a 0x address (40 hex chars) or pick a local fixture.");
+      return;
+    }
+    setResearchRunning(true);
+    setResearchError(null);
+    setLastResearch(null);
+    setUploadedReceipt(null);
+    try {
+      const res = await fetch("/api/test/research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          address: addr || undefined,
+          fixture: fx || undefined,
+        }),
+      });
+      const body = (await res.json()) as ResearchResponse;
+      if (!body.ok) {
+        setResearchError(body.error || `HTTP ${res.status}`);
+        setLastResearch(body);
+        return;
+      }
+      setLastResearch(body);
+      if (body.result?.address) setResearchAddress(body.result.address);
+      await loadResearch();
+    } catch (err) {
+      setResearchError(err instanceof Error ? err.message : "Research run failed");
+    } finally {
+      setResearchRunning(false);
+    }
+  }, [researchAddress, researchFixture, loadResearch]);
 
   const runScan = useCallback(async (override?: { address?: string; fixture?: string }) => {
     const addr = (override?.address ?? address).trim();
@@ -230,6 +350,37 @@ export default function TestApp() {
         )}
         {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
 
+        <div className="mt-8 flex gap-2" role="tablist" aria-label="Scanner mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "lane-a"}
+            onClick={() => setTab("lane-a")}
+            className={`px-4 py-2 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-md border ${
+              tab === "lane-a"
+                ? "border-gold/60 text-gold bg-gold/10"
+                : "border-brand-700 text-brand-300 hover:bg-brand-900"
+            }`}
+          >
+            Lane A
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "research"}
+            onClick={() => setTab("research")}
+            className={`px-4 py-2 text-[11px] tracking-[0.15em] uppercase font-semibold rounded-md border ${
+              tab === "research"
+                ? "border-gold/60 text-gold bg-gold/10"
+                : "border-brand-700 text-brand-300 hover:bg-brand-900"
+            }`}
+          >
+            Research
+          </button>
+        </div>
+
+        {tab === "lane-a" && (
+        <>
         <form
           className="mt-8 rounded-lg border border-brand-800/80 bg-brand-900/30 p-4"
           onSubmit={(e) => {
@@ -447,7 +598,300 @@ export default function TestApp() {
           See <code className="text-brand-400">eth-scanner/README.md</code> and{" "}
           <code className="text-brand-400">docs/ETH_SWEEP_SCANNING_REFERENCE.md</code>.
         </p>
+        </>
+        )}
+
+        {tab === "research" && <ResearchPanel
+          fixtures={researchFeed?.fixtures ?? [
+            { id: "erc4626_vault", label: "ERC-4626 vault" },
+            { id: "yearn_v2", label: "Yearn V2-like" },
+          ]}
+          address={researchAddress}
+          setAddress={setResearchAddress}
+          fixture={researchFixture}
+          setFixture={setResearchFixture}
+          running={researchRunning}
+          error={researchError}
+          last={lastResearch}
+          feed={researchFeed}
+          uploaded={uploadedReceipt}
+          setUploaded={setUploadedReceipt}
+          onRun={() => void runResearch()}
+          onRefresh={() => void loadResearch()}
+        />}
       </div>
     </main>
+  );
+}
+
+function ResearchPanel({
+  fixtures,
+  address,
+  setAddress,
+  fixture,
+  setFixture,
+  running,
+  error,
+  last,
+  feed,
+  uploaded,
+  setUploaded,
+  onRun,
+  onRefresh,
+}: {
+  fixtures: FixtureOpt[];
+  address: string;
+  setAddress: (v: string) => void;
+  fixture: string;
+  setFixture: (v: string) => void;
+  running: boolean;
+  error: string | null;
+  last: ResearchResponse | null;
+  feed: ResearchFeed | null;
+  uploaded: ResearchResult | null;
+  setUploaded: (v: ResearchResult | null) => void;
+  onRun: () => void;
+  onRefresh: () => void;
+}) {
+  const shown = last?.result || uploaded;
+  const latest = feed?.latest;
+  const pythonMissing = Boolean(error && /python|unavailable|not importable/i.test(error));
+
+  return (
+    <div className="mt-8">
+      <p className="text-sm text-brand-400 leading-relaxed max-w-2xl">
+        Defensive research stack (L0–L5). Findings are invariant / property / detector
+        rows with <span className="text-brand-200">defensive_only=true</span>. Optional
+        forge / echidna / slither / halmos / hevm skip when missing. Lane A remains the gate.
+      </p>
+      {feed?.note && (
+        <p className="mt-3 text-xs text-brand-400 border border-brand-800/80 rounded-lg px-3 py-2 bg-brand-900/50">
+          {feed.note}
+        </p>
+      )}
+      {pythonMissing && (
+        <p className="mt-3 text-xs text-amber-200/90 border border-amber-800/70 rounded-lg px-3 py-2">
+          Live research run needs a local Python runtime. Show the last receipt or upload a
+          previously downloaded research JSON — no keys are invented.
+        </p>
+      )}
+
+      <form
+        className="mt-6 rounded-lg border border-brand-800/80 bg-brand-900/30 p-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onRun();
+        }}
+      >
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+          <label className="flex-1 min-w-0">
+            <span className="block text-[10px] tracking-[0.14em] uppercase text-brand-500 mb-1.5">
+              Address
+            </span>
+            <input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="0x… or use a fixture"
+              spellCheck={false}
+              autoComplete="off"
+              className={`w-full font-mono text-[13px] ${inputCls}`}
+            />
+          </label>
+          <label className="sm:w-56">
+            <span className="block text-[10px] tracking-[0.14em] uppercase text-brand-500 mb-1.5">
+              Research fixture
+            </span>
+            <select
+              value={fixture}
+              onChange={(e) => setFixture(e.target.value)}
+              className={`w-full ${inputCls}`}
+            >
+              <option value="">None — address only</option>
+              {fixtures.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" disabled={running} className={btnPrimary} aria-busy={running}>
+            {running ? "Running…" : "Run dry-run"}
+          </button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={onRefresh} disabled={running} className={btnSecondary}>
+            Show last receipt
+          </button>
+          <label className="text-[11px] text-brand-400">
+            <span className="mr-2 uppercase tracking-[0.12em] text-brand-500">Upload receipt</span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="text-[11px] text-brand-300"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  try {
+                    const parsed = JSON.parse(String(reader.result || "")) as Record<string, unknown>;
+                    const findings = Array.isArray(parsed.findings) ? parsed.findings : [];
+                    setUploaded({
+                      address: String(parsed.address || ""),
+                      gated: Boolean(parsed.gated),
+                      gate_reason: String(parsed.gate_reason || ""),
+                      role: parsed.role == null ? null : String(parsed.role),
+                      scope: parsed.scope == null ? null : String(parsed.scope),
+                      layers_run: Array.isArray(parsed.layers_run) ? parsed.layers_run.map(String) : [],
+                      layers_skipped: Array.isArray(parsed.layers_skipped)
+                        ? parsed.layers_skipped.map((s) => {
+                            const row = (s || {}) as { layer?: string; reason?: string };
+                            return { layer: String(row.layer || ""), reason: String(row.reason || "") };
+                          })
+                        : [],
+                      findings: findings.map((f) => {
+                        const row = (f || {}) as ResearchFinding;
+                        return {
+                          id: String(row.id || ""),
+                          severity: String(row.severity || "info"),
+                          layer: String(row.layer || ""),
+                          title: String(row.title || ""),
+                          evidence: String(row.evidence || ""),
+                          address: String(row.address || ""),
+                          detector: String(row.detector || ""),
+                          defensive_only: true,
+                        };
+                      }),
+                      notes: Array.isArray(parsed.notes) ? parsed.notes.map(String) : [],
+                      receipt_md_path: parsed.receipt_md_path == null ? null : String(parsed.receipt_md_path),
+                      receipt_json_path: parsed.receipt_json_path == null ? null : String(parsed.receipt_json_path),
+                      defensive_only: true,
+                    });
+                  } catch {
+                    setUploaded(null);
+                  }
+                };
+                reader.readAsText(file);
+              }}
+            />
+          </label>
+        </div>
+        <p className="mt-3 text-[11px] text-brand-500 leading-relaxed">
+          Dry-run only. Writes <code className="text-brand-300">eth-scanner/work/receipts/research-*.md</code>.
+          Does not replace Lane A buckets.
+        </p>
+      </form>
+
+      {running && (
+        <p className="mt-4 text-xs text-gold/90 border border-gold/30 rounded-lg px-3 py-2 bg-gold/5">
+          Running research dry-run{address ? ` on ${address}` : fixture ? ` on fixture ${fixture}` : ""}
+          … Lane A gate → IR → L2/L3 → fuzz/symbolic (skip if tools missing).
+        </p>
+      )}
+      {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
+
+      {(shown || latest) && (
+        <ResearchSummary
+          result={shown}
+          latest={shown ? null : latest}
+          receiptUrl={last?.receipt_url || latest?.receipt_url || null}
+          fixture={last?.fixture}
+        />
+      )}
+
+      <p className="mt-8 text-[11px] text-brand-600 leading-relaxed max-w-2xl">
+        Research findings are defensive reports, not disclosure. See{" "}
+        <code className="text-brand-400">eth-scanner/research/README.md</code>.
+      </p>
+    </div>
+  );
+}
+
+function ResearchSummary({
+  result,
+  latest,
+  receiptUrl,
+  fixture,
+}: {
+  result: ResearchResult | null;
+  latest: ResearchFeed["latest"] | null | undefined;
+  receiptUrl: string | null;
+  fixture?: string | null;
+}) {
+  const address = result?.address || latest?.address || "";
+  const gated = result?.gated ?? latest?.gated ?? false;
+  const gate = result?.gate_reason || latest?.gate_reason || "";
+  const role = result?.role || latest?.role;
+  const scope = result?.scope || latest?.scope;
+  const layers = result?.layers_run || latest?.layers_run || [];
+  const skips = result?.layers_skipped || latest?.layers_skipped || [];
+  const findings = result?.findings || latest?.findings || [];
+
+  return (
+    <div className="mt-4 rounded-lg border border-brand-700/80 bg-brand-900/50 px-4 py-3 text-xs">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[10px] tracking-[0.14em] uppercase text-gold/80 font-semibold">
+          Research receipt · dry-run
+          {fixture ? ` · fixture ${fixture}` : ""}
+          {latest?.stack_version ? ` · v${latest.stack_version}` : ""}
+        </p>
+        {receiptUrl && (
+          <a
+            href={receiptUrl}
+            className="text-[11px] tracking-[0.08em] uppercase font-semibold text-gold hover:text-gold/80"
+          >
+            Download .md
+          </a>
+        )}
+      </div>
+      <p className="mt-2 font-mono text-[11px] text-brand-200">{address || "—"}</p>
+      <p className="mt-2 text-brand-200">
+        {gated ? "Gated at L1" : "Proceeded past L1"}
+        {gate ? ` — ${gate}` : ""}
+        {role ? ` · ${role}` : ""}
+        {scope ? ` · ${scope}` : ""}
+      </p>
+      <p className="mt-2 text-brand-300">
+        Layers ran: {layers.length ? layers.join(", ") : "—"}
+      </p>
+      {skips.length > 0 && (
+        <ul className="mt-2 text-brand-400 space-y-1">
+          {skips.slice(0, 8).map((s, i) => (
+            <li key={`${s.layer}-${i}`}>
+              skip {s.layer}: {s.reason}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="text-brand-400 tracking-[0.12em] uppercase">
+            <tr>
+              <th className="pr-3 py-1 font-medium">ID</th>
+              <th className="pr-3 py-1 font-medium">Layer</th>
+              <th className="pr-3 py-1 font-medium">Sev</th>
+              <th className="pr-3 py-1 font-medium">Detector</th>
+              <th className="py-1 font-medium">Title</th>
+            </tr>
+          </thead>
+          <tbody>
+            {findings.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-3 text-brand-500">No findings in this receipt.</td>
+              </tr>
+            )}
+            {findings.map((f) => (
+              <tr key={f.id} className="border-t border-brand-800/70">
+                <td className="pr-3 py-1.5 font-mono text-[10px] text-brand-300">{f.id}</td>
+                <td className="pr-3 py-1.5">{f.layer}</td>
+                <td className="pr-3 py-1.5">{f.severity}</td>
+                <td className="pr-3 py-1.5 text-brand-300">{f.detector}</td>
+                <td className="py-1.5 text-brand-100">{f.title}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

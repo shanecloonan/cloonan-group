@@ -1,8 +1,10 @@
 """EIP-1967 implementation resolution + diamond facet listing.
 
-No weak proxy guesses. If a diamond loupe is present but facets cannot be
-listed from an explicit source, mark `diamond-facets-missing` and stop that
-path. Full `eth_call` loupe fetch is Phase 2.
+No weak proxy guesses. Facets come from an explicit list or a read-only
+EIP-2535 loupe `eth_call` (`facetAddresses` / `facetFunctionSelectors` /
+`facets`). If the surface looks like a diamond and neither source is
+available, mark `diamond-facets-missing` and stop that path. Never guess
+facet ABIs from bytecode or constructor literals.
 """
 
 from __future__ import annotations
@@ -14,8 +16,11 @@ import urllib.request
 from typing import Any, Callable, Optional
 
 from eth_scanner.heuristics.invariant_pass import strip_comments
+from eth_scanner.research.keccak import selector4
 from eth_scanner.research.types import FacetEntry
 from eth_scanner.types import SourceArtifact
+
+LoupeCall = Callable[[str, str], str]
 
 # EIP-1967 implementation slot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1)
 EIP1967_IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
@@ -38,7 +43,7 @@ def _rpc_call(rpc_url: str, method: str, params: list[Any], timeout_s: float = 1
     req = urllib.request.Request(
         rpc_url,
         data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-research/0.1 (defensive; read-only)"},
+        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-research/0.2 (defensive; read-only)"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:
@@ -117,17 +122,199 @@ def resolve_implementation(
     return None, "", notes
 
 
+def eth_call(rpc_url: str, address: str, data: str, timeout_s: float = 15.0) -> str:
+    """Read-only `eth_call`. Never sends a transaction."""
+    return str(_rpc_call(rpc_url, "eth_call", [{"to": address, "data": data}, "latest"], timeout_s) or "")
+
+
+def _hex_bytes(data: str) -> bytes:
+    raw = (data or "").strip().lower()
+    if raw.startswith("0x"):
+        raw = raw[2:]
+    if len(raw) % 2:
+        raw = "0" + raw
+    try:
+        return bytes.fromhex(raw)
+    except ValueError:
+        return b""
+
+
+def decode_address_array(data: str) -> list[str]:
+    """ABI-decode a top-level `address[]` return (EIP-2535 facetAddresses)."""
+    blob = _hex_bytes(data)
+    if len(blob) < 64:
+        return []
+    offset = int.from_bytes(blob[0:32], "big")
+    if offset + 32 > len(blob):
+        return []
+    length = int.from_bytes(blob[offset:offset + 32], "big")
+    if length > 256:
+        return []
+    out: list[str] = []
+    pos = offset + 32
+    for _ in range(length):
+        if pos + 32 > len(blob):
+            break
+        word = blob[pos:pos + 32]
+        addr = "0x" + word[-20:].hex()
+        if set(addr[2:]) - {"0"}:
+            out.append(addr)
+        pos += 32
+    return out
+
+
+def decode_bytes4_array(data: str) -> list[str]:
+    """ABI-decode a top-level `bytes4[]` return (facetFunctionSelectors)."""
+    blob = _hex_bytes(data)
+    if len(blob) < 64:
+        return []
+    offset = int.from_bytes(blob[0:32], "big")
+    if offset + 32 > len(blob):
+        return []
+    length = int.from_bytes(blob[offset:offset + 32], "big")
+    if length > 2048:
+        return []
+    out: list[str] = []
+    pos = offset + 32
+    for _ in range(length):
+        if pos + 32 > len(blob):
+            break
+        out.append("0x" + blob[pos:pos + 4].hex())
+        pos += 32
+    return out
+
+
+def decode_facets_tuples(data: str) -> list[FacetEntry]:
+    """Best-effort ABI-decode of EIP-2535 `facets()` → (address, bytes4[])[]."""
+    blob = _hex_bytes(data)
+    if len(blob) < 64:
+        return []
+    head_off = int.from_bytes(blob[0:32], "big")
+    if head_off + 32 > len(blob):
+        return []
+    n = int.from_bytes(blob[head_off:head_off + 32], "big")
+    if n > 256:
+        return []
+    base = head_off
+    out: list[FacetEntry] = []
+    for i in range(n):
+        slot = base + 32 + i * 32
+        if slot + 32 > len(blob):
+            break
+        elem_rel = int.from_bytes(blob[slot:slot + 32], "big")
+        elem = base + elem_rel
+        if elem + 64 > len(blob):
+            continue
+        addr = "0x" + blob[elem + 12:elem + 32].hex()
+        sel_rel = int.from_bytes(blob[elem + 32:elem + 64], "big")
+        sel_at = elem + sel_rel
+        sels: list[str] = []
+        if sel_at + 32 <= len(blob):
+            count = int.from_bytes(blob[sel_at:sel_at + 32], "big")
+            if count <= 2048:
+                pos = sel_at + 32
+                for _ in range(count):
+                    if pos + 32 > len(blob):
+                        break
+                    sels.append("0x" + blob[pos:pos + 4].hex())
+                    pos += 32
+        if set(addr[2:]) - {"0"}:
+            out.append(FacetEntry(address=addr, selectors=sels, source="loupe:facets"))
+    return out
+
+
+def encode_address_array(addresses: list[str]) -> str:
+    """ABI-encode `address[]` (tests + fixtures)."""
+    raw = (32).to_bytes(32, "big") + len(addresses).to_bytes(32, "big")
+    for addr in addresses:
+        h = addr[2:] if addr.startswith("0x") else addr
+        raw += bytes(12) + bytes.fromhex(h.zfill(40)[-40:])
+    return "0x" + raw.hex()
+
+
+def encode_bytes4_array(selectors: list[str]) -> str:
+    """ABI-encode `bytes4[]` (tests + fixtures)."""
+    raw = (32).to_bytes(32, "big") + len(selectors).to_bytes(32, "big")
+    for sel in selectors:
+        h = sel[2:] if sel.startswith("0x") else sel
+        raw += bytes.fromhex(h.ljust(8, "0")[:8]) + bytes(28)
+    return "0x" + raw.hex()
+
+
+def _calldata_noargs(signature: str) -> str:
+    return selector4(signature)
+
+
+def _calldata_address(signature: str, address: str) -> str:
+    h = (address or "").lower()
+    if h.startswith("0x"):
+        h = h[2:]
+    return selector4(signature) + h.zfill(64)
+
+
+def fetch_loupe_facets(
+    address: str,
+    *,
+    rpc_url: str = "",
+    eth_call_fn: Optional[LoupeCall] = None,
+) -> tuple[list[FacetEntry], list[str]]:
+    """Read-only EIP-2535 loupe. Does not guess facet ABIs."""
+    notes: list[str] = []
+    caller = eth_call_fn
+    if caller is None:
+        if not rpc_url:
+            return [], notes
+
+        def caller(addr: str, data: str, _rpc: str = rpc_url) -> str:
+            return eth_call(_rpc, addr, data)
+
+    try:
+        raw_addrs = caller(address, _calldata_noargs("facetAddresses()"))
+        addrs = decode_address_array(raw_addrs)
+    except (OSError, TimeoutError, RuntimeError, urllib.error.URLError, ValueError) as exc:
+        notes.append("loupe facetAddresses() eth_call failed: %s" % exc)
+        addrs = []
+
+    if addrs:
+        out: list[FacetEntry] = []
+        for facet in addrs:
+            sels: list[str] = []
+            try:
+                raw_sels = caller(address, _calldata_address("facetFunctionSelectors(address)", facet))
+                sels = decode_bytes4_array(raw_sels)
+            except (OSError, TimeoutError, RuntimeError, urllib.error.URLError, ValueError) as exc:
+                notes.append("loupe facetFunctionSelectors(%s) failed: %s" % (facet, exc))
+            out.append(FacetEntry(address=facet, selectors=sels, source="loupe:facetAddresses"))
+        notes.append("diamond facets from read-only loupe facetAddresses() (%d)" % len(out))
+        return out, notes
+
+    try:
+        raw_facets = caller(address, _calldata_noargs("facets()"))
+        rows = decode_facets_tuples(raw_facets)
+    except (OSError, TimeoutError, RuntimeError, urllib.error.URLError, ValueError) as exc:
+        notes.append("loupe facets() eth_call failed: %s" % exc)
+        rows = []
+    if rows:
+        notes.append("diamond facets from read-only loupe facets() (%d)" % len(rows))
+        return rows, notes
+    if not notes:
+        notes.append("loupe returned no facet addresses")
+    return [], notes
+
+
 def list_diamond_facets(
     source: str,
     *,
+    address: str = "",
     abi: Optional[list[dict[str, Any]]] = None,
     explicit_facets: Optional[list[dict[str, Any]]] = None,
+    rpc_url: str = "",
+    eth_call_fn: Optional[LoupeCall] = None,
 ) -> tuple[list[FacetEntry], Optional[str], list[str]]:
-    """List facets only when they are explicitly provided.
+    """List facets from an explicit list or a loupe eth_call. Never guess.
 
-    If the surface looks like a diamond/loupe and no explicit facet list is
-    supplied, return status `diamond-facets-missing` and an empty list.
-    Phase 2 will fetch facets via `eth_call` — this path does not guess.
+    If the surface looks like a diamond/loupe and facets cannot be listed,
+    return status `diamond-facets-missing` and an empty list.
     """
     notes: list[str] = []
     if explicit_facets:
@@ -145,12 +332,24 @@ def list_diamond_facets(
     if not looks_like_diamond(source, abi):
         return [], None, notes
 
-    # Refuse to scrape constructor literals / mappings — that is a weak guess.
     stray = _ADDR_RX.findall(source or "")
     if stray:
         notes.append(
             "diamond loupe present; %d address literal(s) in source were not treated as facets"
             % len(stray)
         )
+
+    if (rpc_url or eth_call_fn) and address:
+        fetched, loupe_notes = fetch_loupe_facets(
+            address, rpc_url=rpc_url, eth_call_fn=eth_call_fn,
+        )
+        notes.extend(loupe_notes)
+        if fetched:
+            return fetched, "listed", notes
+        notes.append("loupe eth_call produced no facets — diamond-facets-missing")
+        return [], "diamond-facets-missing", notes
+
+    if not rpc_url and eth_call_fn is None:
+        notes.append("ETH_RPC_URL unset — loupe eth_call not attempted")
     notes.append("diamond loupe/cut surface without an explicit facet list — diamond-facets-missing")
     return [], "diamond-facets-missing", notes

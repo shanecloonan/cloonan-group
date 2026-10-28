@@ -24,13 +24,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     p = argparse.ArgumentParser(
         prog="eth-scanner-research",
         description=(
-            "Research-grade defensive audit stack (Phase 1). "
+            "Research-grade defensive audit stack (Phase 2). "
             "Lane A picker is the gate. Findings are invariant / property reports. No PoCs."
         ),
     )
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    run_p = sub.add_parser("run", help="Lane A classify → IR → Slither → funds-flow → receipt")
+    run_p = sub.add_parser("run", help="Lane A classify → IR → Slither → funds-flow → fuzz → receipt")
     run_p.add_argument("--address", required=True, help="0x…")
     run_p.add_argument("--source", help="local .sol/.vy file or directory (dry-run / no Etherscan)")
     run_p.add_argument("--tvl", type=float, default=None)
@@ -39,6 +39,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     run_p.add_argument("--no-receipt", action="store_true")
     run_p.add_argument("--no-slither", action="store_true")
     run_p.add_argument("--no-forge", action="store_true")
+    run_p.add_argument("--no-fuzz", action="store_true", help="skip built-in Foundry/Echidna fuzz layer")
+    run_p.add_argument("--no-symbolic", action="store_true", help="skip Halmos/hevm hooks")
+    run_p.add_argument("--fuzz-runs", type=int, default=64, help="Foundry --fuzz-runs when forge is present")
     run_p.add_argument("--foundry-project", help="optional Foundry project root for L4 runner")
 
     gen = sub.add_parser("generate-invariants", help="write Foundry invariant stubs for a role")
@@ -74,6 +77,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         write_receipts=not args.no_receipt,
         try_slither=not args.no_slither,
         try_forge=not args.no_forge,
+        try_fuzz=not args.no_fuzz,
+        try_symbolic=not args.no_symbolic,
+        fuzz_runs=args.fuzz_runs,
         foundry_project=Path(args.foundry_project) if args.foundry_project else None,
     )
     print(json.dumps(run.to_dict(), indent=2))

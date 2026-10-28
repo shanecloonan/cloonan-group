@@ -5,7 +5,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { latestWrittenReceipt, loadDryRunStore, pickSourceArtifact } from "@/lib/eth-scanner/local-store";
+import { latestResearchReceipt, latestWrittenReceipt, loadDryRunStore, pickSourceArtifact } from "@/lib/eth-scanner/local-store";
 import { receiptFilename, renderReceiptMarkdown } from "@/lib/eth-scanner/receipt";
 
 export const runtime = "nodejs";
@@ -44,10 +44,22 @@ function mdResponse(markdown: string, filename: string) {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const addressRaw = url.searchParams.get("address");
+  const kind = (url.searchParams.get("kind") || "").trim().toLowerCase();
   if (!isAddress(addressRaw)) {
     return NextResponse.json({ ok: false, error: "pass ?address=0x…" }, { status: 400 });
   }
   const address = addressRaw.toLowerCase();
+
+  if (kind === "research") {
+    const research = latestResearchReceipt(address);
+    if (!research) {
+      return NextResponse.json({
+        ok: false,
+        error: "no research receipt — run the research tab (writes eth-scanner/work/receipts/research-*.md)",
+      }, { status: 404 });
+    }
+    return mdResponse(research.markdown, research.filename);
+  }
 
   const written = latestWrittenReceipt(address);
   if (written) {

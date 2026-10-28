@@ -221,13 +221,20 @@ def emit_contract_ir(
     selectors = selectors_from_abi(abi)
     impl, impl_src, impl_notes = resolve_implementation(artifact, address=address, rpc_url=rpc_url)
     facets, diamond_status, diamond_notes = list_diamond_facets(
-        src, abi=abi, explicit_facets=explicit_facets,
+        src,
+        address=address,
+        abi=abi,
+        explicit_facets=explicit_facets,
+        rpc_url=rpc_url,
     )
     notes: list[str] = []
     notes.extend(impl_notes)
     notes.extend(diamond_notes)
     if diamond_status == "diamond-facets-missing":
-        notes.append("diamond path stopped: facets not listed (Phase 2: eth_call loupe)")
+        notes.append(
+            "diamond path stopped: facets not listed "
+            "(set ETH_RPC_URL for a read-only loupe eth_call, or pass an explicit facet list)"
+        )
         if "diamond-facets-missing" not in signals:
             signals.append("diamond-facets-missing")
     layout = try_storage_layout(src, source_dir)

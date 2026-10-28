@@ -88,6 +88,73 @@ export function latestWrittenReceipt(address: string): { markdown: string; filen
   };
 }
 
+export type ResearchReceiptFile = {
+  filename: string;
+  address: string;
+  mtime: number;
+  markdown?: string;
+  json?: Record<string, unknown> | null;
+};
+
+const RESEARCH_NAME = /^research-(0x[a-f0-9]{40})-/i;
+
+export function listResearchReceipts(limit = 20): ResearchReceiptFile[] {
+  const dir = receiptsDir();
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((name) => name.startsWith("research-") && name.endsWith(".md"))
+    .map((name) => {
+      const full = path.join(dir, name);
+      const m = RESEARCH_NAME.exec(name);
+      return {
+        filename: name,
+        address: (m?.[1] || "").toLowerCase(),
+        mtime: statSync(full).mtimeMs,
+      };
+    })
+    .sort((a, b) => b.mtime - a.mtime)
+    .slice(0, limit);
+}
+
+export function latestResearchReceipt(address?: string): {
+  markdown: string;
+  filename: string;
+  json: Record<string, unknown> | null;
+  address: string;
+} | null {
+  const dir = receiptsDir();
+  if (!existsSync(dir)) return null;
+  const needle = address ? `research-${address.toLowerCase()}-` : "research-";
+  const files = readdirSync(dir)
+    .filter((name) => name.startsWith(needle) && name.endsWith(".md"))
+    .map((name) => {
+      const full = path.join(dir, name);
+      return { name, full, mtime: statSync(full).mtimeMs };
+    })
+    .sort((a, b) => b.mtime - a.mtime);
+  if (!files.length) return null;
+  const md = readFileSync(files[0].full, "utf-8");
+  const jsonPath = files[0].full.replace(/\.md$/, ".json");
+  let json: Record<string, unknown> | null = null;
+  if (existsSync(jsonPath)) {
+    try {
+      const parsed = JSON.parse(readFileSync(jsonPath, "utf-8")) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        json = parsed as Record<string, unknown>;
+      }
+    } catch {
+      json = null;
+    }
+  }
+  const m = RESEARCH_NAME.exec(files[0].name);
+  return {
+    markdown: md,
+    filename: files[0].name,
+    json,
+    address: (m?.[1] || address || "").toLowerCase(),
+  };
+}
+
 export function pickSourceArtifact(artifacts: Record<string, unknown>[], address: string) {
   const prefer: Record<string, number> = { source: 0, decompile: 1 };
   const ranked = artifacts
