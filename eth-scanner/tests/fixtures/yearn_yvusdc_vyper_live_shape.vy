@@ -1,7 +1,7 @@
 # @version 0.2.12
 # Live Yearn V2 yvUSDC (`0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE`).
-# Sourcify miss; shape locked from public yearn-vaults Vault.vy v0.4.3.
-# Etherscan ContractName is yVault — not aliased to Vault.
+# Sourcify miss. Etherscan 2026-10-28: ContractName=Vyper_contract
+# (not yVault), compiler vyper:0.2.12. yVault is the ERC-20 name suffix.
 # Must tag yearn-share-price. Fixture only — not a finding.
 
 from vyper.interfaces import ERC20
