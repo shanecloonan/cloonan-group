@@ -26,6 +26,7 @@ const SKIP_DIR_NAMES = new Set([
   ".turbo",
   "__pycache__",
   ".pnpm-store",
+  ".runtime",
 ]);
 
 /** Generated dependency locks — excluded from line counts (still omitted from "largest files"). */

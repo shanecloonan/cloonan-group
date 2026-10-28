@@ -2,7 +2,9 @@
 
 Defensive static triage for Ethereum contracts. Automation emits **buckets**, never a human verdict. Heuristic flags are **leads**, never findings.
 
-Triage UI: **`/test`** on this site (noindex, not in public nav). **Run** kicks Lane A for one address (or a local fixture). Scanner runtime is the Python CLI spawned by `POST /api/test/run`, not the public marketing pages.
+Triage UI: **`/test`** on this site (noindex, not in public nav). **Run** kicks Lane A for one address (or a local fixture). Scanner runtime is the Python CLI (`python -m eth_scanner`) spawned by `POST /api/test/run`, not the public marketing pages.
+
+On Vercel the Node serverless image has no system Python. `next build` (when `VERCEL=1`) downloads a pinned portable CPython into `eth-scanner/.runtime/python` and Next file-tracing ships it plus `eth-scanner/src` and the Lane A fixtures with `/api/test/run`. If that binary is missing at request time, the route can lazy-install the same pin under `/tmp`. Override with `ETH_SCANNER_PYTHON`. Local `next dev` still uses `python3` / `python` on PATH.
 
 ## Hard rules
 
@@ -79,6 +81,8 @@ Vanilla ERC20 `transfer` / `approve` / `transferFrom` are recorded as leads, not
 | `SUPABASE_SERVICE_ROLE_KEY` | for remote persist | Server-side only. Absent → **dry-run** JSON under `eth-scanner/work/` |
 | `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL` | optional | Defaults to `https://xvjqxjakckkbfsdrntwk.supabase.co` |
 | `ETH_RPC_URL` | optional | Read-only `eth_getCode` |
+| `ETH_SCANNER_PYTHON` | optional | Interpreter for `python -m eth_scanner` (else `python3` / `python`, then the portable bundle) |
+| `ETH_SCANNER_BUNDLE_PYTHON=1` | optional | Download the portable linux-gnu CPython during a local `next build` |
 | `ETH_SCANNER_DRY_RUN=1` | optional | Force local store |
 | `ETH_SCANNER_HEAT_THRESHOLD` | optional | Default `3` |
 | `ETH_SCANNER_TVL_FLOOR` | optional | Default `10000` |
@@ -201,7 +205,7 @@ python -m eth_scanner lane-a --address 0x… --source path/to.sol --dry-run --no
 
 Triage at **`/test`** (noindex, not in public nav).
 
-- **Run** (primary) posts to `POST /api/test/run` with `{ address, fixture? }` and executes `python -m eth_scanner lane-a` for that target. Progress and the last bucket/heat/confidence show on the page; the table refreshes from `GET /api/test`.
+- **Run** (primary) posts to `POST /api/test/run` with `{ address, fixture? }` and executes `python -m eth_scanner lane-a` for that target (system Python locally; portable CPython on Vercel Node serverless). Progress and the last bucket/heat/confidence show on the page; the table refreshes from `GET /api/test`.
 - Click a table row to load that address into the Run field.
 - Optional **local fixture** uses a whitelisted file under `eth-scanner/tests/fixtures/` (`--source`). No arbitrary paths.
 - Each row still has **Download .md** → `GET /api/test/receipt?address=0x…` (`text/markdown` attachment).
