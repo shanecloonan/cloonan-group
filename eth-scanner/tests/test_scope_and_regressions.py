@@ -120,6 +120,18 @@ _ADDR = {
     "woeth_wrap_like.sol": "0xDcEe70654261AF21C44c093C300eD3Bb97b78064",
     "yearn_yvweth_etherscan_live_shape.vy": "0xa258C4606Ca8206D8aA700cE2143D7db854D168c",
     "yearn_yvdai_etherscan_live_shape.vy": "0xdA816459F1AB5631232FE5e97a05BBBb94970c95",
+    "rsweth_like.sol": "0xFAe1031830626743d967e01CFD7709F74CDCB7dA",
+    "rsweth_tree_like.sol": "0xFAe1031830626743d967e01CFD7709F74CDCB7dA",
+    "fx_erc20_root_tunnel_like.sol": "0x0cc2caed31490b546c741bd93dbba8ab387f7f2c",
+    "fx_root_like.sol": "0xfe5e5D361b2ad62c541bAb87C45a0B9B018389a2",
+    "scroll_l1_weth_gateway_like.sol": "0x7AC440cAe8EB6328de4fA621163a792c1EA9D4fE",
+    "curve_gauge_like.vy": "0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A",
+    "aura_booster_like.sol": "0xA57b8d98dAE62B26Ec3bcC4a365338157060B234",
+    "spark_pool_like.sol": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+    "liquity_trove_like.sol": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+    "usds_like.sol": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+    "susds_like.sol": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+    "fluid_liquidity_proxy_like.sol": "0x52Aa899454998Be5b000Ad077a46Bbe360F4e497",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -154,6 +166,17 @@ LIVE_METH = "0xd5F7838F5C461fefF7FE49ea5ebaF7728bB0ADfa"
 LIVE_RETH = "0xae78736Cd615f374D3085123A210448E74Fc6393"
 LIVE_YEARN_YVWETH = "0xa258C4606Ca8206D8aA700cE2143D7db854D168c"
 LIVE_YEARN_YVDAI = "0xdA816459F1AB5631232FE5e97a05BBBb94970c95"
+LIVE_RSWETH = "0xFAe1031830626743d967e01CFD7709F74CDCB7dA"
+LIVE_FX_ERC20_TUNNEL = "0x0cc2caed31490b546c741bd93dbba8ab387f7f2c"
+LIVE_FX_ROOT = "0xfe5e5D361b2ad62c541bAb87C45a0B9B018389a2"
+LIVE_SCROLL_WETH_GW = "0x7AC440cAe8EB6328de4fA621163a792c1EA9D4fE"
+LIVE_CURVE_3POOL_GAUGE = "0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A"
+LIVE_AURA_BOOSTER = "0xA57b8d98dAE62B26Ec3bcC4a365338157060B234"
+LIVE_SPARK_POOL = "0xC13e21B648A5Ee794902342038FF3aDAB66BE987"
+LIVE_LIQUITY_TROVE = "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2"
+LIVE_USDS = "0xdC035D45d973E3EC169d2276DDab16f1e407384F"
+LIVE_SUSDS = "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD"
+LIVE_FLUID_LIQ = "0x52Aa899454998Be5b000Ad077a46Bbe360F4e497"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -266,6 +289,7 @@ class MoverNoise(unittest.TestCase):
         self.assertTrue(name_is_fund_mover("addLiquiditySinglePt"))
         self.assertTrue(name_is_fund_mover("absorb"))
         self.assertTrue(name_is_fund_mover("earmarkRewards"))
+        self.assertTrue(name_is_fund_mover("receiveMessage"))
         self.assertTrue(name_is_fund_mover("proposeRootBundle"))
         self.assertTrue(name_is_fund_mover("executeRootBundle"))
         self.assertTrue(name_is_fund_mover("disputeRootBundle"))
@@ -1107,6 +1131,16 @@ class Pass7LiveLocks(unittest.TestCase):
             "woeth_wrap_like.sol": ("wrap-token", "demoted-token", "lane-a-cool"),
             "yearn_yvweth_etherscan_live_shape.vy": ("vault", "in-scope", "lane-b-queue"),
             "yearn_yvdai_etherscan_live_shape.vy": ("vault", "in-scope", "lane-b-queue"),
+            "rsweth_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "fx_erc20_root_tunnel_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "fx_root_like.sol": ("utility", "utility", "human-no-candidate"),
+            "scroll_l1_weth_gateway_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "curve_gauge_like.vy": ("staking", "in-scope", "lane-b-queue"),
+            "aura_booster_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "spark_pool_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "liquity_trove_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "usds_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "susds_like.sol": ("vault", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -1504,6 +1538,7 @@ class Pass10LockReleaseImplsAndLsts(unittest.TestCase):
         ir = normalize(_art(src, contract_name="METH"), try_slither=False)
         self.assertEqual(ir.contract_class, "token")
         self.assertNotEqual(ir.contract_class, "staking")
+        self.assertNotEqual(ir.contract_class, "wrap-token")
 
     def test_reth_is_staking_not_wrap(self):
         r = _lane("reth_like.sol", tvl=2_000_000_000)
@@ -1544,6 +1579,146 @@ class Pass10LockReleaseImplsAndLsts(unittest.TestCase):
         self.assertTrue(_is_token_admin("forceMint"))
         self.assertTrue(_is_token_admin("forceBurn"))
         self.assertFalse(_is_token_admin("depositExcess"))
+
+
+class Pass11SiblingLeaksAndVenues(unittest.TestCase):
+    """Pass 11: eigen/wrap sibling leaks, FxPortal, gauges, live venue pins."""
+
+    def test_hop_l1_eth_still_unverified_keeps_shape(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertNotEqual(r.contract_class, "staking")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_rsweth_is_swell_lst_not_eigenlayer(self):
+        r = _lane("rsweth_like.sol", tvl=400_000_000)
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.contract_class, "token")
+        self.assertEqual(_ADDR["rsweth_like.sol"], LIVE_RSWETH)
+        src = (FIXTURES / "rsweth_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="RswETH"), try_slither=False)
+        self.assertIn("swell-lst", ir.scope_signals)
+        self.assertNotIn("eigenlayer", ir.scope_signals)
+
+    def test_rsweth_tree_eigen_iface_does_not_steal_family(self):
+        src = (FIXTURES / "rsweth_tree_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="RswETH"), try_slither=False)
+        self.assertEqual(ir.contract_class, "staking")
+        self.assertIn("swell-lst", ir.scope_signals)
+        self.assertNotIn("eigenlayer", ir.scope_signals)
+
+    def test_meth_tree_sibling_weth_shape_stays_token(self):
+        src = (FIXTURES / "meth_tree_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="METH"), try_slither=False)
+        self.assertEqual(ir.contract_class, "token")
+        self.assertEqual(ir.scope, "demoted-token")
+        self.assertNotEqual(ir.contract_class, "wrap-token")
+        self.assertNotEqual(ir.contract_class, "staking")
+
+    def test_fx_erc20_root_tunnel_is_bridge_not_custody(self):
+        r = _lane("fx_erc20_root_tunnel_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.contract_class, "custody")
+        self.assertTrue(set(r.value_movers) & {"deposit", "receiveMessage"})
+        self.assertEqual(_ADDR["fx_erc20_root_tunnel_like.sol"], LIVE_FX_ERC20_TUNNEL)
+
+    def test_fx_root_messaging_is_utility(self):
+        r = _lane("fx_root_like.sol")
+        self.assertEqual(r.contract_class, "utility")
+        self.assertEqual(r.scope, "utility")
+        self.assertNotEqual(r.contract_class, "bridge")
+        self.assertIn(r.bucket, {"lane-a-cool", "human-no-candidate"})
+        self.assertEqual(_ADDR["fx_root_like.sol"], LIVE_FX_ROOT)
+
+    def test_scroll_l1_weth_gateway_is_bridge(self):
+        r = _lane("scroll_l1_weth_gateway_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"finalizeWithdrawERC20", "depositERC20"})
+        self.assertEqual(_ADDR["scroll_l1_weth_gateway_like.sol"], LIVE_SCROLL_WETH_GW)
+
+    def test_curve_gauge_is_staking_not_custody(self):
+        src = (FIXTURES / "curve_gauge_like.vy").read_text(encoding="utf-8")
+        ir = normalize(_art(src, language="vyper", contract_name="Vyper_contract"), try_slither=False)
+        self.assertEqual(ir.contract_class, "staking")
+        self.assertIn("curve-gauge", ir.scope_signals)
+        r = _lane("curve_gauge_like.vy")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertNotEqual(r.contract_class, "custody")
+        self.assertEqual(_ADDR["curve_gauge_like.vy"], LIVE_CURVE_3POOL_GAUGE)
+
+    def test_aura_booster_is_convex_family(self):
+        r = _lane("aura_booster_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        src = (FIXTURES / "aura_booster_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Booster"), try_slither=False)
+        self.assertIn("convex-booster", ir.scope_signals)
+        self.assertEqual(_ADDR["aura_booster_like.sol"], LIVE_AURA_BOOSTER)
+
+    def test_spark_pool_is_lending(self):
+        r = _lane("spark_pool_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"borrow", "repay", "liquidationCall"})
+        self.assertEqual(_ADDR["spark_pool_like.sol"], LIVE_SPARK_POOL)
+
+    def test_liquity_trove_is_lending(self):
+        r = _lane("liquity_trove_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"liquidate", "redeemCollateral"})
+        self.assertEqual(_ADDR["liquity_trove_like.sol"], LIVE_LIQUITY_TROVE)
+
+    def test_usds_is_dss_token(self):
+        r = _lane("usds_like.sol", tvl=2_000_000_000)
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        src = (FIXTURES / "usds_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Usds"), try_slither=False)
+        self.assertIn("dss-token", ir.scope_signals)
+        self.assertEqual(_ADDR["usds_like.sol"], LIVE_USDS)
+
+    def test_susds_is_vault(self):
+        r = _lane("susds_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["susds_like.sol"], LIVE_SUSDS)
+
+    def test_fluid_proxy_missing_facets_is_false_keep(self):
+        src = (FIXTURES / "fluid_liquidity_proxy_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="FluidLiquidityProxy"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        self.assertEqual(ir.scope, "in-scope")
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        r = _lane("fluid_liquidity_proxy_like.sol")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertNotEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["fluid_liquidity_proxy_like.sol"], LIVE_FLUID_LIQ)
+
+    def test_convex_booster_stays_staking(self):
+        r = _lane("convex_booster_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_balancer_vault_stays_vault(self):
+        r = _lane("balancer_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_curve_pool_stays_pool(self):
+        r = _lane("curve_pool_like.sol")
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.bucket, "lane-b-queue")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):

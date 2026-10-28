@@ -2,7 +2,8 @@
 pragma solidity ^0.8.20;
 
 /// Hop L1 ETH lock-release bridge (`0xb8901acB165ed027E32754E0FFe830802919777f`).
-/// Bonders `stake`/`unstake` here — must still tag *bridge*, not staking.
+/// Pass 11: Etherscan + Sourcify still have no verified blob (empty SourceCode).
+/// Keep this shape fixture. Bonder `stake`/`unstake` must not win as staking.
 /// Fixture only — not a finding.
 contract L1_ETH_Bridge {
     mapping(address => uint256) public getCredit;

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// METH + sibling staking `function stake` in one flatten.
-/// Stake must not leak onto the receipt token. Fixture only.
+/// METH + sibling staking `function stake` + sibling WETH deposit/msg.value.
+/// Stake / wrap-shape must not leak onto the receipt token. Fixture only.
 contract METH {
     string public name = "mETH";
     string public symbol = "mETH";
@@ -51,4 +51,18 @@ contract MantleStaking {
         methAmount;
     }
     address public stakingToken;
+}
+
+/// Sibling wrap-token. Live mETH flatten also ships WETH-shaped deposit +
+/// msg.value. Must not flip METH to wrap-token.
+contract WETH9 {
+    mapping(address => uint256) public balanceOf;
+
+    function deposit() external payable {
+        balanceOf[msg.sender] += msg.value;
+    }
+
+    function withdraw(uint256 wad) external {
+        balanceOf[msg.sender] -= wad;
+    }
 }
