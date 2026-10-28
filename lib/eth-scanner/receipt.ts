@@ -197,7 +197,7 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
   const heat = res.heat ?? tgt.heat;
   const generatedAt = input.generatedAt || res.created_at || new Date().toISOString();
   const scannerId = input.scannerId || "eth-scanner";
-  const scannerVersion = input.scannerVersion || "0.3.9";
+  const scannerVersion = input.scannerVersion || "0.3.10";
   const workerId = input.workerId || "eth-scanner";
 
   const stageRows =

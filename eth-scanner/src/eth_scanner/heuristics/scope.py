@@ -50,6 +50,8 @@ TOKEN_ADMIN_NAMES = frozenset({
     "mintto", "mintbatch", "burnfrom", "burnbatch",
     # Mantle mETH / similar LST receipts — admin, not custody.
     "forcemint", "forceburn",
+    # Frax frxETH permissioned mint — receipt token, not a hold.
+    "minter_mint", "minter_burn_from",
 })
 # Prefixes must stay tight. `mint` as a prefix demoted Pendle `mintPyFromSy`
 # as token-admin. Exact mint/burn stay in TOKEN_ADMIN_NAMES.
@@ -1104,6 +1106,14 @@ def _passthrough_family(
         and not _own_reserves(src, names, focus)
     ):
         return "router", ["weth-gateway"]
+    # CoW GPv2Settlement: atomic batch settle. Tokens flash through;
+    # they do not sit. Uni V4 PoolManager has settle+swap but not this.
+    if (
+        {"invalidateorder"} & (declared | probe | names)
+        and {"settle"} & (declared | probe)
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["cow-settlement"]
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "router", ["passthrough-router"]
     if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
@@ -1269,6 +1279,18 @@ def _funds_at_risk_family(
         _contract_bodies(src) if _contract_declared_names(src) else src
     )
 
+    # Maker / Sky LitePSM: sellGem/buyGem hold DAI + gem. Same-file Vat
+    # `function frob` must not steal the family (live DssLitePsm flatten).
+    if {"sellgem", "buygem"} <= (declared | probe | names):
+        return "vault", ["maker-psm"]
+    # Maker Join adapters hold the gem/DAI. join+exit+cage — not Pot
+    # (no cage) and not DsrManager (pass-through, no cage).
+    if (
+        {"join", "exit"} <= (declared | probe)
+        and {"cage"} & (declared | probe | names)
+        and {"vat", "gem", "dai"} & (declared | names)
+    ):
+        return "vault", ["maker-join"]
     # Vat verbs only. Dai (`0x6B17…1d0F`) also has `modifier auth` + `wards`
     # and used to win as maker. Prefer false keep for a real Vat (has frob).
     maker = bool(VAT_VERBS & (declared | probe)) or bool(re.search(
@@ -1379,9 +1401,15 @@ def _funds_at_risk_family(
     liquity_bo = bool(
         {"opentrove", "adjusttrove", "withdrawcoll", "addcoll"} & (declared | probe | here)
     )
-    if lending_ix or compound or comet or liquity_bo or (
+    gearbox = bool({"opencreditaccount", "closecreditaccount"} & (declared | probe | here)) and bool(
+        {"managedebt", "addcollateral", "withdrawcollateral", "liquidatecreditaccount"}
+        & (declared | probe | here | names)
+    )
+    if lending_ix or compound or comet or liquity_bo or gearbox or (
         flash and (aave_supply or "deposit" in here) and not join_exit
     ):
+        if gearbox and not lending_ix:
+            return "lending", ["gearbox-credit"]
         if liquity_bo and not lending_ix:
             return "lending", ["liquity-borrower"]
         if comet and not lending_ix:
