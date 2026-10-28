@@ -347,6 +347,16 @@ LIVE_CONCRETE_DELTA_WEETH = "0xb9dc54c8261745cb97070cefbe3d3d815aee8f20"
 LIVE_RESOLV_STUSR = "0x6c8984bc7DBBeDAf4F6b2FD766f16eBB7d10AAb4"
 LIVE_RESOLV_STUSR_IMPL = "0xba1600735a039E2b3bF1d1d2f1A7f80F45973DA7"
 LIVE_LBTC_PROXY = "0x8236A87084F8B84306F72007F36F2618A5634494"
+LIVE_RATEX = "0xAC64cF5B37124e62Ad716e664faF711Bd0882056"
+LIVE_STADER_SPM = "0xcf5EA1b38380f6aF39068375516Daf40Ed70D797"
+LIVE_EIGEN_STETH_STRATEGY = "0x93c4b944D05dfe6df7645A86cd2206016c308294"
+LIVE_STAKEWISE_VAULT_GENESIS = "0xAC0F906E433d58d7614C8aeFbFC8ed2Fc0019F67"
+LIVE_BLAST_BRIDGE = "0x5F6AE08B8AeB7078cf2F96EFb0896e4f8f95C411"
+LIVE_MANTLE_L1_BRIDGE = "0x95fC37A27a2f98e3113322A6c5Fb5DfBb1934979"
+LIVE_LINEA_L1_MESSAGE = "0xd19d4B5d3343393a313C8E736B8cf31d1226b75A"
+LIVE_KARAK_VAULT_SUPERVISOR = "0x54e44DbB92dBA848ACe27F44c0CB4268981eFFfc"
+LIVE_INCEPTION_INSTETH = "0x36B2293Ae2732D420213f7ccc43f10e39287b54b"
+LIVE_SYMBIOTIC_WETH_COLLATERAL = "0xDC5CF6e98478fBa8C68F48cA45418496806718e9"
 LIVE_SYNAPSE_BRIDGE = "0x2796317b0fF8538F253012862c06787Adfb8cEb6"
 LIVE_SYNAPSE_IMPL = "0x5B0000258c622551A1c7C45b9f860Ef90200005B"
 LIVE_LINEA_TOKEN_BRIDGE = "0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319"
@@ -2979,6 +2989,44 @@ class Pass24BridgeFamilyMisses(unittest.TestCase):
         self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
         self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
         self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass25NoOpHunt(unittest.TestCase):
+    """Pass 25: no new unique FAR pin. Residuals + honest keeps only."""
+
+    def test_pass24_pins_still_hold(self):
+        self.assertEqual(_lane("synapse_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("linea_token_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("wormhole_token_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("celer_bridge_like.sol").contract_class, "bridge")
+        src = (FIXTURES / "aragon_app_proxy_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="AppProxyUpgradeable"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+
+    def test_honest_keeps_unchanged(self):
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertEqual(_lane("treehouse_router_like.sol").contract_class, "router")
+
+    def test_residual_404_addresses_unchanged(self):
+        self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
+        self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
+        self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+        self.assertEqual(LIVE_RATEX.lower()[0:6], "0xac64")
+        self.assertEqual(LIVE_STADER_SPM.lower()[0:6], "0xcf5e")
+        self.assertEqual(LIVE_EIGEN_STETH_STRATEGY.lower()[0:6], "0x93c4")
+        self.assertEqual(LIVE_STAKEWISE_VAULT_GENESIS.lower()[0:6], "0xac0f")
+        self.assertEqual(LIVE_BLAST_BRIDGE.lower()[0:6], "0x5f6a")
+        self.assertEqual(LIVE_MANTLE_L1_BRIDGE.lower()[0:6], "0x95fc")
+        self.assertEqual(LIVE_LINEA_L1_MESSAGE.lower()[0:6], "0xd19d")
+        self.assertEqual(LIVE_KARAK_VAULT_SUPERVISOR.lower()[0:6], "0x54e4")
+        self.assertEqual(LIVE_INCEPTION_INSTETH.lower()[0:6], "0x36b2")
+        self.assertEqual(LIVE_SYMBIOTIC_WETH_COLLATERAL.lower()[0:6], "0xdc5c")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
