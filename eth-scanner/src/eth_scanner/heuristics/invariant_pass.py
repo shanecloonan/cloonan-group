@@ -18,9 +18,12 @@ import re
 import sys
 from typing import Any
 
+# Do not skip `lib/`: Etherscan/Sourcify standard-json often stores the
+# implementation under lib/<pkg>/... (Aave V3 PoolInstance). Skipping it
+# produced false empty-mover human-no-candidate. node_modules/out/cache stay out.
 SKIP_DIRS = {
     ".git", "node_modules", "target", "out", "cache", "artifacts",
-    "build", "lib", "__pycache__", ".venv", "venv", "dist", "typechain",
+    "build", "__pycache__", ".venv", "venv", "dist", "typechain",
     "typechain-types", "coverage",
 }
 TEST_HINT = re.compile(r"(^|/)(test|tests|mock|mocks|script|scripts)(/|$)|\.t\.sol$|_test\.|test_", re.I)
@@ -43,7 +46,7 @@ FUND = {
 FUND_NAME = re.compile(
     r"(transfer|withdraw|redeem|mint|burn|borrow|repay|liquidat|swap|claim|"
     r"harvest|flash|sweep|rescue|skim|exit|unstake|release|bridge|payout|"
-    r"collect|refund|settle|execute|deposit|join|"
+    r"collect|refund|settle|execute|deposit|supply|join|"
     r"exactInput|exactOutput|unoswap|clipperSwap|"
     r"\bfrob\b|\bflux\b|\bslip\b|\bsuck\b|\bgrab\b|\bfold\b|\bheal\b|\bmove\b)",
     re.I,
@@ -352,10 +355,15 @@ def analyse_source(src: str, rel: str, lang: str) -> dict[str, Any]:
                 unchecked = False
                 raw = src_lines[i - 1] if i - 1 < len(src_lines) else ""
                 if lang == "solidity" and label in ("low-level call", "send", "delegatecall"):
-                    unchecked = not re.search(
-                        r"(\(\s*bool\s+\w+|\bbool\s+\w+\s*,|=\s*[^;]*\.(call|send|delegatecall)|require\s*\(|if\s*\(\s*!?",
-                        line,
-                    )
+                    # Must stay a valid regex — a compile error used to fail the whole lift
+                    # (false ir=low / human-no-candidate on real multi-file contracts).
+                    try:
+                        unchecked = not re.search(
+                            r"(\(\s*bool\s+\w+|\bbool\s+\w+\s*,|=\s*[^;]*\.(?:call|send|delegatecall)|require\s*\(|if\s*\()",
+                            line,
+                        )
+                    except re.error:
+                        unchecked = False
                 if lang == "vyper" and label == "raw_call":
                     unchecked = "revert_on_failure=False" in raw
                 res["external_calls"].append(dict(

@@ -129,6 +129,13 @@ class UnpackEtherscanJson(unittest.TestCase):
         self.assertFalse(ir.lift_failed)
         self.assertTrue(any("unpack" in n.lower() for n in ir.notes))
 
+    def test_lib_prefix_sources_are_scanned(self):
+        raw = _standard_json(("lib/aave-v3/src/contracts/protocol/pool/Pool.sol", POOL_SOL))
+        ir = normalize(_art(raw), try_slither=False)
+        names = {fn.name for fn in ir.functions if fn.is_value_mover}
+        self.assertIn("deposit", names)
+        self.assertFalse(ir.lift_failed)
+
     def test_flatten_keeps_solidity_visible(self):
         files = {"B.sol": "contract B {}", "A.sol": "contract A {}"}
         flat = flatten_sources(files)
@@ -195,6 +202,14 @@ class MoverClassification(unittest.TestCase):
         ir = normalize(_art(VAT_SOL), try_slither=False)
         names = {fn.name for fn in ir.functions if fn.is_value_mover}
         self.assertTrue({"frob", "flux", "move"} <= names)
+
+    def test_low_level_call_does_not_fail_lift(self):
+        src = (ROOT / "tests" / "fixtures" / "callsite_vault.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src), try_slither=False)
+        self.assertFalse(ir.lift_failed)
+        self.assertNotEqual(ir.ir_confidence, "low")
+        names = {fn.name for fn in ir.functions}
+        self.assertIn("deposit", names)
 
 
 class LaneADryRunBuckets(unittest.TestCase):
