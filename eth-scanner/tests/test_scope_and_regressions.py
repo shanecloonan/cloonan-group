@@ -197,6 +197,7 @@ _ADDR = {
     "clearpool_pool_like.sol": "0x2E1CE0F2ab6B61d5A3d1682a77496c4611860B57",
     "mellow_root_vault_like.sol": "0xa1eeEb677a121327Ea2643Fb47a23fec304Edd00",
     "concrete_async_vault_like.sol": "0xd57588c73715b65e0ead36ae06c15644169501b7",
+    "oz_proxy_sibling_bridge_like.sol": "0x6c8984bc7DBBeDAf4F6b2FD766f16eBB7d10AAb4",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -338,6 +339,9 @@ LIVE_MELLOW_ROOT_VAULT = "0xa1eeEb677a121327Ea2643Fb47a23fec304Edd00"
 LIVE_CONCRETE_WSTETH = "0xd57588c73715b65e0ead36ae06c15644169501b7"
 LIVE_CONCRETE_WSTETH_IMPL = "0x438d1eb241F866A91EbD0cc148FDa9ac9b09093E"
 LIVE_CONCRETE_DELTA_WEETH = "0xb9dc54c8261745cb97070cefbe3d3d815aee8f20"
+LIVE_RESOLV_STUSR = "0x6c8984bc7DBBeDAf4F6b2FD766f16eBB7d10AAb4"
+LIVE_RESOLV_STUSR_IMPL = "0xba1600735a039E2b3bF1d1d2f1A7f80F45973DA7"
+LIVE_LBTC_PROXY = "0x8236A87084F8B84306F72007F36F2618A5634494"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -2853,6 +2857,45 @@ class Pass22ConcreteMellowRoot(unittest.TestCase):
         self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
         self.assertEqual(_lane("erc4626_vault_like.sol").contract_class, "vault")
+        self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
+        self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass23OzProxySiblingLeak(unittest.TestCase):
+    """Pass 23: thin OZ proxy + sibling depositV3 must not steal as bridge."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_oz_proxy_sibling_depositv3_stays_diamond_missing(self):
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "bridge")
+        self.assertNotIn("bridge-surface", ir.scope_signals)
+        r = _lane("oz_proxy_sibling_bridge_like.sol")
+        self.assertEqual(_ADDR["oz_proxy_sibling_bridge_like.sol"], LIVE_RESOLV_STUSR)
+        self.assertEqual(LIVE_RESOLV_STUSR_IMPL.lower()[0:6], "0xba16")
+        self.assertEqual(LIVE_LBTC_PROXY.lower()[0:6], "0x8236")
+
+    def test_real_across_and_diamond_still_keep(self):
+        self.assertEqual(_lane("across_spoke_like.sol").contract_class, "bridge")
+        src = (FIXTURES / "diamond_thin_primary_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Diamond"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+
+    def test_pass22_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("mellow_root_vault_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("concrete_async_vault_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("veda_boring_vault_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("veda_teller_like.sol").contract_class, "router")
         self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
         self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
         self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
