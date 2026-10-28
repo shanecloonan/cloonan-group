@@ -48,6 +48,8 @@ TOKEN_ADMIN_NAMES = frozenset({
     "updaterescuer", "updateblacklister", "updatepauser", "removeminter",
     "cancelauthorization",
     "mintto", "mintbatch", "burnfrom", "burnbatch",
+    # Mantle mETH / similar LST receipts — admin, not custody.
+    "forcemint", "forceburn",
 })
 # Prefixes must stay tight. `mint` as a prefix demoted Pendle `mintPyFromSy`
 # as token-admin. Exact mint/burn stay in TOKEN_ADMIN_NAMES.
@@ -99,6 +101,16 @@ BRIDGE_NAMES = frozenset({
     # Arbitrum Inbox / Polygon PoS ether lock.
     "createretryableticket", "unsafecreateretryableticket",
     "depositetherfor",
+    # Polygon EtherPredicate / ERC20Predicate / Plasma DepositManager.
+    "locktokens", "exittokens", "depositether",
+    # Scroll L1 messenger / ETH gateway (ETH is locked on the messenger).
+    "relaymessagewithproof", "replaymessage",
+    "finalizewithdraweth", "finalizewithdrawerc20",
+    # Starknet StarkGate / StarknetEthBridge.
+    "depositwithmessage",
+    # zkSync Era Mailbox / L1ERC20Bridge.
+    "requestl2transaction", "bridgehubrequestl2transaction",
+    "finalizeethwithdrawal",
 })
 SHARE_WRAP_NAMES = frozenset({
     "getwstethbysteth", "getstethbywsteth", "stethpertoken", "tokenspersteth",
@@ -111,6 +123,8 @@ SHARE_WRAP_NAMES = frozenset({
     "getezethbyeth", "getethbyezeth", "ezethpereth", "ethperezeth",
     # cbETH / Coinbase staked wrap converters (if a wrap helper exists).
     "getcbethbyeth", "getethbycbeth", "cbethpereth", "ethpercbeth",
+    # Origin wOETH wrap of rebasing OETH (weETH-class).
+    "getwoethbyoeth", "getoethbywoeth", "woethperoeth", "oethperwoeth",
 })
 # Token-to-token wrap movers. WETH uses deposit/withdraw; these do not.
 _SHARE_WRAP_MOVERS = frozenset({"wrap", "unwrap"})
@@ -119,11 +133,16 @@ _SHARE_WRAP_RATE_RX = re.compile(
     r"getWeETHByeETH|getEETHByWeETH|"
     r"getRsETHByETH|getETHByRsETH|rsETHPerETH|getRsETHByAsset|"
     r"getEzETHByETH|getETHByEzETH|ezETHPerETH|"
-    r"getCbETHByETH|getETHByCbETH|cbETHPerETH)\b",
+    r"getCbETHByETH|getETHByCbETH|cbETHPerETH|"
+    r"getWOETHByOETH|getOETHByWOETH|woETHPerOETH)\b",
 )
 LRT_DEPOSIT_NAMES = frozenset({
     "depositasset", "getrsethamounttomint", "gettotalassetdeposits",
 })
+SWELL_LST_NAMES = frozenset({
+    "reprice", "swethtoethrate", "ethtoswethrate", "rswethtoethrate",
+})
+ROCKET_RETH_NAMES = frozenset({"getethvalue", "getrethvalue"})
 # DSS token transfer aliases (Dai `move`/`push`/`pull`). Not Vat verbs.
 DSS_TOKEN_ALIASES = frozenset({"move", "push", "pull"})
 VAT_VERBS = frozenset({
@@ -1062,6 +1081,23 @@ def _this_or_names(src: str, names: set[str], focus: Optional[str] = None) -> se
     return implemented if implemented else set(names)
 
 
+def _family_search(src: str, focus: Optional[str] = None) -> str:
+    """Regex surface for family tags — *contract* bodies, not imported ifaces.
+
+    Live swETH / rswETH blobs include `interface { function finalizeWithdrawal; }`
+    and used to win as bridge via a full-source search. Prefer the focused
+    contract + parents; else every `contract` body. Fall back to raw `src`
+    only when there are no type blocks (IR-only / Vyper / JSON).
+    """
+    focused = _contract_bodies(src, focus)
+    if focused:
+        return focused
+    all_bodies = _contract_bodies(src)
+    if all_bodies:
+        return all_bodies
+    return src or ""
+
+
 def _is_share_wrap(
     src: str,
     names: set[str],
@@ -1191,16 +1227,21 @@ def _funds_at_risk_family(
         return "maker", ["maker-vat/wards"]
 
     if (probe | declared | (set() if movers else names)) & BRIDGE_NAMES or re.search(
-        r"\b(lzReceive|finalizeWithdrawal\w*|proveWithdrawal\w*|bridgeMint|l1Bridge|l2Bridge|"
+        r"\b(lzReceive|finalizeWithdrawalTransaction\w*|proveWithdrawalTransaction\w*|"
+        r"finalizeWithdrawal\b|proveWithdrawal\b|bridgeMint|"
         r"depositV3|fillV3Relay|fillRelay|relayTokens|proposeRootBundle|"
         r"SpokePool|HubPool|claimRelayerRefund|"
         r"sendToL2|bondTransferRoot|confirmTransferRoot|challengeTransferRoot|"
         r"bondWithdrawal\w*|settleBondedWithdrawal\w*|"
         r"depositTransaction|OptimismPortal|"
         r"finalizeETHWithdrawal|finalizeERC20Withdrawal|finalizeBridgeETH|finalizeBridgeERC20|"
+        r"finalizeWithdrawETH|finalizeWithdrawERC20|"
         r"bridgeETH\w*|bridgeERC20\w*|"
-        r"createRetryableTicket|unsafeCreateRetryableTicket|depositEtherFor)\b",
-        src,
+        r"createRetryableTicket|unsafeCreateRetryableTicket|depositEtherFor|"
+        r"lockTokens|exitTokens|depositEther|"
+        r"relayMessageWithProof|depositWithMessage|"
+        r"requestL2Transaction|bridgehubRequestL2Transaction|finalizeEthWithdrawal)\b",
+        _family_search(src, focus),
     ):
         return "bridge", ["bridge-surface"]
 
@@ -1324,12 +1365,12 @@ def _funds_at_risk_family(
     staking_ix = bool({"stake", "unstake", "getreward"} & (declared | probe)) or bool(
         re.search(
             r"\b(function\s+stake|function\s+unstake|function\s+getReward|stakingToken)\b",
-            _contract_bodies(src, focus) or src,
+            _family_search(src, focus),
         )
     )
     masterchef = bool(re.search(
         r"\b(poolInfo|userInfo|MasterChef|pendingSushi|pendingRewards)\b",
-        _contract_bodies(src, focus) or src,
+        _family_search(src, focus),
     )) and ("deposit" in (declared | probe) or "withdraw" in (declared | probe))
     convex = bool((probe | declared) & CONVEX_NAMES) or bool(re.search(
         r"\b(function\s+earmarkRewards|function\s+earmarkFees)\b",
@@ -1355,18 +1396,28 @@ def _funds_at_risk_family(
             not (focus and declared)
             and re.search(
                 r"\b(getRsETHAmountToMint|getTotalAssetDeposits|function\s+depositAsset)\b",
-                _contract_bodies(src, focus) or src,
+                _family_search(src, focus),
             )
         )
+    )
+    rocket = bool(ROCKET_RETH_NAMES & declared) and bool(
+        {"burn", "depositexcess"} & (declared | probe)
+    )
+    swell = bool({"deposit", "depositwithreferral"} & (declared | probe)) and bool(
+        SWELL_LST_NAMES & (declared | names)
     )
     synth_rewards = bool({"deposit", "withdraw"} <= (declared | probe | names)) and bool(
         {"earned", "getreward", "rewardpertoken"} & (declared | probe | names)
     )
-    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or synth_rewards:
+    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or swell or synth_rewards:
         if eigen:
             return "staking", ["eigenlayer"]
         if lido:
             return "staking", ["lido-pooled-eth"]
+        if rocket:
+            return "staking", ["rocket-reth"]
+        if swell:
+            return "staking", ["swell-lst"]
         if convex:
             return "staking", ["convex-booster"]
         if lrt_pool:

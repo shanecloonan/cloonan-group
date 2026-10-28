@@ -3,4 +3,4 @@
 Emits funnel buckets. Never a finding. Never auto-yes.
 """
 
-__version__ = "0.3.6"
+__version__ = "0.3.7"
