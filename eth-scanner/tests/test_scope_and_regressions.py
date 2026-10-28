@@ -203,6 +203,8 @@ _ADDR = {
     "wormhole_token_bridge_like.sol": "0x3ee18B2214AFF97000D974cf647E7C347E8fa585",
     "celer_bridge_like.sol": "0x5427FEFA711Eff984124bFBB1AB6fbf5E3DA1820",
     "aragon_app_proxy_like.sol": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    "idle_token_like.sol": "0xC8E6CA6E96a326dC448307A5fDE90a0b21fd7f80",
+    "agglayer_bridge_like.sol": "0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -366,6 +368,10 @@ LIVE_WORMHOLE_TOKEN_BRIDGE_IMPL = "0x381752f5458282d317d12C30D2Bd4D6E1FD8841e"
 LIVE_CELER_BRIDGE = "0x5427FEFA711Eff984124bFBB1AB6fbf5E3DA1820"
 LIVE_STETH = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
 LIVE_STETH_IMPL = "0x028271E30a695c0527A0C50cA30603feD004cDb0"
+LIVE_IDLE_WETH = "0xC8E6CA6E96a326dC448307A5fDE90a0b21fd7f80"
+LIVE_IDLE_IMPL = "0x577D963246D28dbE0dC579048AdDA421B054924A"
+LIVE_AGGLAYER_BRIDGE = "0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe"
+LIVE_AGGLAYER_IMPL = "0x66E0120e3c965552a89AcC37b03f762624baC5Ad"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -3027,6 +3033,51 @@ class Pass25NoOpHunt(unittest.TestCase):
         self.assertEqual(LIVE_KARAK_VAULT_SUPERVISOR.lower()[0:6], "0x54e4")
         self.assertEqual(LIVE_INCEPTION_INSTETH.lower()[0:6], "0x36b2")
         self.assertEqual(LIVE_SYMBIOTIC_WETH_COLLATERAL.lower()[0:6], "0xdc5c")
+
+
+class Pass26IdleAgglayer(unittest.TestCase):
+    """Pass 26: Idle yield vault + Agglayer lock-release. New hunt, not residuals."""
+
+    def test_idle_token_is_vault_not_custody(self):
+        src = (FIXTURES / "idle_token_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="IdleTokenGovernance"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("idle-token", ir.scope_signals)
+        self.assertNotIn("erc20-plus-custody", " ".join(ir.scope_signals))
+        r = _lane("idle_token_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["idle_token_like.sol"], LIVE_IDLE_WETH)
+        self.assertEqual(LIVE_IDLE_IMPL.lower()[0:6], "0x577d")
+
+    def test_agglayer_bridge_is_bridge_not_custody(self):
+        src = (FIXTURES / "agglayer_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="AgglayerBridge"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("agglayer-bridge", ir.scope_signals)
+        self.assertNotIn("custody-movers", " ".join(ir.scope_signals))
+        r = _lane("agglayer_bridge_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["agglayer_bridge_like.sol"], LIVE_AGGLAYER_BRIDGE)
+        self.assertEqual(LIVE_AGGLAYER_IMPL.lower()[0:6], "0x66e0")
+
+    def test_pass25_honest_keeps_and_residuals(self):
+        self.assertEqual(_lane("synapse_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("linea_token_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("wormhole_token_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("celer_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertEqual(_lane("treehouse_router_like.sol").contract_class, "router")
+        self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
+        self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
+        self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):

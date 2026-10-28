@@ -1510,6 +1510,12 @@ def _funds_at_risk_family(
         "sendnative", "decrelay"
     } & (declared | probe):
         return "bridge", ["celer-bridge"]
+    # Polygon zkEVM / Agglayer L1 lock (`0x2a3D…2EDe` / impl `0x66E0…5Ad`).
+    # bridgeAsset + claimAsset — used to win as generic custody-movers.
+    if {"bridgeasset", "claimasset"} <= (declared | probe) and {
+        "updateglobalexitroot", "gettokenwrappedaddress", "claimmessage"
+    } & (declared | probe):
+        return "bridge", ["agglayer-bridge"]
 
     if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
@@ -1673,6 +1679,11 @@ def _funds_at_risk_family(
         "claimwithdrawal", "claimprioritywithdrawal"
     } & (declared | probe):
         return "vault", ["concrete-async-vault"]
+    # Idle TokenGovernance (`0xC8E6…7f80` / impl `0x577D…573A`). Yield
+    # aggregator holds the basket. mintIdleToken + redeemIdleToken —
+    # used to win as erc20-plus-custody (flashLoan + mint).
+    if {"mintidletoken", "redeemidletoken"} <= (declared | probe):
+        return "vault", ["idle-token"]
 
     # Pendle Action* / Uni V2 Router02: unique pass-through verbs beat imported
     # ERC-4626 / SY ifaces in the diamond or periphery blob.
