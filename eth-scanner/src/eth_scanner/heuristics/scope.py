@@ -422,6 +422,17 @@ def classify_scope(
             promote=False,
         )
 
+    # Aave / Spark PoolAddressesProvider: registry of pool proxies. The
+    # Sourcify tree ships Proxy.sol (fallback+delegatecall) and used to
+    # false-keep as diamond-facets-missing. ACLManager is already utility.
+    if _is_pool_addresses_provider(src, names, contract_name):
+        return ScopeDecision(
+            contract_class="utility",
+            scope="utility",
+            signals=["pool-addresses-provider"],
+            promote=False,
+        )
+
     # Diamond loupe / EIP-2535 proxy whose facet files are not in the blob.
     # Prefer false keep — Do Not Auto-Dismiss a possible custody venue.
     if _diamond_loupe_without_venue(src, names, contract_name):
@@ -1087,6 +1098,21 @@ def _own_reserves(src: str, names: set[str], focus: Optional[str] = None) -> boo
     return _reserve_storage(src or "")
 
 
+def _is_pool_addresses_provider(
+    src: str,
+    names: set[str],
+    focus: Optional[str] = None,
+) -> bool:
+    """Aave / Spark address registry — not a diamond and not a hold."""
+    declared = _this_or_names(src, names, focus)
+    probe = _probe_names(src, names, None, focus)
+    if not ({"getpool", "getaclmanager"} <= declared):
+        return False
+    if not ({"setpoolimpl", "setaddress"} & (declared | probe)):
+        return False
+    return not _hold_signal(src, names, include_amm=False, focus=focus)
+
+
 def _passthrough_family(
     src: str,
     names: set[str],
@@ -1117,6 +1143,14 @@ def _passthrough_family(
     # Sky DaiUsds: 1:1 converter through the Joins. Nothing sits here.
     if {"daitousds", "usdstodai"} <= (declared | probe) and not _own_reserves(src, names, focus):
         return "router", ["dai-usds-converter"]
+    # Compound III CometRewards: COMP faucet. claim/withdrawToken are not a
+    # lending hold. Sibling Comet.sol in the Sourcify tree must not promote.
+    if (
+        {"getrewardowed", "claim"} <= (declared | probe)
+        and {"claimto", "withdrawtoken"} & (declared | probe)
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["comet-rewards"]
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "router", ["passthrough-router"]
     if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
@@ -1287,11 +1321,12 @@ def _funds_at_risk_family(
     if {"sellgem", "buygem"} <= (declared | probe | names):
         return "vault", ["maker-psm"]
     # Maker / Sky Join adapters hold the gem/DAI/USDS. DaiJoin/GemJoin
-    # have cage; UsdsJoin (`0x3C0f…7FEB`) does not — require vat plus a
-    # join token, and do not steal Pot (dsr/chi/pie). DsrManager has no vat.
+    # have cage; UsdsJoin (`0x3C0f…7FEB`) does not — require *this*
+    # contract's vat (not PotLike.vat on DsrManager) plus a join token.
+    # Do not steal Pot (dsr/chi/pie). DsrManager stays generic custody.
     if (
         {"join", "exit"} <= (declared | probe)
-        and {"vat"} & (declared | names)
+        and {"vat"} & (declared | probe)
         and not ({"dsr", "chi", "pie"} <= (declared | names))
         and {"usds", "dai", "gem", "cage"} & (declared | probe | names)
     ):

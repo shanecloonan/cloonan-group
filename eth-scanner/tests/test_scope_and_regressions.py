@@ -35,7 +35,7 @@ _ADDR = {
     "weth_like.sol": "0x" + "c3" * 20,
     "aave_v2_like.sol": "0x" + "c4" * 20,
     "aave_v3_like.sol": "0x" + "c5" * 20,
-    "balancer_vault_like.sol": "0x" + "c6" * 20,
+    "balancer_vault_like.sol": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
     "maker_vat_like.sol": "0x" + "c7" * 20,
     "uni_v3_router_like.sol": "0x" + "c8" * 20,
     "open_vault.sol": "0x" + "c9" * 20,
@@ -154,6 +154,11 @@ _ADDR = {
     "crvusd_controller_like.sol": "0x4e59541306910aD6dC1daC0AC9dFB29bD9F15c67",
     "crvusd_llamma_like.vy": "0x2B7e624bdb839975d56D8428d9f6A4cf1160D3e9",
     "contango_vault_like.sol": "0x3F37C7d8e61C000085AAc0515775b06A3412F36b",
+    "comet_rewards_like.sol": "0x1B0e765F6224C21223AeA2af16c1C46E38885a40",
+    "pool_addresses_provider_like.sol": "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+    "usde_like.sol": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+    "susde_like.sol": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+    "sfrxeth_like.sol": "0xac3E018457B222d93114458476f3E3416Abbe38F",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -221,6 +226,17 @@ LIVE_GEARBOX_POOL = "0xda00000035fef4082F78dEF6A8903bee419FbF8E"
 LIVE_CRVUSD_CTRL = "0x4e59541306910aD6dC1daC0AC9dFB29bD9F15c67"
 LIVE_CRVUSD_LLAMMA_IMPL = "0x2B7e624bdb839975d56D8428d9f6A4cf1160D3e9"
 LIVE_CONTANGO_VAULT = "0x3F37C7d8e61C000085AAc0515775b06A3412F36b"
+LIVE_COMET_REWARDS = "0x1B0e765F6224C21223AeA2af16c1C46E38885a40"
+LIVE_AAVE_PROVIDER = "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e"
+LIVE_USDE = "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3"
+LIVE_SUSDE = "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497"
+LIVE_SFRXETH = "0xac3E018457B222d93114458476f3E3416Abbe38F"
+LIVE_BALANCER_V2 = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+LIVE_COMET_USDC = "0xc3d688B66703497DAA19211EEdff47f25384cdc3"
+LIVE_COMET_USDC_IMPL = "0x63e749153BaF1838f63cA22c275370BD2B1cEB15"
+LIVE_AAVE_V3_POOL = "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2"
+LIVE_AAVE_V3_POOL_IMPL = "0x728a138A4823392C2EFA55e028d434F526fE03CF"
+LIVE_EULER_USDC_PROXY = "0x797DD80692c3b2dAdabCe8e30C07fDE5307D48a9"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1207,6 +1223,11 @@ class Pass7LiveLocks(unittest.TestCase):
             "crvusd_controller_like.sol": ("lending", "in-scope", "lane-b-queue"),
             "crvusd_llamma_like.vy": ("pool", "in-scope", "lane-b-queue"),
             "contango_vault_like.sol": ("custody", "in-scope", "lane-b-queue"),
+            "comet_rewards_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "pool_addresses_provider_like.sol": ("utility", "utility", "human-no-candidate"),
+            "usde_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "susde_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "sfrxeth_like.sol": ("vault", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -2060,6 +2081,95 @@ class Pass14CrvusdEulerVenues(unittest.TestCase):
         self.assertEqual(r.contract_class, "custody")
         self.assertNotEqual(r.bucket, "lane-a-cool")
         self.assertEqual(_ADDR["contango_vault_like.sol"], LIVE_CONTANGO_VAULT)
+
+
+class Pass15MorphoEthenaVenues(unittest.TestCase):
+    """Pass 15: DsrManager vat leak, CometRewards, Aave provider, Ethena/Frax pins."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_dsr_manager_live_shape_not_maker_join(self):
+        src = (FIXTURES / "dsr_manager_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DsrManager"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        self.assertNotIn("maker-join", ir.scope_signals)
+        r = _lane("dsr_manager_like.sol")
+        self.assertEqual(r.contract_class, "custody")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["dsr_manager_like.sol"], LIVE_DSR_MANAGER)
+
+    def test_dai_join_still_maker_join(self):
+        src = (FIXTURES / "dai_join_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DaiJoin"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("maker-join", ir.scope_signals)
+
+    def test_comet_rewards_is_passthrough(self):
+        src = (FIXTURES / "comet_rewards_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="CometRewards"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertEqual(ir.scope, "demoted-passthrough")
+        self.assertIn("comet-rewards", ir.scope_signals)
+        r = _lane("comet_rewards_like.sol", tvl=9_999_999)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["comet_rewards_like.sol"], LIVE_COMET_REWARDS)
+
+    def test_comet_still_lending(self):
+        r = _lane("compound_comet_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(_ADDR["compound_comet_like.sol"], LIVE_COMET_USDC)
+
+    def test_pool_addresses_provider_is_utility(self):
+        src = (FIXTURES / "pool_addresses_provider_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="PoolAddressesProvider"), try_slither=False)
+        self.assertEqual(ir.contract_class, "utility")
+        self.assertIn("pool-addresses-provider", ir.scope_signals)
+        self.assertNotIn("diamond-facets-missing", ir.scope_signals)
+        r = _lane("pool_addresses_provider_like.sol")
+        self.assertEqual(r.contract_class, "utility")
+        self.assertEqual(_ADDR["pool_addresses_provider_like.sol"], LIVE_AAVE_PROVIDER)
+
+    def test_aave_pool_still_lending(self):
+        r = _lane("aave_v3_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+
+    def test_usde_is_token(self):
+        r = _lane("usde_like.sol")
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["usde_like.sol"], LIVE_USDE)
+
+    def test_susde_is_vault(self):
+        src = (FIXTURES / "susde_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="StakedUSDeV2"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("erc4626", ir.scope_signals)
+        r = _lane("susde_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["susde_like.sol"], LIVE_SUSDE)
+
+    def test_sfrxeth_is_vault(self):
+        r = _lane("sfrxeth_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["sfrxeth_like.sol"], LIVE_SFRXETH)
+
+    def test_balancer_v2_pinned_live(self):
+        r = _lane("balancer_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["balancer_vault_like.sol"], LIVE_BALANCER_V2)
+
+    def test_morpho_and_metamorpho_still_correct(self):
+        self.assertEqual(_lane("morpho_blue_like.sol").contract_class, "lending")
+        self.assertEqual(_lane("metamorpho_like.sol").contract_class, "vault")
+
+    def test_contango_and_euler_proxy_still_honest_keep(self):
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_ADDR["euler_evault_like.sol"], LIVE_EULER_EVAULT)
+        self.assertEqual(LIVE_EULER_USDC_PROXY.lower()[0:6], "0x797d")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
