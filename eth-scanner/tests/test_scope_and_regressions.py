@@ -177,6 +177,13 @@ _ADDR = {
     "teth_vault_like.sol": "0x551d155760ae96050439AD24Ae98A96c765d761B",
     "teth_tasset_like.sol": "0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8",
     "usd0pp_like.sol": "0x35D8949372D46B7a3D5A56006AE77B215fc69bC0",
+    "folio_deployer_like.sol": "0x4D201a6e5BF975E2CEE9e5cbDfc803C0Ff122073",
+    "folio_like.sol": "0xb6b35b2c7032E00BAa2535Ba480d461321B7E0A6",
+    "ccip_lock_release_like.sol": "0x8113f001eA456759264317007220cBc939cA8435",
+    "reserve_backing_manager_like.sol": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
+    "mantle_unstake_queue_like.sol": "0x38fDF7b489316e03eD8754ad339cb5c4483FDcf9",
+    "mantle_staking_like.sol": "0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f",
+    "treehouse_redemption_like.sol": "0x62fb2022c4be4586432f298de9a404da92d9dd90",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -288,6 +295,15 @@ LIVE_USD0 = "0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5"
 LIVE_USD0PP = "0x35D8949372D46B7a3D5A56006AE77B215fc69bC0"
 LIVE_STAKED_LBTC = "0x8236A87084F8B84306F72007F36F2618A5634494"
 LIVE_ETHERFI_WRNFT = "0x7d5706f6ef3F89B3951E23e557CDFBC3239D4E2c"
+LIVE_FOLIO_DEPLOYER = "0x4D201a6e5BF975E2CEE9e5cbDfc803C0Ff122073"
+LIVE_FOLIO_IMPL = "0xb6b35b2c7032E00BAa2535Ba480d461321B7E0A6"
+LIVE_TETH_CCIP = "0x8113f001eA456759264317007220cBc939cA8435"
+LIVE_EUSD_BM = "0xF014FEF41cCB703975827C8569a3f0940cFD80A4"
+LIVE_EUSD_BM_IMPL = "0x62A574b9F4BCc1DDf877E154963C5B4E792985d6"
+LIVE_MANTLE_STAKING = "0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f"
+LIVE_MANTLE_URM = "0x38fDF7b489316e03eD8754ad339cb5c4483FDcf9"
+LIVE_TETH_REDEEM = "0x62fb2022c4be4586432f298de9a404da92d9dd90"
+LIVE_FLUID_VAULT_T1 = "0x348aD11DB2c90e7FdF8e57420C569F76dBe38a59"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1297,6 +1313,13 @@ class Pass7LiveLocks(unittest.TestCase):
             "teth_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "teth_tasset_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "usd0pp_like.sol": ("custody", "in-scope", "lane-b-queue"),
+            "folio_deployer_like.sol": ("utility", "utility", "human-no-candidate"),
+            "folio_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "ccip_lock_release_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "reserve_backing_manager_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "mantle_unstake_queue_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "mantle_staking_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "treehouse_redemption_like.sol": ("vault", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -2501,6 +2524,93 @@ class Pass18UsualTreehouseEtherfi(unittest.TestCase):
         self.assertEqual(LIVE_STAKED_LBTC.lower()[0:6], "0x8236")
         self.assertEqual(LIVE_ETHERFI_WRNFT.lower()[0:6], "0x7d57")
         self.assertEqual(LIVE_SUSDS.lower()[0:6], "0xa393")
+
+
+class Pass19FolioMantleCcip(unittest.TestCase):
+    """Pass 19: Folio factory, BackingManager, Mantle queue, CCIP lock-release."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_folio_deployer_is_factory(self):
+        src = (FIXTURES / "folio_deployer_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="FolioDeployer"), try_slither=False)
+        self.assertEqual(ir.contract_class, "utility")
+        self.assertIn("folio-deployer", ir.scope_signals)
+        r = _lane("folio_deployer_like.sol")
+        self.assertEqual(r.contract_class, "utility")
+        self.assertEqual(r.bucket, "human-no-candidate")
+        self.assertEqual(_ADDR["folio_deployer_like.sol"], LIVE_FOLIO_DEPLOYER)
+
+    def test_folio_is_4626_vault(self):
+        src = (FIXTURES / "folio_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Folio"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("erc4626", ir.scope_signals)
+        r = _lane("folio_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["folio_like.sol"], LIVE_FOLIO_IMPL)
+
+    def test_backing_manager_is_vault_not_fluid(self):
+        src = (FIXTURES / "reserve_backing_manager_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="BackingManagerP1"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("reserve-backing-manager", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "lending")
+        r = _lane("reserve_backing_manager_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["reserve_backing_manager_like.sol"], LIVE_EUSD_BM)
+        self.assertEqual(LIVE_EUSD_BM_IMPL.lower()[0:6], "0x62a5")
+
+    def test_ccip_lock_release_is_bridge(self):
+        src = (FIXTURES / "ccip_lock_release_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="LockReleaseTokenPool"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("ccip-lock-release", ir.scope_signals)
+        r = _lane("ccip_lock_release_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["ccip_lock_release_like.sol"], LIVE_TETH_CCIP)
+
+    def test_mantle_staking_and_unstake_queue(self):
+        stake = normalize(
+            _art((FIXTURES / "mantle_staking_like.sol").read_text(encoding="utf-8"), contract_name="Staking"),
+            try_slither=False,
+        )
+        self.assertEqual(stake.contract_class, "staking")
+        self.assertIn("stake/reward", stake.scope_signals)
+        urm = normalize(
+            _art((FIXTURES / "mantle_unstake_queue_like.sol").read_text(encoding="utf-8"), contract_name="UnstakeRequestsManager"),
+            try_slither=False,
+        )
+        self.assertEqual(urm.contract_class, "staking")
+        self.assertIn("mantle-unstake-queue", urm.scope_signals)
+        self.assertEqual(_lane("mantle_staking_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_lane("mantle_unstake_queue_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["mantle_staking_like.sol"], LIVE_MANTLE_STAKING)
+        self.assertEqual(_ADDR["mantle_unstake_queue_like.sol"], LIVE_MANTLE_URM)
+
+    def test_treehouse_redemption_is_vault(self):
+        src = (FIXTURES / "treehouse_redemption_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TreehouseRedemptionV3"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("treehouse-redemption", ir.scope_signals)
+        r = _lane("treehouse_redemption_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["treehouse_redemption_like.sol"], LIVE_TETH_REDEEM)
+
+    def test_fluid_and_pins_still_correct(self):
+        self.assertEqual(_lane("fluid_liquidity_dummy_like.sol").contract_class, "lending")
+        self.assertEqual(_lane("susds_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("usds_like.sol").contract_class, "token")
+        self.assertEqual(_lane("sdai_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("meth_like.sol").contract_class, "token")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("rtoken_like.sol").contract_class, "token")
+        self.assertEqual(LIVE_FLUID_VAULT_T1.lower()[0:6], "0x348a")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
