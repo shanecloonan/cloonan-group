@@ -184,6 +184,17 @@ _ADDR = {
     "mantle_unstake_queue_like.sol": "0x38fDF7b489316e03eD8754ad339cb5c4483FDcf9",
     "mantle_staking_like.sol": "0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f",
     "treehouse_redemption_like.sol": "0x62fb2022c4be4586432f298de9a404da92d9dd90",
+    "fraxlend_pair_like.sol": "0x78bB3aEC3d855431bd9289fD98dA13F9ebB7ef15",
+    "sommelier_cellar_like.sol": "0x99bA1Ef93A5ef0596Bb14B45e9D313eD5969bfe6",
+    "term_repo_collateral_like.sol": "0xb99F5a082465b4cD8037E28Ac7e0BF81B609Df53",
+    "term_repo_locker_like.sol": "0xFCf4eF17D1BC11dF6c6200A809C54cB06F16e86e",
+    "liquid_collective_like.sol": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
+    "veda_boring_vault_like.sol": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+    "veda_teller_like.sol": "0x9AA79C84b79816ab920bBcE20f8f74557B514734",
+    "veda_queue_like.sol": "0x0D2dF071207E18Ca8638b4f04E98c53155eC2cE0",
+    "upshift_vault_like.sol": "0x3EAa4b3e8967c02cE1304C1EB35e8C5409838DFC",
+    "mellow_vault_like.sol": "0x76001faFd4a8d3E8Cd399e19B91296Bc8bD0bb84",
+    "clearpool_pool_like.sol": "0x2E1CE0F2ab6B61d5A3d1682a77496c4611860B57",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -304,6 +315,23 @@ LIVE_MANTLE_STAKING = "0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f"
 LIVE_MANTLE_URM = "0x38fDF7b489316e03eD8754ad339cb5c4483FDcf9"
 LIVE_TETH_REDEEM = "0x62fb2022c4be4586432f298de9a404da92d9dd90"
 LIVE_FLUID_VAULT_T1 = "0x348aD11DB2c90e7FdF8e57420C569F76dBe38a59"
+LIVE_FRAXLEND_SFRXETH = "0x78bB3aEC3d855431bd9289fD98dA13F9ebB7ef15"
+LIVE_SOMMELIER_CELLAR_IMPL = "0x99bA1Ef93A5ef0596Bb14B45e9D313eD5969bfe6"
+LIVE_TERM_CM = "0xb99F5a082465b4cD8037E28Ac7e0BF81B609Df53"
+LIVE_TERM_LOCKER = "0xFCf4eF17D1BC11dF6c6200A809C54cB06F16e86e"
+LIVE_LSETH = "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549"
+LIVE_LSETH_IMPL = "0x0056f9ed62dAa4dc3F972340C92326AcCddd1a9D"
+LIVE_CONTANGO_IMPL = "0x3cab97F99147012B0B1352E5E1278c933776861a"
+LIVE_GOLDFINCH_SENIOR_IMPL = "0x656cC68D76C7DEA07b477fFD26f6C9766d154e5E"
+LIVE_SCRVUSD = "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367"
+LIVE_VEDA_BORING = "0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+LIVE_VEDA_TELLER = "0x9AA79C84b79816ab920bBcE20f8f74557B514734"
+LIVE_VEDA_QUEUE = "0x0D2dF071207E18Ca8638b4f04E98c53155eC2cE0"
+LIVE_UPSHIFT_VAULT = "0x3EAa4b3e8967c02cE1304C1EB35e8C5409838DFC"
+LIVE_MELLOW_VAULT = "0x76001faFd4a8d3E8Cd399e19B91296Bc8bD0bb84"
+LIVE_CLEARPOOL_IMPL = "0x2E1CE0F2ab6B61d5A3d1682a77496c4611860B57"
+LIVE_CLEARPOOL_WINTERMUTE = "0xcb288b6d30738db7e3998159d192615769794b5b"
+LIVE_UPSHIFT_POOL_IMPL = "0xc0026E559dA7F2d4eE573616C09A8F721fa599bd"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -2610,6 +2638,160 @@ class Pass19FolioMantleCcip(unittest.TestCase):
         self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
         self.assertEqual(_lane("rtoken_like.sol").contract_class, "token")
         self.assertEqual(LIVE_FLUID_VAULT_T1.lower()[0:6], "0x348a")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass20FraxlendSommelierTerm(unittest.TestCase):
+    """Pass 20: Fraxlend pair, Sommelier cellar, Term repo, Liquid Collective."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_fraxlend_pair_is_lending_not_router(self):
+        src = (FIXTURES / "fraxlend_pair_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="FraxlendPair"), try_slither=False)
+        self.assertEqual(ir.contract_class, "lending")
+        self.assertIn("fraxlend-pair", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "router")
+        r = _lane("fraxlend_pair_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["fraxlend_pair_like.sol"], LIVE_FRAXLEND_SFRXETH)
+
+    def test_sommelier_cellar_beats_sibling_swap_adaptor(self):
+        src = (FIXTURES / "sommelier_cellar_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="CellarInitializableV2_1"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("sommelier-cellar", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "router")
+        r = _lane("sommelier_cellar_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["sommelier_cellar_like.sol"], LIVE_SOMMELIER_CELLAR_IMPL)
+
+    def test_term_repo_collateral_and_locker_are_vaults(self):
+        cm = normalize(
+            _art((FIXTURES / "term_repo_collateral_like.sol").read_text(encoding="utf-8"), contract_name="TermRepoCollateralManager"),
+            try_slither=False,
+        )
+        self.assertEqual(cm.contract_class, "vault")
+        self.assertIn("term-repo-collateral", cm.scope_signals)
+        locker = normalize(
+            _art((FIXTURES / "term_repo_locker_like.sol").read_text(encoding="utf-8"), contract_name="TermRepoLocker"),
+            try_slither=False,
+        )
+        self.assertEqual(locker.contract_class, "vault")
+        self.assertIn("term-repo-locker", locker.scope_signals)
+        self.assertEqual(_lane("term_repo_collateral_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_lane("term_repo_locker_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["term_repo_collateral_like.sol"], LIVE_TERM_CM)
+        self.assertEqual(_ADDR["term_repo_locker_like.sol"], LIVE_TERM_LOCKER)
+
+    def test_liquid_collective_is_staking(self):
+        src = (FIXTURES / "liquid_collective_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="RiverV1"), try_slither=False)
+        self.assertEqual(ir.contract_class, "staking")
+        self.assertIn("liquid-collective", ir.scope_signals)
+        r = _lane("liquid_collective_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(_ADDR["liquid_collective_like.sol"], LIVE_LSETH)
+        self.assertEqual(LIVE_LSETH_IMPL.lower()[0:6], "0x0056")
+
+    def test_pass19_and_honest_keeps_still_correct(self):
+        self.assertEqual(_lane("folio_deployer_like.sol").contract_class, "utility")
+        self.assertEqual(_lane("reserve_backing_manager_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("mantle_unstake_queue_like.sol").contract_class, "staking")
+        self.assertEqual(_lane("ccip_lock_release_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("treehouse_redemption_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("fluid_liquidity_dummy_like.sol").contract_class, "lending")
+        self.assertEqual(LIVE_CONTANGO_IMPL.lower()[0:6], "0x3cab")
+        self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
+        self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass21VedaUpshiftMellow(unittest.TestCase):
+    """Pass 21: Veda BoringVault + teller cool, Upshift, Mellow, Clearpool pin."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_veda_boring_vault_is_vault(self):
+        src = (FIXTURES / "veda_boring_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="BoringVault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("veda-boring-vault", ir.scope_signals)
+        r = _lane("veda_boring_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["veda_boring_vault_like.sol"], LIVE_VEDA_BORING)
+
+    def test_veda_teller_cools_not_bridge(self):
+        src = (FIXTURES / "veda_teller_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="LayerZeroTellerWithRateLimiting"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertIn("veda-teller", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "bridge")
+        r = _lane("veda_teller_like.sol")
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["veda_teller_like.sol"], LIVE_VEDA_TELLER)
+
+    def test_veda_queue_is_vault(self):
+        src = (FIXTURES / "veda_queue_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="BoringOnChainQueue"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("veda-withdraw-queue", ir.scope_signals)
+        r = _lane("veda_queue_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["veda_queue_like.sol"], LIVE_VEDA_QUEUE)
+
+    def test_upshift_and_mellow_are_vaults(self):
+        up = normalize(
+            _art((FIXTURES / "upshift_vault_like.sol").read_text(encoding="utf-8"), contract_name="Vault"),
+            try_slither=False,
+        )
+        self.assertEqual(up.contract_class, "vault")
+        self.assertIn("upshift-institutional", up.scope_signals)
+        mv = normalize(
+            _art((FIXTURES / "mellow_vault_like.sol").read_text(encoding="utf-8"), contract_name="MellowVault"),
+            try_slither=False,
+        )
+        self.assertEqual(mv.contract_class, "vault")
+        self.assertIn("mellow-vault", mv.scope_signals)
+        self.assertEqual(_lane("upshift_vault_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_lane("mellow_vault_like.sol").bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["upshift_vault_like.sol"], LIVE_UPSHIFT_VAULT)
+        self.assertEqual(_ADDR["mellow_vault_like.sol"], LIVE_MELLOW_VAULT)
+
+    def test_clearpool_impl_already_lending(self):
+        src = (FIXTURES / "clearpool_pool_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="PoolMaster"), try_slither=False)
+        self.assertEqual(ir.contract_class, "lending")
+        r = _lane("clearpool_pool_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(_ADDR["clearpool_pool_like.sol"], LIVE_CLEARPOOL_IMPL)
+        self.assertEqual(LIVE_CLEARPOOL_WINTERMUTE.lower()[0:6], "0xcb28")
+        self.assertEqual(LIVE_UPSHIFT_POOL_IMPL.lower()[0:6], "0xc002")
+
+    def test_pass20_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("fraxlend_pair_like.sol").contract_class, "lending")
+        self.assertEqual(_lane("sommelier_cellar_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("term_repo_collateral_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("term_repo_locker_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("liquid_collective_like.sol").contract_class, "staking")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        self.assertEqual(LIVE_CONTANGO_IMPL.lower()[0:6], "0x3cab")
+        self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
+        self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
         self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
 
 

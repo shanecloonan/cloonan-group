@@ -1211,6 +1211,14 @@ def _passthrough_family(
         and not _own_reserves(src, names, focus)
     ):
         return "router", ["usual-dao-collateral"]
+    # Veda / ether.fi Liquid Teller: deposit into BoringVault, optional LZ
+    # share bridge. lzReceive must not steal as a lock-release bridge.
+    if (
+        {"depositandbridge"} & (declared | probe)
+        and {"sharelockperiod", "bulkdeposit"} & (declared | probe)
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["veda-teller"]
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "router", ["passthrough-router"]
     if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
@@ -1418,6 +1426,12 @@ def _funds_at_risk_family(
         and bool({"checktickets", "encodetaxi", "encodebus"} & (declared | probe))
         and "addtreasuryfee" not in (declared | probe)
     )
+    # Veda Teller: depositAndBridge + lzReceive is share messaging, not a lock.
+    veda_teller = (
+        bool({"depositandbridge"} & (declared | probe))
+        and bool({"sharelockperiod", "bulkdeposit"} & (declared | probe))
+        and not _own_reserves(src, names, focus)
+    )
 
     # Fluid Liquidity dummy / user module: operate is supply+borrow+withdraw.
     # Etherscan Implementation is DummyImpl (ABI surface); money sits on the proxy.
@@ -1437,7 +1451,7 @@ def _funds_at_risk_family(
     ):
         return "bridge", ["ccip-lock-release"]
 
-    if not stargate_msg_only and (
+    if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
         or re.search(
             r"\b(lzReceive|finalizeWithdrawalTransaction\w*|proveWithdrawalTransaction\w*|"
@@ -1539,9 +1553,16 @@ def _funds_at_risk_family(
         {"managedebt", "addcollateral", "withdrawcollateral", "liquidatecreditaccount"}
         & (declared | probe | here | names)
     )
-    if lending_ix or compound or comet or liquity_bo or liquity_v2 or gearbox or (
+    # FraxlendPair (`0x78bB…ef15`). borrowAsset/repayAsset — not Aave borrow/repay.
+    # Live blob ships swap helpers and used to cool as passthrough-router.
+    fraxlend = bool({"borrowasset", "repayasset"} <= (declared | probe)) and bool(
+        {"addcollateral", "removecollateral"} & (declared | probe)
+    )
+    if lending_ix or compound or comet or liquity_bo or liquity_v2 or gearbox or fraxlend or (
         flash and (aave_supply or "deposit" in here) and not join_exit
     ):
+        if fraxlend:
+            return "lending", ["fraxlend-pair"]
         if gearbox and not lending_ix:
             return "lending", ["gearbox-credit"]
         if liquity_v2 and not lending_ix:
@@ -1553,6 +1574,33 @@ def _funds_at_risk_family(
         if compound and not lending_ix:
             return "lending", ["compound-ctoken"]
         return "lending", ["lending-ix"] if lending_ix else ["flash+supply/deposit"]
+
+    # Sommelier Cellar (`0x99bA…bfe6` impl) is a 4626 vault. Sibling swap
+    # adaptors must not steal as unique-router.
+    if {"callonadaptor"} & (declared | probe) and {"addposition", "holdingposition"} & (declared | probe):
+        return "vault", ["sommelier-cellar"]
+    # TermRepoCollateralManager holds encumbered collateral.
+    if {"externallockcollateral", "externalunlockcollateral"} <= (declared | probe):
+        return "vault", ["term-repo-collateral"]
+    # TermRepoLocker is the token piggy-bank for a repo.
+    if (
+        {"transfertokenfromwallet", "transfertokentowallet"} <= (declared | probe)
+        and {"termrepoid"} & (declared | probe)
+    ):
+        return "vault", ["term-repo-locker"]
+    # Veda / ether.fi Liquid BoringVault (`0xf0bb…416C`) holds the basket.
+    # enter/exit/manage — not a generic deposit/withdraw.
+    if {"enter", "exit", "manage"} <= (declared | probe):
+        return "vault", ["veda-boring-vault"]
+    # Veda on-chain withdraw queue holds shares until a solver fills.
+    if {"requestonchainwithdraw"} & (declared | probe) and {"solveonchainwithdraws"} & (declared | probe):
+        return "vault", ["veda-withdraw-queue"]
+    # Upshift institutional vault (`0x3EAa…8DFC`) holds deposits.
+    if {"lockcapital"} & (declared | probe) and {"claimdailyinterest", "getdeployablecapital"} & (declared | probe):
+        return "vault", ["upshift-institutional"]
+    # Mellow ALM vault (`0x7600…bb84`) holds vault tokens.
+    if {"transferandpush"} & (declared | probe) and {"reclaimtokens"} & (declared | probe):
+        return "vault", ["mellow-vault"]
 
     # Pendle Action* / Uni V2 Router02: unique pass-through verbs beat imported
     # ERC-4626 / SY ifaces in the diamond or periphery blob.
@@ -1701,10 +1749,14 @@ def _funds_at_risk_family(
     mantle_urm = bool({"allocatedethforclaims"} & (declared | probe)) and bool(
         {"cancelunfinalizedrequests", "withdrawallocatedethsurplus"} & (declared | probe)
     )
+    # Liquid Collective LsETH (`0x8c1B…6549` / impl `0x0056…1a9D`).
+    liquid_collective = bool({"deposittoconsensuslayerwithdepositroot"} & (declared | probe)) and bool(
+        {"requestredeem", "claimredeemrequests"} & (declared | probe)
+    )
     synth_rewards = bool({"deposit", "withdraw"} <= (declared | probe | names)) and bool(
         {"earned", "getreward", "rewardpertoken"} & (declared | probe | names)
     )
-    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or rocket_dp or lido_wq or renzo or swell or etherfi_lp or mantle_urm or synth_rewards or gauge:
+    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or rocket_dp or lido_wq or renzo or swell or etherfi_lp or mantle_urm or liquid_collective or synth_rewards or gauge:
         if eigen:
             return "staking", ["eigenlayer"]
         if lido:
@@ -1723,6 +1775,8 @@ def _funds_at_risk_family(
             return "staking", ["etherfi-liquidity-pool"]
         if mantle_urm:
             return "staking", ["mantle-unstake-queue"]
+        if liquid_collective:
+            return "staking", ["liquid-collective"]
         if convex:
             return "staking", ["convex-booster"]
         if lrt_pool:
