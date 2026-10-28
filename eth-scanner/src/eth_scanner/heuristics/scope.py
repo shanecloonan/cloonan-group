@@ -1,12 +1,13 @@
-"""Lane-A scope filter — regularity, not a funds-at-risk oracle.
+"""Lane-A scope filter — funds-at-risk regularity, not a funds oracle.
 
-Plain ERC-20 / wrap / admin-token surfaces do not repay deep work.
-In-scope classes are contracts that regularly hold or route *other
-people's* value: lending, vaults, pools, routers, DEXes, bridges,
-Maker-like accounting engines.
+Lane A only keeps contracts that regularly *hold or account* other people's
+value (staking / vaults / lending / AMM reserves / bridges / Maker). Plain
+tokens, wrap-tokens, pass-through routers, and atomic NFT markets are
+cool-archived. This is a picker. It never stamps yes/no.
 
-This is a picker/filter. It never stamps yes/no. Ambiguous *non-token*
-surfaces stay on the main path (Do Not Auto-Dismiss).
+Ambiguous *non-token* surfaces stay on the main path (Do Not Auto-Dismiss).
+Hybrids (token + vault/pool/lending/staking) stay in-scope when a family
+tag fires — prefer false keep.
 """
 
 from __future__ import annotations
@@ -15,12 +16,16 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
 
-# Classes that merit Lane B (interesting value-moving regularity).
-PROMOTE_CLASSES = frozenset({
-    "lending", "router", "vault", "pool", "dex", "bridge", "maker",
+# Venues that regularly hold / account third-party value. Family promote.
+FUNDS_AT_RISK_CLASSES = frozenset({
+    "lending", "vault", "staking", "pool", "bridge", "maker",
 })
-# Cool-archive. High TVL must not promote these — USDC/USDT are still tokens.
-DEMOTE_CLASSES = frozenset({"token", "wrap-token"})
+# Back-compat alias used by the funnel S6 gate.
+PROMOTE_CLASSES = FUNDS_AT_RISK_CLASSES
+# Cool-archive. High TVL must not promote these.
+DEMOTE_CLASSES = frozenset({
+    "token", "wrap-token", "router", "nft", "nft-market",
+})
 
 ERC20_INTERFACE = (
     "transfer", "approve", "transferfrom", "balanceof", "allowance", "totalsupply",
@@ -28,6 +33,9 @@ ERC20_INTERFACE = (
 ERC20_META = ("name", "symbol", "decimals")
 ERC721_INTERFACE = (
     "ownerof", "safetransferfrom", "setapprovalforall", "tokenuri", "balanceof",
+)
+ERC1155_INTERFACE = (
+    "safetransferfrom", "safebatchtransferfrom", "setapprovalforall", "balanceof", "balanceofbatch",
 )
 TOKEN_ADMIN_NAMES = frozenset({
     "mint", "burn", "issue", "redeem", "rescue", "pause", "unpause",
@@ -40,9 +48,25 @@ TOKEN_ADMIN_NAMES = frozenset({
     "updaterescuer", "updateblacklister", "updatepauser", "removeminter",
     "cancelauthorization",
 })
-# Compound admin verbs (rescueERC20, mintTo, recoverToken). Keep tight —
-# do not prefix-match generic custody names like withdraw/sweep.
 TOKEN_ADMIN_PREFIXES = ("mint", "burn", "rescue", "recover")
+
+ROUTER_NAMES = frozenset({
+    "exactinput", "exactinputsingle", "exactoutput", "exactoutputsingle",
+    "uniswapv3swapcallback",
+    "swapexacttokensfortokens", "swapexactethfortokens", "swapexacttokensforeth",
+    "swaptokensforexacttokens", "unoswap", "clipperswap", "uniswapv2call",
+})
+NFT_MARKET_NAMES = frozenset({
+    "fulfillorder", "fulfillbasicorder", "fulfillavailableorders",
+    "fulfillavailableadvancedorders", "matchorders", "matchadvancedorders",
+    "atomicmatch", "atomicmatch_",
+    "takeask", "takebid", "taketoken",
+    "matchaskwithtakerbid", "matchbidwithtakerask",
+    "settleorder", "buyitem", "buyedition",
+})
+ESCROW_NAMES = frozenset({
+    "escrow", "depositeth", "withdraweth", "depositweth", "withdrawweth",
+})
 
 _FN_NAME = re.compile(r"\bfunction\s+(\w+)\s*\(", re.I)
 _PUBLIC_GETTER = re.compile(
@@ -54,13 +78,13 @@ _PUBLIC_GETTER = re.compile(
 @dataclass
 class ScopeDecision:
     contract_class: str
-    scope: str  # in-scope | demoted-token | utility | unknown
+    scope: str  # in-scope | demoted-token | demoted-passthrough | utility | unknown
     signals: list[str] = field(default_factory=list)
     promote: bool = False
 
     @property
     def demoted(self) -> bool:
-        return self.scope == "demoted-token"
+        return self.scope in {"demoted-token", "demoted-passthrough"}
 
 
 def classify_scope(
@@ -71,8 +95,8 @@ def classify_scope(
 ) -> ScopeDecision:
     """Classify a contract from source text + lifted functions.
 
-    In-scope families are checked *before* ERC-20 shape so a lending pool
-    that calls `IERC20.transferFrom` is never demoted as a token.
+    Funds-at-risk families are checked *before* ERC-20 / ERC-721 shape so a
+    vault, cToken, Curve pool, or staking token is never demoted as a token.
     """
     src = source or ""
     fns = list(functions or [])
@@ -89,17 +113,18 @@ def classify_scope(
         {"deposit", "withdraw", "wrap", "unwrap"} & names and _weth_shape(src, names)
     )
 
-    family, family_signals = _in_scope_family(src, names)
+    family, family_signals = _funds_at_risk_family(src, names)
     if family:
         return ScopeDecision(
             contract_class=family,
             scope="in-scope",
             signals=family_signals,
-            promote=family in PROMOTE_CLASSES,
+            promote=family in FUNDS_AT_RISK_CLASSES,
         )
 
     erc20 = _interface_score(src, names, ERC20_INTERFACE)
     erc721 = _interface_score(src, names, ERC721_INTERFACE)
+    erc1155 = _interface_score(src, names, ERC1155_INTERFACE)
     token_admin_only = bool(custody) and all(_is_token_admin(n) for n in custody)
     wrap_only = wrap and all(
         roles.get(n) in {"wrap-unwrap", "erc20-standard", ""} or _is_token_admin(n)
@@ -109,7 +134,17 @@ def classify_scope(
     token_shaped = erc20 >= 3 or (erc20 >= 2 and _has_meta(src, names)) or (
         erc20 >= 2 and token_admin_only
     )
+
+    # Second-chance hybrid: ERC-20 shape plus a hold signal the first pass missed.
     if token_shaped:
+        hybrid, hybrid_signals = _hybrid_hold(src, names)
+        if hybrid:
+            return ScopeDecision(
+                contract_class=hybrid,
+                scope="in-scope",
+                signals=["hybrid-token+%s" % hybrid] + hybrid_signals,
+                promote=hybrid in FUNDS_AT_RISK_CLASSES,
+            )
         if not custody or token_admin_only or wrap_only:
             klass = "wrap-token" if (wrap or wrap_only) else "token"
             return ScopeDecision(
@@ -120,6 +155,7 @@ def classify_scope(
                 promote=False,
             )
         # ERC-20 *plus* a non-admin custody mover we did not family-tag.
+        # Prefer false keep — may be an unnamed vault.
         return ScopeDecision(
             contract_class="custody",
             scope="in-scope",
@@ -127,11 +163,28 @@ def classify_scope(
             promote=False,
         )
 
-    if erc721 >= 3 and (not custody or token_admin_only):
+    passthru, pass_signals = _passthrough_family(src, names)
+    if passthru:
         return ScopeDecision(
-            contract_class="token",
+            contract_class=passthru,
+            scope="demoted-passthrough",
+            signals=pass_signals,
+            promote=False,
+        )
+
+    if (erc721 >= 3 or erc1155 >= 3) and (not custody or token_admin_only):
+        if _nft_escrow(src, names):
+            return ScopeDecision(
+                contract_class="custody",
+                scope="in-scope",
+                signals=["nft-escrow"],
+                promote=False,
+            )
+        klass = "nft"
+        return ScopeDecision(
+            contract_class=klass,
             scope="demoted-token",
-            signals=["erc721-interface:%d" % erc721],
+            signals=["erc721-interface:%d" % erc721] if erc721 >= erc1155 else ["erc1155-interface:%d" % erc1155],
             promote=False,
         )
 
@@ -144,6 +197,24 @@ def classify_scope(
         )
 
     if custody:
+        # Last-chance pass-through: custody movers that are only router verbs.
+        if _is_router(src, names) and not _hold_signal(src, names, include_amm=False):
+            return ScopeDecision(
+                contract_class="router",
+                scope="demoted-passthrough",
+                signals=["passthrough-router"] + ["custody-movers:%s" % ",".join(custody[:8])],
+                promote=False,
+            )
+        flash_only = set(custody) <= {
+            "flashloan", "receiveflashloan", "onflashloan", "uniswapv3flashcallback",
+        }
+        if flash_only and not _hold_signal(src, names):
+            return ScopeDecision(
+                contract_class="utility",
+                scope="demoted-passthrough",
+                signals=["flash-adapter-no-reserves"],
+                promote=False,
+            )
         return ScopeDecision(
             contract_class="custody",
             scope="in-scope",
@@ -178,7 +249,7 @@ def _is_token_admin(name: str) -> bool:
 
 def _collect_names(src: str, fns: list[Any], extra: Optional[Iterable[str]]) -> set[str]:
     names = {(getattr(fn, "name", "") or "").lower() for fn in fns}
-    names.update(_FN_NAME.findall(src or ""))
+    names.update(n.lower() for n in _FN_NAME.findall(src or ""))
     names.update(n.lower() for n in _PUBLIC_GETTER.findall(src or ""))
     if extra:
         names.update(str(n).lower() for n in extra if n)
@@ -211,9 +282,106 @@ def _weth_shape(src: str, names: set[str]) -> bool:
     return bool(re.search(r"balanceOf\s*\[\s*msg\.sender\s*\]\s*\+|msg\.value", src))
 
 
-def _in_scope_family(src: str, names: set[str]) -> tuple[str, list[str]]:
-    """Most-specific interesting family first. Flash-loan alone is not lending
-    when join/exit (Balancer) or a swap-router is the real surface."""
+def _is_router(src: str, names: set[str]) -> bool:
+    if names & ROUTER_NAMES:
+        return True
+    return bool(re.search(
+        r"\b(exactInput(Single)?|exactOutput(Single)?|swapExactTokensForTokens|"
+        r"SwapRouter|UniversalRouter|unoswap|clipperSwap)\b",
+        src,
+    ))
+
+
+def _is_nft_market(src: str, names: set[str]) -> bool:
+    if names & NFT_MARKET_NAMES:
+        return True
+    return bool(re.search(
+        r"\b(fulfill(Basic)?Order|fulfillAvailable(Advanced)?Orders|match(Advanced)?Orders|"
+        r"atomicMatch_?|takeAsk|takeBid|settleOrder|buyItem)\b",
+        src,
+    ))
+
+
+def _nft_escrow(src: str, names: set[str]) -> bool:
+    if names & ESCROW_NAMES:
+        return True
+    return bool(re.search(
+        r"\b(pendingPayment|escrowBalance|depositETH|withdrawETH|depositWETH)\b",
+        src,
+    ))
+
+
+def _hold_signal(src: str, names: set[str], *, include_amm: bool = True) -> bool:
+    """True when the source shows share / reserve / stake / vault accounting.
+
+    `include_amm=False` ignores imported pool interfaces (`slot0` / `getReserves`)
+    so a SwapRouter that embeds IUniswapV3Pool is not treated as a reserve venue.
+    """
+    hold_names = {
+        "totalassets", "converttoshares", "converttoassets",
+        "previewdeposit", "previewmint", "previewwithdraw", "previewredeem",
+        "pricepershare", "getpriceperfullshare",
+        "exchangeratestored", "exchangeratecurrent",
+        "stakingtoken", "rewardstoken", "rewardtoken", "earned", "getreward",
+        "add_liquidity", "remove_liquidity", "addliquidity", "removeliquidity",
+        "accrueinterest", "liquidationcall",
+        "getpooledethbyshares", "getsharesbypooledeth",
+        "joinpool", "exitpool",
+        "stake", "unstake",
+    }
+    if include_amm:
+        hold_names = set(hold_names) | {"getreserves", "slot0", "reserve0", "reserve1"}
+    if names & hold_names:
+        return True
+    pats = (
+        r"\b(totalAssets|convertToShares|convertToAssets|pricePerShare|"
+        r"getPricePerFullShare|exchangeRateStored|stakingToken|getReward|"
+        r"getPooledEthByShares|joinPool|exitPool|accrueInterest)\b"
+    )
+    if include_amm:
+        pats = (
+            r"\b(totalAssets|convertToShares|convertToAssets|pricePerShare|"
+            r"getPricePerFullShare|exchangeRateStored|stakingToken|getReward|"
+            r"uint\d*\s+(?:public\s+|private\s+|internal\s+)?(reserve0|reserve1)|"
+            r"getPooledEthByShares|joinPool|exitPool|accrueInterest)\b"
+        )
+    return bool(re.search(pats, src))
+
+
+def _own_reserves(src: str, names: set[str]) -> bool:
+    """AMM reserve surface on *this* contract, not an imported pool interface.
+
+    A router file often embeds `function slot0` on IUniswapV3Pool. That is
+    not this contract holding reserves — `_is_router` gates the pool class.
+    """
+    if {"getreserves", "slot0", "reserve0", "reserve1"} & names:
+        return True
+    return bool(re.search(
+        r"\buint\d*\s+(?:public\s+|private\s+|internal\s+)?(_?reserve[01]|liquidity)\b",
+        src,
+    ))
+
+
+def _passthrough_family(src: str, names: set[str]) -> tuple[str, list[str]]:
+    """Pass-through surfaces that do not hold third-party funds."""
+    if _is_nft_market(src, names) and not _nft_escrow(src, names):
+        return "nft-market", ["atomic-nft-market"]
+    if _is_router(src, names) and not _hold_signal(src, names, include_amm=False):
+        return "router", ["passthrough-router"]
+    return "", []
+
+
+def _hybrid_hold(src: str, names: set[str]) -> tuple[str, list[str]]:
+    """Looser hold check used after ERC-20 shape so hybrids are not demoted."""
+    return _funds_at_risk_family(src, names)
+
+
+def _funds_at_risk_family(src: str, names: set[str]) -> tuple[str, list[str]]:
+    """Most-specific venue that regularly holds or accounts third-party value.
+
+    Flash-loan alone is not lending. A swap-router is not a pool. Prefer
+    false keep when a real hold/share/reserve/stake signal is present.
+    """
     signals: list[str] = []
 
     maker = bool({"frob", "flux", "suck", "grab", "heal", "fold", "slip"} & names) or (
@@ -227,35 +395,63 @@ def _in_scope_family(src: str, names: set[str]) -> tuple[str, list[str]]:
 
     join_exit = bool({"joinpool", "exitpool"} & names) or bool(re.search(r"\b(joinPool|exitPool)\b", src))
     erc4626 = bool(re.search(r"\b(ERC4626|convertToShares|convertToAssets|totalAssets)\b", src))
-    if join_exit or erc4626:
-        signals.append("join/exit" if join_exit else "erc4626")
+    yearn = bool(re.search(r"\b(pricePerShare|getPricePerFullShare)\b", src))
+    share_acct = bool(re.search(r"\b(totalShares|convertToShares|pricePerShare)\b", src))
+    has_dw = bool({"deposit", "withdraw", "redeem"} & names)
+    if join_exit or erc4626 or yearn or (share_acct and has_dw):
+        if join_exit:
+            signals.append("join/exit")
+        elif erc4626:
+            signals.append("erc4626")
+        elif yearn:
+            signals.append("yearn-share-price")
+        else:
+            signals.append("share-accounting")
         return "vault", signals or ["vault"]
+    if _is_nft_market(src, names) and _nft_escrow(src, names):
+        return "vault", ["nft-escrow"]
 
-    lending_ix = bool({"borrow", "repay", "liquidationcall", "liquidate"} & names) or bool(
-        re.search(r"\b(function\s+borrow|function\s+repay|liquidationCall|LendingPool|executeSupply)\b", src)
+    lending_ix = bool({"borrow", "repay", "repayborrow", "liquidationcall", "liquidate", "liquidateborrow"} & names) or bool(
+        re.search(r"\b(function\s+borrow|function\s+repay|liquidationCall|LendingPool|executeSupply|repayBorrow)\b", src)
     )
     flash = "flashloan" in names or bool(re.search(r"\bflashLoan\s*\(", src))
     aave_supply = "supply" in names or bool(re.search(r"\bfunction\s+supply\s*\(", src))
-    if lending_ix or (flash and (aave_supply or "deposit" in names) and not join_exit):
+    compound = (
+        {"mint", "redeem"} <= names
+        and (
+            bool({"borrow", "repayborrow", "accrueinterest"} & names)
+            or bool(re.search(r"\b(exchangeRateStored|accrueInterest)\b", src))
+        )
+    )
+    if lending_ix or compound or (flash and (aave_supply or "deposit" in names) and not join_exit):
+        if compound and not lending_ix:
+            return "lending", ["compound-ctoken"]
         return "lending", ["lending-ix"] if lending_ix else ["flash+supply/deposit"]
 
-    router = bool({"exactinput", "exactinputsingle", "exactoutput", "exactoutputsingle", "uniswapv3swapcallback"} & names) or bool(
-        re.search(r"\b(exactInput(Single)?|exactOutput(Single)?|uniswapV3SwapCallback|SwapRouter)\b", src)
+    staking_ix = bool({"stake", "unstake", "getreward"} & names) or bool(
+        re.search(r"\b(function\s+stake|function\s+unstake|function\s+getReward|stakingToken)\b", src)
     )
-    if router:
-        return "router", ["router-swap"]
+    masterchef = bool(re.search(r"\b(poolInfo|userInfo|MasterChef|pendingSushi|pendingRewards)\b", src)) and (
+        "deposit" in names or "withdraw" in names
+    )
+    lido = bool(re.search(r"\b(getPooledEthByShares|getSharesByPooledEth)\b", src))
+    synth_rewards = bool({"deposit", "withdraw"} <= names) and bool({"earned", "getreward", "rewardpertoken"} & names)
+    if staking_ix or masterchef or lido or synth_rewards:
+        if lido:
+            return "staking", ["lido-pooled-eth"]
+        if masterchef:
+            return "staking", ["masterchef"]
+        return "staking", ["stake/reward"]
 
-    if flash and join_exit:
-        return "vault", ["flash+join"]
-    if flash and ("swap" in names or bool(re.search(r"\bfunction\s+swap\s*\(", src))):
-        return "dex", ["flash+swap"]
+    curve = bool({"add_liquidity", "remove_liquidity", "exchange"} & names) or bool(
+        re.search(r"\b(add_liquidity|remove_liquidity)\s*\(", src)
+    )
+    has_swap = "swap" in names or bool(re.search(r"\bfunction\s+swap\s*\(", src))
+    if curve or (has_swap and _own_reserves(src, names) and not _is_router(src, names)):
+        return "pool", ["curve-pool"] if curve else ["amm-reserves"]
 
-    if ("swap" in names or bool(re.search(r"\bfunction\s+swap\s*\(", src))) and re.search(
-        r"\b(getReserves|slot0)\b", src
-    ):
-        return "pool", ["amm-swap"]
-
-    if flash:
-        return "lending", ["flash-loan-venue"]
+    # Ungated ETH piggy-bank: withdraws address(this).balance and is not WETH.
+    if "withdraw" in names and re.search(r"address\s*\(\s*this\s*\)\s*\.balance", src) and not _weth_shape(src, names):
+        return "vault", ["eth-custody-withdraw"]
 
     return "", []

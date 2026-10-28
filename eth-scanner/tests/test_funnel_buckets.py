@@ -207,6 +207,21 @@ class LaneARouting(unittest.TestCase):
         self.assertNotEqual(r.bucket, "manual-review")
         self.assertNotEqual(r.bucket, "human-yes-candidate")
 
+    def test_passthrough_router_not_promoted_by_tvl(self):
+        from eth_scanner.heuristics.scope import classify_scope
+        src = (ROOT / "tests" / "fixtures" / "uni_v3_router_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art("high", content=src), try_slither=False)
+        d = classify_scope(source=src, functions=ir.functions)
+        self.assertEqual(d.scope, "demoted-passthrough")
+        r = run_lane_a(FunnelContext(
+            target=_target(tvl_usd=9_999_999),
+            artifact=_art("high", content=src),
+            ir=ir,
+            source_text=src,
+        ))
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(r.scope, "demoted-passthrough")
+
     def test_lane_a_never_emits_human_yes(self):
         cases = [
             _ir("high", movers=[]),

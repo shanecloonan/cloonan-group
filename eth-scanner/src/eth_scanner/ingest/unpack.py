@@ -130,6 +130,11 @@ def _loads_etherscan_json(raw: str) -> Optional[dict]:
     candidates = [text]
     if text.startswith("{{") and text.endswith("}}"):
         candidates.append(text[1:-1])
+    if text.startswith("{{"):
+        # Extra or truncated wrapping brace (Etherscan sometimes emits `{{...}`).
+        candidates.append(text[1:])
+    if text.startswith("\ufeff"):
+        candidates.append(text.lstrip("\ufeff"))
     for cand in candidates:
         try:
             obj = json.loads(cand)

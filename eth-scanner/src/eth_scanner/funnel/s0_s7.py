@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from eth_scanner.heuristics.patterns import detect_fork_family, detect_weird_signals, skim_known_patterns
-from eth_scanner.heuristics.scope import PROMOTE_CLASSES, ScopeDecision, classify_scope
+from eth_scanner.heuristics.scope import FUNDS_AT_RISK_CLASSES, ScopeDecision, classify_scope
 from eth_scanner.types import (
     DEFAULT_HEAT_THRESHOLD,
     DEFAULT_TVL_FLOOR_USD,
@@ -76,7 +76,7 @@ def _scope_of(ctx: FunnelContext) -> ScopeDecision:
             contract_class=ir.contract_class,
             scope=ir.scope or "unknown",
             signals=list(ir.scope_signals or []),
-            promote=ir.contract_class in PROMOTE_CLASSES,
+            promote=ir.contract_class in FUNDS_AT_RISK_CLASSES,
         )
     source = ctx.source_text or (ctx.artifact.content if ctx.artifact else "")
     extra = list(ir.function_names) if ir is not None else []
@@ -188,20 +188,22 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
     if scope.demoted:
         traces.append(_trace(
             "S4", "lane-a-cool",
-            "plain token / wrap-token demoted from the main Lane A path",
+            "no funds-at-risk surface — demoted from the main Lane A path",
             contract_class=scope.contract_class,
             scope=scope.scope,
             signals=scope.signals,
             erc20_standard=erc20_leads,
             movers=movers,
         ))
-        traces.append(_trace("S5", "skip", "token demoted — not competing for Lane B"))
-        traces.append(_trace("S6", "lane-a-cool", "cool-archive for tokens (TVL does not promote)"))
+        traces.append(_trace("S5", "skip", "out-of-scope class — not competing for Lane B"))
+        traces.append(_trace("S6", "lane-a-cool", "cool-archive (TVL does not promote tokens/passthrough)"))
         return _done(
             "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
             extra=(
-                "Demoted %s from the main scan lane. Tokens (including mint/burn/rescue "
-                "admin tokens and WETH-like wrap) do not compete for Lane B. Not a verdict."
+                "Demoted %s from the main scan lane. Lane A only keeps venues that "
+                "hold or account third-party value (vault/staking/lending/pool/bridge/maker). "
+                "Tokens, wrap-tokens, pass-through routers, and atomic NFT markets do not "
+                "compete for Lane B. Not a verdict."
                 % scope.contract_class
             ) + erc20_note,
             pattern_leads=pattern_leads,
@@ -319,11 +321,11 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
     heat = _cap_heat(heat)
 
     # --- S6 Deep-lane gate -------------------------------------------------
-    # Tokens never reach here (S4 demote). In-scope families (lending / vault /
-    # router / …) promote on regularity — Lane A's job is picking interesting
-    # surfaces, not scoring funds-at-risk.
+    # Tokens / pass-through never reach here (S4 demote). Funds-at-risk
+    # families (lending / vault / staking / pool / bridge / maker) promote
+    # on regularity. Generic custody can still promote on heat / TVL / weirdness.
     tvl = float(ctx.target.tvl_usd or 0)
-    family_promote = scope.contract_class in PROMOTE_CLASSES
+    family_promote = scope.contract_class in FUNDS_AT_RISK_CLASSES
     promote = (
         family_promote
         or heat >= ctx.config.heat_threshold

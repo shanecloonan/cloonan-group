@@ -146,8 +146,8 @@ function handoffNext(
   ir: unknown,
   scope?: string | null,
 ): string {
-  if (scope === "demoted-token" && bucket === "lane-a-cool") {
-    return "Token / wrap-token demoted from the main Lane A path. Not competing for Lane B. Optional spot-check only.";
+  if ((scope === "demoted-token" || scope === "demoted-passthrough") && bucket === "lane-a-cool") {
+    return "Out of Lane A funds-at-risk scope (token / wrap-token / pass-through router / atomic NFT market). Not competing for Lane B. Optional spot-check only.";
   }
   if (bucket === "manual-review" || src === "low" || ir === "low") {
     return "Manual read of movers + provenance. Do not close as no. If source is missing, fetch verified Etherscan or local --source and re-run Lane A.";
@@ -196,7 +196,7 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
   const heat = res.heat ?? tgt.heat;
   const generatedAt = input.generatedAt || res.created_at || new Date().toISOString();
   const scannerId = input.scannerId || "eth-scanner";
-  const scannerVersion = input.scannerVersion || "0.2.0";
+  const scannerVersion = input.scannerVersion || "0.3.0";
   const workerId = input.workerId || "eth-scanner";
 
   const stageRows =
@@ -273,7 +273,7 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
     `- **Target status:** \`${fmt(tgt.status)}\``,
     `- **Has code:** ${fmt(tgt.has_code, "unknown")}`,
     `- **Contract class:** \`${fmt(res.contract_class)}\``,
-    `- **Lane scope:** \`${fmt(res.scope)}\` — \`in-scope\` (main lane) · \`demoted-token\` (cool-archive) · \`utility\``,
+    `- **Lane scope:** \`${fmt(res.scope)}\` — \`in-scope\` (funds-at-risk) · \`demoted-token\` · \`demoted-passthrough\` · \`utility\``,
     "",
     "## Source provenance",
     "",
@@ -327,7 +327,7 @@ export function renderReceiptMarkdown(input: ReceiptInput): string {
     "",
     `- **src_confidence:** \`${fmt(src)}\``,
     `- **ir_confidence:** \`${fmt(ir)}\``,
-    "- Scale: `high` Slither SSA / exact verified · `med` heuristic/Vyper / partial · `low` decompile or failed lift",
+    "- Scale: `high` Slither SSA *or* clear heuristic on verified Solidity/Vyper · `med` partial / unparsed · `low` decompile or failed lift",
     "- Heimdall / Panoramix decompiles are hypothesis generators only (`src_confidence=low`).",
     "",
     "## Notes",

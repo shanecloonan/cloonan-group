@@ -128,7 +128,7 @@ class IRDocument:
     fork_family: Optional[str] = None
     unpack_failed: bool = False
     contract_class: str = "unknown"
-    scope: str = "unknown"  # in-scope | demoted-token | utility | unknown
+    scope: str = "unknown"  # in-scope | demoted-token | demoted-passthrough | utility | unknown
     scope_signals: list[str] = field(default_factory=list)
     function_names: list[str] = field(default_factory=list)
 

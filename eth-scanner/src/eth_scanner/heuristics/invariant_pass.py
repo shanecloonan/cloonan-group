@@ -49,13 +49,13 @@ FUND = {
 FUND_NAME = re.compile(
     r"(?i)(?<![A-Za-z])(?:"
     r"transferFrom|transfer|"
-    r"withdraw|redeem|mint|burn|issue|borrow|repay|"
+    r"withdraw|redeem|mint|burn|issue|borrow|repayBorrow|repay|"
     r"liquidat\w*|swap\w*|claim|harvest|flash\w*|sweep|rescue|skim|"
-    r"exit\w*|unstake|release|bridge|payout|collect|refund|settle|execute|"
-    r"deposit|supply|join\w*|"
+    r"exit\w*|stake|unstake|release|bridge|payout|collect|refund|settle|execute|"
+    r"deposit|supply|join\w*|add_liquidity|remove_liquidity|addLiquidity|removeLiquidity|"
     r"exactInput\w*|exactOutput\w*|unoswap|clipperSwap|"
     r"uniswapV3\w*Callback|uniswapV2Call|receiveFlashLoan|onFlashLoan|"
-    r"frob|flux|slip|suck|grab|fold|heal|move"
+    r"frob|flux|slip|suck|grab|fold|heal|move|exchange"
     r")(?![A-Za-z])"
 )
 ERC20_STANDARD_NAMES = {
@@ -116,6 +116,7 @@ AUTH = {
         r"\bauth\b|\brequiresAuth\b",
         r"wards\s*\[\s*(msg\.sender|_msgSender\(\))",
         r"\bwish\s*\(",
+        r"\bcanCall\s*\(",
         r"CallbackValidation\.verifyCallback|verifyCallback\s*\(",
         r"IUniswapV3Pool\s*\(\s*msg\.sender",
         r"ecrecover\s*\(|ECDSA\.recover|SignatureChecker|isValidSignature",
@@ -329,14 +330,18 @@ def classify_auth(
     body = body or ""
     ctx = ctx or ""
 
-    if re.search(r"\bauth\b|\brequiresAuth\b|\bonlyOwner\b|\bonlyRole\b", header):
+    if re.search(
+        r"\bauth\b|\brequiresAuth\b|\bonlyOwner\b|\bonlyRole\b|"
+        r"\bonlyGuardian\b|\bonlyPoolAdmin\b|\bonlyLendingPool\b",
+        header,
+    ):
         return "PRESENT"
     onlys = re.findall(r"\bonly[A-Z]\w+", header)
     if onlys and not all(WEAK_AUTH_ONLY.search(x) for x in onlys):
         return "PRESENT"
     if re.search(r"wards\s*\[\s*(msg\.sender|_msgSender\(\))", ctx):
         return "PRESENT"
-    if re.search(r"\bwish\s*\(", ctx):
+    if re.search(r"\bwish\s*\(|\bcanCall\s*\(", ctx):
         return "PRESENT"
     if re.search(r"CallbackValidation\.verifyCallback|verifyCallback\s*\(", ctx):
         return "PRESENT"
