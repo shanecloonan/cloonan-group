@@ -49,9 +49,15 @@ def _trace(stage: str, decision: str, reason: str, **extras: Any) -> StageTrace:
 def _exposed_movers(ir: IRDocument) -> list[str]:
     names: list[str] = []
     for fn in ir.functions:
-        if fn.is_value_mover and fn.exposed:
+        if fn.is_value_mover and fn.exposed and fn.role != "erc20-standard":
             names.append(fn.name)
     return names
+
+
+def _erc20_standard_names(ir: Optional[IRDocument]) -> list[str]:
+    if ir is None:
+        return []
+    return [fn.name for fn in ir.functions if fn.role == "erc20-standard" and fn.exposed]
 
 
 def _auth_for(ir: IRDocument, name: str) -> str:
@@ -131,22 +137,37 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
 
     # --- S4 Value-mover presence -------------------------------------------
     movers = _exposed_movers(ir)
+    erc20_leads = _erc20_standard_names(ir)
+    erc20_note = ""
+    if erc20_leads:
+        erc20_note = (
+            " ERC20-standard transfer/approve surfaces %s recorded as leads, "
+            "not I1 custody movers." % ",".join(erc20_leads[:12])
+        )
     if not movers:
         if ir_conf == "high" and src_conf == "high":
-            traces.append(_trace("S4", "human-no-candidate", "no value movers + high IR + verified"))
-            traces.append(_trace("S5", "skip", "no movers"))
+            traces.append(_trace(
+                "S4", "human-no-candidate",
+                "no custody movers + high IR + verified",
+                erc20_standard=erc20_leads,
+            ))
+            traces.append(_trace("S5", "skip", "no custody movers"))
             traces.append(_trace("S6", "skip", "S4 closed as human-no-candidate (still needs human stamp)"))
             return _done(
                 "human-no-candidate", traces, src_conf, ir_conf, heat, notes,
-                extra="Candidate auto-no only: high IR + verified + no movers. Human still stamps no.",
+                extra="Candidate auto-no only: high IR + verified + no custody movers. Human still stamps no." + erc20_note,
                 pattern_leads=pattern_leads,
             )
-        traces.append(_trace("S4", "lane-a-cool", "no value movers; IR not high+verified so not a close"))
-        traces.append(_trace("S5", "skip", "no movers"))
-        traces.append(_trace("S6", "lane-a-cool", "utility / non-custody with usable IR"))
+        traces.append(_trace(
+            "S4", "lane-a-cool",
+            "no custody movers; IR not high+verified so not a close",
+            erc20_standard=erc20_leads,
+        ))
+        traces.append(_trace("S5", "skip", "no custody movers"))
+        traces.append(_trace("S6", "lane-a-cool", "utility / non-custody / vanilla ERC20 with usable IR"))
         return _done(
             "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
-            extra="No exposed value movers; absence is only a close when IR is high and source verified.",
+            extra="No exposed custody movers; absence is only a close when IR is high and source verified." + erc20_note,
             pattern_leads=pattern_leads,
         )
     traces.append(_trace("S4", "continue", "exposed value movers=%d" % len(movers), movers=movers))
