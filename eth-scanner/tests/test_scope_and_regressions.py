@@ -210,6 +210,7 @@ _ADDR = {
     "rainbow_near_locker_like.sol": "0x23Ddd3e3692d1861Ed57EDE224608875809e127f",
     "tokemak_eth_pool_like.sol": "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36",
     "voting_escrow_like.vy": "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2",
+    "linea_usdc_bridge_like.sol": "0x504A330327A089d8364C4ab3811Ee26976d388ce",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -387,6 +388,8 @@ LIVE_TOKEMAK_IMPL = "0xb104A7fA1041168556218DDb40Fe2516F88246d5"
 LIVE_VECRV = "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2"
 LIVE_VEFXS = "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0"
 LIVE_STAKEDAO_FXS_LOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f"
+LIVE_LINEA_USDC_BRIDGE = "0x504A330327A089d8364C4ab3811Ee26976d388ce"
+LIVE_LINEA_USDC_IMPL = "0x66CFD1562d6Aa4629e9e4142662c1A403528Df00"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -3201,6 +3204,45 @@ class Pass28VotingEscrow(unittest.TestCase):
         self.assertIn("diamond-facets-missing", ir.scope_signals)
         self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
         self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass29LineaUsdcBridge(unittest.TestCase):
+    """Pass 29: Linea native USDC L1 lock. New hunt."""
+
+    def test_linea_usdc_bridge_is_bridge_not_token_bridge(self):
+        src = (FIXTURES / "linea_usdc_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="L1USDCBridge"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("linea-usdc-bridge", ir.scope_signals)
+        self.assertNotIn("linea-token-bridge", ir.scope_signals)
+        r = _lane("linea_usdc_bridge_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["linea_usdc_bridge_like.sol"], LIVE_LINEA_USDC_BRIDGE)
+        self.assertEqual(LIVE_LINEA_USDC_IMPL.lower()[0:6], "0x66cf")
+
+    def test_linea_token_bridge_still_separate(self):
+        self.assertEqual(_lane("linea_token_bridge_like.sol").contract_class, "bridge")
+        src = (FIXTURES / "linea_token_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TokenBridge"), try_slither=False)
+        self.assertIn("linea-token-bridge", ir.scope_signals)
+        self.assertNotIn("linea-usdc-bridge", ir.scope_signals)
+
+    def test_pass28_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("voting_escrow_like.vy").contract_class, "staking")
+        self.assertEqual(_lane("debridge_gate_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("tokemak_eth_pool_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("idle_token_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("agglayer_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertEqual(LIVE_STAKEDAO_FXS_LOCKER.lower()[0:6], "0xcd3a")
+        self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
+        self.assertEqual(LIVE_LINEA_L1_MESSAGE.lower()[0:6], "0xd19d")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
