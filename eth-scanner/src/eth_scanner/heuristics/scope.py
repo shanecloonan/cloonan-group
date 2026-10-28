@@ -228,6 +228,18 @@ _DIAMOND_NAMES = frozenset({
     "diamondcut", "facetaddresses", "facetaddress", "facets",
     "facetfunctionselectors",
 })
+# OZ / EIP-173 proxy shells. Sourcify trees often ship unrelated siblings
+# (Inception lockbox, Across depositV3). Those are not this address's facets.
+_THIN_OZ_PROXY_NAMES = frozenset({
+    "transparentupgradeableproxy",
+    "erc1967proxy",
+    "uupsproxy",
+    "eip173proxy",
+    "vaultproxy",
+    "adminupgradeabilityproxy",
+    "optimizedtransparentupgradeableproxy",
+    "beaconproxy",
+})
 YEARN_SHARE_NAMES = frozenset({
     "pricepershare", "getpriceperfullshare",
     "price_per_share", "get_price_per_full_share",
@@ -317,6 +329,18 @@ def classify_scope(
             signals=["share-wrap"],
             promote=False,
         )
+
+    # Named OZ / EIP-173 proxy shell: sibling lockboxes (depositV3 /
+    # Inception) are not this address. Stop as diamond-facets-missing.
+    if _is_thin_oz_proxy(contract_name):
+        declared_here = _contract_declared_names(src, contract_name)
+        if not (declared_here & _venue_verbs()):
+            return ScopeDecision(
+                contract_class="custody",
+                scope="in-scope",
+                signals=["diamond-facets-missing"],
+                promote=False,
+            )
 
     family, family_signals = _funds_at_risk_family(src, names, custody, contract_name)
     if family:
@@ -768,10 +792,15 @@ def _venue_verbs() -> set[str]:
     )
 
 
+def _is_thin_oz_proxy(focus: Optional[str]) -> bool:
+    """True for a named OZ / EIP-173 proxy shell (not a Diamond / venue)."""
+    return bool(focus) and _norm_ident(focus) in _THIN_OZ_PROXY_NAMES
+
+
 def _diamond_loupe_without_venue(
     src: str,
     names: set[str],
-    _focus: Optional[str] = None,
+    focus: Optional[str] = None,
 ) -> bool:
     """True when the blob is a diamond/loupe and no facet venue verbs are visible.
 
@@ -779,7 +808,13 @@ def _diamond_loupe_without_venue(
     facets are often a different verified address. Prefer false keep —
     do not cool-archive a possible custody diamond as utility.
     Unique-router names (PendleRouter, exactInput) are handled earlier.
+    Thin OZ proxy shells must not inherit sibling lockbox / depositV3 verbs.
     """
+    if _is_thin_oz_proxy(focus):
+        declared = _contract_declared_names(src, focus)
+        if declared & _venue_verbs():
+            return False
+        return True
     blocks = [(k, n, b) for k, n, b in _type_blocks(src) if k == "contract"]
     fns: set[str] = set()
     diamondish = False
@@ -828,7 +863,7 @@ def _focused_blocks(src: str, focus: Optional[str]) -> list[tuple[str, str, str]
     hit = [(k, n, b) for k, n, b in blocks if _norm_ident(n) in chain]
     if not hit:
         return blocks
-    if _diamond_incomplete(hit, blocks):
+    if _diamond_incomplete(hit, blocks) and not _is_thin_oz_proxy(focus):
         return blocks
     used = _used_libraries(src, focus, hit)
     if used:
