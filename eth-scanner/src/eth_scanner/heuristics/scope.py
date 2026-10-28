@@ -1601,6 +1601,18 @@ def _funds_at_risk_family(
     # Mellow ALM vault (`0x7600…bb84`) holds vault tokens.
     if {"transferandpush"} & (declared | probe) and {"reclaimtokens"} & (declared | probe):
         return "vault", ["mellow-vault"]
+    # Mellow ERC20RootVault (`0xa1ee…dd00`) holds the multi-subvault basket.
+    # hasSubvault + addDepositorsToAllowlist — not generic deposit/withdraw.
+    if {"hassubvault"} & (declared | probe) and {
+        "adddepositorstoallowlist", "subvaultnfts"
+    } & (declared | probe):
+        return "vault", ["mellow-root-vault"]
+    # Concrete async vault impl (`0x438d…093E`). Already 4626; pin the
+    # async queue. Proxy-only blobs stay diamond-facets-missing.
+    if {"cachedtotalassets"} & (declared | probe) and {
+        "claimwithdrawal", "claimprioritywithdrawal"
+    } & (declared | probe):
+        return "vault", ["concrete-async-vault"]
 
     # Pendle Action* / Uni V2 Router02: unique pass-through verbs beat imported
     # ERC-4626 / SY ifaces in the diamond or periphery blob.
