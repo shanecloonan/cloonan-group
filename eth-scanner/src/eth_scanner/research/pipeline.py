@@ -15,6 +15,7 @@ from eth_scanner.receipt import default_receipt_dir
 from eth_scanner.research.detectors import run_custom_detectors
 from eth_scanner.research.fork_checks import run_fork_checks
 from eth_scanner.research.funds_flow import build_funds_flow, funds_flow_findings
+from eth_scanner.research.fuzz import run_fuzz_layer
 from eth_scanner.research.invariants import (
     generate_invariant_stubs,
     invariant_findings,
@@ -24,6 +25,7 @@ from eth_scanner.research.invariants import (
 from eth_scanner.research.ir import emit_contract_ir
 from eth_scanner.research.receipt import write_research_receipts
 from eth_scanner.research.slither_runner import run_slither
+from eth_scanner.research.symbolic import run_symbolic_layer
 from eth_scanner.research.types import LayerSkip, ResearchRun
 from eth_scanner.store.supabase import MemoryStore, ScanStore, normalize_address, open_store
 from eth_scanner.types import FunnelResult, SourceArtifact
@@ -84,6 +86,9 @@ def run_research(
     write_receipts: bool = True,
     try_slither: bool = True,
     try_forge: bool = True,
+    try_fuzz: bool = True,
+    try_symbolic: bool = True,
+    fuzz_runs: int = 64,
     foundry_project: Optional[Path] = None,
     fork_mock: Optional[dict[str, int]] = None,
     explicit_facets: Optional[list[dict]] = None,
@@ -92,7 +97,7 @@ def run_research(
     store = store or open_store(settings)
     addr = normalize_address(address)
     notes: list[str] = [
-        "Research stack Phase 1. Defensive reports only. Lane A is the gate.",
+        "Research stack Phase 2. Defensive reports only. Lane A is the gate.",
     ]
 
     lane = lane_a_one(
@@ -223,6 +228,42 @@ def run_research(
     if inv_skip:
         run.layers_skipped.append(inv_skip)
 
+    fuzz_project: Optional[Path] = None
+    if try_fuzz:
+        fuzz_dest = (receipt_dir or default_receipt_dir(settings.work_dir)).parent / "fuzz" / addr
+        fuzz_findings, fuzz_skips, fuzz_notes, fuzz_project = run_fuzz_layer(
+            address=addr,
+            dest_dir=fuzz_dest,
+            fuzz_runs=fuzz_runs,
+            try_forge=try_forge,
+            try_echidna=True,
+        )
+        run.findings.extend(fuzz_findings)
+        run.notes.extend(fuzz_notes)
+        ran_fuzz = any(f.detector.startswith("fuzz:") and "skipped" not in f.title.lower() for f in fuzz_findings)
+        if ran_fuzz and any(f.detector == "fuzz:forge" and "skipped" not in f.title.lower() for f in fuzz_findings):
+            run.layers_run.append("L4-fuzz")
+        for skip in fuzz_skips:
+            if skip.reason not in {s.reason for s in run.layers_skipped}:
+                run.layers_skipped.append(skip)
+    else:
+        run.layers_skipped.append(LayerSkip(layer="L4", reason="fuzz layer disabled by flag"))
+
+    if try_symbolic:
+        sym_findings, sym_skips, sym_notes = run_symbolic_layer(
+            address=addr,
+            project_dir=fuzz_project,
+        )
+        run.findings.extend(sym_findings)
+        run.notes.extend(sym_notes)
+        if any(f.detector == "symbolic:halmos" and "skipped" not in f.title.lower() for f in sym_findings):
+            run.layers_run.append("L4-symbolic")
+        if any(f.detector == "symbolic:hevm" and "skipped" not in f.title.lower() for f in sym_findings):
+            run.layers_run.append("L5-symbolic")
+        run.layers_skipped.extend(sym_skips)
+    else:
+        run.layers_skipped.append(LayerSkip(layer="L4", reason="symbolic layer disabled by flag"))
+
     fork_findings, fork_skips, fork_notes = run_fork_checks(
         address=addr,
         role=role,
@@ -271,5 +312,7 @@ def dry_run_on_fixture(
         write_receipts=True,
         try_slither=True,
         try_forge=True,
+        try_fuzz=True,
+        try_symbolic=True,
         fork_mock=fork_mock,
     )

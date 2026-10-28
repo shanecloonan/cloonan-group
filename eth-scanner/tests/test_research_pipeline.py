@@ -87,8 +87,10 @@ class EndToEndVaults(unittest.TestCase):
                 payload = json.loads(js.read_text(encoding="utf-8"))
                 self.assertEqual(payload["address"], run.address)
                 self.assertTrue(payload["defensive_only"])
-            self.assertTrue(any("slither" in (s.reason + "".join(a.notes)).lower() for s in a.layers_skipped)
+                self.assertTrue(any("slither" in (s.reason + "".join(a.notes)).lower() for s in a.layers_skipped)
                             or "L2-slither" in a.layers_run)
+            self.assertTrue(any(f.detector.startswith("fuzz:") for f in a.findings))
+            self.assertTrue(any(f.detector.startswith("symbolic:") for f in a.findings))
 
     def test_usdc_token_stops_at_l1(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -118,7 +120,7 @@ class ResearchCli(unittest.TestCase):
         with redirect_stdout(buf), redirect_stderr(err):
             rc = research_cli(["version"])
         self.assertEqual(rc, 0)
-        self.assertIn("0.1.0", buf.getvalue())
+        self.assertIn("0.2.0", buf.getvalue())
 
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "receipts"
@@ -147,7 +149,7 @@ class ResearchCli(unittest.TestCase):
         with redirect_stdout(buf), redirect_stderr(err):
             rc = root_cli(["research", "version"])
         self.assertEqual(rc, 0)
-        self.assertIn("0.1.0", buf.getvalue())
+        self.assertIn("0.2.0", buf.getvalue())
 
     def test_generate_invariants(self):
         with tempfile.TemporaryDirectory() as tmp:

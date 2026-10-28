@@ -6,8 +6,8 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { capabilityNote, fixtureCatalog, pythonCapability, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
-import { loadDryRunStore } from "@/lib/eth-scanner/local-store";
+import { capabilityNote, fixtureCatalog, pythonCapability, researchFixtureCatalog, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
+import { listResearchReceipts, loadDryRunStore } from "@/lib/eth-scanner/local-store";
 import { BUCKETS } from "@/lib/eth-scanner/receipt";
 
 export const runtime = "nodejs";
@@ -57,6 +57,8 @@ export async function GET(req: Request) {
       targets: filtered.slice(0, limit),
       results: results.slice(0, limit),
       fixtures,
+      research_fixtures: researchFixtureCatalog(),
+      research_receipts: listResearchReceipts(12),
       python_runtime,
       note: local
         ? `${modeNote} Showing eth-scanner/work/dry-run-store.json. Download receipt is Markdown from work/receipts/ when present.`
@@ -94,6 +96,8 @@ export async function GET(req: Request) {
       targets: [],
       results: [],
       fixtures,
+      research_fixtures: researchFixtureCatalog(),
+      research_receipts: listResearchReceipts(12),
       python_runtime,
       note: missing
         ? "eth_scan_* tables missing — apply infra/supabase/migrations/2026-10-27-eth-scanner-queue.sql. Run still writes the local dry-run store."
@@ -116,6 +120,8 @@ export async function GET(req: Request) {
     targets,
     results: resultsRes.data ?? [],
     fixtures,
+    research_fixtures: researchFixtureCatalog(),
+    research_receipts: listResearchReceipts(12),
     python_runtime,
     note: `${modeNote} Automation never stamps yes. Low IR stays in manual-review.`,
   });

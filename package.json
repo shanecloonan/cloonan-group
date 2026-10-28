@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "node scripts/bundle-python-runtime.mjs && next build",
     "start": "next start",
-    "test:lane-a-runtime": "npx tsx --test lib/eth-scanner/python-runtime.test.ts lib/eth-scanner/run-lane-a.test.ts",
+    "test:lane-a-runtime": "npx tsx --test lib/eth-scanner/python-runtime.test.ts lib/eth-scanner/run-lane-a.test.ts lib/eth-scanner/run-research.test.ts",
     "lint": "eslint lib/network lib/node scripts/smoke-bond.ts scripts/smoke-block-consensus.ts scripts/smoke-store.ts scripts/smoke-validator-wire.ts --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "smoke:bond": "npx tsx scripts/smoke-bond.ts",

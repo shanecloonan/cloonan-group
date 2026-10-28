@@ -8,6 +8,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { LANE_A_FIXTURES, type FixtureId, scannerCapabilities, type ScannerCapabilities } from "./capabilities";
 import { workRoot } from "./local-store";
+import { acquireScan, releaseScan, scanInFlight } from "./scan-lock";
 import {
   canLazyInstallPython,
   ensurePortablePython,
@@ -63,11 +64,7 @@ export type LaneARunErr = {
   persist_remote: boolean;
 };
 
-let inflight = false;
-
-export function scanInFlight(): boolean {
-  return inflight;
-}
+export { scanInFlight } from "./scan-lock";
 
 export function normalizeScanAddress(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
@@ -213,7 +210,7 @@ export async function runLaneA(input: LaneARunInput): Promise<LaneARunOk | LaneA
     persist_remote: caps.persist_remote,
   });
 
-  if (inflight) return fail("a Lane A scan is already running");
+  if (scanInFlight()) return fail("a Lane A scan is already running");
 
   let address = normalizeScanAddress(input.address);
   const fixture = resolveFixture(input.fixture);
@@ -242,7 +239,7 @@ export async function runLaneA(input: LaneARunInput): Promise<LaneARunOk | LaneA
     ETH_SCANNER_WORK_DIR: work,
   };
 
-  inflight = true;
+  if (!acquireScan()) return fail("a Lane A scan is already running");
   try {
     const candidates = pythonCandidates();
     const ran = await tryCandidates(candidates, args, env, address, fixture?.id ?? null, caps);
@@ -264,7 +261,7 @@ export async function runLaneA(input: LaneARunInput): Promise<LaneARunOk | LaneA
     }
     return fail(missingPythonError(ran.lastErr, candidates.map((c) => c.bin)));
   } finally {
-    inflight = false;
+    releaseScan();
   }
 }
 

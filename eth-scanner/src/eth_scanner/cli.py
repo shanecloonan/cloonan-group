@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
     rec.add_argument("--dry-run", action="store_true")
 
     sub.add_parser("surface", help="run invariant_pass heuristics (passthrough)")
-    sub.add_parser("research", help="Phase 1 research audit stack (defensive; see eth_scanner.research)")
+    sub.add_parser("research", help="Phase 2 research audit stack (defensive; see eth_scanner.research)")
 
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":

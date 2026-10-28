@@ -14,7 +14,13 @@ export const LANE_A_FIXTURES = {
   utility_no_movers: { file: "utility_no_movers.sol", label: "Utility (no movers)" },
 } as const;
 
+export const RESEARCH_FIXTURES = {
+  erc4626_vault: { file: "erc4626_vault_like.sol", label: "ERC-4626 vault" },
+  yearn_v2: { file: "yearn_v2_like.sol", label: "Yearn V2-like" },
+} as const;
+
 export type FixtureId = keyof typeof LANE_A_FIXTURES;
+export type ResearchFixtureId = keyof typeof RESEARCH_FIXTURES;
 
 export type ScannerCapabilities = {
   persist_remote: boolean;
@@ -54,5 +60,12 @@ export function fixtureCatalog(): { id: FixtureId; label: string }[] {
   return (Object.keys(LANE_A_FIXTURES) as FixtureId[]).map((id) => ({
     id,
     label: LANE_A_FIXTURES[id].label,
+  }));
+}
+
+export function researchFixtureCatalog(): { id: ResearchFixtureId; label: string }[] {
+  return (Object.keys(RESEARCH_FIXTURES) as ResearchFixtureId[]).map((id) => ({
+    id,
+    label: RESEARCH_FIXTURES[id].label,
   }));
 }
