@@ -3,7 +3,8 @@
  * Used by /api/test when SUPABASE_SERVICE_ROLE_KEY is unset.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import path from "path";
 
 export type DryRunStore = {
@@ -12,8 +13,38 @@ export type DryRunStore = {
   results: Record<string, unknown>[];
 };
 
-function workRoot(): string {
-  return process.env.ETH_SCANNER_WORK_DIR || path.join(process.cwd(), "eth-scanner", "work");
+let cachedWorkRoot: string | null = null;
+
+function canWriteDir(dir: string): boolean {
+  try {
+    mkdirSync(dir, { recursive: true });
+    const probe = path.join(dir, ".write-probe");
+    writeFileSync(probe, "ok");
+    unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Writable work dir for dry-run JSON + receipts. Falls back to /tmp on read-only hosts. */
+export function workRoot(): string {
+  if (cachedWorkRoot) return cachedWorkRoot;
+  const fromEnv = process.env.ETH_SCANNER_WORK_DIR?.trim();
+  if (fromEnv) {
+    cachedWorkRoot = fromEnv;
+    return cachedWorkRoot;
+  }
+  const local = path.join(process.cwd(), "eth-scanner", "work");
+  if (canWriteDir(local)) {
+    cachedWorkRoot = local;
+    return cachedWorkRoot;
+  }
+  const fallback = path.join(tmpdir(), "eth-scanner-work");
+  mkdirSync(fallback, { recursive: true });
+  process.env.ETH_SCANNER_WORK_DIR = fallback;
+  cachedWorkRoot = fallback;
+  return cachedWorkRoot;
 }
 
 export function dryRunStorePath(): string {
