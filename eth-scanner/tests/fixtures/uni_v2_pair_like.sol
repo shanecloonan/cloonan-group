@@ -2,7 +2,12 @@
 pragma solidity ^0.8.20;
 
 /// Uniswap V2 pair — ERC-20 LP + reserve custody. Hybrid — stay pool.
+/// Live pairs *call* `uniswapV2Call`; that callback name must not demote as router.
 /// Fixture only — not a finding.
+interface IUniswapV2Callee {
+    function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external;
+}
+
 contract UniswapV2Pair {
     string public name = "UNI-V2";
     string public symbol = "UNI-V2";
@@ -36,6 +41,7 @@ contract UniswapV2Pair {
     }
 
     function swap(uint256 amount0Out, uint256 amount1Out, address to) external {
+        IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, "");
         to;
         amount0Out;
         amount1Out;
