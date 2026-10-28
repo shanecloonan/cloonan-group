@@ -1787,6 +1787,11 @@ def _funds_at_risk_family(
     # create_lock + increase_unlock_time — not StakeDAO FxsLocker createLock.
     if {"create_lock", "increase_unlock_time"} <= (declared | probe):
         return "staking", ["voting-escrow"]
+    # Lido WithdrawalVault (`0xB9D7…293f` / impl `0xfB45…7340`).
+    # Beacon ETH sits here until Lido pulls it. withdrawWithdrawals +
+    # addWithdrawalRequests — not WithdrawalQueue requestWithdrawals.
+    if {"withdrawwithdrawals", "addwithdrawalrequests"} <= (declared | probe):
+        return "staking", ["lido-withdrawal-vault"]
 
     staking_ix = bool({"stake", "unstake", "getreward"} & (declared | probe)) or bool(
         re.search(

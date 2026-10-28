@@ -211,6 +211,7 @@ _ADDR = {
     "tokemak_eth_pool_like.sol": "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36",
     "voting_escrow_like.vy": "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2",
     "linea_usdc_bridge_like.sol": "0x504A330327A089d8364C4ab3811Ee26976d388ce",
+    "lido_withdrawal_vault_like.sol": "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -390,6 +391,8 @@ LIVE_VEFXS = "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0"
 LIVE_STAKEDAO_FXS_LOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f"
 LIVE_LINEA_USDC_BRIDGE = "0x504A330327A089d8364C4ab3811Ee26976d388ce"
 LIVE_LINEA_USDC_IMPL = "0x66CFD1562d6Aa4629e9e4142662c1A403528Df00"
+LIVE_LIDO_WV = "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f"
+LIVE_LIDO_WV_IMPL = "0xfB4521BD151BFB45DB6045D2d07e58e0f597e340"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -3243,6 +3246,42 @@ class Pass29LineaUsdcBridge(unittest.TestCase):
         self.assertEqual(LIVE_STAKEDAO_FXS_LOCKER.lower()[0:6], "0xcd3a")
         self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
         self.assertEqual(LIVE_LINEA_L1_MESSAGE.lower()[0:6], "0xd19d")
+
+
+class Pass30LidoWithdrawalVault(unittest.TestCase):
+    """Pass 30: Lido WithdrawalVault beacon ETH. New hunt."""
+
+    def test_lido_withdrawal_vault_is_staking_not_queue(self):
+        src = (FIXTURES / "lido_withdrawal_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="WithdrawalVault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "staking")
+        self.assertIn("lido-withdrawal-vault", ir.scope_signals)
+        self.assertNotIn("lido-withdrawal-queue", ir.scope_signals)
+        r = _lane("lido_withdrawal_vault_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["lido_withdrawal_vault_like.sol"], LIVE_LIDO_WV)
+        self.assertEqual(LIVE_LIDO_WV_IMPL.lower()[0:6], "0xfb45")
+
+    def test_lido_withdrawal_queue_still_separate(self):
+        self.assertEqual(_lane("lido_withdrawal_queue_like.sol").contract_class, "staking")
+        src = (FIXTURES / "lido_withdrawal_queue_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="WithdrawalQueueERC721"), try_slither=False)
+        self.assertIn("lido-withdrawal-queue", ir.scope_signals)
+        self.assertNotIn("lido-withdrawal-vault", ir.scope_signals)
+
+    def test_pass29_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("linea_usdc_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("linea_token_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("voting_escrow_like.vy").contract_class, "staking")
+        self.assertEqual(_lane("tokemak_eth_pool_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertEqual(LIVE_STAKEDAO_FXS_LOCKER.lower()[0:6], "0xcd3a")
+        self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
