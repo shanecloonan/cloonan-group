@@ -47,6 +47,7 @@ Cargo.lock.bak
 
 # ETH scanner local dry-run + Python
 eth-scanner/work/
+eth-scanner/.runtime/
 eth-scanner/.venv/
 __pycache__/
 *.py[cod]

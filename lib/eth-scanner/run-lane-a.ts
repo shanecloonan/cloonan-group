@@ -8,6 +8,15 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { LANE_A_FIXTURES, type FixtureId, scannerCapabilities, type ScannerCapabilities } from "./capabilities";
 import { workRoot } from "./local-store";
+import {
+  canLazyInstallPython,
+  ensurePortablePython,
+  lazyPythonPrefix,
+  listPythonCandidates,
+  missingPythonError,
+  pythonHomeFor,
+  type PythonCandidate,
+} from "./python-runtime";
 
 export const ETH_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 export const FIXTURE_PLACEHOLDER = "0x1111111111111111111111111111111111111111";
@@ -140,9 +149,14 @@ function shapeResult(row: Record<string, unknown>, address: string): LaneAResult
   };
 }
 
-function pythonCandidates(): string[] {
-  const preferred = process.env.ETH_SCANNER_PYTHON?.trim();
-  return preferred ? [preferred] : ["python3", "python"];
+function pythonCandidates(): PythonCandidate[] {
+  return listPythonCandidates();
+}
+
+function envForPython(base: NodeJS.ProcessEnv, candidate: PythonCandidate): NodeJS.ProcessEnv {
+  const home = pythonHomeFor(candidate.source, candidate.bin);
+  if (!home) return base;
+  return { ...base, PYTHONHOME: home };
 }
 
 function spawnLaneA(
@@ -230,39 +244,95 @@ export async function runLaneA(input: LaneARunInput): Promise<LaneARunOk | LaneA
 
   inflight = true;
   try {
-    let lastErr = "python -m eth_scanner unavailable";
-    for (const bin of pythonCandidates()) {
-      const ran = await spawnLaneA(bin, args, env);
-      if (!ran.spawned) {
-        lastErr = `could not start ${bin}`;
-        continue;
-      }
-      if (ran.code !== 0) {
-        const snippet = redactScannerText((ran.stderr || ran.stdout || "").trim()).slice(-400);
-        const importMiss = /ModuleNotFoundError|No module named/i.test(ran.stderr);
+    const candidates = pythonCandidates();
+    const ran = await tryCandidates(candidates, args, env, address, fixture?.id ?? null, caps);
+    if (ran.ok || ran.giveUp) return ran.out;
+
+    if (canLazyInstallPython() && !candidates.some((c) => c.source === "bundled" || c.source === "lazy")) {
+      try {
+        const bin = ensurePortablePython({ destPrefix: lazyPythonPrefix() });
+        const lazy: PythonCandidate = { bin, source: "lazy" };
+        const again = await tryCandidates([lazy], args, env, address, fixture?.id ?? null, caps);
+        if (again.ok || again.giveUp) return again.out;
+        return fail(missingPythonError(again.lastErr, [...candidates, lazy].map((c) => c.bin)));
+      } catch (err) {
+        const why = err instanceof Error ? err.message : "portable CPython install failed";
         return fail(
-          importMiss
-            ? "python -m eth_scanner is not importable — set PYTHONPATH to eth-scanner/src or ETH_SCANNER_PYTHON"
-            : `Lane A exited ${ran.code}${snippet ? `: ${snippet}` : ""}`,
+          missingPythonError(`${ran.lastErr}; lazy install failed: ${redactScannerText(why)}`, candidates.map((c) => c.bin)),
         );
       }
-      try {
-        const payload = extractJsonArray(ran.stdout);
-        const row = pickResult(payload, address);
-        return {
-          ok: true,
-          dry_run: caps.dry_run,
-          live_ingest: caps.live_ingest && !fixture,
-          persist_remote: caps.persist_remote,
-          fixture: fixture?.id ?? null,
-          result: shapeResult(row, address),
-        };
-      } catch (err) {
-        return fail(err instanceof Error ? err.message : "could not parse scanner JSON");
-      }
     }
-    return fail(`${lastErr}. Install Python 3 or set ETH_SCANNER_PYTHON.`);
+    return fail(missingPythonError(ran.lastErr, candidates.map((c) => c.bin)));
   } finally {
     inflight = false;
   }
+}
+
+type Attempt =
+  | { ok: true; out: LaneARunOk; lastErr: string; giveUp: false }
+  | { ok: false; out: LaneARunErr; lastErr: string; giveUp: true }
+  | { ok: false; out: LaneARunErr; lastErr: string; giveUp: false };
+
+async function tryCandidates(
+  candidates: PythonCandidate[],
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  address: string,
+  fixtureId: FixtureId | null,
+  caps: ScannerCapabilities,
+): Promise<Attempt> {
+  const fail = (error: string): LaneARunErr => ({
+    ok: false,
+    error,
+    dry_run: caps.dry_run,
+    live_ingest: caps.live_ingest,
+    persist_remote: caps.persist_remote,
+  });
+  let lastErr = "python -m eth_scanner unavailable";
+  for (const candidate of candidates) {
+    const ran = await spawnLaneA(candidate.bin, args, envForPython(env, candidate));
+    if (!ran.spawned) {
+      lastErr = `could not start ${candidate.bin}`;
+      continue;
+    }
+    if (ran.code !== 0) {
+      const snippet = redactScannerText((ran.stderr || ran.stdout || "").trim()).slice(-400);
+      const importMiss = /ModuleNotFoundError|No module named/i.test(ran.stderr);
+      return {
+        ok: false,
+        giveUp: true,
+        lastErr: snippet,
+        out: fail(
+          importMiss
+            ? "python -m eth_scanner is not importable — set PYTHONPATH to eth-scanner/src or ETH_SCANNER_PYTHON"
+            : `Lane A exited ${ran.code}${snippet ? `: ${snippet}` : ""}`,
+        ),
+      };
+    }
+    try {
+      const payload = extractJsonArray(ran.stdout);
+      const row = pickResult(payload, address);
+      return {
+        ok: true,
+        giveUp: false,
+        lastErr: "",
+        out: {
+          ok: true,
+          dry_run: caps.dry_run,
+          live_ingest: caps.live_ingest && !fixtureId,
+          persist_remote: caps.persist_remote,
+          fixture: fixtureId,
+          result: shapeResult(row, address),
+        },
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        giveUp: true,
+        lastErr: err instanceof Error ? err.message : "could not parse scanner JSON",
+        out: fail(err instanceof Error ? err.message : "could not parse scanner JSON"),
+      };
+    }
+  }
+  return { ok: false, giveUp: false, lastErr, out: fail(lastErr) };
 }

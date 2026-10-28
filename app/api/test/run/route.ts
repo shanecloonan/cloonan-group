@@ -1,10 +1,11 @@
 /**
  * Kick a Lane A scan for one /test address (or a whitelisted local fixture).
- * Defensive only. Spawns python -m eth_scanner. Never a scanner runtime on GET.
+ * Defensive only. Spawns python -m eth_scanner (system Python or the
+ * portable CPython bundled for Vercel). Never a scanner runtime on GET.
  */
 
 import { NextResponse } from "next/server";
-import { capabilityNote, fixtureCatalog, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
+import { capabilityNote, fixtureCatalog, pythonCapability, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
 import { runLaneA, scanInFlight } from "@/lib/eth-scanner/run-lane-a";
 
 export const runtime = "nodejs";
@@ -26,6 +27,7 @@ export async function GET() {
   return json({
     ok: true,
     ...caps,
+    python_runtime: pythonCapability(),
     running: scanInFlight(),
     fixtures: fixtureCatalog(),
     note: capabilityNote(caps),
@@ -58,7 +60,7 @@ export async function POST(req: Request) {
       ? 429
       : /pass a 0x|unknown fixture|tvl must/.test(out.error)
         ? 400
-        : /unavailable|not importable|could not start/.test(out.error)
+        : /unavailable|not importable|could not start|no system Python|portable CPython/.test(out.error)
           ? 503
           : 500;
     return json({ ...out, note: capabilityNote(out) }, status);

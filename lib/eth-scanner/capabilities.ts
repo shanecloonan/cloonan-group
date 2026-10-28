@@ -3,6 +3,8 @@
  * Live persist needs SUPABASE_SERVICE_ROLE_KEY; live ingest needs ETHERSCAN_API_KEYS.
  */
 
+import { pythonRuntimeStatus, type PythonRuntimeStatus } from "./python-runtime";
+
 export const LANE_A_FIXTURES = {
   gated_vault: { file: "gated_vault.sol", label: "Gated vault" },
   open_vault: { file: "open_vault.sol", label: "Open vault" },
@@ -32,6 +34,10 @@ export function scannerCapabilities(): ScannerCapabilities {
     live_ingest: liveIngest,
     dry_run: !persistRemote,
   };
+}
+
+export function pythonCapability(): PythonRuntimeStatus {
+  return pythonRuntimeStatus();
 }
 
 export function capabilityNote(caps: ScannerCapabilities): string {
