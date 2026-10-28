@@ -147,6 +147,13 @@ _ADDR = {
     "cow_settlement_like.sol": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
     "frxeth_like.sol": "0x5E8422345238F34275888049021821E8E08Caa1f",
     "uni_v4_pool_manager_like.sol": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+    "usds_join_like.sol": "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB",
+    "dai_usds_like.sol": "0x3225737a9Bbb6473CB4A45b7244ACa2BeFdB276A",
+    "euler_evault_like.sol": "0x8Ff1C814719096b61aBf00Bb46EAd0c9A529Dd7D",
+    "gearbox_pool_v3_like.sol": "0xda00000035fef4082F78dEF6A8903bee419FbF8E",
+    "crvusd_controller_like.sol": "0x4e59541306910aD6dC1daC0AC9dFB29bD9F15c67",
+    "crvusd_llamma_like.vy": "0x2B7e624bdb839975d56D8428d9f6A4cf1160D3e9",
+    "contango_vault_like.sol": "0x3F37C7d8e61C000085AAc0515775b06A3412F36b",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -207,6 +214,13 @@ LIVE_GEARBOX_CM = "0x3EB95430FdB99439A86d3c6D7D01C3c561393556"
 LIVE_COW_SETTLEMENT = "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
 LIVE_FRXETH = "0x5E8422345238F34275888049021821E8E08Caa1f"
 LIVE_UNI_V4_PM = "0x000000000004444c5dc75cB358380D2e3dE08A90"
+LIVE_USDS_JOIN = "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB"
+LIVE_DAI_USDS = "0x3225737a9Bbb6473CB4A45b7244ACa2BeFdB276A"
+LIVE_EULER_EVAULT = "0x8Ff1C814719096b61aBf00Bb46EAd0c9A529Dd7D"
+LIVE_GEARBOX_POOL = "0xda00000035fef4082F78dEF6A8903bee419FbF8E"
+LIVE_CRVUSD_CTRL = "0x4e59541306910aD6dC1daC0AC9dFB29bD9F15c67"
+LIVE_CRVUSD_LLAMMA_IMPL = "0x2B7e624bdb839975d56D8428d9f6A4cf1160D3e9"
+LIVE_CONTANGO_VAULT = "0x3F37C7d8e61C000085AAc0515775b06A3412F36b"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1186,6 +1200,13 @@ class Pass7LiveLocks(unittest.TestCase):
             "cow_settlement_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
             "frxeth_like.sol": ("token", "demoted-token", "lane-a-cool"),
             "uni_v4_pool_manager_like.sol": ("pool", "in-scope", "lane-b-queue"),
+            "usds_join_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "dai_usds_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "euler_evault_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "gearbox_pool_v3_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "crvusd_controller_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "crvusd_llamma_like.vy": ("pool", "in-scope", "lane-b-queue"),
+            "contango_vault_like.sol": ("custody", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -1954,6 +1975,91 @@ class Pass13CustodyVenues(unittest.TestCase):
         ir = normalize(_art(src, contract_name="Pot"), try_slither=False)
         self.assertIn("maker-pot", ir.scope_signals)
         self.assertNotIn("maker-join", ir.scope_signals)
+
+
+class Pass14CrvusdEulerVenues(unittest.TestCase):
+    """Pass 14: UsdsJoin, DaiUsds, crvUSD / Gearbox / Euler pins."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_usds_join_is_vault_without_cage(self):
+        src = (FIXTURES / "usds_join_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="UsdsJoin"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("maker-join", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "maker")
+        r = _lane("usds_join_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["usds_join_like.sol"], LIVE_USDS_JOIN)
+
+    def test_dai_usds_is_passthrough(self):
+        src = (FIXTURES / "dai_usds_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DaiUsds"), try_slither=False)
+        self.assertEqual(ir.contract_class, "router")
+        self.assertEqual(ir.scope, "demoted-passthrough")
+        self.assertIn("dai-usds-converter", ir.scope_signals)
+        self.assertNotIn("maker-join", ir.scope_signals)
+        r = _lane("dai_usds_like.sol", tvl=9_999_999)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["dai_usds_like.sol"], LIVE_DAI_USDS)
+
+    def test_dsr_manager_still_not_maker_join(self):
+        r = _lane("dsr_manager_like.sol")
+        self.assertEqual(r.contract_class, "custody")
+        self.assertNotEqual(r.contract_class, "vault")
+        src = (FIXTURES / "dsr_manager_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DsrManager"), try_slither=False)
+        self.assertNotIn("maker-join", ir.scope_signals)
+
+    def test_euler_evault_is_lending(self):
+        src = (FIXTURES / "euler_evault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="EVault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "lending")
+        r = _lane("euler_evault_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["euler_evault_like.sol"], LIVE_EULER_EVAULT)
+
+    def test_gearbox_pool_v3_is_vault(self):
+        src = (FIXTURES / "gearbox_pool_v3_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="PoolV3"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("erc4626", ir.scope_signals)
+        r = _lane("gearbox_pool_v3_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["gearbox_pool_v3_like.sol"], LIVE_GEARBOX_POOL)
+
+    def test_crvusd_controller_is_lending(self):
+        src = (FIXTURES / "crvusd_controller_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="crvUSDController"), try_slither=False)
+        self.assertEqual(ir.contract_class, "lending")
+        r = _lane("crvusd_controller_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(_ADDR["crvusd_controller_like.sol"], LIVE_CRVUSD_CTRL)
+
+    def test_crvusd_llamma_is_pool(self):
+        src = (FIXTURES / "crvusd_llamma_like.vy").read_text(encoding="utf-8")
+        ir = normalize(_art(src, language="vyper", contract_name="AMM"), try_slither=False)
+        self.assertEqual(ir.contract_class, "pool")
+        r = _lane("crvusd_llamma_like.vy")
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["crvusd_llamma_like.vy"], LIVE_CRVUSD_LLAMMA_IMPL)
+
+    def test_contango_vault_stays_custody(self):
+        src = (FIXTURES / "contango_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Vault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        self.assertEqual(ir.scope, "in-scope")
+        r = _lane("contango_vault_like.sol")
+        self.assertEqual(r.contract_class, "custody")
+        self.assertNotEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["contango_vault_like.sol"], LIVE_CONTANGO_VAULT)
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):

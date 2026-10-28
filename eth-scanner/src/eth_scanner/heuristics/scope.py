@@ -1114,6 +1114,9 @@ def _passthrough_family(
         and not _own_reserves(src, names, focus)
     ):
         return "router", ["cow-settlement"]
+    # Sky DaiUsds: 1:1 converter through the Joins. Nothing sits here.
+    if {"daitousds", "usdstodai"} <= (declared | probe) and not _own_reserves(src, names, focus):
+        return "router", ["dai-usds-converter"]
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "router", ["passthrough-router"]
     if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
@@ -1283,12 +1286,14 @@ def _funds_at_risk_family(
     # `function frob` must not steal the family (live DssLitePsm flatten).
     if {"sellgem", "buygem"} <= (declared | probe | names):
         return "vault", ["maker-psm"]
-    # Maker Join adapters hold the gem/DAI. join+exit+cage — not Pot
-    # (no cage) and not DsrManager (pass-through, no cage).
+    # Maker / Sky Join adapters hold the gem/DAI/USDS. DaiJoin/GemJoin
+    # have cage; UsdsJoin (`0x3C0f…7FEB`) does not — require vat plus a
+    # join token, and do not steal Pot (dsr/chi/pie). DsrManager has no vat.
     if (
         {"join", "exit"} <= (declared | probe)
-        and {"cage"} & (declared | probe | names)
-        and {"vat", "gem", "dai"} & (declared | names)
+        and {"vat"} & (declared | names)
+        and not ({"dsr", "chi", "pie"} <= (declared | names))
+        and {"usds", "dai", "gem", "cage"} & (declared | probe | names)
     ):
         return "vault", ["maker-join"]
     # Vat verbs only. Dai (`0x6B17…1d0F`) also has `modifier auth` + `wards`
