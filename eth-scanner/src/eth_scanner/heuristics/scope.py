@@ -1531,6 +1531,11 @@ def _funds_at_risk_family(
         "proveoutcome", "decodeblockheaderlight"
     } & (declared | probe):
         return "bridge", ["rainbow-near-locker"]
+    # Linea native USDC L1 lock (`0x504A…88ce` / impl `0x66CF…Df00`).
+    # receiveFromOtherLayer + burnAllLockedUSDC — not TokenBridge
+    # (bridgeToken + completeBridging).
+    if {"receivefromotherlayer", "burnalllockedusdc"} <= (declared | probe):
+        return "bridge", ["linea-usdc-bridge"]
 
     if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
