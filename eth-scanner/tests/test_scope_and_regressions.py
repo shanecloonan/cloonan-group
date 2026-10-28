@@ -132,6 +132,13 @@ _ADDR = {
     "usds_like.sol": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
     "susds_like.sol": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
     "fluid_liquidity_proxy_like.sol": "0x52Aa899454998Be5b000Ad077a46Bbe360F4e497",
+    "fluid_liquidity_dummy_like.sol": "0xcc331daf69752bece3dc98dbc63eacd5092266a2",
+    "lido_withdrawal_queue_like.sol": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+    "rocket_deposit_pool_like.sol": "0x2cac916b2A963Bf162f076C0a8a4a8200BCFBfb4",
+    "renzo_restake_manager_like.sol": "0x74a09653A083691711cF8215a6ab074BB4e99ef5",
+    "liquity_borrower_ops_like.sol": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+    "maker_pot_like.sol": "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7",
+    "weth_gateway_like.sol": "0xBD7D6a9ad7865463DE44B05F04559f65e3B11704",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -177,6 +184,13 @@ LIVE_LIQUITY_TROVE = "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2"
 LIVE_USDS = "0xdC035D45d973E3EC169d2276DDab16f1e407384F"
 LIVE_SUSDS = "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD"
 LIVE_FLUID_LIQ = "0x52Aa899454998Be5b000Ad077a46Bbe360F4e497"
+LIVE_FLUID_DUMMY = "0xcc331daf69752bece3dc98dbc63eacd5092266a2"
+LIVE_LIDO_WQ = "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1"
+LIVE_ROCKET_DP = "0x2cac916b2A963Bf162f076C0a8a4a8200BCFBfb4"
+LIVE_RENZO_RM = "0x74a09653A083691711cF8215a6ab074BB4e99ef5"
+LIVE_LIQUITY_BO = "0x24179CD81c9e782A4096035f7eC97fB8B783e007"
+LIVE_MAKER_POT = "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7"
+LIVE_SPARK_WETH_GW = "0xBD7D6a9ad7865463DE44B05F04559f65e3B11704"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1141,6 +1155,13 @@ class Pass7LiveLocks(unittest.TestCase):
             "liquity_trove_like.sol": ("lending", "in-scope", "lane-b-queue"),
             "usds_like.sol": ("token", "demoted-token", "lane-a-cool"),
             "susds_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "fluid_liquidity_dummy_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "lido_withdrawal_queue_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "rocket_deposit_pool_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "renzo_restake_manager_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "liquity_borrower_ops_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "maker_pot_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "weth_gateway_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -1719,6 +1740,94 @@ class Pass11SiblingLeaksAndVenues(unittest.TestCase):
         r = _lane("curve_pool_like.sol")
         self.assertEqual(r.contract_class, "pool")
         self.assertEqual(r.bucket, "lane-b-queue")
+
+
+class Pass12FluidFacetsAndSiblingRoles(unittest.TestCase):
+    """Pass 12: Fluid dummy ABI, Lido queue wrap leak, Rocket depositEther call, venues."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_fluid_dummy_impl_is_lending(self):
+        src = (FIXTURES / "fluid_liquidity_dummy_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="FluidLiquidityDummyImpl"), try_slither=False)
+        self.assertEqual(ir.contract_class, "lending")
+        self.assertIn("fluid-liquidity", ir.scope_signals)
+        r = _lane("fluid_liquidity_dummy_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["fluid_liquidity_dummy_like.sol"], LIVE_FLUID_DUMMY)
+
+    def test_fluid_proxy_without_modules_is_still_false_keep(self):
+        src = (FIXTURES / "fluid_liquidity_proxy_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="FluidLiquidityProxy"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+
+    def test_lido_withdrawal_queue_is_staking_not_wrap(self):
+        src = (FIXTURES / "lido_withdrawal_queue_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="WithdrawalQueueERC721"), try_slither=False)
+        self.assertEqual(ir.contract_class, "staking")
+        self.assertIn("lido-withdrawal-queue", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "wrap-token")
+        r = _lane("lido_withdrawal_queue_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["lido_withdrawal_queue_like.sol"], LIVE_LIDO_WQ)
+
+    def test_rocket_deposit_pool_is_staking_not_bridge(self):
+        src = (FIXTURES / "rocket_deposit_pool_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="RocketDepositPool"), try_slither=False)
+        self.assertEqual(ir.contract_class, "staking")
+        self.assertIn("rocket-deposit-pool", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "bridge")
+        r = _lane("rocket_deposit_pool_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(_ADDR["rocket_deposit_pool_like.sol"], LIVE_ROCKET_DP)
+
+    def test_renzo_restake_manager_is_staking(self):
+        r = _lane("renzo_restake_manager_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        src = (FIXTURES / "renzo_restake_manager_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="RestakeManager"), try_slither=False)
+        self.assertIn("renzo-restake", ir.scope_signals)
+        self.assertEqual(_ADDR["renzo_restake_manager_like.sol"], LIVE_RENZO_RM)
+
+    def test_liquity_borrower_ops_is_lending(self):
+        r = _lane("liquity_borrower_ops_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        src = (FIXTURES / "liquity_borrower_ops_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="BorrowerOperations"), try_slither=False)
+        self.assertIn("liquity-borrower", ir.scope_signals)
+        self.assertEqual(_ADDR["liquity_borrower_ops_like.sol"], LIVE_LIQUITY_BO)
+
+    def test_maker_pot_is_vault(self):
+        r = _lane("maker_pot_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.scope, "in-scope")
+        src = (FIXTURES / "maker_pot_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Pot"), try_slither=False)
+        self.assertIn("maker-pot", ir.scope_signals)
+        self.assertEqual(_ADDR["maker_pot_like.sol"], LIVE_MAKER_POT)
+
+    def test_spark_weth_gateway_is_passthrough(self):
+        r = _lane("weth_gateway_like.sol")
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        src = (FIXTURES / "weth_gateway_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="WrappedTokenGatewayV3"), try_slither=False)
+        self.assertIn("weth-gateway", ir.scope_signals)
+        self.assertEqual(_ADDR["weth_gateway_like.sol"], LIVE_SPARK_WETH_GW)
+
+    def test_weeth_share_wrap_still_demotes(self):
+        r = _lane("weeth_like.sol")
+        self.assertEqual(r.contract_class, "wrap-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
