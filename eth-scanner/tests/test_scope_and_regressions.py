@@ -51,6 +51,7 @@ _ADDR = {
     "router_with_pool_interface.sol": "0x" + "db" * 20,
     "uni_v3_swaprouter_live_shape.json": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     "uni_v3_pool_live_shape.sol": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
+    "uni_v3_pool_live_shape.json": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -114,6 +115,24 @@ def _live_uni_v3_pool_fns() -> list[FunctionIR]:
         FunctionIR(name="burn", line=30, **custody),
         FunctionIR(name="flash", line=40, **custody),
         FunctionIR(name="collect", line=50, **custody),
+        FunctionIR(name="collectProtocol", line=60, **custody),
+    ]
+
+
+def _live_uni_v3_pool_extra_names() -> list[str]:
+    """Function names the live multi-file Etherscan blob contributes.
+
+    IERC20Minimal + IUniswapV3Pool + IUniswapV3SwapCallback are separate
+    verified files. After unpack, extra_names look ERC-20 shaped *and*
+    include uniswapV3SwapCallback / slot0 — the #28 false router demote.
+    """
+    return [
+        fn.name for fn in _live_uni_v3_pool_fns()
+    ] + [
+        "transfer", "approve", "transferFrom", "balanceOf", "allowance", "totalSupply",
+        "name", "symbol", "decimals",
+        "slot0", "liquidity", "token0", "token1",
+        "uniswapV3SwapCallback", "uniswapV3MintCallback", "uniswapV3FlashCallback",
     ]
 
 
@@ -397,28 +416,66 @@ class ScopeFilter(unittest.TestCase):
     def test_live_uni_v3_pool_ir_shape_stays_in_scope(self):
         """USDC/WETH 0.05% pool must stay in-scope. Prefer `pool`; custody keep is OK.
 
-        Live dry-run after #27 kept it (good) but tagged `custody` because
-        `Slot0 public override slot0` is not `function slot0(`.
+        After #28 the live address `0x88e6…5640` returned lane-a-cool / router
+        because the Etherscan blob includes IUniswapV3SwapCallback. Policy:
+        reserve AMM → lane-b-queue / pool. Prefer false keep.
         """
         fns = _live_uni_v3_pool_fns()
         src = (FIXTURES / "uni_v3_pool_live_shape.sol").read_text(encoding="utf-8")
-        extra = [fn.name for fn in fns] + [
-            "transfer", "approve", "transferFrom", "balanceOf", "allowance", "totalSupply",
-            "token0", "token1",
-        ]
+        extra = _live_uni_v3_pool_extra_names()
         d = classify_scope(source=src, functions=fns, extra_names=extra)
         self.assertEqual(d.scope, "in-scope")
         self.assertIn(d.contract_class, {"pool", "custody"})
         self.assertEqual(d.contract_class, "pool")
         self.assertNotEqual(d.contract_class, "router")
         self.assertFalse(d.scope in {"demoted-token", "demoted-passthrough"})
+        self.assertNotEqual(d.scope, "demoted-passthrough")
 
-        r = _lane("uni_v3_pool_live_shape.sol", tvl=50_000)
+        # Same movers + callback/IERC20 extra_names with empty source (live IR).
+        ir_only = classify_scope(source="", functions=fns, extra_names=extra)
+        self.assertEqual(ir_only.contract_class, "pool")
+        self.assertEqual(ir_only.scope, "in-scope")
+        self.assertNotEqual(ir_only.contract_class, "router")
+        self.assertFalse(ir_only.scope in {"demoted-token", "demoted-passthrough"})
+
+        r = run_lane_a(FunnelContext(
+            target=Target(address=LIVE_UNI_V3_POOL, has_code=True, tvl_usd=50_000),
+            artifact=_art(src),
+            ir=IRDocument(
+                functions=fns,
+                ir_confidence="high",
+                src_confidence="high",
+                language="solidity",
+                lift_tool="test",
+                contract_class=d.contract_class,
+                scope=d.scope,
+                scope_signals=list(d.signals),
+                function_names=extra,
+            ),
+            source_text=src,
+        ))
+        self.assertEqual(r.bucket, "lane-b-queue")
         self.assertEqual(r.scope, "in-scope")
         self.assertEqual(r.contract_class, "pool")
+        self.assertTrue(set(r.value_movers) >= {"swap", "mint", "burn", "flash", "collect", "collectProtocol"})
+        self.assertNotEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "router")
+
+        r_sol = _lane("uni_v3_pool_live_shape.sol", tvl=50_000)
+        self.assertEqual(r_sol.scope, "in-scope")
+        self.assertEqual(r_sol.contract_class, "pool")
+        self.assertEqual(r_sol.bucket, "lane-b-queue")
+        self.assertNotEqual(r_sol.contract_class, "router")
+        self.assertTrue(set(r_sol.value_movers) & {"swap", "mint", "flash", "collectProtocol"})
+
+    def test_live_uni_v3_pool_multifile_json_stays_pool(self):
+        r = _lane("uni_v3_pool_live_shape.json", tvl=50_000)
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.scope, "in-scope")
         self.assertEqual(r.bucket, "lane-b-queue")
         self.assertNotEqual(r.contract_class, "router")
-        self.assertTrue(set(r.value_movers) & {"swap", "mint", "flash"})
+        self.assertNotEqual(r.bucket, "lane-a-cool")
+        self.assertTrue(set(r.value_movers) & {"swap", "mint", "flash", "collectProtocol"})
 
     def test_steth_like_stays_staking(self):
         src = """pragma solidity ^0.8.20;

@@ -50,11 +50,28 @@ TOKEN_ADMIN_NAMES = frozenset({
 })
 TOKEN_ADMIN_PREFIXES = ("mint", "burn", "rescue", "recover")
 
-ROUTER_NAMES = frozenset({
+# Unique pass-through verbs. Shared AMM *callbacks* are not unique —
+# Uni V3 Pool *calls* uniswapV3SwapCallback; Uni V2 pair *calls* uniswapV2Call.
+UNIQUE_ROUTER_NAMES = frozenset({
     "exactinput", "exactinputsingle", "exactoutput", "exactoutputsingle",
-    "uniswapv3swapcallback",
     "swapexacttokensfortokens", "swapexactethfortokens", "swapexacttokensforeth",
-    "swaptokensforexacttokens", "unoswap", "clipperswap", "uniswapv2call",
+    "swaptokensforexacttokens", "unoswap", "clipperswap",
+})
+ROUTER_CALLBACK_NAMES = frozenset({
+    "uniswapv3swapcallback", "uniswapv2call",
+})
+# Union kept for callers / tests that still mention ROUTER_NAMES.
+ROUTER_NAMES = UNIQUE_ROUTER_NAMES | ROUTER_CALLBACK_NAMES
+# Custody AMM surface. mint+burn alone is token admin — need a reserve verb.
+POOL_MOVER_NAMES = frozenset({
+    "swap", "mint", "burn", "collect", "flash", "collectprotocol",
+    "getreserves", "add_liquidity", "remove_liquidity", "addliquidity",
+    "removeliquidity", "exchange", "skim",
+})
+POOL_RESERVE_VERBS = frozenset({
+    "swap", "flash", "collect", "collectprotocol", "getreserves",
+    "add_liquidity", "remove_liquidity", "addliquidity", "removeliquidity",
+    "exchange", "skim",
 })
 NFT_MARKET_NAMES = frozenset({
     "fulfillorder", "fulfillbasicorder", "fulfillavailableorders",
@@ -69,8 +86,11 @@ ESCROW_NAMES = frozenset({
 })
 
 _FN_NAME = re.compile(r"\bfunction\s+(\w+)\s*\(", re.I)
+# `Slot0 public override slot0` / `uint128 public override liquidity` — live
+# Uni V3 Pool storage. The old type-list + `public (\w+)` captured `override`.
 _PUBLIC_GETTER = re.compile(
-    r"\b(?:mapping\s*\([^;]*\)|uint\d*|u256|int\d*|bool|address|string|bytes\d*)\s+public\s+(\w+)",
+    r"\b(?:mapping\s*\([^;]*\)|uint\d*|u256|int\d*|bool|address|string|bytes\d*|\w+)\s+"
+    r"public\s+(?:(?:immutable|override|constant)\s+)*(\w+)",
     re.I,
 )
 # `abstract contract Foo is Bar {` — group 1 is contract|interface|library.
@@ -118,7 +138,7 @@ def classify_scope(
         {"deposit", "withdraw", "wrap", "unwrap"} & names and _weth_shape(src, names)
     )
 
-    family, family_signals = _funds_at_risk_family(src, names)
+    family, family_signals = _funds_at_risk_family(src, names, custody)
     if family:
         return ScopeDecision(
             contract_class=family,
@@ -142,7 +162,7 @@ def classify_scope(
 
     # Second-chance hybrid: ERC-20 shape plus a hold signal the first pass missed.
     if token_shaped:
-        hybrid, hybrid_signals = _hybrid_hold(src, names)
+        hybrid, hybrid_signals = _hybrid_hold(src, names, custody)
         if hybrid:
             return ScopeDecision(
                 contract_class=hybrid,
@@ -164,7 +184,10 @@ def classify_scope(
         # multi-file blob made the name set look token-shaped, so this keep
         # skipped pass-through demotion (bucket=lane-b-queue, class=custody).
         # Imported IERC20 on a router is not this contract holding funds.
-        passthru, pass_signals = _passthrough_family(src, names)
+        # Live Uni V3 Pool after #28 also looked ERC-20 shaped (IERC20Minimal
+        # in the blob) *and* `_is_router` fired on IUniswapV3SwapCallback —
+        # that is a keep (reserves), not a passthrough.
+        passthru, pass_signals = _passthrough_family(src, names, custody)
         if passthru:
             return ScopeDecision(
                 contract_class=passthru,
@@ -180,7 +203,7 @@ def classify_scope(
             promote=False,
         )
 
-    passthru, pass_signals = _passthrough_family(src, names)
+    passthru, pass_signals = _passthrough_family(src, names, custody)
     if passthru:
         return ScopeDecision(
             contract_class=passthru,
@@ -215,7 +238,8 @@ def classify_scope(
 
     if custody:
         # Last-chance pass-through: custody movers that are only router verbs.
-        if _is_router(src, names) and not _hold_signal(src, names, include_amm=False):
+        # Own reserves / pool-cluster (mint/collect/burn/swap/flash) stay in.
+        if _is_router(src, names, custody) and not _hold_signal(src, names, include_amm=False):
             return ScopeDecision(
                 contract_class="router",
                 scope="demoted-passthrough",
@@ -360,14 +384,88 @@ def _weth_shape(src: str, names: set[str]) -> bool:
     return bool(re.search(r"balanceOf\s*\[\s*msg\.sender\s*\]\s*\+|msg\.value", src))
 
 
-def _is_router(src: str, names: set[str]) -> bool:
-    if names & ROUTER_NAMES:
+def _probe_names(
+    src: str,
+    names: set[str],
+    custody: Optional[Iterable[str]] = None,
+) -> set[str]:
+    """Prefer this-contract movers / declared names over imported interfaces.
+
+    Live Uni V3 Pool + SwapRouter share a flattened Etherscan blob shape:
+    IERC20 + IUniswapV3Pool + callback ifaces. The global name set is the
+    union of every file. Custody movers and `contract` bodies are *this*
+    address. Fall back to the collected set only for IR-only (empty source).
+    """
+    movers = {str(n).lower() for n in (custody or []) if n}
+    if movers:
+        return movers
+    implemented = _contract_declared_names(src)
+    if implemented:
+        return implemented
+    return set(names)
+
+
+def _unique_router(
+    src: str,
+    names: set[str],
+    custody: Optional[Iterable[str]] = None,
+) -> bool:
+    """True when *this* contract is an exactInput-style pass-through."""
+    if _probe_names(src, names, custody) & UNIQUE_ROUTER_NAMES:
         return True
+    implemented = _contract_declared_names(src)
+    if implemented:
+        for kind, name, _body in _type_blocks(src):
+            if kind == "contract" and re.search(r"(SwapRouter|UniversalRouter)", name):
+                return True
+        search = _contract_bodies(src)
+    else:
+        search = src or ""
     return bool(re.search(
         r"\b(exactInput(Single)?|exactOutput(Single)?|swapExactTokensForTokens|"
         r"SwapRouter|UniversalRouter|unoswap|clipperSwap)\b",
-        src,
+        search,
     ))
+
+
+def _pool_cluster(
+    custody: Optional[Iterable[str]],
+    names: set[str],
+) -> bool:
+    """True when lifted movers look like a custody AMM, not token admin.
+
+    Live Uni V3 Pool movers: mint / collect / burn / swap / flash /
+    collectProtocol. mint+burn alone is USDC-style admin — require a
+    reserve verb. Do not use imported extra_names (SwapRouter blobs
+    include IUniswapV3Pool.swap/mint).
+    """
+    movers = {str(n).lower() for n in (custody or []) if n}
+    if not movers:
+        return False
+    hits = movers & POOL_MOVER_NAMES
+    return bool(hits & POOL_RESERVE_VERBS) and len(hits) >= 2
+
+
+def _is_router(
+    src: str,
+    names: set[str],
+    custody: Optional[Iterable[str]] = None,
+) -> bool:
+    """Pass-through swap router, not an AMM that *invokes* a callback.
+
+    After #28, `uniswapV3SwapCallback` in ROUTER_NAMES plus the live Pool
+    blob (IUniswapV3SwapCallback + `IUniswapV3SwapCallback(msg.sender)…`)
+    made `_is_router` true. Combined with `not _is_router` on the pool
+    family and `_hold_signal(include_amm=False)` on passthrough, the
+    USDC/WETH 0.05% pool (`0x88e6…5640`) demoted as `router`. Callback
+    names are shared; unique exactInput verbs are not.
+    """
+    if _pool_cluster(custody, names) or _own_reserves(src, names):
+        return False
+    if _unique_router(src, names, custody):
+        return True
+    probe = _probe_names(src, names, custody)
+    return bool(probe & ROUTER_CALLBACK_NAMES)
 
 
 def _is_nft_market(src: str, names: set[str]) -> bool:
@@ -426,50 +524,77 @@ def _hold_signal(src: str, names: set[str], *, include_amm: bool = True) -> bool
     return bool(re.search(pats, src))
 
 
-def _own_reserves(src: str, names: set[str]) -> bool:
-    """AMM reserve surface on *this* contract, not an imported pool interface.
-
-    A router file often embeds `function slot0` on IUniswapV3Pool. That is
-    not this contract holding reserves — `_is_router` gates the pool class.
-
-    Live Uni V3 *Pool* (`0x88e6…5640`) stores `Slot0 public override slot0`
-    and `uint128 public override liquidity`. Those are not `function slot0(`
-    so `_FN_NAME` / the old visibility regex missed them and the pool fell
-    through as generic `custody`. Prefer the pool tag; custody keep is OK.
-    """
-    if {"getreserves", "slot0", "reserve0", "reserve1"} & names:
-        return True
+def _reserve_storage(text: str) -> bool:
     if re.search(
         r"\b(struct\s+Slot0|Slot0\s+public\s+(?:override\s+)?slot0|"
         r"uint128\s+public\s+(?:override\s+)?liquidity)\b",
-        src,
+        text,
     ):
         return True
     return bool(re.search(
         r"\buint\d*\s+(?:public\s+|private\s+|internal\s+|override\s+)+(?:_?reserve[01]|liquidity)\b",
-        src,
+        text,
     ))
 
 
-def _passthrough_family(src: str, names: set[str]) -> tuple[str, list[str]]:
+def _own_reserves(src: str, names: set[str]) -> bool:
+    """AMM reserve surface on *this* contract, not an imported pool interface.
+
+    A router file often embeds `function slot0` on IUniswapV3Pool. That is
+    not this contract holding reserves. Do **not** treat imported `slot0`
+    in the global name set as own reserves — that is how SwapRouter extra
+    names looked like a pool after #27.
+
+    Live Uni V3 *Pool* (`0x88e6…5640`) stores `Slot0 public override slot0`
+    and `uint128 public override liquidity`. Those are not `function slot0(`
+    so `_FN_NAME` / the old visibility regex missed them. Prefer the pool
+    tag; custody keep is OK.
+    """
+    implemented = _contract_declared_names(src)
+    if implemented:
+        if {"getreserves", "slot0", "reserve0", "reserve1", "liquidity"} & implemented:
+            return True
+        return _reserve_storage(_contract_bodies(src))
+    # No contract blocks (IR-only / raw JSON). Do not trust `slot0` in the
+    # collected name set — SwapRouter extra_names include the pool iface.
+    # V2-shaped reserve0/getReserves in names is still a keep.
+    if {"reserve0", "reserve1", "getreserves"} & names:
+        return True
+    return _reserve_storage(src or "")
+
+
+def _passthrough_family(
+    src: str,
+    names: set[str],
+    custody: Optional[Iterable[str]] = None,
+) -> tuple[str, list[str]]:
     """Pass-through surfaces that do not hold third-party funds."""
     if _is_nft_market(src, names) and not _nft_escrow(src, names):
         return "nft-market", ["atomic-nft-market"]
-    if _is_router(src, names) and not _hold_signal(src, names, include_amm=False):
+    if _is_router(src, names, custody) and not _hold_signal(src, names, include_amm=False):
         return "router", ["passthrough-router"]
     return "", []
 
 
-def _hybrid_hold(src: str, names: set[str]) -> tuple[str, list[str]]:
+def _hybrid_hold(
+    src: str,
+    names: set[str],
+    custody: Optional[Iterable[str]] = None,
+) -> tuple[str, list[str]]:
     """Looser hold check used after ERC-20 shape so hybrids are not demoted."""
-    return _funds_at_risk_family(src, names)
+    return _funds_at_risk_family(src, names, custody)
 
 
-def _funds_at_risk_family(src: str, names: set[str]) -> tuple[str, list[str]]:
+def _funds_at_risk_family(
+    src: str,
+    names: set[str],
+    custody: Optional[Iterable[str]] = None,
+) -> tuple[str, list[str]]:
     """Most-specific venue that regularly holds or accounts third-party value.
 
     Flash-loan alone is not lending. A swap-router is not a pool. Prefer
     false keep when a real hold/share/reserve/stake signal is present.
+    Imported callback ifaces on a reserve AMM are a keep, not a router.
     """
     signals: list[str] = []
 
@@ -535,9 +660,16 @@ def _funds_at_risk_family(src: str, names: set[str]) -> tuple[str, list[str]]:
     curve = bool({"add_liquidity", "remove_liquidity", "exchange"} & names) or bool(
         re.search(r"\b(add_liquidity|remove_liquidity)\s*\(", src)
     )
-    has_swap = "swap" in names or bool(re.search(r"\bfunction\s+swap\s*\(", src))
-    if curve or (has_swap and _own_reserves(src, names) and not _is_router(src, names)):
-        return "pool", ["curve-pool"] if curve else ["amm-reserves"]
+    if curve:
+        return "pool", ["curve-pool"]
+    # Custody AMM movers beat imported callback-iface "router" names.
+    if _pool_cluster(custody, names):
+        return "pool", ["amm-pool-movers"]
+    has_swap = "swap" in _probe_names(src, names, custody) or bool(
+        re.search(r"\bfunction\s+swap\s*\(", _contract_bodies(src) or src)
+    )
+    if has_swap and _own_reserves(src, names) and not _unique_router(src, names, custody):
+        return "pool", ["amm-reserves"]
 
     # Ungated ETH piggy-bank: *this* contract withdraws address(this).balance
     # and is not WETH. Do not fire on a SwapRouter that imports IWETH9.withdraw
@@ -547,7 +679,7 @@ def _funds_at_risk_family(src: str, names: set[str]) -> tuple[str, list[str]]:
         "withdraw" in names
         and re.search(r"address\s*\(\s*this\s*\)\s*\.balance", src)
         and not _weth_shape(src, names)
-        and not _is_router(src, names)
+        and not _unique_router(src, names, custody)
         and (not implemented or "withdraw" in implemented)
     ):
         return "vault", ["eth-custody-withdraw"]
