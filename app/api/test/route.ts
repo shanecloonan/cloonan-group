@@ -6,6 +6,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { capabilityNote, fixtureCatalog, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
 import { loadDryRunStore } from "@/lib/eth-scanner/local-store";
 import { BUCKETS } from "@/lib/eth-scanner/receipt";
 
@@ -30,6 +31,9 @@ export async function GET(req: Request) {
   const bucket = url.searchParams.get("bucket");
   const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") || 80)));
   const sb = serviceClient();
+  const caps = scannerCapabilities();
+  const fixtures = fixtureCatalog();
+  const modeNote = capabilityNote(caps);
 
   if (!sb) {
     const local = loadDryRunStore();
@@ -45,14 +49,16 @@ export async function GET(req: Request) {
       : targets;
     return NextResponse.json({
       ok: true,
+      ...caps,
       dry_run: true,
       buckets: BUCKETS,
       counts,
       targets: filtered.slice(0, limit),
       results: results.slice(0, limit),
+      fixtures,
       note: local
-        ? "SUPABASE_SERVICE_ROLE_KEY unset — showing eth-scanner/work/dry-run-store.json. Download receipt is Markdown from work/receipts/ when present."
-        : "SUPABASE_SERVICE_ROLE_KEY unset — /test is read-only and empty. Lane A/B dry-run writes eth-scanner/work/ instead.",
+        ? `${modeNote} Showing eth-scanner/work/dry-run-store.json. Download receipt is Markdown from work/receipts/ when present.`
+        : `${modeNote} Queue is empty until you click Run (or use the CLI).`,
     });
   }
 
@@ -79,13 +85,15 @@ export async function GET(req: Request) {
     const missing = /does not exist|schema cache|relation/i.test(err);
     return NextResponse.json({
       ok: true,
-      dry_run: missing,
+      ...caps,
+      dry_run: missing || caps.dry_run,
       buckets: BUCKETS,
       counts: Object.fromEntries(BUCKETS.map((b) => [b, 0])),
       targets: [],
       results: [],
+      fixtures,
       note: missing
-        ? "eth_scan_* tables missing — apply infra/supabase/migrations/2026-10-27-eth-scanner-queue.sql"
+        ? "eth_scan_* tables missing — apply infra/supabase/migrations/2026-10-27-eth-scanner-queue.sql. Run still writes the local dry-run store."
         : err,
     });
   }
@@ -98,11 +106,13 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
+    ...caps,
     dry_run: false,
     buckets: BUCKETS,
     counts,
     targets,
     results: resultsRes.data ?? [],
-    note: "Read-only triage. Automation never stamps yes. Low IR stays in manual-review.",
+    fixtures,
+    note: `${modeNote} Automation never stamps yes. Low IR stays in manual-review.`,
   });
 }

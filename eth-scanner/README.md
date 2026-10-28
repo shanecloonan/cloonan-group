@@ -2,7 +2,7 @@
 
 Defensive static triage for Ethereum contracts. Automation emits **buckets**, never a human verdict. Heuristic flags are **leads**, never findings.
 
-Triage UI (read-only): **`/test`** on this site. Scanner runtime lives here, not on the public marketing pages.
+Triage UI: **`/test`** on this site (noindex, not in public nav). **Run** kicks Lane A for one address (or a local fixture). Scanner runtime is the Python CLI spawned by `POST /api/test/run`, not the public marketing pages.
 
 ## Hard rules
 
@@ -199,4 +199,11 @@ python -m eth_scanner lane-a --address 0x… --source path/to.sol --dry-run --no
 
 ### /test UI
 
-Read-only triage at **`/test`** (noindex, not in public nav). Each row has **Download .md**, which hits `GET /api/test/receipt?address=0x…` and returns `text/markdown` with `Content-Disposition: attachment`. When the service-role key is unset, the API serves the latest file under `eth-scanner/work/receipts/` if present, otherwise it rebuilds Markdown from `dry-run-store.json`.
+Triage at **`/test`** (noindex, not in public nav).
+
+- **Run** (primary) posts to `POST /api/test/run` with `{ address, fixture? }` and executes `python -m eth_scanner lane-a` for that target. Progress and the last bucket/heat/confidence show on the page; the table refreshes from `GET /api/test`.
+- Click a table row to load that address into the Run field.
+- Optional **local fixture** uses a whitelisted file under `eth-scanner/tests/fixtures/` (`--source`). No arbitrary paths.
+- Each row still has **Download .md** → `GET /api/test/receipt?address=0x…` (`text/markdown` attachment).
+
+**Honesty:** live persist needs `SUPABASE_SERVICE_ROLE_KEY`; live ingest needs `ETHERSCAN_API_KEYS`. If those are unset, Run is still a dry-run: stub decompile (usually `manual-review`) or a local fixture, writing `eth-scanner/work/`. The page chips say which mode you are in. When the service-role key is unset, receipt download serves the latest file under `eth-scanner/work/receipts/` if present, otherwise it rebuilds Markdown from `dry-run-store.json`.
