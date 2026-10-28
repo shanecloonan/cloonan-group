@@ -256,7 +256,19 @@ def classify_scope(
     src = source or ""
     fns = list(functions or [])
     names = _collect_names(src, fns, extra_names)
-    roles = {(getattr(fn, "name", "") or "").lower(): (getattr(fn, "role", "") or "") for fn in fns}
+    # Same-file sibling IR roles (wrap-unwrap / admin / staking) must not
+    # overwrite this contract's role for a shared name like deposit.
+    role_fns = fns
+    if contract_name:
+        declared_roles = _contract_declared_names(src, contract_name)
+        if declared_roles:
+            focused_role_fns = [
+                fn for fn in fns
+                if (getattr(fn, "name", "") or "").lower() in declared_roles
+            ]
+            if focused_role_fns:
+                role_fns = focused_role_fns
+    roles = {(getattr(fn, "name", "") or "").lower(): (getattr(fn, "role", "") or "") for fn in role_fns}
     custody = [
         (getattr(fn, "name", "") or "").lower()
         for fn in fns
@@ -1082,6 +1094,16 @@ def _passthrough_family(
     """Pass-through surfaces that do not hold third-party funds."""
     if _is_nft_market(src, names) and not _nft_escrow(src, names):
         return "nft-market", ["atomic-nft-market"]
+    # Aave / Spark WrappedTokenGateway: wrap+supply / unwrap+withdraw.
+    # ETH does not sit here — it is forwarded to the pool.
+    declared = _this_or_names(src, names, focus)
+    probe = _probe_names(src, names, custody, focus)
+    if (
+        {"depositeth", "borroweth", "repayeth"} <= (declared | probe)
+        and {"getwethaddress", "withdraweth"} & (declared | probe | names)
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["weth-gateway"]
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "router", ["passthrough-router"]
     if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
@@ -1148,8 +1170,12 @@ def _is_share_wrap(
 
     probe = _probe_names(src, names, custody, focus) | _this_or_names(src, names, focus)
     movers = {str(n).lower() for n in (custody or []) if n}
-    has_wrap = bool(_SHARE_WRAP_MOVERS & (probe | names | movers))
-    rate = bool(SHARE_WRAP_NAMES & (declared | names)) or bool(
+    # Global names include imported IWstETH.unwrap / getWstETHByStETH on
+    # Lido WithdrawalQueue — only *this* contract's wrap/rate counts.
+    wrap_pool = probe | movers | (declared if declared else set())
+    has_wrap = bool(_SHARE_WRAP_MOVERS & wrap_pool)
+    rate_pool = declared if declared else names
+    rate = bool(SHARE_WRAP_NAMES & rate_pool) or bool(
         _SHARE_WRAP_RATE_RX.search(_family_search(src, focus))
     )
     if has_wrap and rate:
@@ -1251,6 +1277,18 @@ def _funds_at_risk_family(
     ))
     if maker:
         return "maker", ["maker-vat/wards"]
+    # Sky / Maker Pot: DSR pie accounting. join/exit hold DAI in Vat.
+    if {"join", "exit"} <= (declared | probe) and {"dsr", "chi", "pie"} <= (declared | names):
+        return "vault", ["maker-pot"]
+    # Fluid Liquidity dummy / user module: operate is supply+borrow+withdraw.
+    # Etherscan Implementation is DummyImpl (ABI surface); money sits on the proxy.
+    if {"operate", "operateonbehalfof"} <= (declared | names) and bool(
+        re.search(
+            r"\b(supplyAmount_|borrowAmount_|updateUserBorrowConfigs|FluidLiquidity)\b",
+            _family_search(src, focus),
+        )
+    ):
+        return "lending", ["fluid-liquidity"]
 
     if (probe | declared | (set() if movers else names)) & BRIDGE_NAMES or re.search(
         r"\b(lzReceive|finalizeWithdrawalTransaction\w*|proveWithdrawalTransaction\w*|"
@@ -1264,7 +1302,7 @@ def _funds_at_risk_family(
         r"finalizeWithdrawETH|finalizeWithdrawERC20|"
         r"bridgeETH\w*|bridgeERC20\w*|"
         r"createRetryableTicket|unsafeCreateRetryableTicket|depositEtherFor|"
-        r"lockTokens|exitTokens|depositEther|"
+        r"lockTokens|exitTokens|function\s+depositEther|"
         r"relayMessageWithProof|depositWithMessage|"
         r"requestL2Transaction|bridgehubRequestL2Transaction|finalizeEthWithdrawal|"
         r"receiveMessage|_processMessageFromChild)\b",
@@ -1338,9 +1376,14 @@ def _funds_at_risk_family(
     join_exit = bool({"joinpool", "exitpool"} & here) or bool(
         src_rx and re.search(r"\b(joinPool|exitPool)\b", lending_search or src)
     )
-    if lending_ix or compound or comet or (
+    liquity_bo = bool(
+        {"opentrove", "adjusttrove", "withdrawcoll", "addcoll"} & (declared | probe | here)
+    )
+    if lending_ix or compound or comet or liquity_bo or (
         flash and (aave_supply or "deposit" in here) and not join_exit
     ):
+        if liquity_bo and not lending_ix:
+            return "lending", ["liquity-borrower"]
         if comet and not lending_ix:
             return "lending", ["compound-comet"]
         if compound and not lending_ix:
@@ -1440,19 +1483,37 @@ def _funds_at_risk_family(
     rocket = bool(ROCKET_RETH_NAMES & declared) and bool(
         {"burn", "depositexcess"} & (declared | probe)
     )
+    rocket_dp = bool({"deposit"} & (declared | probe)) and bool(
+        {"assigndeposits", "receivevaultwithdrawaleth", "recycleliquidatedstake"}
+        & (declared | names)
+    )
+    # Lido WithdrawalQueue holds unstETH claims — not a wstETH wrap.
+    lido_wq = bool({"requestwithdrawals", "requestwithdrawal"} & (declared | probe | names)) and bool(
+        {"claimwithdrawals", "finalize", "_enqueue", "_claim"} & (declared | names)
+    )
+    # Renzo RestakeManager holds collaterals for ezETH.
+    renzo = bool({"depositeth", "deposit"} & (declared | probe)) and bool(
+        {"ezeth", "operatordelegator", "renzooracle"} & (declared | names)
+    )
     swell = bool({"deposit", "depositwithreferral"} & (declared | probe)) and bool(
         SWELL_LST_NAMES & (declared | names)
     )
     synth_rewards = bool({"deposit", "withdraw"} <= (declared | probe | names)) and bool(
         {"earned", "getreward", "rewardpertoken"} & (declared | probe | names)
     )
-    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or swell or synth_rewards or gauge:
+    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or rocket_dp or lido_wq or renzo or swell or synth_rewards or gauge:
         if eigen:
             return "staking", ["eigenlayer"]
         if lido:
             return "staking", ["lido-pooled-eth"]
         if rocket:
             return "staking", ["rocket-reth"]
+        if rocket_dp:
+            return "staking", ["rocket-deposit-pool"]
+        if lido_wq:
+            return "staking", ["lido-withdrawal-queue"]
+        if renzo:
+            return "staking", ["renzo-restake"]
         if swell:
             return "staking", ["swell-lst"]
         if convex:
