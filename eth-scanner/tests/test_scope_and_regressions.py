@@ -49,9 +49,13 @@ _ADDR = {
     "nft_escrow_market_like.sol": "0x" + "d9" * 20,
     "flash_adapter_like.sol": "0x" + "da" * 20,
     "router_with_pool_interface.sol": "0x" + "db" * 20,
+    "uni_v3_swaprouter_live_shape.json": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "uni_v3_pool_live_shape.sol": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+LIVE_SWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+LIVE_UNI_V3_POOL = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -65,6 +69,51 @@ def _live_usdc_fns() -> list[FunctionIR]:
         FunctionIR(name="mint", line=40, **admin),
         FunctionIR(name="burn", line=50, **admin),
         FunctionIR(name="rescueERC20", line=60, **admin),
+    ]
+
+
+def _live_swap_router_fns() -> list[FunctionIR]:
+    """Movers from the live SwapRouter dry-run after PR #27."""
+    custody = dict(
+        visibility="external", is_value_mover=True, exposed=True,
+        role="custody", auth_heuristic="PRESENT",
+    )
+    return [
+        FunctionIR(name="exactInput", line=10, **custody),
+        FunctionIR(name="exactOutput", line=20, **custody),
+        FunctionIR(name="uniswapV3SwapCallback", line=30, **custody),
+        FunctionIR(name="unwrapWETH9", line=40, **custody),
+    ]
+
+
+def _live_swap_router_extra_names() -> list[str]:
+    """Function names the live multi-file Etherscan blob contributes.
+
+    IERC20 + IUniswapV3Pool + IWETH9 are separate verified files. After
+    unpack, extra_names look ERC-20 shaped and include slot0 / withdraw.
+    """
+    return [
+        fn.name for fn in _live_swap_router_fns()
+    ] + [
+        "transfer", "approve", "transferFrom", "balanceOf", "allowance", "totalSupply",
+        "name", "symbol", "decimals",
+        "slot0", "liquidity", "swap", "mint", "burn", "flash",
+        "deposit", "withdraw", "refundETH", "sweepToken",
+        "exactInputSingle", "exactOutputSingle",
+    ]
+
+
+def _live_uni_v3_pool_fns() -> list[FunctionIR]:
+    custody = dict(
+        visibility="external", is_value_mover=True, exposed=True,
+        role="custody", auth_heuristic="PRESENT",
+    )
+    return [
+        FunctionIR(name="swap", line=10, **custody),
+        FunctionIR(name="mint", line=20, **custody),
+        FunctionIR(name="burn", line=30, **custody),
+        FunctionIR(name="flash", line=40, **custody),
+        FunctionIR(name="collect", line=50, **custody),
     ]
 
 
@@ -270,6 +319,120 @@ class ScopeFilter(unittest.TestCase):
         self.assertEqual(r.contract_class, "router")
         self.assertEqual(r.scope, "demoted-passthrough")
         self.assertEqual(r.bucket, "lane-a-cool")
+
+    def test_live_swap_router_ir_shape_demotes_passthrough(self):
+        """Would have caught the live SwapRouter miss after #27.
+
+        Address `0xE592427A0AEce92De3Edee1F18E0157C05861564` returned
+        bucket=lane-b-queue / class=custody because the Etherscan multi-file
+        blob contributed IERC20 names. Policy: pass-through → cool / router.
+        """
+        fns = _live_swap_router_fns()
+        extra = _live_swap_router_extra_names()
+        src = (FIXTURES / "uni_v3_swaprouter_live_shape.json").read_text(encoding="utf-8")
+        # Flattened-like source still embeds IERC20 + pool iface + refundETH.
+        flat = (
+            "interface IERC20 { function transfer(address,uint256) external returns (bool); "
+            "function approve(address,uint256) external returns (bool); "
+            "function transferFrom(address,address,uint256) external returns (bool); "
+            "function balanceOf(address) external view returns (uint256); "
+            "function allowance(address,address) external view returns (uint256); "
+            "function totalSupply() external view returns (uint256); }\n"
+            "interface IUniswapV3Pool { function slot0() external view returns (uint160); "
+            "function swap(address,bool,int256,uint160,bytes calldata) external; }\n"
+            "interface IWETH9 { function deposit() external payable; function withdraw(uint256) external; }\n"
+            "abstract contract PeripheryPayments {\n"
+            "    function unwrapWETH9(uint256 amountMinimum, address recipient) public payable {}\n"
+            "    function refundETH() external payable { if (address(this).balance > 0) { recipient; } }\n"
+            "}\n"
+            "contract SwapRouter is PeripheryPayments {\n"
+            "    function exactInput(uint256 amountIn, address recipient) external payable returns (uint256) { return amountIn; }\n"
+            "    function exactOutput(uint256 amountOut, address recipient) external payable returns (uint256) { return amountOut; }\n"
+            "    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external {}\n"
+            "}\n"
+        )
+        d = classify_scope(source=flat, functions=fns, extra_names=extra)
+        self.assertEqual(d.contract_class, "router")
+        self.assertEqual(d.scope, "demoted-passthrough")
+        self.assertFalse(d.promote)
+        self.assertNotEqual(d.contract_class, "custody")
+        self.assertNotEqual(d.scope, "in-scope")
+
+        # Same movers + IERC20 extra_names with empty source (USDC-style IR shape).
+        ir_only = classify_scope(source="", functions=fns, extra_names=extra)
+        self.assertEqual(ir_only.contract_class, "router")
+        self.assertEqual(ir_only.scope, "demoted-passthrough")
+        self.assertIn("imported-erc20-on-passthrough", ir_only.signals)
+
+        r = run_lane_a(FunnelContext(
+            target=Target(address=LIVE_SWAP_ROUTER, has_code=True, tvl_usd=9_999_999),
+            artifact=_art(src),
+            ir=IRDocument(
+                functions=fns,
+                ir_confidence="high",
+                src_confidence="high",
+                language="solidity",
+                lift_tool="test",
+                contract_class=d.contract_class,
+                scope=d.scope,
+                scope_signals=list(d.signals),
+                function_names=extra,
+            ),
+            source_text=flat,
+        ))
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(set(r.value_movers), {"exactInput", "exactOutput", "uniswapV3SwapCallback", "unwrapWETH9"})
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+
+    def test_live_swap_router_multifile_json_demoted(self):
+        r = _lane("uni_v3_swaprouter_live_shape.json", tvl=9_999_999)
+        self.assertEqual(r.contract_class, "router")
+        self.assertEqual(r.scope, "demoted-passthrough")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"exactInput", "exactOutput", "uniswapV3SwapCallback", "unwrapWETH9"})
+
+    def test_live_uni_v3_pool_ir_shape_stays_in_scope(self):
+        """USDC/WETH 0.05% pool must stay in-scope. Prefer `pool`; custody keep is OK.
+
+        Live dry-run after #27 kept it (good) but tagged `custody` because
+        `Slot0 public override slot0` is not `function slot0(`.
+        """
+        fns = _live_uni_v3_pool_fns()
+        src = (FIXTURES / "uni_v3_pool_live_shape.sol").read_text(encoding="utf-8")
+        extra = [fn.name for fn in fns] + [
+            "transfer", "approve", "transferFrom", "balanceOf", "allowance", "totalSupply",
+            "token0", "token1",
+        ]
+        d = classify_scope(source=src, functions=fns, extra_names=extra)
+        self.assertEqual(d.scope, "in-scope")
+        self.assertIn(d.contract_class, {"pool", "custody"})
+        self.assertEqual(d.contract_class, "pool")
+        self.assertNotEqual(d.contract_class, "router")
+        self.assertFalse(d.scope in {"demoted-token", "demoted-passthrough"})
+
+        r = _lane("uni_v3_pool_live_shape.sol", tvl=50_000)
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.contract_class, "router")
+        self.assertTrue(set(r.value_movers) & {"swap", "mint", "flash"})
+
+    def test_steth_like_stays_staking(self):
+        src = """pragma solidity ^0.8.20;
+contract LidoStETH {
+    function submit(address referral) external payable returns (uint256) { referral; return msg.value; }
+    function getPooledEthByShares(uint256 shares) external view returns (uint256) { return shares; }
+    function getSharesByPooledEth(uint256 ethAmount) external view returns (uint256) { return ethAmount; }
+    function withdraw(uint256 amount) external { amount; }
+}
+"""
+        d = classify_scope(source=src, functions=normalize(_art(src), try_slither=False).functions)
+        self.assertEqual(d.contract_class, "staking")
+        self.assertEqual(d.scope, "in-scope")
+        self.assertTrue(d.promote)
 
     def test_open_vault_is_eth_custody_vault(self):
         r = _lane("open_vault.sol")

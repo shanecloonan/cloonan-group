@@ -1,6 +1,6 @@
 [project]
 name = "eth-scanner"
-version = "0.3.0"
+version = "0.3.1"
 description = "Ethereum-only defensive invariant scanner (Lane A/B). Buckets, never verdicts."
 requires-python = ">=3.10"
 readme = "README.md"
