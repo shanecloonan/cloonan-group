@@ -88,6 +88,13 @@ BRIDGE_NAMES = frozenset({
 })
 SHARE_WRAP_NAMES = frozenset({
     "getwstethbysteth", "getstethbywsteth", "stethpertoken", "tokenspersteth",
+    # weETH (`0xCd5f…b7ee`) wrap of eETH — same pattern as wstETH/stETH.
+    "getweethbyeeth", "geteethbyweeth",
+})
+# DSS token transfer aliases (Dai `move`/`push`/`pull`). Not Vat verbs.
+DSS_TOKEN_ALIASES = frozenset({"move", "push", "pull"})
+VAT_VERBS = frozenset({
+    "frob", "flux", "suck", "grab", "heal", "fold", "slip",
 })
 PENDLE_MARKET_NAMES = frozenset({
     "swapexactptforsy", "swapexactsyforpt", "swapsyforexactpt",
@@ -245,6 +252,15 @@ def classify_scope(
                 signals=["hybrid-token+%s" % hybrid] + hybrid_signals,
                 promote=hybrid in FUNDS_AT_RISK_CLASSES,
             )
+        # Live Dai (`0x6B17…1d0F`) is a DSS ERC-20: wards + auth + move/push/pull.
+        # Those used to fire maker via the auth+wards fallback. Vat has frob.
+        if _is_dss_token(src, names, contract_name):
+            return ScopeDecision(
+                contract_class="token",
+                scope="demoted-token",
+                signals=["dss-token"],
+                promote=False,
+            )
         if not custody or token_admin_only or wrap_only:
             klass = "wrap-token" if (wrap or wrap_only) else "token"
             return ScopeDecision(
@@ -311,6 +327,16 @@ def classify_scope(
             promote=False,
         )
 
+    # Diamond loupe / EIP-2535 proxy whose facet files are not in the blob.
+    # Prefer false keep — Do Not Auto-Dismiss a possible custody venue.
+    if _diamond_loupe_without_venue(src, names, contract_name):
+        return ScopeDecision(
+            contract_class="custody",
+            scope="in-scope",
+            signals=["diamond-facets-missing"],
+            promote=False,
+        )
+
     if custody:
         # Last-chance pass-through: custody movers that are only router verbs.
         # Own reserves / pool-cluster (mint/collect/burn/swap/flash) stay in.
@@ -341,6 +367,14 @@ def classify_scope(
     if not names and not src.strip():
         return ScopeDecision(contract_class="unknown", scope="unknown", signals=["empty"], promote=False)
 
+    if _diamond_loupe_without_venue(src, names, contract_name):
+        return ScopeDecision(
+            contract_class="custody",
+            scope="in-scope",
+            signals=["diamond-facets-missing"],
+            promote=False,
+        )
+
     return ScopeDecision(
         contract_class="utility",
         scope="utility",
@@ -358,7 +392,7 @@ def _is_token_admin(name: str) -> bool:
     n = (name or "").lower()
     if not n:
         return False
-    if n in TOKEN_ADMIN_NAMES:
+    if n in TOKEN_ADMIN_NAMES or n in DSS_TOKEN_ALIASES:
         return True
     return any(n.startswith(p) for p in TOKEN_ADMIN_PREFIXES)
 
@@ -593,6 +627,68 @@ def _diamond_incomplete(
         }
     )
     return bool(extra & venue) or len(fns) <= 8
+
+
+def _venue_verbs() -> set[str]:
+    return (
+        UNIQUE_ROUTER_NAMES
+        | PENDLE_MARKET_NAMES
+        | GMX_NAMES
+        | BRIDGE_NAMES
+        | EIGEN_NAMES
+        | COMET_NAMES
+        | CONVEX_NAMES
+        | POOL_RESERVE_VERBS
+        | VAT_VERBS
+        | {
+            "deposit", "withdraw", "redeem", "borrow", "repay", "stake",
+            "unstake", "supply", "mint", "burn", "swap", "addliquidity",
+        }
+    )
+
+
+def _diamond_loupe_without_venue(
+    src: str,
+    names: set[str],
+    _focus: Optional[str] = None,
+) -> bool:
+    """True when the blob is a diamond/loupe and no facet venue verbs are visible.
+
+    ContractName may be Diamond / PendleRouterV4 / LiFi. Action* / vault
+    facets are often a different verified address. Prefer false keep —
+    do not cool-archive a possible custody diamond as utility.
+    Unique-router names (PendleRouter, exactInput) are handled earlier.
+    """
+    blocks = [(k, n, b) for k, n, b in _type_blocks(src) if k == "contract"]
+    fns: set[str] = set()
+    diamondish = False
+    for _k, name, body in blocks:
+        fns.update(n.lower() for n in _FN_NAME.findall(body))
+        if _ident_match(name, "Diamond") or re.search(r"Diamond$", name or ""):
+            diamondish = True
+        if re.search(r"\bdelegatecall\b", body) and re.search(r"\bfallback\b", body):
+            diamondish = True
+    if fns & _DIAMOND_NAMES:
+        diamondish = True
+    if not diamondish and not (names & _DIAMOND_NAMES):
+        return False
+    if not diamondish:
+        diamondish = bool(re.search(r"\bdelegatecall\b", src) and re.search(r"\bfallback\b", src))
+    if not diamondish:
+        return False
+    pool = fns or set(names)
+    return not bool(pool & _venue_verbs())
+
+
+def _is_dss_token(src: str, names: set[str], focus: Optional[str] = None) -> bool:
+    """Dai-like DSS ERC-20: wards + auth, no Vat verbs (frob/flux/…)."""
+    declared = _contract_declared_names(src, focus)
+    pool = declared if declared else names
+    if VAT_VERBS & pool:
+        return False
+    if re.search(r"\bfunction\s+frob\s*\(", src):
+        return False
+    return bool(re.search(r"\bmodifier\s+auth\b", src)) and bool(re.search(r"\bwards\s*\[", src))
 
 
 def _focused_blocks(src: str, focus: Optional[str]) -> list[tuple[str, str, str]]:
@@ -935,7 +1031,8 @@ def _is_share_wrap(
     if not ({"wrap", "unwrap"} & probe or {"wrap", "unwrap"} & names):
         return False
     if SHARE_WRAP_NAMES & names or bool(re.search(
-        r"\b(getWstETHByStETH|getStETHByWstETH|stEthPerToken|tokensPerStEth)\b",
+        r"\b(getWstETHByStETH|getStETHByWstETH|stEthPerToken|tokensPerStEth|"
+        r"getWeETHByeETH|getEETHByWeETH)\b",
         src,
     )):
         # Real Lido stETH implements submit + getPooledEthByShares here.
@@ -1006,9 +1103,12 @@ def _funds_at_risk_family(
         _contract_bodies(src) if _contract_declared_names(src) else src
     )
 
-    maker = bool({"frob", "flux", "suck", "grab", "heal", "fold", "slip"} & (declared | probe)) or (
-        bool(re.search(r"\bmodifier\s+auth\b", src)) and bool(re.search(r"\bwards\s*\[", src))
-    )
+    # Vat verbs only. Dai (`0x6B17…1d0F`) also has `modifier auth` + `wards`
+    # and used to win as maker. Prefer false keep for a real Vat (has frob).
+    maker = bool(VAT_VERBS & (declared | probe)) or bool(re.search(
+        r"\bfunction\s+(frob|flux|suck|grab|heal|fold|slip)\s*\(",
+        _contract_bodies(src, focus) or src,
+    ))
     if maker:
         return "maker", ["maker-vat/wards"]
 

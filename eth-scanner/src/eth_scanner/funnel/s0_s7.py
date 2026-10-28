@@ -219,12 +219,16 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
     if not movers:
         # Live Eigen DelegationManager (`0x3905…f37A`) was a funds-at-risk
         # family with zero lifted movers → human-no-candidate. Prefer keep.
-        if scope.contract_class in FUNDS_AT_RISK_CLASSES:
+        if (
+            scope.contract_class in FUNDS_AT_RISK_CLASSES
+            or "diamond-facets-missing" in scope.signals
+        ):
             traces.append(_trace(
                 "S4", "continue",
                 "in-scope %s with no lifted movers — prefer keep (Do Not Auto-Dismiss)"
                 % scope.contract_class,
                 contract_class=scope.contract_class,
+                signals=scope.signals,
                 erc20_standard=erc20_leads,
             ))
         elif ir_conf == "high" and src_conf == "high":

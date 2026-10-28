@@ -1,0 +1,11 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/Diamond.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/// Diamond loupe. ContractName=Diamond misses the swap facet unless we keep siblings.\n/// This venue is a pass-through router — still cool. Fixture only — not a finding.\ncontract Diamond {\n    mapping(bytes4 => address) public facets;\n    fallback() external payable {\n        address f = facets[msg.sig];\n        assembly { let ok := delegatecall(gas(), f, 0, calldatasize(), 0, 0) }\n    }\n    function diamondCut(address facet, bytes4[] calldata selectors) external {\n        for (uint256 i = 0; i < selectors.length; i++) { facets[selectors[i]] = facet; }\n    }\n    function facetAddresses() external view returns (address[] memory) {\n        address[] memory out; return out;\n    }\n}\n"
+    },
+    "contracts/facets/SwapFacet.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/// LiFi / aggregator-shaped diamond facet. Pass-through — not reserves.\ncontract SwapFacet {\n    function exactInput(bytes calldata path, uint256 amountIn) external payable returns (uint256) {\n        path; return amountIn;\n    }\n    function exactInputSingle(address tokenIn, address tokenOut, uint256 amountIn) external payable returns (uint256) {\n        tokenIn; tokenOut; return amountIn;\n    }\n    function swapTokensGeneric(address from, address to, uint256 amount) external { from; to; amount; }\n}\n"
+    }
+  }
+}
