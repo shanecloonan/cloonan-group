@@ -1777,6 +1777,12 @@ def _funds_at_risk_family(
     ):
         return "vault", ["gmx-glp-vault"]
 
+    # Curve VotingEscrow (veCRV `0x5f3b…e2A2`, veFXS `0xc841…5b0`).
+    # Locked tokens sit here. ERC-20 surface used to demote as token.
+    # create_lock + increase_unlock_time — not StakeDAO FxsLocker createLock.
+    if {"create_lock", "increase_unlock_time"} <= (declared | probe):
+        return "staking", ["voting-escrow"]
+
     staking_ix = bool({"stake", "unstake", "getreward"} & (declared | probe)) or bool(
         re.search(
             r"\b(function\s+stake|function\s+unstake|function\s+getReward|stakingToken)\b",

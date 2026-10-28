@@ -209,6 +209,7 @@ _ADDR = {
     "aztec_rollup_like.sol": "0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455",
     "rainbow_near_locker_like.sol": "0x23Ddd3e3692d1861Ed57EDE224608875809e127f",
     "tokemak_eth_pool_like.sol": "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36",
+    "voting_escrow_like.vy": "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -383,6 +384,9 @@ LIVE_AZTEC_IMPL = "0x7d657Ddcf7e2A5fD118dC8A6dDc3dC308AdC2728"
 LIVE_RAINBOW_NEAR = "0x23Ddd3e3692d1861Ed57EDE224608875809e127f"
 LIVE_TOKEMAK_ETH = "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36"
 LIVE_TOKEMAK_IMPL = "0xb104A7fA1041168556218DDb40Fe2516F88246d5"
+LIVE_VECRV = "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2"
+LIVE_VEFXS = "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0"
+LIVE_STAKEDAO_FXS_LOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -3140,6 +3144,55 @@ class Pass27DebridgeAztecRainbowTokemak(unittest.TestCase):
         self.assertEqual(_lane("idle_token_like.sol").contract_class, "vault")
         self.assertEqual(_lane("agglayer_bridge_like.sol").contract_class, "bridge")
         self.assertEqual(_lane("origin_oeth_vault_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass28VotingEscrow(unittest.TestCase):
+    """Pass 28: Curve VotingEscrow (veCRV / veFXS). New hunt."""
+
+    def test_voting_escrow_is_staking_not_token(self):
+        src = (FIXTURES / "voting_escrow_like.vy").read_text(encoding="utf-8")
+        ir = normalize(_art(src, language="vyper", contract_name="Vyper_contract"), try_slither=False)
+        self.assertEqual(ir.contract_class, "staking")
+        self.assertIn("voting-escrow", ir.scope_signals)
+        self.assertNotIn("erc20-interface", " ".join(ir.scope_signals))
+        r = _lane("voting_escrow_like.vy")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["voting_escrow_like.vy"], LIVE_VECRV)
+        self.assertEqual(LIVE_VEFXS.lower()[0:6], "0xc841")
+
+    def test_stakedao_fxs_locker_stays_custody(self):
+        src = """
+        contract FxsLocker {
+            function createLock(uint256 value, uint256 unlockTime) external { value; unlockTime; }
+            function increaseUnlockTime(uint256 unlockTime) external { unlockTime; }
+            function claimFXSRewards(address recipient) external { recipient; }
+            function release(address recipient) external { recipient; }
+            function execute(address to, uint256 value, bytes calldata data) external returns (bool, bytes memory) {
+                to; value; data; return (true, "");
+            }
+        }
+        """
+        ir = normalize(_art(src, contract_name="FxsLocker"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        self.assertNotIn("voting-escrow", ir.scope_signals)
+        self.assertEqual(LIVE_STAKEDAO_FXS_LOCKER.lower()[0:6], "0xcd3a")
+
+    def test_pass27_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("debridge_gate_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("aztec_rollup_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("rainbow_near_locker_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("tokemak_eth_pool_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("idle_token_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("agglayer_bridge_like.sol").contract_class, "bridge")
         self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
         self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
