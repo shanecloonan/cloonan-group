@@ -1,0 +1,11 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/Diamond.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/// Thin diamond. ContractName=Diamond misses facet files unless we prefer false keep.\ncontract Diamond {\n    mapping(bytes4 => address) public facets;\n    fallback() external payable {\n        address f = facets[msg.sig];\n        assembly { let ok := delegatecall(gas(), f, 0, calldatasize(), 0, 0) }\n    }\n    function diamondCut(address facet, bytes4[] calldata selectors) external {\n        for (uint256 i = 0; i < selectors.length; i++) { facets[selectors[i]] = facet; }\n    }\n    function facetAddresses() external view returns (address[] memory) {\n        address[] memory out; return out;\n    }\n}\n"
+    },
+    "contracts/facets/VaultFacet.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\ninterface IERC20D { function transferFrom(address, address, uint256) external returns (bool); }\ncontract VaultFacet {\n    IERC20D public token;\n    function deposit(uint256 amount) external { token.transferFrom(msg.sender, address(this), amount); }\n    function withdraw(uint256 amount) external { amount; }\n    function convertToShares(uint256 assets) public view returns (uint256) { return assets; }\n    function convertToAssets(uint256 shares) public view returns (uint256) { return shares; }\n    function totalAssets() public view returns (uint256) { return 1; }\n}\n"
+    }
+  }
+}

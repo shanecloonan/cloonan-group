@@ -21,7 +21,16 @@ from typing import Any, Optional
 
 from eth_scanner.heuristics.invariant_pass import run_scan, run_scan_source
 from eth_scanner.heuristics.patterns import detect_fork_family, detect_weird_signals, skim_known_patterns
-from eth_scanner.heuristics.scope import _focus_chain, _ident_match, classify_scope
+from eth_scanner.heuristics.scope import (
+    _diamond_incomplete,
+    _focus_chain,
+    _ident_match,
+    _norm_ident,
+    _path_matches_focus,
+    _type_blocks,
+    _used_libraries,
+    classify_scope,
+)
 from eth_scanner.ingest.unpack import looks_like_etherscan_json, materialize_source, parse_etherscan_sources
 from eth_scanner.types import FunctionIR, IRDocument, SourceArtifact
 
@@ -205,28 +214,27 @@ def _prefer_primary_functions(
     src: str,
     contract_name: Optional[str],
 ) -> list[FunctionIR]:
-    """Keep movers from the Etherscan primary + its parents.
+    """Keep movers from the Etherscan primary + its parents + used libraries.
 
     Sourcify / standard-json trees ship sibling venues (MetaMorpho + Morpho).
     Those siblings are not *this* address. Diamonds with no matching file
-    keep the full set (prefer false keep).
+    (or a thin loupe when ContractName misses facets) keep the full set
+    (prefer false keep). File-path matching includes path components and
+    `using Lib for` libraries that implement movers the primary inherits.
     """
     if not contract_name or not functions:
         return functions
-    chain = _focus_chain(src, contract_name)
-    keep: list[FunctionIR] = []
     focus = (contract_name or "").strip()
+    chain = _focus_chain(src, focus)
+    contracts = [(k, n, b) for k, n, b in _type_blocks(src) if k == "contract"]
+    focused = [(k, n, b) for k, n, b in contracts if _norm_in_chain(n, chain, focus)]
+    if contracts and focused and _diamond_incomplete(focused, contracts):
+        return functions
+    used_libs = _used_libraries(src, focus, focused or contracts)
+    keep: list[FunctionIR] = []
     for fn in functions:
         path = (fn.file or "").replace("\\", "/")
-        stem = path.rsplit("/", 1)[-1]
-        if "." in stem:
-            stem = stem.rsplit(".", 1)[0]
-        if _ident_match(stem, focus) or (chain and stem.lower() in chain):
-            keep.append(fn)
-            continue
-        blob = f"/{path.lower()}"
-        key = focus.lower()
-        if f"/{key}.sol" in blob or f"/{key}.vy" in blob:
+        if _path_matches_focus(path, focus, chain, used_libs):
             keep.append(fn)
     if not keep:
         return functions
@@ -235,6 +243,11 @@ def _prefer_primary_functions(
     if not focused_movers and all_movers:
         return functions
     return keep
+
+
+def _norm_in_chain(name: str, chain: set[str], focus: str) -> bool:
+    key = _norm_ident(name)
+    return bool(key and (key in chain or _ident_match(name, focus)))
 
 
 def _function_names_from_surface(surface: dict[str, Any]) -> list[str]:

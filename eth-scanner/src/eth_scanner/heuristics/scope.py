@@ -90,7 +90,8 @@ SHARE_WRAP_NAMES = frozenset({
     "getwstethbysteth", "getstethbywsteth", "stethpertoken", "tokenspersteth",
 })
 PENDLE_MARKET_NAMES = frozenset({
-    "swapexactptforsy", "swapexactsyforpt", "readstate",
+    "swapexactptforsy", "swapexactsyforpt", "swapsyforexactpt",
+    "readstate", "readtokens",
 })
 CONVEX_NAMES = frozenset({
     "earmarkrewards", "earmarkfees",
@@ -137,6 +138,31 @@ _TYPE_HEAD = re.compile(
     r"\b(?:abstract\s+)?(contract|interface|library)\s+(\w+)\b",
     re.I,
 )
+_USING_FOR = re.compile(r"\busing\s+(\w+)\s+for\b", re.I)
+_COMMENT_BLOCK = re.compile(r"/\*.*?\*/", re.S)
+_COMMENT_LINE = re.compile(r"//.*?$", re.M)
+_VERSION_TAIL = re.compile(r"(?:[._-]?v?\d+)+$", re.I)
+# Strip these from *either* side of an Etherscan ContractName alias.
+# Do not include short/generic stems (token, vault, pool, market).
+_ALIAS_SUFFIXES = (
+    "implementation",
+    "upgradeable",
+    "interface",
+    "instance",
+    "proxy",
+    "impl",
+    "logic",
+    "module",
+    "facet",
+)
+_DIAMOND_NAMES = frozenset({
+    "diamondcut", "facetaddresses", "facetaddress", "facets",
+    "facetfunctionselectors",
+})
+YEARN_SHARE_NAMES = frozenset({
+    "pricepershare", "getpriceperfullshare",
+    "price_per_share", "get_price_per_full_share",
+})
 
 
 @dataclass
@@ -385,14 +411,15 @@ def _type_blocks(src: str) -> list[tuple[str, str, str]]:
     # Raw Etherscan JSON still has JSON braces — do not brace-match it.
     if text.lstrip().startswith("{"):
         return []
+    blank = _sol_without_comments(text)
     out: list[tuple[str, str, str]] = []
-    for m in _TYPE_HEAD.finditer(text):
+    for m in _TYPE_HEAD.finditer(blank):
         kind = (m.group(1) or "").lower()
         name = m.group(2) or ""
-        brace = text.find("{", m.end())
+        brace = blank.find("{", m.end())
         if brace < 0:
             continue
-        gap = text[m.end():brace]
+        gap = blank[m.end():brace]
         if re.search(r"\b(?:abstract\s+)?(?:contract|interface|library)\b", gap, re.I):
             continue
         body, _end = _brace_span(text, brace)
@@ -406,10 +433,41 @@ def _norm_ident(name: str) -> str:
     return (name or "").strip().lower()
 
 
+def _sol_without_comments(src: str) -> str:
+    """Blank `//` and `/* */` comments, keeping offsets (newlines stay).
+
+    `_TYPE_HEAD` is word-bounded. NatSpec like `this contract is the hub`
+    used to spawn fake types (`contract is`) and break primary focus.
+    """
+    def _spaces(m: re.Match[str]) -> str:
+        return re.sub(r"[^\n]", " ", m.group(0))
+
+    text = _COMMENT_BLOCK.sub(_spaces, src or "")
+    return _COMMENT_LINE.sub(_spaces, text)
+
+
+def _alias_stem(name: str) -> str:
+    """Strip version / impl / facet suffixes. `PoolInstance` → `pool`."""
+    n = _norm_ident(name)
+    if not n:
+        return ""
+    while True:
+        m = _VERSION_TAIL.search(n)
+        if not m or m.start() == 0:
+            break
+        n = n[:m.start()]
+    for suf in _ALIAS_SUFFIXES:
+        if n.endswith(suf) and len(n) > len(suf):
+            n = n[: -len(suf)]
+            break
+    return n
+
+
 def _ident_match(declared: str, primary: str) -> bool:
     """True when `declared` is the Etherscan primary (or a versioned alias).
 
     `Morpho` must not match `MetaMorpho`. `Pool` may match `PoolInstance`.
+    Also `VaultV3` / `TokenImpl` / `FooFacet` / `HubPoolInterface`.
     """
     a, b = _norm_ident(declared), _norm_ident(primary)
     if not a or not b:
@@ -421,9 +479,12 @@ def _ident_match(declared: str, primary: str) -> bool:
         if not long.startswith(short) or len(long) <= len(short):
             return False
         rest = long[len(short):]
-        return rest[0] in "._-vV" or rest.startswith(("instance", "proxy", "impl", "upgradeable"))
+        return rest[0] in "._-vV" or rest.startswith(_ALIAS_SUFFIXES)
 
-    return _extends(a, b) or _extends(b, a)
+    if _extends(a, b) or _extends(b, a):
+        return True
+    sa, sb = _alias_stem(a), _alias_stem(b)
+    return bool(sa and sb and sa == sb and len(sa) >= 3)
 
 
 def _contract_bases(src: str) -> dict[str, list[str]]:
@@ -431,7 +492,7 @@ def _contract_bases(src: str) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
     for m in re.finditer(
         r"\b(?:abstract\s+)?contract\s+(\w+)\s+is\s+([^{]+)\s*\{",
-        src or "",
+        _sol_without_comments(src or ""),
         re.I,
     ):
         bases: list[str] = []
@@ -464,11 +525,82 @@ def _focus_chain(src: str, focus: Optional[str]) -> set[str]:
     return chain
 
 
+def _library_blocks(src: str) -> list[tuple[str, str, str]]:
+    return [(k, n, b) for k, n, b in _type_blocks(src) if k == "library"]
+
+
+def _used_libraries(src: str, focus: Optional[str], contract_blocks: list[tuple[str, str, str]]) -> set[str]:
+    """Libraries the primary inherits via `using Lib for` or `Lib.fn` calls.
+
+    MarketMathCore implements Pendle swap/addLiquidity; the market only
+    `using MarketMathCore for MarketState`. Prefer false keep for those
+    movers — do not pull in unused sibling libraries.
+    """
+    used: set[str] = set()
+    search = "\n".join(body for _k, _n, body in contract_blocks)
+    for m in _USING_FOR.finditer(search):
+        ident = _norm_ident(m.group(1))
+        if ident:
+            used.add(ident)
+    for _kind, name, _body in _library_blocks(src):
+        key = _norm_ident(name)
+        if key and re.search(r"\b%s\s*\." % re.escape(name), search):
+            used.add(key)
+    if focus:
+        fkey = _norm_ident(focus)
+        for _kind, name, _body in _library_blocks(src):
+            if _ident_match(name, focus) or _norm_ident(name) == fkey:
+                used.add(_norm_ident(name))
+    return used
+
+
+def _diamond_incomplete(
+    focused: list[tuple[str, str, str]],
+    all_contracts: list[tuple[str, str, str]],
+) -> bool:
+    """True when ContractName hit a thin diamond/loupe and siblings have movers.
+
+    Prefer false keep: missing facet files must not cool-archive a venue.
+    """
+    if not focused or len(focused) >= len(all_contracts):
+        return False
+    fns: set[str] = set()
+    diamondish = False
+    for _k, _n, body in focused:
+        fns.update(n.lower() for n in _FN_NAME.findall(body))
+        if re.search(r"\bdelegatecall\b", body) and re.search(r"\bfallback\b", body):
+            diamondish = True
+    if fns & _DIAMOND_NAMES:
+        diamondish = True
+    if not diamondish:
+        return False
+    sibling: set[str] = set()
+    for _k, _n, body in all_contracts:
+        sibling.update(n.lower() for n in _FN_NAME.findall(body))
+    extra = sibling - fns
+    venue = (
+        UNIQUE_ROUTER_NAMES
+        | PENDLE_MARKET_NAMES
+        | GMX_NAMES
+        | BRIDGE_NAMES
+        | EIGEN_NAMES
+        | COMET_NAMES
+        | CONVEX_NAMES
+        | POOL_RESERVE_VERBS
+        | {
+            "deposit", "withdraw", "redeem", "borrow", "repay", "stake",
+            "unstake", "supply", "mint", "burn", "swap", "addliquidity",
+        }
+    )
+    return bool(extra & venue) or len(fns) <= 8
+
+
 def _focused_blocks(src: str, focus: Optional[str]) -> list[tuple[str, str, str]]:
     """`contract` blocks for the primary + parents. No match → all contracts.
 
     Prefer false keep: if Etherscan's ContractName does not appear in the
-    blob, do not drop the tree (diamonds / renamed impls).
+    blob, do not drop the tree (diamonds / renamed impls). Include libraries
+    the primary `using`s. Diamond loupes that miss facet files keep siblings.
     """
     blocks = [(k, n, b) for k, n, b in _type_blocks(src) if k == "contract"]
     if not focus or not blocks:
@@ -477,7 +609,16 @@ def _focused_blocks(src: str, focus: Optional[str]) -> list[tuple[str, str, str]
     if not chain:
         return blocks
     hit = [(k, n, b) for k, n, b in blocks if _norm_ident(n) in chain]
-    return hit or blocks
+    if not hit:
+        return blocks
+    if _diamond_incomplete(hit, blocks):
+        return blocks
+    used = _used_libraries(src, focus, hit)
+    if used:
+        hit = hit + [
+            (k, n, b) for k, n, b in _library_blocks(src) if _norm_ident(n) in used
+        ]
+    return hit
 
 
 def _brace_span(src: str, open_idx: int) -> tuple[Optional[str], int]:
@@ -491,6 +632,36 @@ def _brace_span(src: str, open_idx: int) -> tuple[Optional[str], int]:
             if depth == 0:
                 return src[open_idx + 1:i], i
     return None, open_idx
+
+
+def _path_matches_focus(
+    path: str,
+    focus: Optional[str],
+    chain: Optional[set[str]] = None,
+    libraries: Optional[set[str]] = None,
+) -> bool:
+    """True when a source path belongs to the primary, a parent, or a used lib.
+
+    Matches file stem *and* path components (`core/Market/PendleMarket.sol`).
+    """
+    if not focus or not path:
+        return False
+    blob = (path or "").replace("\\", "/")
+    parts = [p for p in blob.split("/") if p]
+    stem = parts[-1] if parts else ""
+    if "." in stem:
+        stem = stem.rsplit(".", 1)[0]
+    chain = chain or set()
+    libraries = libraries or set()
+    if _ident_match(stem, focus) or _norm_ident(stem) in chain or _norm_ident(stem) in libraries:
+        return True
+    key = _norm_ident(focus)
+    if key and (f"/{key}.sol" in f"/{blob.lower()}" or f"/{key}.vy" in f"/{blob.lower()}"):
+        return True
+    for part in parts[:-1]:
+        if _ident_match(part, focus) or _norm_ident(part) in chain or _norm_ident(part) in libraries:
+            return True
+    return False
 
 
 def _contract_declared_names(src: str, focus: Optional[str] = None) -> set[str]:
@@ -926,8 +1097,10 @@ def _funds_at_risk_family(
         return "", []
 
     erc4626 = _is_erc4626(src, names, focus)
-    yearn = bool(re.search(
-        r"\b(pricePerShare|getPricePerFullShare)\b",
+    # Live Yearn yvUSDC tagged share-accounting: `uint256 public pricePerShare`
+    # (and Vyper `pricePerShare: public`) is a getter, not `function pricePerShare`.
+    yearn = bool(YEARN_SHARE_NAMES & (declared | names)) or bool(re.search(
+        r"\b(pricePerShare|getPricePerFullShare|price_per_share|get_price_per_full_share)\b",
         _contract_bodies(src, focus) or src,
     ))
     # `totalShares` + imported IStrategy.deposit used to tag Eigen Delegation
@@ -952,10 +1125,16 @@ def _funds_at_risk_family(
     if _is_nft_market(src, names) and _nft_escrow(src, names):
         return "vault", ["nft-escrow"]
 
-    if (probe | declared) & GMX_NAMES or bool(re.search(
-        r"\b(function\s+buyUSDG|function\s+sellUSDG|function\s+increasePosition|guaranteedUsd)\b",
-        src,
-    )):
+    # GLP vault is Arbitrum-first. Require *this* contract's verbs — do not
+    # search the full blob (imported IVault on the ETH GMX token is not a vault).
+    gmx_search = _contract_bodies(src, focus) or ""
+    if (probe | declared) & GMX_NAMES or (
+        gmx_search
+        and bool(re.search(
+            r"\b(function\s+buyUSDG|function\s+sellUSDG|function\s+increasePosition|guaranteedUsd)\b",
+            gmx_search,
+        ))
+    ):
         return "vault", ["gmx-glp-vault"]
 
     staking_ix = bool({"stake", "unstake", "getreward"} & (declared | probe)) or bool(
@@ -1001,10 +1180,14 @@ def _funds_at_risk_family(
     )
     if curve:
         return "pool", ["curve-pool"]
-    pendle_mkt = bool(PENDLE_MARKET_NAMES & (declared | probe | names)) and not _unique_router(
+    pendle_here = (declared | probe) if (declared or probe) else names
+    pendle_mkt = bool(PENDLE_MARKET_NAMES & pendle_here) and not _unique_router(
         src, names, custody, focus,
     )
-    if pendle_mkt and ({"swapexactptforsy", "swapexactsyforpt", "readstate"} & (declared | probe | names)):
+    if pendle_mkt and (
+        {"swapexactptforsy", "swapsyforexactpt", "swapexactsyforpt"} & pendle_here
+        or ({"readstate", "readtokens"} & pendle_here and {"mint", "burn", "skim"} & pendle_here)
+    ):
         return "pool", ["pendle-market"]
     # Uni V2 Router02 (`0x7a25…488D`) has addLiquidity + swapExact* — that is
     # pass-through, not a reserve AMM. Unique router verbs beat pool-cluster.

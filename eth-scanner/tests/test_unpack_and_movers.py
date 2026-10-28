@@ -204,6 +204,21 @@ class UnpackEtherscanJson(unittest.TestCase):
         self.assertEqual(ir.contract_class, "vault")
         self.assertNotEqual(ir.contract_class, "lending")
 
+    def test_using_for_library_movers_kept_sibling_dropped(self):
+        raw = (ROOT / "tests" / "fixtures" / "inherited_lib_movers_like.json").read_text(encoding="utf-8")
+        ir = normalize(_art(raw, contract_name="VaultV3"), try_slither=False)
+        movers = {fn.name.lower() for fn in ir.functions if fn.is_value_mover and fn.exposed}
+        self.assertIn("deposit", movers)
+        self.assertNotIn("borrow", movers)
+        self.assertEqual(ir.contract_class, "vault")
+
+    def test_diamond_contract_name_keeps_facet_movers(self):
+        raw = (ROOT / "tests" / "fixtures" / "diamond_thin_primary_like.json").read_text(encoding="utf-8")
+        ir = normalize(_art(raw, contract_name="Diamond"), try_slither=False)
+        movers = {fn.name.lower() for fn in ir.functions if fn.is_value_mover and fn.exposed}
+        self.assertTrue(movers & {"deposit", "withdraw"})
+        self.assertEqual(ir.contract_class, "vault")
+
 
 class ProxyImplForIR(unittest.TestCase):
     def test_impl_source_wins_for_lift(self):
