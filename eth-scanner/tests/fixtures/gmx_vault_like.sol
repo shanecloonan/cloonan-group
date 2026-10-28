@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// GMX-like GLP vault (no mainnet vault; pattern for similar ETH venues).
-/// Holds poolAmounts / guaranteedUsd. Fixture only — not a finding.
+/// GMX-like GLP vault shape. GLP vault is Arbitrum-first
+/// (`0x489ee077994B6658eAfA855C308275EAd8097C4A` is not an ETH contract).
+/// Do not treat the ETH GMX token as this. Fixture only — not a finding.
 contract GmxVault {
     mapping(address => uint256) public poolAmounts;
     mapping(address => uint256) public reservedAmounts;

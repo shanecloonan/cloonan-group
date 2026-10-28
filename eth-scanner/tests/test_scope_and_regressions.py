@@ -62,9 +62,17 @@ _ADDR = {
     "across_spoke_like.sol": "0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5",
     "across_hub_adapter_like.sol": "0xc186fA914353c44b2E33eBE05f21846F1048bEda",
     "pendle_router_like.sol": "0x888888888889758F76e7103c6CbF23ABbF58F946",
-    "pendle_market_like.sol": "0x" + "e1" * 20,
+    "pendle_market_like.sol": "0x34280882267ffa6383b363e278b027be083bbe3b",
+    "pendle_market_live_shape.json": "0x34280882267ffa6383b363e278b027be083bbe3b",
     "uni_v2_router_like.sol": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
     "gmx_vault_like.sol": "0x" + "e2" * 20,
+    "gmx_token_like.sol": "0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a",
+    "yearn_v2_public_getter_like.sol": "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE",
+    "across_hub_like.sol": "0xc186fA914353c44b2E33eBE05f21846F1048bEda",
+    "diamond_thin_primary_like.sol": "0x" + "e3" * 20,
+    "diamond_thin_primary_like.json": "0x" + "e3" * 20,
+    "inherited_lib_movers_like.sol": "0x" + "e4" * 20,
+    "inherited_lib_movers_like.json": "0x" + "e4" * 20,
     "metamorpho_like.sol": "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
     "metamorpho_tree_like.sol": "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
     "convex_booster_like.sol": "0xF403C135812408BFbE8713b5A23a04b3D48AAE31",
@@ -73,6 +81,10 @@ _ADDR = {
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 LIVE_SWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564"
 LIVE_UNI_V3_POOL = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
+LIVE_PENDLE_MARKET = "0x34280882267ffa6383b363e278b027be083bbe3b"
+LIVE_YEARN_YVUSDC = "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE"
+LIVE_ACROSS_HUB = "0xc186fA914353c44b2E33eBE05f21846F1048bEda"
+LIVE_GMX_TOKEN = "0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -185,6 +197,9 @@ class MoverNoise(unittest.TestCase):
         self.assertTrue(name_is_fund_mover("addLiquiditySinglePt"))
         self.assertTrue(name_is_fund_mover("absorb"))
         self.assertTrue(name_is_fund_mover("earmarkRewards"))
+        self.assertTrue(name_is_fund_mover("proposeRootBundle"))
+        self.assertTrue(name_is_fund_mover("executeRootBundle"))
+        self.assertTrue(name_is_fund_mover("disputeRootBundle"))
         self.assertFalse(name_is_fund_mover("exchangeRate"))
         self.assertFalse(name_is_fund_mover("exchangeRateStored"))
         self.assertFalse(name_is_fund_mover("transferOwnership"))
@@ -736,8 +751,16 @@ class LiveDeFiPass(unittest.TestCase):
         from eth_scanner.heuristics.scope import _ident_match
         self.assertTrue(_ident_match("MetaMorpho", "MetaMorpho"))
         self.assertTrue(_ident_match("PoolInstance", "Pool"))
+        self.assertTrue(_ident_match("VaultV3", "Vault"))
+        self.assertTrue(_ident_match("TokenImpl", "Token"))
+        self.assertTrue(_ident_match("FooFacet", "Foo"))
+        self.assertTrue(_ident_match("HubPoolInterface", "HubPool"))
+        self.assertTrue(_ident_match("FiatTokenV2_2", "FiatTokenV2"))
+        self.assertTrue(_ident_match("PendleMarketV3", "PendleMarket"))
         self.assertFalse(_ident_match("Morpho", "MetaMorpho"))
         self.assertFalse(_ident_match("MetaMorpho", "Morpho"))
+        self.assertFalse(_ident_match("LendingPool", "Pool"))
+        self.assertFalse(_ident_match("YearnVault", "Vault"))
 
     def test_convex_booster_is_staking(self):
         r = _lane("convex_booster_like.sol")
@@ -794,6 +817,7 @@ class LiveDeFiPass(unittest.TestCase):
         self.assertEqual(r.contract_class, "pool")
         self.assertEqual(r.scope, "in-scope")
         self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["pendle_market_like.sol"], LIVE_PENDLE_MARKET)
 
     def test_uni_v2_router_is_passthrough_not_pool(self):
         r = _lane("uni_v2_router_like.sol", tvl=9_999_999)
@@ -836,6 +860,131 @@ class LiveDeFiPass(unittest.TestCase):
         ))
         self.assertEqual(r.bucket, "lane-b-queue")
         self.assertNotEqual(r.bucket, "human-no-candidate")
+
+
+class Pass7LiveLocks(unittest.TestCase):
+    """Pass 7: Pendle market lock, aliases, Yearn getter, Hub movers, diamond, GMX token."""
+
+    def test_live_pendle_market_json_is_pool_not_vault(self):
+        src = (FIXTURES / "pendle_market_live_shape.json").read_text(encoding="utf-8")
+        from eth_scanner.ingest.unpack import flatten_sources, parse_etherscan_sources
+        flat = flatten_sources(parse_etherscan_sources(src))
+        ir = normalize(_art(src, contract_name="PendleMarket"), try_slither=False)
+        self.assertEqual(ir.contract_class, "pool")
+        self.assertNotEqual(ir.contract_class, "vault")
+        self.assertNotEqual(ir.contract_class, "router")
+        d = classify_scope(
+            source=flat,
+            functions=ir.functions,
+            extra_names=ir.function_names,
+            contract_name="PendleMarket",
+        )
+        self.assertEqual(d.contract_class, "pool")
+        self.assertEqual(d.scope, "in-scope")
+        self.assertIn("pendle-market", d.signals)
+        self.assertNotEqual(d.contract_class, "vault")
+        r = _lane("pendle_market_live_shape.json", tvl=4_900_000)
+        self.assertEqual(r.contract_class, "pool")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"swapExactPtForSy", "swapSyForExactPt", "mint", "burn"})
+
+    def test_yearn_public_getter_tags_yearn_share_price(self):
+        src = (FIXTURES / "yearn_v2_public_getter_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="yVault"), try_slither=False)
+        d = classify_scope(
+            source=src,
+            functions=ir.functions,
+            extra_names=ir.function_names,
+            contract_name="yVault",
+        )
+        self.assertEqual(d.contract_class, "vault")
+        self.assertIn("yearn-share-price", d.signals)
+        self.assertNotIn("share-accounting", d.signals)
+        r = _lane("yearn_v2_public_getter_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_across_hub_movers_include_bundle_verbs(self):
+        r = _lane("across_hub_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"addLiquidity", "removeLiquidity"})
+        self.assertTrue(set(r.value_movers) & {"proposeRootBundle", "executeRootBundle"})
+        self.assertGreaterEqual(len(r.value_movers), 3)
+
+    def test_comment_contract_is_not_a_type(self):
+        from eth_scanner.heuristics.scope import _type_blocks
+        src = (FIXTURES / "across_hub_like.sol").read_text(encoding="utf-8")
+        names = [n for _k, n, _b in _type_blocks(src)]
+        self.assertIn("HubPool", names)
+        self.assertIn("Ethereum_Adapter", names)
+        self.assertNotIn("is", names)
+        self.assertNotIn("via", names)
+        self.assertNotIn("the", names)
+
+    def test_gmx_token_is_not_a_vault(self):
+        r = _lane("gmx_token_like.sol", tvl=50_000)
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "vault")
+        src = (FIXTURES / "gmx_token_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="GMX"), try_slither=False)
+        self.assertEqual(ir.contract_class, "token")
+        self.assertNotEqual(ir.contract_class, "vault")
+
+    def test_gmx_glp_shape_still_vault(self):
+        r = _lane("gmx_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+
+    def test_diamond_thin_primary_keeps_vault_facet(self):
+        src = (FIXTURES / "diamond_thin_primary_like.json").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Diamond"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertEqual(ir.scope, "in-scope")
+        movers = {fn.name.lower() for fn in ir.functions if fn.is_value_mover and fn.exposed}
+        self.assertTrue(movers & {"deposit", "withdraw"})
+
+    def test_inherited_lib_keeps_primary_and_drops_sibling(self):
+        src = (FIXTURES / "inherited_lib_movers_like.json").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="VaultV3"), try_slither=False)
+        movers = {fn.name.lower() for fn in ir.functions if fn.is_value_mover and fn.exposed}
+        self.assertIn("deposit", movers)
+        self.assertNotIn("borrow", movers)
+        self.assertNotIn("liquidate", movers)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertNotEqual(ir.contract_class, "lending")
+
+    def test_known_live_set_before_after_lock(self):
+        """Re-scan the known live fixture set. Buckets, never verdicts."""
+        expected = {
+            "usdc_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "weth_like.sol": ("wrap-token", "demoted-token", "lane-a-cool"),
+            "wsteth_like.sol": ("wrap-token", "demoted-token", "lane-a-cool"),
+            "uni_v3_router_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "uni_v2_router_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "pendle_router_like.sol": ("router", "demoted-passthrough", "lane-a-cool"),
+            "uni_v3_pool_live_shape.sol": ("pool", "in-scope", "lane-b-queue"),
+            "aave_v3_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "morpho_blue_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "metamorpho_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "compound_comet_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "across_spoke_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "across_hub_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "across_hub_adapter_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "eigen_delegation_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "convex_booster_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "pendle_market_live_shape.json": ("pool", "in-scope", "lane-b-queue"),
+            "yearn_v2_public_getter_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "gmx_token_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "gmx_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "maker_vat_like.sol": ("maker", "in-scope", "lane-b-queue"),
+        }
+        for name, (klass, scope, bucket) in expected.items():
+            r = _lane(name)
+            self.assertEqual((r.contract_class, r.scope, r.bucket), (klass, scope, bucket), name)
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 /// Pendle Market holds SY/PT reserves. In-scope pool. Fixture only — not a finding.
+/// Live ETH lock: wstETH 30DEC2027 `0x34280882267ffa6383b363e278b027be083bbe3b`.
 contract PendleMarket {
     uint256 public expiry;
     uint256 public totalPt;
