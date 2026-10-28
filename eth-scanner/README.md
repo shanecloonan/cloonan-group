@@ -35,7 +35,7 @@ Lane A is a **picker** for venues that regularly *hold or account* other peopleâ
 
 **Do Not Auto-Dismiss:** unverified / failed IR / failed unpack / rate-limited ingest / truly ambiguous *non-token* auth still go to `manual-review`, never silent `no`.
 
-Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *before* ERC-20/721 shape so a pool that calls `IERC20.transferFrom` is never demoted as a token.
+Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *before* ERC-20/721 shape so a pool that calls `IERC20.transferFrom` is never demoted as a token. Imported `IERC20` / `IUniswapV3Pool` / `IWETH9` on a Uni V3 *SwapRouter* do not flip it to `custody` â€” pass-through still demotes. Uni V3 *pools* (`Slot0 public override slot0`) stay in-scope as `pool`.
 
 ## Layout
 

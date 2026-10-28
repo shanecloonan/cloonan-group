@@ -73,6 +73,11 @@ _PUBLIC_GETTER = re.compile(
     r"\b(?:mapping\s*\([^;]*\)|uint\d*|u256|int\d*|bool|address|string|bytes\d*)\s+public\s+(\w+)",
     re.I,
 )
+# `abstract contract Foo is Bar {` — group 1 is contract|interface|library.
+_TYPE_HEAD = re.compile(
+    r"\b(?:abstract\s+)?(contract|interface|library)\s+(\w+)\b",
+    re.I,
+)
 
 
 @dataclass
@@ -155,6 +160,18 @@ def classify_scope(
                 promote=False,
             )
         # ERC-20 *plus* a non-admin custody mover we did not family-tag.
+        # Live SwapRouter after #27 landed here: IERC20.sol in the Etherscan
+        # multi-file blob made the name set look token-shaped, so this keep
+        # skipped pass-through demotion (bucket=lane-b-queue, class=custody).
+        # Imported IERC20 on a router is not this contract holding funds.
+        passthru, pass_signals = _passthrough_family(src, names)
+        if passthru:
+            return ScopeDecision(
+                contract_class=passthru,
+                scope="demoted-passthrough",
+                signals=["imported-erc20-on-passthrough"] + pass_signals,
+                promote=False,
+            )
         # Prefer false keep — may be an unnamed vault.
         return ScopeDecision(
             contract_class="custody",
@@ -257,19 +274,80 @@ def _collect_names(src: str, fns: list[Any], extra: Optional[Iterable[str]]) -> 
 
 
 def _interface_score(src: str, names: set[str], interface: Iterable[str]) -> int:
-    """Count *this* contract's ERC interface, not IERC20 calls on other tokens."""
+    """Count *this* contract's ERC interface, not IERC20 on imported files.
+
+    Live Uni V3 SwapRouter is a multi-file Etherscan blob (IERC20 + pool
+    iface + PeripheryPayments + SwapRouter). The global name set therefore
+    looks ERC-20 shaped even though SwapRouter does not implement
+    transfer/approve. Prefer names declared inside `contract` blocks.
+    When source is empty (IR-only extra_names, e.g. live USDC), fall back
+    to the collected name set so token demotion still works.
+    """
+    implemented = _contract_declared_names(src)
+    pool = implemented if implemented else names
+    search_src = _contract_bodies(src) if implemented else (src or "")
     score = 0
     for item in interface:
-        if item in names:
+        if item in pool:
             score += 1
             continue
-        if re.search(r"\bfunction\s+%s\s*\(" % re.escape(item), src, re.I):
+        if re.search(r"\bfunction\s+%s\s*\(" % re.escape(item), search_src, re.I):
             score += 1
             continue
         if item in {"balanceof", "allowance", "totalsupply", "name", "symbol", "decimals", "ownerof"}:
-            if re.search(r"\bpublic\s+%s\b" % re.escape(item), src, re.I):
+            if re.search(r"\bpublic\s+(?:override\s+)?%s\b" % re.escape(item), search_src, re.I):
                 score += 1
     return score
+
+
+def _type_blocks(src: str) -> list[tuple[str, str, str]]:
+    """Return (kind, name, body) for top-level Solidity type declarations."""
+    text = src or ""
+    # Raw Etherscan JSON still has JSON braces — do not brace-match it.
+    if text.lstrip().startswith("{"):
+        return []
+    out: list[tuple[str, str, str]] = []
+    for m in _TYPE_HEAD.finditer(text):
+        kind = (m.group(1) or "").lower()
+        name = m.group(2) or ""
+        brace = text.find("{", m.end())
+        if brace < 0:
+            continue
+        gap = text[m.end():brace]
+        if re.search(r"\b(?:abstract\s+)?(?:contract|interface|library)\b", gap, re.I):
+            continue
+        body, _end = _brace_span(text, brace)
+        if body is None:
+            continue
+        out.append((kind, name, body))
+    return out
+
+
+def _brace_span(src: str, open_idx: int) -> tuple[Optional[str], int]:
+    depth = 0
+    for i in range(open_idx, len(src)):
+        ch = src[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return src[open_idx + 1:i], i
+    return None, open_idx
+
+
+def _contract_declared_names(src: str) -> set[str]:
+    names: set[str] = set()
+    for kind, _name, body in _type_blocks(src):
+        if kind != "contract":
+            continue
+        names.update(n.lower() for n in _FN_NAME.findall(body))
+        names.update(n.lower() for n in _PUBLIC_GETTER.findall(body))
+    return names
+
+
+def _contract_bodies(src: str) -> str:
+    return "\n".join(body for kind, _name, body in _type_blocks(src) if kind == "contract")
 
 
 def _has_meta(src: str, names: set[str]) -> bool:
@@ -353,11 +431,22 @@ def _own_reserves(src: str, names: set[str]) -> bool:
 
     A router file often embeds `function slot0` on IUniswapV3Pool. That is
     not this contract holding reserves — `_is_router` gates the pool class.
+
+    Live Uni V3 *Pool* (`0x88e6…5640`) stores `Slot0 public override slot0`
+    and `uint128 public override liquidity`. Those are not `function slot0(`
+    so `_FN_NAME` / the old visibility regex missed them and the pool fell
+    through as generic `custody`. Prefer the pool tag; custody keep is OK.
     """
     if {"getreserves", "slot0", "reserve0", "reserve1"} & names:
         return True
+    if re.search(
+        r"\b(struct\s+Slot0|Slot0\s+public\s+(?:override\s+)?slot0|"
+        r"uint128\s+public\s+(?:override\s+)?liquidity)\b",
+        src,
+    ):
+        return True
     return bool(re.search(
-        r"\buint\d*\s+(?:public\s+|private\s+|internal\s+)?(_?reserve[01]|liquidity)\b",
+        r"\buint\d*\s+(?:public\s+|private\s+|internal\s+|override\s+)+(?:_?reserve[01]|liquidity)\b",
         src,
     ))
 
@@ -450,8 +539,17 @@ def _funds_at_risk_family(src: str, names: set[str]) -> tuple[str, list[str]]:
     if curve or (has_swap and _own_reserves(src, names) and not _is_router(src, names)):
         return "pool", ["curve-pool"] if curve else ["amm-reserves"]
 
-    # Ungated ETH piggy-bank: withdraws address(this).balance and is not WETH.
-    if "withdraw" in names and re.search(r"address\s*\(\s*this\s*\)\s*\.balance", src) and not _weth_shape(src, names):
+    # Ungated ETH piggy-bank: *this* contract withdraws address(this).balance
+    # and is not WETH. Do not fire on a SwapRouter that imports IWETH9.withdraw
+    # and refunds leftover ETH in `refundETH` (`address(this).balance`).
+    implemented = _contract_declared_names(src)
+    if (
+        "withdraw" in names
+        and re.search(r"address\s*\(\s*this\s*\)\s*\.balance", src)
+        and not _weth_shape(src, names)
+        and not _is_router(src, names)
+        and (not implemented or "withdraw" in implemented)
+    ):
         return "vault", ["eth-custody-withdraw"]
 
     return "", []
