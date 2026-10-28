@@ -1211,6 +1211,14 @@ def _passthrough_family(
         and not _own_reserves(src, names, focus)
     ):
         return "router", ["usual-dao-collateral"]
+    # Veda / ether.fi Liquid Teller: deposit into BoringVault, optional LZ
+    # share bridge. lzReceive must not steal as a lock-release bridge.
+    if (
+        {"depositandbridge"} & (declared | probe)
+        and {"sharelockperiod", "bulkdeposit"} & (declared | probe)
+        and not _own_reserves(src, names, focus)
+    ):
+        return "router", ["veda-teller"]
     if _unique_router(src, names, custody, focus) and not _own_reserves(src, names, focus):
         return "router", ["passthrough-router"]
     if _is_router(src, names, custody, focus) and not _hold_signal(src, names, include_amm=False, focus=focus):
@@ -1418,6 +1426,12 @@ def _funds_at_risk_family(
         and bool({"checktickets", "encodetaxi", "encodebus"} & (declared | probe))
         and "addtreasuryfee" not in (declared | probe)
     )
+    # Veda Teller: depositAndBridge + lzReceive is share messaging, not a lock.
+    veda_teller = (
+        bool({"depositandbridge"} & (declared | probe))
+        and bool({"sharelockperiod", "bulkdeposit"} & (declared | probe))
+        and not _own_reserves(src, names, focus)
+    )
 
     # Fluid Liquidity dummy / user module: operate is supply+borrow+withdraw.
     # Etherscan Implementation is DummyImpl (ABI surface); money sits on the proxy.
@@ -1437,7 +1451,7 @@ def _funds_at_risk_family(
     ):
         return "bridge", ["ccip-lock-release"]
 
-    if not stargate_msg_only and (
+    if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
         or re.search(
             r"\b(lzReceive|finalizeWithdrawalTransaction\w*|proveWithdrawalTransaction\w*|"
@@ -1574,6 +1588,19 @@ def _funds_at_risk_family(
         and {"termrepoid"} & (declared | probe)
     ):
         return "vault", ["term-repo-locker"]
+    # Veda / ether.fi Liquid BoringVault (`0xf0bb…416C`) holds the basket.
+    # enter/exit/manage — not a generic deposit/withdraw.
+    if {"enter", "exit", "manage"} <= (declared | probe):
+        return "vault", ["veda-boring-vault"]
+    # Veda on-chain withdraw queue holds shares until a solver fills.
+    if {"requestonchainwithdraw"} & (declared | probe) and {"solveonchainwithdraws"} & (declared | probe):
+        return "vault", ["veda-withdraw-queue"]
+    # Upshift institutional vault (`0x3EAa…8DFC`) holds deposits.
+    if {"lockcapital"} & (declared | probe) and {"claimdailyinterest", "getdeployablecapital"} & (declared | probe):
+        return "vault", ["upshift-institutional"]
+    # Mellow ALM vault (`0x7600…bb84`) holds vault tokens.
+    if {"transferandpush"} & (declared | probe) and {"reclaimtokens"} & (declared | probe):
+        return "vault", ["mellow-vault"]
 
     # Pendle Action* / Uni V2 Router02: unique pass-through verbs beat imported
     # ERC-4626 / SY ifaces in the diamond or periphery blob.
