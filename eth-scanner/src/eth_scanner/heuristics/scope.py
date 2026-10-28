@@ -1316,6 +1316,14 @@ def _funds_at_risk_family(
         _contract_bodies(src) if _contract_declared_names(src) else src
     )
 
+    # Liquity V2 StabilityPool (`0x5721…f9bf` WETH branch): depositors'
+    # BOLD sits here and is offset against liquidations. V1 uses the same
+    # verbs. Not a pass-through.
+    if (
+        {"providetosp", "withdrawfromsp"} <= (declared | probe)
+        and {"offset"} & (declared | probe | names)
+    ):
+        return "vault", ["liquity-stability-pool"]
     # Maker / Sky LitePSM: sellGem/buyGem hold DAI + gem. Same-file Vat
     # `function frob` must not steal the family (live DssLitePsm flatten).
     if {"sellgem", "buygem"} <= (declared | probe | names):
@@ -1441,15 +1449,22 @@ def _funds_at_risk_family(
     liquity_bo = bool(
         {"opentrove", "adjusttrove", "withdrawcoll", "addcoll"} & (declared | probe | here)
     )
+    # Liquity V2 TroveManager (`0x7bcb…Cf5A` WETH). V1 uses liquidate;
+    # V2 uses batchLiquidateTroves + onOpenTrove / redeemCollateral.
+    liquity_v2 = bool({"batchliquidatetroves"} & (declared | probe | here)) and bool(
+        {"redeemcollateral", "urgentredemption", "onopentrove"} & (declared | probe | here)
+    )
     gearbox = bool({"opencreditaccount", "closecreditaccount"} & (declared | probe | here)) and bool(
         {"managedebt", "addcollateral", "withdrawcollateral", "liquidatecreditaccount"}
         & (declared | probe | here | names)
     )
-    if lending_ix or compound or comet or liquity_bo or gearbox or (
+    if lending_ix or compound or comet or liquity_bo or liquity_v2 or gearbox or (
         flash and (aave_supply or "deposit" in here) and not join_exit
     ):
         if gearbox and not lending_ix:
             return "lending", ["gearbox-credit"]
+        if liquity_v2 and not lending_ix:
+            return "lending", ["liquity-v2-trove"]
         if liquity_bo and not lending_ix:
             return "lending", ["liquity-borrower"]
         if comet and not lending_ix:

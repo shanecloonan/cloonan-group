@@ -159,6 +159,11 @@ _ADDR = {
     "usde_like.sol": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
     "susde_like.sol": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
     "sfrxeth_like.sol": "0xac3E018457B222d93114458476f3E3416Abbe38F",
+    "liquity_v2_trove_like.sol": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+    "liquity_v2_stability_like.sol": "0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf",
+    "bold_like.sol": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
+    "yearn_v3_vault_like.sol": "0xc1F484Dee9a586c122D658B8AFE3436c2F4290be",
+    "puffer_vault_like.sol": "0x3b2fdFdEFE919dBcCE0bc5ac426097d5523B8AFA",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -237,6 +242,13 @@ LIVE_COMET_USDC_IMPL = "0x63e749153BaF1838f63cA22c275370BD2B1cEB15"
 LIVE_AAVE_V3_POOL = "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2"
 LIVE_AAVE_V3_POOL_IMPL = "0x728a138A4823392C2EFA55e028d434F526fE03CF"
 LIVE_EULER_USDC_PROXY = "0x797DD80692c3b2dAdabCe8e30C07fDE5307D48a9"
+LIVE_LQ2_TM_WETH = "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a"
+LIVE_LQ2_SP_WETH = "0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf"
+LIVE_BOLD = "0x6440f144b7e50D6a8439336510312d2F54beB01D"
+LIVE_YEARN_V3_VAULT = "0xc1F484Dee9a586c122D658B8AFE3436c2F4290be"
+LIVE_PUFFER_VAULT = "0x3b2fdFdEFE919dBcCE0bc5ac426097d5523B8AFA"
+LIVE_ACROSS_SPOKE = "0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5"
+LIVE_EIGEN_POD_MGR = "0x91E677b07F7AF907ec9a428aafA9fc14a0d3A338"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -1228,6 +1240,11 @@ class Pass7LiveLocks(unittest.TestCase):
             "usde_like.sol": ("token", "demoted-token", "lane-a-cool"),
             "susde_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "sfrxeth_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "liquity_v2_trove_like.sol": ("lending", "in-scope", "lane-b-queue"),
+            "liquity_v2_stability_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "bold_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "yearn_v3_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
+            "puffer_vault_like.sol": ("vault", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -2170,6 +2187,77 @@ class Pass15MorphoEthenaVenues(unittest.TestCase):
         self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
         self.assertEqual(_ADDR["euler_evault_like.sol"], LIVE_EULER_EVAULT)
         self.assertEqual(LIVE_EULER_USDC_PROXY.lower()[0:6], "0x797d")
+
+
+class Pass16LiquityEigenVenues(unittest.TestCase):
+    """Pass 16: Liquity V2 Trove/SP, Yearn V3, Puffer, Bold pins."""
+
+    def test_hop_l1_eth_still_unverified(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_liquity_v2_trove_is_lending(self):
+        src = (FIXTURES / "liquity_v2_trove_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TroveManager"), try_slither=False)
+        self.assertEqual(ir.contract_class, "lending")
+        self.assertIn("liquity-v2-trove", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "custody")
+        r = _lane("liquity_v2_trove_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["liquity_v2_trove_like.sol"], LIVE_LQ2_TM_WETH)
+
+    def test_liquity_v1_trove_still_lending(self):
+        r = _lane("liquity_trove_like.sol")
+        self.assertEqual(r.contract_class, "lending")
+        self.assertEqual(_ADDR["liquity_trove_like.sol"], LIVE_LIQUITY_TROVE)
+
+    def test_liquity_v2_stability_is_vault(self):
+        src = (FIXTURES / "liquity_v2_stability_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="StabilityPool"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("liquity-stability-pool", ir.scope_signals)
+        r = _lane("liquity_v2_stability_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["liquity_v2_stability_like.sol"], LIVE_LQ2_SP_WETH)
+
+    def test_bold_is_token(self):
+        r = _lane("bold_like.sol")
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertEqual(_ADDR["bold_like.sol"], LIVE_BOLD)
+
+    def test_yearn_v3_is_vault(self):
+        src = (FIXTURES / "yearn_v3_vault_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="YearnV3Vault"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("erc4626", ir.scope_signals)
+        r = _lane("yearn_v3_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["yearn_v3_vault_like.sol"], LIVE_YEARN_V3_VAULT)
+
+    def test_puffer_vault_is_vault(self):
+        r = _lane("puffer_vault_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(_ADDR["puffer_vault_like.sol"], LIVE_PUFFER_VAULT)
+
+    def test_across_and_eigen_still_correct(self):
+        self.assertEqual(_lane("across_spoke_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("across_hub_like.sol").contract_class, "bridge")
+        self.assertEqual(_ADDR["across_spoke_like.sol"], LIVE_ACROSS_SPOKE)
+        self.assertEqual(_lane("eigen_delegation_like.sol").contract_class, "staking")
+        self.assertEqual(_lane("eigen_strategy_like.sol").contract_class, "staking")
+
+    def test_dsr_and_ethena_minting_stay_custody(self):
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+
+    def test_weeth_still_wrap(self):
+        r = _lane("weeth_like.sol")
+        self.assertEqual(r.contract_class, "wrap-token")
+        self.assertEqual(_ADDR["weeth_like.sol"], LIVE_WEETH)
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
