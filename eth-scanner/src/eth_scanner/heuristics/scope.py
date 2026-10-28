@@ -228,8 +228,10 @@ _DIAMOND_NAMES = frozenset({
     "diamondcut", "facetaddresses", "facetaddress", "facets",
     "facetfunctionselectors",
 })
-# OZ / EIP-173 proxy shells. Sourcify trees often ship unrelated siblings
-# (Inception lockbox, Across depositV3). Those are not this address's facets.
+# OZ / EIP-173 / Aragon proxy shells. Sourcify trees often ship unrelated
+# siblings (Inception lockbox, Across depositV3, Lido submit). Those are
+# not this address's facets. AppProxyUpgradeable (stETH) used to cool as
+# utility because Aragon uses delegatedFwd, not delegatecall+fallback.
 _THIN_OZ_PROXY_NAMES = frozenset({
     "transparentupgradeableproxy",
     "erc1967proxy",
@@ -239,6 +241,7 @@ _THIN_OZ_PROXY_NAMES = frozenset({
     "adminupgradeabilityproxy",
     "optimizedtransparentupgradeableproxy",
     "beaconproxy",
+    "appproxyupgradeable",
 })
 YEARN_SHARE_NAMES = frozenset({
     "pricepershare", "getpriceperfullshare",
@@ -330,8 +333,9 @@ def classify_scope(
             promote=False,
         )
 
-    # Named OZ / EIP-173 proxy shell: sibling lockboxes (depositV3 /
-    # Inception) are not this address. Stop as diamond-facets-missing.
+    # Named OZ / EIP-173 / Aragon proxy shell: sibling lockboxes
+    # (depositV3 / Inception / Lido submit) are not this address.
+    # Stop as diamond-facets-missing.
     if _is_thin_oz_proxy(contract_name):
         declared_here = _contract_declared_names(src, contract_name)
         if not (declared_here & _venue_verbs()):
@@ -793,7 +797,7 @@ def _venue_verbs() -> set[str]:
 
 
 def _is_thin_oz_proxy(focus: Optional[str]) -> bool:
-    """True for a named OZ / EIP-173 proxy shell (not a Diamond / venue)."""
+    """True for a named OZ / EIP-173 / Aragon proxy shell (not a Diamond)."""
     return bool(focus) and _norm_ident(focus) in _THIN_OZ_PROXY_NAMES
 
 
@@ -1485,6 +1489,27 @@ def _funds_at_risk_family(
         and {"provideliquidity"} & (declared | probe)
     ):
         return "bridge", ["ccip-lock-release"]
+    # SynapseBridge (`0x2796…cEb6` / impl `0x5B00…005B`). Lock-mint-redeem.
+    # Used to win as eth-custody-withdraw (withdraw + address(this).balance).
+    if {"depositandswap", "mintandswap"} <= (declared | probe) and {
+        "kappaexists", "redeemv2"
+    } & (declared | probe):
+        return "bridge", ["synapse-bridge"]
+    # Linea TokenBridge (`0x051F…3319` / impl `0xF0e0…e3ff`). Escrow + mint.
+    if {"bridgetoken", "completebridging"} <= (declared | probe) and {
+        "nativetobridgedtoken", "bridgedtonativetoken"
+    } & (declared | probe):
+        return "bridge", ["linea-token-bridge"]
+    # Wormhole TokenBridge (`0x3ee1…a585` / impl `0x3817…841e`). Lock + mint.
+    if {"completetransfer", "attesttoken"} <= (declared | probe) and {
+        "transfertokens", "wrapandtransfereth"
+    } & (declared | probe):
+        return "bridge", ["wormhole-token-bridge"]
+    # Celer cBridge (`0x5427…1820`). Liquidity lock + signed withdraw.
+    if {"addnativeliquidity", "decwithdrawmsg"} <= (declared | probe) and {
+        "sendnative", "decrelay"
+    } & (declared | probe):
+        return "bridge", ["celer-bridge"]
 
     if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES

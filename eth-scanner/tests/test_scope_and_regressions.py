@@ -198,6 +198,11 @@ _ADDR = {
     "mellow_root_vault_like.sol": "0xa1eeEb677a121327Ea2643Fb47a23fec304Edd00",
     "concrete_async_vault_like.sol": "0xd57588c73715b65e0ead36ae06c15644169501b7",
     "oz_proxy_sibling_bridge_like.sol": "0x6c8984bc7DBBeDAf4F6b2FD766f16eBB7d10AAb4",
+    "synapse_bridge_like.sol": "0x2796317b0fF8538F253012862c06787Adfb8cEb6",
+    "linea_token_bridge_like.sol": "0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319",
+    "wormhole_token_bridge_like.sol": "0x3ee18B2214AFF97000D974cf647E7C347E8fa585",
+    "celer_bridge_like.sol": "0x5427FEFA711Eff984124bFBB1AB6fbf5E3DA1820",
+    "aragon_app_proxy_like.sol": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -342,6 +347,15 @@ LIVE_CONCRETE_DELTA_WEETH = "0xb9dc54c8261745cb97070cefbe3d3d815aee8f20"
 LIVE_RESOLV_STUSR = "0x6c8984bc7DBBeDAf4F6b2FD766f16eBB7d10AAb4"
 LIVE_RESOLV_STUSR_IMPL = "0xba1600735a039E2b3bF1d1d2f1A7f80F45973DA7"
 LIVE_LBTC_PROXY = "0x8236A87084F8B84306F72007F36F2618A5634494"
+LIVE_SYNAPSE_BRIDGE = "0x2796317b0fF8538F253012862c06787Adfb8cEb6"
+LIVE_SYNAPSE_IMPL = "0x5B0000258c622551A1c7C45b9f860Ef90200005B"
+LIVE_LINEA_TOKEN_BRIDGE = "0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319"
+LIVE_LINEA_TOKEN_BRIDGE_IMPL = "0xF0e003F0dE2d583Ae28FA8cBF66aa096CdAce3ff"
+LIVE_WORMHOLE_TOKEN_BRIDGE = "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
+LIVE_WORMHOLE_TOKEN_BRIDGE_IMPL = "0x381752f5458282d317d12C30D2Bd4D6E1FD8841e"
+LIVE_CELER_BRIDGE = "0x5427FEFA711Eff984124bFBB1AB6fbf5E3DA1820"
+LIVE_STETH = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
+LIVE_STETH_IMPL = "0x028271E30a695c0527A0C50cA30603feD004cDb0"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -2896,6 +2910,72 @@ class Pass23OzProxySiblingLeak(unittest.TestCase):
         self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
         self.assertEqual(_lane("veda_boring_vault_like.sol").contract_class, "vault")
         self.assertEqual(_lane("veda_teller_like.sol").contract_class, "router")
+        self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
+        self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass24BridgeFamilyMisses(unittest.TestCase):
+    """Pass 24: Synapse/Linea/Wormhole/Celer pins + Aragon AppProxy keep."""
+
+    def test_synapse_is_bridge_not_eth_custody_withdraw(self):
+        src = (FIXTURES / "synapse_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="SynapseBridge"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("synapse-bridge", ir.scope_signals)
+        self.assertNotIn("eth-custody-withdraw", ir.scope_signals)
+        r = _lane("synapse_bridge_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["synapse_bridge_like.sol"], LIVE_SYNAPSE_BRIDGE)
+        self.assertEqual(LIVE_SYNAPSE_IMPL.lower()[0:6], "0x5b00")
+
+    def test_linea_token_bridge_is_bridge(self):
+        src = (FIXTURES / "linea_token_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TokenBridge"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("linea-token-bridge", ir.scope_signals)
+        r = _lane("linea_token_bridge_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["linea_token_bridge_like.sol"], LIVE_LINEA_TOKEN_BRIDGE)
+        self.assertEqual(LIVE_LINEA_TOKEN_BRIDGE_IMPL.lower()[0:6], "0xf0e0")
+
+    def test_wormhole_token_bridge_is_bridge(self):
+        src = (FIXTURES / "wormhole_token_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="BridgeImplementation"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("wormhole-token-bridge", ir.scope_signals)
+        r = _lane("wormhole_token_bridge_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["wormhole_token_bridge_like.sol"], LIVE_WORMHOLE_TOKEN_BRIDGE)
+        self.assertEqual(LIVE_WORMHOLE_TOKEN_BRIDGE_IMPL.lower()[0:6], "0x3817")
+
+    def test_celer_bridge_is_bridge(self):
+        src = (FIXTURES / "celer_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="Bridge"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("celer-bridge", ir.scope_signals)
+        r = _lane("celer_bridge_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["celer_bridge_like.sol"], LIVE_CELER_BRIDGE)
+
+    def test_aragon_app_proxy_stays_diamond_missing(self):
+        src = (FIXTURES / "aragon_app_proxy_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="AppProxyUpgradeable"), try_slither=False)
+        self.assertEqual(ir.contract_class, "custody")
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertNotEqual(ir.contract_class, "utility")
+        self.assertNotEqual(ir.contract_class, "staking")
+        self.assertEqual(_ADDR["aragon_app_proxy_like.sol"], LIVE_STETH)
+        self.assertEqual(LIVE_STETH_IMPL.lower()[0:6], "0x0282")
+
+    def test_honest_keeps_and_pass23_still_hold(self):
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
         self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
         self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
         self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
