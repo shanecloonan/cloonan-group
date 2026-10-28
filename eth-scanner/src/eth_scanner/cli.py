@@ -1,4 +1,4 @@
-"""CLI: lane-a, lane-b, enqueue, surface, list, receipt.
+"""CLI: lane-a, lane-b, enqueue, surface, list, receipt, research.
 
 Defensive analysis only. No exploit / PoC / live fund-moving commands.
 """
@@ -80,10 +80,14 @@ def main(argv: list[str] | None = None) -> int:
     rec.add_argument("--dry-run", action="store_true")
 
     sub.add_parser("surface", help="run invariant_pass heuristics (passthrough)")
+    sub.add_parser("research", help="Phase 1 research audit stack (defensive; see eth_scanner.research)")
 
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
+    if args.cmd == "research":
+        from eth_scanner.research.cli import main as research_main
+        return research_main(rest)
 
     settings = load_settings()
     if getattr(args, "dry_run", False):

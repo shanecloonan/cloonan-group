@@ -39,6 +39,16 @@ Lane A is a **picker** for venues that regularly *hold or account* other people�
 
 Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *before* ERC-20/721 shape so a pool that calls `IERC20.transferFrom` is never demoted as a token. Imported `IERC20` / `IUniswapV3Pool` / `IWETH9` on a Uni V3 *SwapRouter* do not flip it to `custody` — pass-through still demotes. Imported `IUniswapV3SwapCallback` / `uniswapV2Call` on a Uni V3 *pool* or Uni V2 pair do not flip it to `router` — reserve AMMs stay in-scope as `pool` (`Slot0 public override slot0`, mint/collect/burn/swap/flash). Etherscan `ContractName` scopes family identity to that contract plus `is` parents *and* `using Lib for` libraries — a Sourcify tree that also ships sibling `Morpho.sol` must not flip MetaMorpho to lending. Name aliases include `Pool`/`PoolInstance`, version suffixes, `Impl`/`Facet`/`Interface`. `yVault` vs `Vault` is intentionally **not** aliased. Diamond loupes that miss facet files prefer false keep (`diamond-facets-missing`); a diamond *router* facet still cools. Yearn `uint256 public pricePerShare` and Vyper `def pricePerShare` tag `yearn-share-price` (live yvUSDC `0xa354…C4DE`, yvWETH `0xa258…68c`, yvDAI `0xdA81…c95`: Etherscan `ContractName=Vyper_contract`, compiler `vyper:0.2.12`). Live Across Hub (`0xc186…Eda`) Sourcify `HubPool` file movers include `addLiquidity` / `proposeRootBundle` / `executeRootBundle`. Live Pendle Market (wstETH 30DEC2027 `0x342808…Be3b`) is `pool`; PendleRouterV4 thin diamond stays cool. Dai is a DSS token, not Vat. weETH / rsETH-wrap / ezETH-wrap / cbETH / wOETH are wrap-tokens. Hop L1 ERC20 (`0x3666…18a`, `L1_ERC20_Bridge`) is the live verified Hop lock — L1 ETH (`0xb890…777f`) is still unverified on Etherscan and Sourcify (Pass 21 re-checked; keep the shape fixture). ether.fi LiquidityPool is `staking` (`getTotalPooledEther`+`requestWithdraw`) — imported EigenLayer `exchange` must not steal `curve-pool`. TreehouseRouter and Usual DaoCollateral cool. tETH Vault / TAsset / RedemptionV3 are vaults. USD0++ stays generic custody (holds USD0 until unwrap). eUSD RToken cools as a token. Reserve Folio is 4626; FolioDeployer cools; BackingManager is a vault (`forwardRevenue`+`grantRTokenAllowance`). Mantle Staking is `stake/reward`; UnstakeRequestsManager is `mantle-unstake-queue`. CCIP LockReleaseTokenPool is `bridge` (`lockOrBurn`+`releaseOrMint`+`provideLiquidity`). FraxlendPair is `lending` (`borrowAsset`+`repayAsset`). Sommelier Cellar is `vault` (`callOnAdaptor`+`addPosition`). TermRepoCollateralManager / TermRepoLocker are vaults. Liquid Collective LsETH is `staking`. Veda BoringVault is `vault` (`enter`+`exit`+`manage`); the Teller cools (`depositAndBridge`+`shareLockPeriod` — lzReceive is not a lock); the on-chain queue is a vault. Upshift institutional is `vault` (`lockCapital`+`claimDailyInterest`). Mellow ALM vault is `vault` (`transferAndPush`+`reclaimTokens`). Clearpool PoolMaster impl is already lending-ix. Liquity V2 TroveManager is `lending` (`batchLiquidateTroves`); StabilityPool is `vault` (`provideToSP`+`offset`) — WETH / wstETH / rETH branches all tag. BOLD is a token. Yearn V3 vault original / TokenizedStrategy 3.1.0 are 4626. PufferVaultV5 impl is a 4626 vault. Maple syrupUSDC/USDT are 4626; SyrupRouter cools. Stargate V2 pools are `bridge`; TokenMessaging cools. Enzyme VaultLib and Origin OETHVault are vaults. Pendle SY-stETH is 4626. Maker DaiJoin / GemJoin / UsdsJoin are `vault` (`maker-join`; *this* contract must declare `vat` — imported `PotLike.vat` on DsrManager must not steal). DssLitePsm is `vault` (`maker-psm`). Sky DaiUsds (`daiToUsds`+`usdsToDai`) is a 1:1 converter and cools. DsrManager stays generic custody. Compound CometRewards cools (`getRewardOwed`+`claim`). Aave/Spark PoolAddressesProvider is utility. sUSDe / sfrxETH are 4626 vaults; USDe is a token. Balancer V2 Vault (`0xBA12…F2C8`) is `vault`. Gearbox CreditManagerV3 is `lending`; Gearbox PoolV3 is a 4626 `vault`. crvUSD Controller is `lending`; LLAMMA `exchange` is `pool`. Euler EVault impl is `lending`. Contango Vault stays generic custody (Do Not Auto-Dismiss). Uni V4 PoolManager is `pool`. CoW GPv2Settlement cools (`invalidateOrder`+`settle`). frxETH cools as a permissioned-mint receipt. A `.depositEther` *call* (Rocket DepositPool → vault) is not a lock-release verb; `function depositEther` still is. Imported IWstETH.unwrap on Lido WithdrawalQueue is not a share-wrap. Optimism Portal 2 impl (`0x1005…6748`), L1StandardBridge impl (`0xb37a…a891`), Arbitrum Inbox impl (`0x7c05…0a10`) pin the proxy IR lift. Polygon EtherPredicate / ERC20Predicate / Plasma DepositManager / FxERC20RootTunnel, Scroll L1 messenger + ETH/WETH gateway, StarknetEthBridge, and zkSync Mailbox / L1ERC20Bridge are lock-release bridges. FxRoot is messaging-only (utility). Hop bonder `stake`/`unstake` and sibling `function stake` / `finalizeWithdrawal` / EigenLayer `queueWithdrawals` *interfaces* must not steal the family. Same-file sibling WETH `deposit`/`msg.value` must not flip mETH to wrap-token. The ETH GMX *token* is not a vault (GLP vault is Arbitrum-first). Prefer false keep for true reserves.
 
+## Research stack (Phase 1, beside Lane A)
+
+Lane A stays the picker. A **research audit stack** (`0.1.0`) sits next to it and only runs L2+ on Lane A funds-at-risk venues. Scanner semver stays `0.3.16`.
+
+```bash
+python -m eth_scanner.research run --address 0x… --source tests/fixtures/erc4626_vault_like.sol --dry-run
+```
+
+Layers L0–L5, receipts, and Phase 2 stubs: [`research/README.md`](research/README.md). `/test` UI wiring is Phase 2 — use the CLI.
+
 ## Layout
 
 ```
@@ -52,15 +62,19 @@ eth-scanner/
     heuristics/scope.py      # token demote vs in-scope family
     lane_a/worker.py         # S0–S5 + S6 gate
     lane_b/worker.py         # S7 on lane-b-queue + manual-review
+    research/                # Phase 1 defensive audit stack (L0–L5)
     store/supabase.py        # service-role or local dry-run
     receipt.py               # Markdown scan receipts (downloadable .md)
     cli.py
+  research/README.md         # L0–L5 architecture + how to run
+  research/invariants/       # Foundry invariant templates (no attacker harness)
   supabase/migrations/20261027_eth_scanner_queue.sql
   tests/test_funnel_buckets.py
   tests/test_unpack_and_movers.py
   tests/test_receipts.py
   tests/test_scope_and_regressions.py
   tests/test_etherscan_resilience.py
+  tests/test_research_*.py
 ```
 
 Wired into the repo migration path as `infra/supabase/migrations/2026-10-27-eth-scanner-queue.sql` (`npm run db:migrate:all`).
@@ -123,6 +137,12 @@ python -m eth_scanner surface path/to/src --json -
 
 python -m eth_scanner list
 python -m eth_scanner list --results
+
+# Research stack (Lane A gate → IR → Slither/custom → funds-flow → receipt)
+python -m eth_scanner.research run \
+  --address 0xd2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2 \
+  --source tests/fixtures/erc4626_vault_like.sol \
+  --dry-run
 ```
 
 Apply SQL (from repo root, needs `SUPABASE_ACCESS_TOKEN`):
