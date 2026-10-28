@@ -27,13 +27,6 @@ export type PythonRuntimeStatus = {
   lazy: boolean;
 };
 
-export const SCANNER_FILE_TRACE_GLOBS = [
-  "./eth-scanner/src/**/*",
-  "./eth-scanner/tests/fixtures/**/*",
-  "./eth-scanner/.runtime/**/*",
-  "./scripts/bundle-python-runtime.mjs",
-] as const;
-
 export function portablePythonPrefix(root = process.cwd()): string {
   return path.join(root, "eth-scanner", ".runtime", "python");
 }

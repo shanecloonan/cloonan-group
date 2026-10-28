@@ -37,13 +37,18 @@ const ASSETS = {
 };
 
 const SLIM_DIRS = [
+  "include",
+  "share",
+  "lib/pkgconfig",
   "lib/python3.12/tkinter",
   "lib/python3.12/idlelib",
   "lib/python3.12/turtledemo",
   "lib/python3.12/ensurepip",
   "lib/python3.12/test",
-  "share/man",
-  "share/doc",
+  "lib/python3.12/pydoc_data",
+  "lib/python3.12/lib2to3",
+  "lib/python3.12/unittest",
+  "lib/python3.12/site-packages/pip",
 ];
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -94,6 +99,15 @@ function slim(prefix) {
     const abs = path.join(prefix, rel);
     if (existsSync(abs)) rmSync(abs, { recursive: true, force: true });
   }
+  const binDir = path.join(prefix, "bin");
+  if (existsSync(binDir)) {
+    for (const name of ["pip", "pip3", "pip3.12", "idle3", "idle3.12", "2to3", "2to3-3.12", "pydoc3", "pydoc3.12"]) {
+      const abs = path.join(binDir, name);
+      if (existsSync(abs)) rmSync(abs, { force: true });
+    }
+  }
+  const turtle = path.join(prefix, "lib/python3.12/turtle.py");
+  if (existsSync(turtle)) rmSync(turtle, { force: true });
 }
 
 async function download(arch, destFile) {
