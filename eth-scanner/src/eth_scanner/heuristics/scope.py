@@ -1541,6 +1541,11 @@ def _funds_at_risk_family(
     # not Linea burnAllLockedUSDC.
     if {"withdrawwhiledead", "canceldepositwhiledead"} <= (declared | probe):
         return "bridge", ["sonic-token-deposit"]
+    # Circle GatewayWallet (`0x7777…00eE` / impl `0xF7a6…e798`).
+    # USDC lock for cross-domain mint. gatewayBurn + initiateWithdrawal —
+    # not Sonic withdrawWhileDead / Linea burnAllLockedUSDC.
+    if {"gatewayburn", "initiatewithdrawal"} <= (declared | probe):
+        return "bridge", ["circle-gateway-wallet"]
 
     if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
