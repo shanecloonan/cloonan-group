@@ -435,6 +435,14 @@ def classify_scope(
             signals=["pool-addresses-provider"],
             promote=False,
         )
+    # Reserve FolioDeployer: factory. Folios hold the basket, not this address.
+    if _is_folio_deployer(src, names, contract_name):
+        return ScopeDecision(
+            contract_class="utility",
+            scope="utility",
+            signals=["folio-deployer"],
+            promote=False,
+        )
 
     # Diamond loupe / EIP-2535 proxy whose facet files are not in the blob.
     # Prefer false keep — Do Not Auto-Dismiss a possible custody venue.
@@ -1116,6 +1124,21 @@ def _is_pool_addresses_provider(
     return not _hold_signal(src, names, include_amm=False, focus=focus)
 
 
+def _is_folio_deployer(
+    src: str,
+    names: set[str],
+    focus: Optional[str] = None,
+) -> bool:
+    """Reserve FolioDeployer (`0x4D20…2073`) — factory, not a hold."""
+    declared = _this_or_names(src, names, focus)
+    probe = _probe_names(src, names, None, focus)
+    if "deployfolio" not in (declared | probe):
+        return False
+    if not ({"deploygovernedfolio", "folioimplementation"} & (declared | probe)):
+        return False
+    return not _own_reserves(src, names, focus)
+
+
 def _passthrough_family(
     src: str,
     names: set[str],
@@ -1406,6 +1429,14 @@ def _funds_at_risk_family(
     ):
         return "lending", ["fluid-liquidity"]
 
+    # Chainlink CCIP LockReleaseTokenPool holds the token. Burn-mint
+    # pools share lockOrBurn/releaseOrMint but not provideLiquidity.
+    if (
+        {"lockorburn", "releaseormint"} <= (declared | probe)
+        and {"provideliquidity"} & (declared | probe)
+    ):
+        return "bridge", ["ccip-lock-release"]
+
     if not stargate_msg_only and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
         or re.search(
@@ -1539,6 +1570,20 @@ def _funds_at_risk_family(
         and {"rebase", "allocate"} & (declared | probe)
     ):
         return "vault", ["origin-oeth-vault"]
+    # Reserve BackingManager (`0xF014…80A4` / impl `0x62A5…85d6`) holds
+    # the eUSD basket. rebalance alone is too weak (Fluid VaultT1).
+    if (
+        {"forwardrevenue"} & (declared | probe)
+        and {"grantrtokenallowance", "rebalance"} & (declared | probe)
+    ):
+        return "vault", ["reserve-backing-manager"]
+    # TreehouseRedemptionV3 (`0x62fb…dd90`) queues tETH shares, then
+    # redeems from the vault after the waiting period.
+    if (
+        {"finalizeredeem"} & (declared | probe)
+        and {"redeemwithnft", "totalredeemingshares"} & (declared | probe)
+    ):
+        return "vault", ["treehouse-redemption"]
     erc4626 = _is_erc4626(src, names, focus)
     # Live Yearn yvUSDC tagged share-accounting: `uint256 public pricePerShare`
     # (and Vyper `pricePerShare: public`) is a getter, not `function pricePerShare`.
@@ -1651,10 +1696,15 @@ def _funds_at_risk_family(
     etherfi_lp = bool({"gettotalpooledether"} & (declared | probe)) and bool(
         {"deposit", "requestwithdraw"} <= (declared | probe)
     )
+    # Mantle UnstakeRequestsManager holds ETH for finalized claims.
+    # Staking (`stake`) is already stake/reward; this is the queue.
+    mantle_urm = bool({"allocatedethforclaims"} & (declared | probe)) and bool(
+        {"cancelunfinalizedrequests", "withdrawallocatedethsurplus"} & (declared | probe)
+    )
     synth_rewards = bool({"deposit", "withdraw"} <= (declared | probe | names)) and bool(
         {"earned", "getreward", "rewardpertoken"} & (declared | probe | names)
     )
-    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or rocket_dp or lido_wq or renzo or swell or etherfi_lp or synth_rewards or gauge:
+    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or rocket_dp or lido_wq or renzo or swell or etherfi_lp or mantle_urm or synth_rewards or gauge:
         if eigen:
             return "staking", ["eigenlayer"]
         if lido:
@@ -1671,6 +1721,8 @@ def _funds_at_risk_family(
             return "staking", ["swell-lst"]
         if etherfi_lp:
             return "staking", ["etherfi-liquidity-pool"]
+        if mantle_urm:
+            return "staking", ["mantle-unstake-queue"]
         if convex:
             return "staking", ["convex-booster"]
         if lrt_pool:
