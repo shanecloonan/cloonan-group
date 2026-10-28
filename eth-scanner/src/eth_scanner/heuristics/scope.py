@@ -85,11 +85,44 @@ BRIDGE_NAMES = frozenset({
     "depositv3", "depositv3now", "fillv3relay", "fillrelay", "relaytokens",
     "proposerootbundle", "executerootbundle", "claimrelayerrefund",
     "speedupv3deposit",
+    # Hop lock-release (L1_ETH_Bridge / L1_ERC20_Bridge).
+    "sendtol2", "bondwithdrawal", "bondwithdrawalanddistribute",
+    "bondtransferroot", "confirmtransferroot", "challengetransferroot",
+    "settlebondedwithdrawals", "settlebondedwithdrawal",
+    # Optimism / Base portal + StandardBridge lock-release.
+    "deposittransaction", "provewithdrawaltransaction",
+    "finalizewithdrawaltransaction", "finalizewithdrawaltransactionexternalproof",
+    "provewithdrawal", "finalizewithdrawal",
+    "finalizeethwithdrawal", "finalizeerc20withdrawal",
+    "finalizebridgeeth", "finalizebridgeerc20",
+    "bridgeeth", "bridgeerc20", "bridgeethto", "bridgeerc20to",
+    # Arbitrum Inbox / Polygon PoS ether lock.
+    "createretryableticket", "unsafecreateretryableticket",
+    "depositetherfor",
 })
 SHARE_WRAP_NAMES = frozenset({
     "getwstethbysteth", "getstethbywsteth", "stethpertoken", "tokenspersteth",
     # weETH (`0xCd5f…b7ee`) wrap of eETH — same pattern as wstETH/stETH.
     "getweethbyeeth", "geteethbyweeth",
+    # rsETH / Kelp and wrsETH-shaped wraps (false-keep like weETH when wrap/unwrap).
+    "getrsethbyeth", "getethbyrseth", "rsethpereth", "ethperrseth",
+    "getrsethbyasset", "getassetbyrseth",
+    # ezETH / Renzo wrap of ezETH.
+    "getezethbyeth", "getethbyezeth", "ezethpereth", "ethperezeth",
+    # cbETH / Coinbase staked wrap converters (if a wrap helper exists).
+    "getcbethbyeth", "getethbycbeth", "cbethpereth", "ethpercbeth",
+})
+# Token-to-token wrap movers. WETH uses deposit/withdraw; these do not.
+_SHARE_WRAP_MOVERS = frozenset({"wrap", "unwrap"})
+_SHARE_WRAP_RATE_RX = re.compile(
+    r"\b(getWstETHByStETH|getStETHByWstETH|stEthPerToken|tokensPerStEth|"
+    r"getWeETHByeETH|getEETHByWeETH|"
+    r"getRsETHByETH|getETHByRsETH|rsETHPerETH|getRsETHByAsset|"
+    r"getEzETHByETH|getETHByEzETH|ezETHPerETH|"
+    r"getCbETHByETH|getETHByCbETH|cbETHPerETH)\b",
+)
+LRT_DEPOSIT_NAMES = frozenset({
+    "depositasset", "getrsethamounttomint", "gettotalassetdeposits",
 })
 # DSS token transfer aliases (Dai `move`/`push`/`pull`). Not Vat verbs.
 DSS_TOKEN_ALIASES = frozenset({"move", "push", "pull"})
@@ -207,6 +240,17 @@ def classify_scope(
         and getattr(fn, "exposed", False)
         and (getattr(fn, "role", "") or "custody") not in {"erc20-standard"}
     ]
+    # Same-file Sourcify siblings (RSETH + LRTDepositPool, EzEthToken +
+    # RestakeManager) share one IR file path, so normalize cannot drop the
+    # other contract's movers. Intersect with this-contract names when
+    # Etherscan named the primary. Empty intersect keeps the raw set
+    # (diamond / rename — prefer false keep).
+    if contract_name and custody:
+        declared_here = _contract_declared_names(src, contract_name)
+        if declared_here:
+            focused_custody = [n for n in custody if n in declared_here]
+            if focused_custody:
+                custody = focused_custody
     wrap = any((getattr(fn, "role", "") == "wrap-unwrap") for fn in fns) or bool(
         {"deposit", "withdraw", "wrap", "unwrap"} & names and _weth_shape(src, names)
     )
@@ -621,6 +665,7 @@ def _diamond_incomplete(
         | COMET_NAMES
         | CONVEX_NAMES
         | POOL_RESERVE_VERBS
+        | LRT_DEPOSIT_NAMES
         | {
             "deposit", "withdraw", "redeem", "borrow", "repay", "stake",
             "unstake", "supply", "mint", "burn", "swap", "addliquidity",
@@ -640,6 +685,7 @@ def _venue_verbs() -> set[str]:
         | CONVEX_NAMES
         | POOL_RESERVE_VERBS
         | VAT_VERBS
+        | LRT_DEPOSIT_NAMES
         | {
             "deposit", "withdraw", "redeem", "borrow", "repay", "stake",
             "unstake", "supply", "mint", "burn", "swap", "addliquidity",
@@ -1026,21 +1072,53 @@ def _is_share_wrap(
 
     Live wstETH movers are wrap / unwrap / receive. The flattened blob also
     *calls* `stETH.getPooledEthByShares`, which used to fire Lido staking.
+    Token-to-token wrap/unwrap is *not* WETH-shaped, so IR tags those movers
+    as custody — that is how weETH (`0xCd5f…b7ee`) false-kept. Named rate
+    converters *or* wrap/unwrap as the only non-admin movers catch that class
+    (rsETH / ezETH / cbETH wraps included). cbETH StakedTokenV1 is an oracle
+    exchangeRate wrap with no on-chain wrap/unwrap.
     """
-    probe = _probe_names(src, names, custody, focus) | _this_or_names(src, names, focus)
-    if not ({"wrap", "unwrap"} & probe or {"wrap", "unwrap"} & names):
+    declared = _contract_declared_names(src, focus)
+    # Real Lido stETH implements submit + getPooledEthByShares here.
+    if declared and {"getpooledethbyshares", "submit"} & declared:
         return False
-    if SHARE_WRAP_NAMES & names or bool(re.search(
-        r"\b(getWstETHByStETH|getStETHByWstETH|stEthPerToken|tokensPerStEth|"
-        r"getWeETHByeETH|getEETHByWeETH)\b",
-        src,
-    )):
-        # Real Lido stETH implements submit + getPooledEthByShares here.
-        declared = _contract_declared_names(src, focus)
-        if declared and {"getpooledethbyshares", "submit"} & declared:
-            return False
+    # Compound / lending share tokens are venues, not wraps.
+    if declared and {"borrow", "repay", "accrueinterest", "repayborrow"} & declared:
+        return False
+
+    probe = _probe_names(src, names, custody, focus) | _this_or_names(src, names, focus)
+    movers = {str(n).lower() for n in (custody or []) if n}
+    has_wrap = bool(_SHARE_WRAP_MOVERS & (probe | names | movers))
+    rate = bool(SHARE_WRAP_NAMES & names) or bool(_SHARE_WRAP_RATE_RX.search(src or ""))
+    if has_wrap and rate:
         return True
-    return False
+    # wrap/unwrap as the only non-admin custody movers — weETH-class share wrap
+    # even when the rate getter name is new / missing.
+    if has_wrap and movers:
+        extra = {m for m in movers if m not in _SHARE_WRAP_MOVERS and not _is_token_admin(m)}
+        if not extra:
+            return True
+    return _is_oracle_staked_wrap(src, names, focus)
+
+
+def _is_oracle_staked_wrap(
+    src: str,
+    names: set[str],
+    focus: Optional[str] = None,
+) -> bool:
+    """cbETH StakedTokenV1: FiatToken + oracle `exchangeRate` / `updateExchangeRate`.
+
+    Coinbase holds the ETH off-chain. This address is a wrap-token, not a vault.
+    Compound uses `exchangeRateStored` / `exchangeRateCurrent` + accrue — skip.
+    """
+    pool = _this_or_names(src, names, focus)
+    if "exchangerate" not in pool:
+        return False
+    if not ({"updateexchangerate", "updateoracle"} & (pool | names)):
+        return False
+    if {"exchangeratestored", "exchangeratecurrent", "accrueinterest"} & pool:
+        return False
+    return True
 
 
 def _is_erc4626(src: str, names: set[str], focus: Optional[str] = None) -> bool:
@@ -1113,9 +1191,15 @@ def _funds_at_risk_family(
         return "maker", ["maker-vat/wards"]
 
     if (probe | declared | (set() if movers else names)) & BRIDGE_NAMES or re.search(
-        r"\b(lzReceive|finalizeWithdrawal|proveWithdrawal|bridgeMint|l1Bridge|l2Bridge|"
+        r"\b(lzReceive|finalizeWithdrawal\w*|proveWithdrawal\w*|bridgeMint|l1Bridge|l2Bridge|"
         r"depositV3|fillV3Relay|fillRelay|relayTokens|proposeRootBundle|"
-        r"SpokePool|HubPool|claimRelayerRefund)\b",
+        r"SpokePool|HubPool|claimRelayerRefund|"
+        r"sendToL2|bondTransferRoot|confirmTransferRoot|challengeTransferRoot|"
+        r"bondWithdrawal\w*|settleBondedWithdrawal\w*|"
+        r"depositTransaction|OptimismPortal|"
+        r"finalizeETHWithdrawal|finalizeERC20Withdrawal|finalizeBridgeETH|finalizeBridgeERC20|"
+        r"bridgeETH\w*|bridgeERC20\w*|"
+        r"createRetryableTicket|unsafeCreateRetryableTicket|depositEtherFor)\b",
         src,
     ):
         return "bridge", ["bridge-surface"]
@@ -1261,16 +1345,32 @@ def _funds_at_risk_family(
         r"function\s+completeQueuedWithdrawal|function\s+undelegate)\b",
         src,
     ))
+    # Kelp LRTDepositPool (`depositAsset` + `getRsETHAmountToMint`) holds LSTs.
+    # The rsETH *token* only mints/burns — require *this* contract.
+    lrt_here = declared if (focus and declared) else (declared | probe)
+    lrt_pool = bool({"depositasset"} & lrt_here) and bool(
+        {"getrsethamounttomint", "gettotalassetdeposits", "getassetcurrentlimit"}
+        & (lrt_here | (set() if (focus and declared) else names))
+        or (
+            not (focus and declared)
+            and re.search(
+                r"\b(getRsETHAmountToMint|getTotalAssetDeposits|function\s+depositAsset)\b",
+                _contract_bodies(src, focus) or src,
+            )
+        )
+    )
     synth_rewards = bool({"deposit", "withdraw"} <= (declared | probe | names)) and bool(
         {"earned", "getreward", "rewardpertoken"} & (declared | probe | names)
     )
-    if staking_ix or masterchef or lido or eigen or convex or synth_rewards:
+    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or synth_rewards:
         if eigen:
             return "staking", ["eigenlayer"]
         if lido:
             return "staking", ["lido-pooled-eth"]
         if convex:
             return "staking", ["convex-booster"]
+        if lrt_pool:
+            return "staking", ["lrt-deposit-pool"]
         if masterchef:
             return "staking", ["masterchef"]
         return "staking", ["stake/reward"]

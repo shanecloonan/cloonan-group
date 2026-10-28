@@ -86,6 +86,20 @@ _ADDR = {
     "weeth_like.sol": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
     "eeth_like.sol": "0x35fA164735182de50811E8e2E824cFb9B6118ac2",
     "sdai_like.sol": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+    "rseth_like.sol": "0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7",
+    "rseth_wrap_like.sol": "0x" + "f1" * 20,
+    "rseth_tree_like.sol": "0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7",
+    "kelp_deposit_pool_like.sol": "0x036676389e48133B63a802f8635AD39E752D375D",
+    "ezeth_like.sol": "0xbf5495Efe5DB9ce00f80364C8B423567e58d2110",
+    "ezeth_wrap_like.sol": "0x" + "f2" * 20,
+    "ezeth_tree_like.sol": "0xbf5495Efe5DB9ce00f80364C8B423567e58d2110",
+    "cbeth_like.sol": "0xBe9895146f7AF43049ca1c1AE358B0541Ea49704",
+    "cbeth_wrap_like.sol": "0x" + "f3" * 20,
+    "hop_l1_eth_bridge_like.sol": "0xb8901acB165ed027E32754E0FFe830802919777f",
+    "optimism_portal_like.sol": "0xbEb5Fc579115071764c7423A4f12eDde41f106Ed",
+    "op_standard_bridge_like.sol": "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
+    "arbitrum_inbox_like.sol": "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
+    "yearn_yvusdc_etherscan_live_shape.vy": "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -100,6 +114,13 @@ LIVE_WEETH = "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
 LIVE_EETH = "0x35fA164735182de50811E8e2E824cFb9B6118ac2"
 LIVE_SDAI = "0x83F20F44975D03b1b09e64809B757c47f942BEeA"
 LIVE_PENDLE_ROUTER = "0x888888888889758F76e7103c6CbF23ABbF58F946"
+LIVE_RSETH = "0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7"
+LIVE_EZETH = "0xbf5495Efe5DB9ce00f80364C8B423567e58d2110"
+LIVE_CBETH = "0xBe9895146f7AF43049ca1c1AE358B0541Ea49704"
+LIVE_HOP_ETH = "0xb8901acB165ed027E32754E0FFe830802919777f"
+LIVE_OP_PORTAL = "0xbEb5Fc579115071764c7423A4f12eDde41f106Ed"
+LIVE_OP_STD_BRIDGE = "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1"
+LIVE_ARB_INBOX = "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -215,6 +236,14 @@ class MoverNoise(unittest.TestCase):
         self.assertTrue(name_is_fund_mover("proposeRootBundle"))
         self.assertTrue(name_is_fund_mover("executeRootBundle"))
         self.assertTrue(name_is_fund_mover("disputeRootBundle"))
+        self.assertTrue(name_is_fund_mover("sendToL2"))
+        self.assertTrue(name_is_fund_mover("bondWithdrawal"))
+        self.assertTrue(name_is_fund_mover("depositTransaction"))
+        self.assertTrue(name_is_fund_mover("finalizeWithdrawalTransaction"))
+        self.assertTrue(name_is_fund_mover("proveWithdrawalTransaction"))
+        self.assertTrue(name_is_fund_mover("createRetryableTicket"))
+        self.assertTrue(name_is_fund_mover("finalizeETHWithdrawal"))
+        self.assertTrue(name_is_fund_mover("bridgeETH"))
         self.assertFalse(name_is_fund_mover("exchangeRate"))
         self.assertFalse(name_is_fund_mover("exchangeRateStored"))
         self.assertFalse(name_is_fund_mover("transferOwnership"))
@@ -1008,6 +1037,18 @@ class Pass7LiveLocks(unittest.TestCase):
             "eeth_like.sol": ("token", "demoted-token", "lane-a-cool"),
             "sdai_like.sol": ("vault", "in-scope", "lane-b-queue"),
             "diamond_router_like.json": ("router", "demoted-passthrough", "lane-a-cool"),
+            "rseth_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "rseth_wrap_like.sol": ("wrap-token", "demoted-token", "lane-a-cool"),
+            "ezeth_like.sol": ("token", "demoted-token", "lane-a-cool"),
+            "ezeth_wrap_like.sol": ("wrap-token", "demoted-token", "lane-a-cool"),
+            "cbeth_like.sol": ("wrap-token", "demoted-token", "lane-a-cool"),
+            "cbeth_wrap_like.sol": ("wrap-token", "demoted-token", "lane-a-cool"),
+            "kelp_deposit_pool_like.sol": ("staking", "in-scope", "lane-b-queue"),
+            "hop_l1_eth_bridge_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "optimism_portal_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "op_standard_bridge_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "arbitrum_inbox_like.sol": ("bridge", "in-scope", "lane-b-queue"),
+            "yearn_yvusdc_etherscan_live_shape.vy": ("vault", "in-scope", "lane-b-queue"),
         }
         for name, (klass, scope, bucket) in expected.items():
             r = _lane(name)
@@ -1140,6 +1181,147 @@ class Pass8LiveLocks(unittest.TestCase):
         r = _lane("maker_vat_like.sol")
         self.assertEqual(r.contract_class, "maker")
         self.assertEqual(r.bucket, "lane-b-queue")
+
+
+class Pass9ShareWrapsAndLockRelease(unittest.TestCase):
+    """Pass 9: rsETH/ezETH/cbETH share-wraps + Hop/OP/Arbitrum lock-release."""
+
+    def test_rseth_token_is_token_not_staking(self):
+        r = _lane("rseth_like.sol", tvl=2_000_000_000)
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "staking")
+        self.assertNotEqual(r.contract_class, "custody")
+        self.assertEqual(_ADDR["rseth_like.sol"], LIVE_RSETH)
+
+    def test_rseth_wrap_is_wrap_token_not_custody(self):
+        r = _lane("rseth_wrap_like.sol", tvl=2_000_000_000)
+        self.assertEqual(r.contract_class, "wrap-token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "custody")
+        src = (FIXTURES / "rseth_wrap_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="WrsETH"), try_slither=False)
+        self.assertIn("share-wrap", ir.scope_signals)
+
+    def test_rseth_tree_primary_stays_token(self):
+        src = (FIXTURES / "rseth_tree_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="RSETH"), try_slither=False)
+        self.assertEqual(ir.contract_class, "token")
+        self.assertNotEqual(ir.contract_class, "staking")
+        d = classify_scope(
+            source=src,
+            functions=ir.functions,
+            extra_names=ir.function_names,
+            contract_name="RSETH",
+        )
+        self.assertEqual(d.contract_class, "token")
+        self.assertEqual(d.scope, "demoted-token")
+
+    def test_kelp_deposit_pool_is_staking(self):
+        r = _lane("kelp_deposit_pool_like.sol")
+        self.assertEqual(r.contract_class, "staking")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        src = (FIXTURES / "kelp_deposit_pool_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="LRTDepositPool"), try_slither=False)
+        self.assertIn("lrt-deposit-pool", ir.scope_signals)
+
+    def test_ezeth_token_is_token_not_staking(self):
+        r = _lane("ezeth_like.sol", tvl=2_000_000_000)
+        self.assertEqual(r.contract_class, "token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "staking")
+        self.assertEqual(_ADDR["ezeth_like.sol"], LIVE_EZETH)
+
+    def test_ezeth_wrap_is_wrap_token_not_custody(self):
+        r = _lane("ezeth_wrap_like.sol", tvl=2_000_000_000)
+        self.assertEqual(r.contract_class, "wrap-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "custody")
+
+    def test_ezeth_tree_primary_stays_token(self):
+        src = (FIXTURES / "ezeth_tree_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="EzEthToken"), try_slither=False)
+        self.assertEqual(ir.contract_class, "token")
+        self.assertNotEqual(ir.contract_class, "staking")
+
+    def test_cbeth_is_wrap_token_not_vault(self):
+        r = _lane("cbeth_like.sol", tvl=5_000_000_000)
+        self.assertEqual(r.contract_class, "wrap-token")
+        self.assertEqual(r.scope, "demoted-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertNotEqual(r.contract_class, "vault")
+        self.assertNotEqual(r.contract_class, "custody")
+        src = (FIXTURES / "cbeth_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="StakedTokenV1"), try_slither=False)
+        self.assertIn("share-wrap", ir.scope_signals)
+        self.assertEqual(_ADDR["cbeth_like.sol"], LIVE_CBETH)
+
+    def test_cbeth_wrap_is_wrap_token(self):
+        r = _lane("cbeth_wrap_like.sol", tvl=1_000_000)
+        self.assertEqual(r.contract_class, "wrap-token")
+        self.assertEqual(r.bucket, "lane-a-cool")
+
+    def test_usdc_still_token_not_cbeth_wrap(self):
+        r = _lane("usdc_like.sol", tvl=30_000_000_000)
+        self.assertEqual(r.contract_class, "token")
+        self.assertNotEqual(r.contract_class, "wrap-token")
+
+    def test_hop_is_bridge_not_staking(self):
+        r = _lane("hop_l1_eth_bridge_like.sol", tvl=50_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.contract_class, "staking")
+        self.assertTrue(set(r.value_movers) & {"sendToL2", "bondWithdrawal", "withdraw"})
+        self.assertEqual(_ADDR["hop_l1_eth_bridge_like.sol"], LIVE_HOP_ETH)
+
+    def test_optimism_portal_is_bridge_not_custody(self):
+        r = _lane("optimism_portal_like.sol", tvl=200_000_000)
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.scope, "in-scope")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertNotEqual(r.contract_class, "custody")
+        self.assertTrue(set(r.value_movers) & {
+            "depositTransaction", "finalizeWithdrawalTransaction", "proveWithdrawalTransaction",
+        })
+        self.assertEqual(_ADDR["optimism_portal_like.sol"], LIVE_OP_PORTAL)
+
+    def test_op_standard_bridge_is_bridge(self):
+        r = _lane("op_standard_bridge_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"finalizeETHWithdrawal", "bridgeETH", "depositERC20"})
+        self.assertEqual(_ADDR["op_standard_bridge_like.sol"], LIVE_OP_STD_BRIDGE)
+
+    def test_arbitrum_inbox_is_bridge(self):
+        r = _lane("arbitrum_inbox_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertTrue(set(r.value_movers) & {"createRetryableTicket", "depositEth"})
+        self.assertEqual(_ADDR["arbitrum_inbox_like.sol"], LIVE_ARB_INBOX)
+
+    def test_yearn_etherscan_vyper_contract_name_is_vault(self):
+        src = (FIXTURES / "yearn_yvusdc_etherscan_live_shape.vy").read_text(encoding="utf-8")
+        ir = normalize(_art(src, language="vyper", contract_name="Vyper_contract"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        d = classify_scope(
+            source=src,
+            functions=ir.functions,
+            extra_names=ir.function_names,
+            contract_name="Vyper_contract",
+        )
+        self.assertEqual(d.contract_class, "vault")
+        self.assertEqual(d.scope, "in-scope")
+        self.assertIn("yearn-share-price", d.signals)
+        r = _lane("yearn_yvusdc_etherscan_live_shape.vy")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["yearn_yvusdc_etherscan_live_shape.vy"], LIVE_YEARN_YVUSDC)
+        self.assertTrue(set(r.value_movers) & {"deposit", "withdraw"})
 
 
 class UnpackFailureIsNotAClose(unittest.TestCase):
