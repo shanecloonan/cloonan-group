@@ -1516,6 +1516,21 @@ def _funds_at_risk_family(
         "updateglobalexitroot", "gettokenwrappedaddress", "claimmessage"
     } & (declared | probe):
         return "bridge", ["agglayer-bridge"]
+    # deBridgeGate (`0x43dE…98aA` / impl `0x7971…658e`). Lock + claim.
+    # send+claim alone is too generic — require getDebridgeId.
+    if {"getdebridgeid", "claim"} <= (declared | probe) and {
+        "send", "withdrawfee"
+    } & (declared | probe):
+        return "bridge", ["debridge-gate"]
+    # Aztec RollupProcessor (`0xFF1F…0455` / impl `0x7d65…2728`). L1 lock.
+    if {"depositpendingfunds", "processrollup"} <= (declared | probe):
+        return "bridge", ["aztec-rollup"]
+    # Rainbow NEAR ERC20Locker (`0x23Dd…27f`). Lock-release to NEAR.
+    # lockToken (singular) — Polygon predicates use lockTokens.
+    if {"locktoken", "unlocktoken"} <= (declared | probe) and {
+        "proveoutcome", "decodeblockheaderlight"
+    } & (declared | probe):
+        return "bridge", ["rainbow-near-locker"]
 
     if not stargate_msg_only and not veda_teller and (
         (probe | declared | (set() if movers else names)) & BRIDGE_NAMES
@@ -1684,6 +1699,12 @@ def _funds_at_risk_family(
     # used to win as erc20-plus-custody (flashLoan + mint).
     if {"mintidletoken", "redeemidletoken"} <= (declared | probe):
         return "vault", ["idle-token"]
+    # Tokemak EthPool (`0xD3D1…2F36` / impl `0xb104…46d5`). Reactor holds ETH.
+    # approveManager + requestedWithdrawals — not Origin requestWithdrawal.
+    if {"approvemanager"} & (declared | probe) and {
+        "requestedwithdrawals", "depositfor"
+    } & (declared | probe):
+        return "vault", ["tokemak-eth-pool"]
 
     # Pendle Action* / Uni V2 Router02: unique pass-through verbs beat imported
     # ERC-4626 / SY ifaces in the diamond or periphery blob.
