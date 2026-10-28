@@ -212,6 +212,7 @@ _ADDR = {
     "voting_escrow_like.vy": "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2",
     "linea_usdc_bridge_like.sol": "0x504A330327A089d8364C4ab3811Ee26976d388ce",
     "lido_withdrawal_vault_like.sol": "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f",
+    "sonic_token_deposit_like.sol": "0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -393,6 +394,8 @@ LIVE_LINEA_USDC_BRIDGE = "0x504A330327A089d8364C4ab3811Ee26976d388ce"
 LIVE_LINEA_USDC_IMPL = "0x66CFD1562d6Aa4629e9e4142662c1A403528Df00"
 LIVE_LIDO_WV = "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f"
 LIVE_LIDO_WV_IMPL = "0xfB4521BD151BFB45DB6045D2d07e58e0f597e340"
+LIVE_SONIC_TD = "0xa1E2481a9CD0Cb0447EeB1cbc26F1b3fff3bec20"
+LIVE_SONIC_TD_IMPL = "0xAdE2eF0101278fe11490F2EE2aaD7915a094ADe9"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -3273,6 +3276,44 @@ class Pass30LidoWithdrawalVault(unittest.TestCase):
     def test_pass29_pins_and_honest_keeps(self):
         self.assertEqual(_lane("linea_usdc_bridge_like.sol").contract_class, "bridge")
         self.assertEqual(_lane("linea_token_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("voting_escrow_like.vy").contract_class, "staking")
+        self.assertEqual(_lane("tokemak_eth_pool_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertEqual(LIVE_STAKEDAO_FXS_LOCKER.lower()[0:6], "0xcd3a")
+        self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
+
+
+class Pass31SonicTokenDeposit(unittest.TestCase):
+    """Pass 31: Sonic Gateway TokenDeposit L1 lock. New hunt."""
+
+    def test_sonic_token_deposit_is_bridge_not_linea_usdc(self):
+        src = (FIXTURES / "sonic_token_deposit_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TokenDeposit"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("sonic-token-deposit", ir.scope_signals)
+        self.assertNotIn("linea-usdc-bridge", ir.scope_signals)
+        r = _lane("sonic_token_deposit_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["sonic_token_deposit_like.sol"], LIVE_SONIC_TD)
+        self.assertEqual(LIVE_SONIC_TD_IMPL.lower()[0:6], "0xade2")
+
+    def test_linea_usdc_and_lido_wv_still_separate(self):
+        self.assertEqual(_lane("linea_usdc_bridge_like.sol").contract_class, "bridge")
+        src = (FIXTURES / "linea_usdc_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="L1USDCBridge"), try_slither=False)
+        self.assertIn("linea-usdc-bridge", ir.scope_signals)
+        self.assertNotIn("sonic-token-deposit", ir.scope_signals)
+        self.assertEqual(_lane("lido_withdrawal_vault_like.sol").contract_class, "staking")
+
+    def test_pass30_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("lido_withdrawal_vault_like.sol").contract_class, "staking")
+        self.assertEqual(_lane("lido_withdrawal_queue_like.sol").contract_class, "staking")
+        self.assertEqual(_lane("linea_usdc_bridge_like.sol").contract_class, "bridge")
         self.assertEqual(_lane("voting_escrow_like.vy").contract_class, "staking")
         self.assertEqual(_lane("tokemak_eth_pool_like.sol").contract_class, "vault")
         self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
