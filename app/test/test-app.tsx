@@ -319,6 +319,14 @@ export default function TestApp() {
                 Dropped{lastRun.result.drop_reason ? ` — ${lastRun.result.drop_reason}` : ""}
               </p>
             )}
+            {lastRun.result.dropped &&
+              lastRun.result.drop_reason === "empty EOA / zero-code" &&
+              !lastRun.live_ingest && (
+                <p className="mt-2 text-amber-200/90 leading-relaxed">
+                  Not a confirmed EOA. ETHERSCAN_API_KEYS is unset, so Lane A had no bytecode.
+                  Pick a local fixture or set keys for live ingest.
+                </p>
+              )}
             {lastRun.result.notes[0] && (
               <p className="mt-2 text-brand-400 leading-relaxed">{lastRun.result.notes[0]}</p>
             )}
