@@ -66,6 +66,7 @@ FUND_NAME = re.compile(
     r"bridgeETH\w*|bridgeERC20\w*|finalizeETHWithdrawal|finalizeERC20Withdrawal|"
     r"finalizeBridgeETH|finalizeBridgeERC20|finalizeWithdrawETH|finalizeWithdrawERC20|"
     r"lockTokens|exitTokens|relayMessageWithProof|depositWithMessage|"
+    r"receiveMessage|"
     r"requestL2Transaction|bridgehubRequestL2Transaction|"
     r"absorb|buyCollateral|buyUSDG|sellUSDG|increasePosition|decreasePosition|"
     r"earmarkRewards|earmarkFees"

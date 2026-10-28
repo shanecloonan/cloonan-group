@@ -111,6 +111,8 @@ BRIDGE_NAMES = frozenset({
     # zkSync Era Mailbox / L1ERC20Bridge.
     "requestl2transaction", "bridgehubrequestl2transaction",
     "finalizeethwithdrawal",
+    # Polygon FxPortal lock-release tunnels (not FxRoot messaging).
+    "receivemessage", "processmessagefromchild",
 })
 SHARE_WRAP_NAMES = frozenset({
     "getwstethbysteth", "getstethbywsteth", "stethpertoken", "tokenspersteth",
@@ -154,6 +156,9 @@ PENDLE_MARKET_NAMES = frozenset({
 })
 CONVEX_NAMES = frozenset({
     "earmarkrewards", "earmarkfees",
+})
+CURVE_GAUGE_NAMES = frozenset({
+    "set_approve_deposit", "claimable_tokens", "claimable_reward",
 })
 ROUTER_CALLBACK_NAMES = frozenset({
     "uniswapv3swapcallback", "uniswapv2call",
@@ -270,8 +275,21 @@ def classify_scope(
             focused_custody = [n for n in custody if n in declared_here]
             if focused_custody:
                 custody = focused_custody
-    wrap = any((getattr(fn, "role", "") == "wrap-unwrap") for fn in fns) or bool(
-        {"deposit", "withdraw", "wrap", "unwrap"} & names and _weth_shape(src, names)
+    # Same-file sibling WETH (live mETH flatten) has deposit/withdraw +
+    # msg.value and IR wrap-unwrap roles. Only this contract counts.
+    wrap_role_names = {
+        (getattr(fn, "name", "") or "").lower()
+        for fn in fns
+        if getattr(fn, "role", "") == "wrap-unwrap"
+    }
+    wrap_names = _this_or_names(src, names, contract_name)
+    if contract_name and wrap_role_names:
+        declared_here = _contract_declared_names(src, contract_name)
+        if declared_here:
+            wrap_role_names &= declared_here
+    wrap = bool(wrap_role_names) or bool(
+        {"deposit", "withdraw", "wrap", "unwrap"} & wrap_names
+        and _weth_shape(src, names, contract_name)
     )
     # wstETH-like share wrap holds the inner token the same way WETH holds ETH.
     # Live wstETH (`0x7f39…Ca0`) imported `getPooledEthByShares` and became staking.
@@ -683,6 +701,7 @@ def _diamond_incomplete(
         | EIGEN_NAMES
         | COMET_NAMES
         | CONVEX_NAMES
+        | CURVE_GAUGE_NAMES
         | POOL_RESERVE_VERBS
         | LRT_DEPOSIT_NAMES
         | {
@@ -702,6 +721,7 @@ def _venue_verbs() -> set[str]:
         | EIGEN_NAMES
         | COMET_NAMES
         | CONVEX_NAMES
+        | CURVE_GAUGE_NAMES
         | POOL_RESERVE_VERBS
         | VAT_VERBS
         | LRT_DEPOSIT_NAMES
@@ -841,10 +861,14 @@ def _has_meta(src: str, names: set[str]) -> bool:
     return sum(1 for m in ERC20_META if m in names or re.search(r"\b%s\b" % m, src, re.I)) >= 2
 
 
-def _weth_shape(src: str, names: set[str]) -> bool:
-    if not ({"deposit", "withdraw", "wrap", "unwrap"} & names):
+def _weth_shape(src: str, names: set[str], focus: Optional[str] = None) -> bool:
+    wrap_names = _this_or_names(src, names, focus)
+    if not ({"deposit", "withdraw", "wrap", "unwrap"} & wrap_names):
         return False
-    return bool(re.search(r"balanceOf\s*\[\s*msg\.sender\s*\]\s*\+|msg\.value", src))
+    return bool(re.search(
+        r"balanceOf\s*\[\s*msg\.sender\s*\]\s*\+|msg\.value",
+        _family_search(src, focus),
+    ))
 
 
 def _probe_names(
@@ -1125,7 +1149,9 @@ def _is_share_wrap(
     probe = _probe_names(src, names, custody, focus) | _this_or_names(src, names, focus)
     movers = {str(n).lower() for n in (custody or []) if n}
     has_wrap = bool(_SHARE_WRAP_MOVERS & (probe | names | movers))
-    rate = bool(SHARE_WRAP_NAMES & names) or bool(_SHARE_WRAP_RATE_RX.search(src or ""))
+    rate = bool(SHARE_WRAP_NAMES & (declared | names)) or bool(
+        _SHARE_WRAP_RATE_RX.search(_family_search(src, focus))
+    )
     if has_wrap and rate:
         return True
     # wrap/unwrap as the only non-admin custody movers — weETH-class share wrap
@@ -1240,8 +1266,13 @@ def _funds_at_risk_family(
         r"createRetryableTicket|unsafeCreateRetryableTicket|depositEtherFor|"
         r"lockTokens|exitTokens|depositEther|"
         r"relayMessageWithProof|depositWithMessage|"
-        r"requestL2Transaction|bridgehubRequestL2Transaction|finalizeEthWithdrawal)\b",
+        r"requestL2Transaction|bridgehubRequestL2Transaction|finalizeEthWithdrawal|"
+        r"receiveMessage|_processMessageFromChild)\b",
         _family_search(src, focus),
+    ) or (
+        {"maptoken"} & (declared | probe | names)
+        and {"deposit", "depositether"} & (declared | probe | names)
+        and {"receivemessage", "processmessagefromchild"} & (declared | names)
     ):
         return "bridge", ["bridge-surface"]
 
@@ -1374,18 +1405,24 @@ def _funds_at_risk_family(
     )) and ("deposit" in (declared | probe) or "withdraw" in (declared | probe))
     convex = bool((probe | declared) & CONVEX_NAMES) or bool(re.search(
         r"\b(function\s+earmarkRewards|function\s+earmarkFees)\b",
-        src,
+        _family_search(src, focus),
     ))
     # Live wstETH *calls* stETH.getPooledEthByShares — require it *here*.
     lido = bool({"getpooledethbyshares", "getsharesbypooledeth", "submit"} & declared) or (
         not _contract_declared_names(src, focus)
         and bool(re.search(r"\bfunction\s+(getPooledEthByShares|submit)\b", src))
     )
+    # Live rswETH flatten ships IDelegationManager with queueWithdrawals —
+    # search *contract* bodies, not imported ifaces (same as swETH finalizeWithdrawal).
     eigen = bool((probe | declared) & EIGEN_NAMES) or bool(re.search(
         r"\b(function\s+depositIntoStrategy|function\s+queueWithdrawals|"
         r"function\s+completeQueuedWithdrawal|function\s+undelegate)\b",
-        src,
+        _family_search(src, focus),
     ))
+    gauge = bool(CURVE_GAUGE_NAMES & (declared | probe | names)) or (
+        {"deposit", "withdraw"} <= (declared | probe | names)
+        and bool({"claimable_tokens", "claimable_reward", "integrate_fraction"} & (declared | names))
+    )
     # Kelp LRTDepositPool (`depositAsset` + `getRsETHAmountToMint`) holds LSTs.
     # The rsETH *token* only mints/burns — require *this* contract.
     lrt_here = declared if (focus and declared) else (declared | probe)
@@ -1409,7 +1446,7 @@ def _funds_at_risk_family(
     synth_rewards = bool({"deposit", "withdraw"} <= (declared | probe | names)) and bool(
         {"earned", "getreward", "rewardpertoken"} & (declared | probe | names)
     )
-    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or swell or synth_rewards:
+    if staking_ix or masterchef or lido or eigen or convex or lrt_pool or rocket or swell or synth_rewards or gauge:
         if eigen:
             return "staking", ["eigenlayer"]
         if lido:
@@ -1424,10 +1461,12 @@ def _funds_at_risk_family(
             return "staking", ["lrt-deposit-pool"]
         if masterchef:
             return "staking", ["masterchef"]
+        if gauge:
+            return "staking", ["curve-gauge"]
         return "staking", ["stake/reward"]
 
     curve = bool({"add_liquidity", "remove_liquidity", "exchange"} & (declared | probe | names)) or bool(
-        re.search(r"\b(add_liquidity|remove_liquidity)\s*\(", src)
+        re.search(r"\b(add_liquidity|remove_liquidity)\s*\(", _family_search(src, focus))
     )
     if curve:
         return "pool", ["curve-pool"]
@@ -1459,8 +1498,8 @@ def _funds_at_risk_family(
     implemented = _contract_declared_names(src, focus)
     if (
         "withdraw" in names
-        and re.search(r"address\s*\(\s*this\s*\)\s*\.balance", src)
-        and not _weth_shape(src, names)
+        and re.search(r"address\s*\(\s*this\s*\)\s*\.balance", _family_search(src, focus))
+        and not _weth_shape(src, names, focus)
         and not _unique_router(src, names, custody, focus)
         and (not implemented or "withdraw" in implemented)
     ):
