@@ -205,6 +205,10 @@ _ADDR = {
     "aragon_app_proxy_like.sol": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
     "idle_token_like.sol": "0xC8E6CA6E96a326dC448307A5fDE90a0b21fd7f80",
     "agglayer_bridge_like.sol": "0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe",
+    "debridge_gate_like.sol": "0x43dE2d77BF8027e25dBD179B491e8d64f38398aA",
+    "aztec_rollup_like.sol": "0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455",
+    "rainbow_near_locker_like.sol": "0x23Ddd3e3692d1861Ed57EDE224608875809e127f",
+    "tokemak_eth_pool_like.sol": "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36",
 }
 
 LIVE_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -372,6 +376,13 @@ LIVE_IDLE_WETH = "0xC8E6CA6E96a326dC448307A5fDE90a0b21fd7f80"
 LIVE_IDLE_IMPL = "0x577D963246D28dbE0dC579048AdDA421B054924A"
 LIVE_AGGLAYER_BRIDGE = "0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe"
 LIVE_AGGLAYER_IMPL = "0x66E0120e3c965552a89AcC37b03f762624baC5Ad"
+LIVE_DEBRIDGE_GATE = "0x43dE2d77BF8027e25dBD179B491e8d64f38398aA"
+LIVE_DEBRIDGE_IMPL = "0x797161BCC625155D2302251404ccB93c2632658e"
+LIVE_AZTEC_ROLLUP = "0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455"
+LIVE_AZTEC_IMPL = "0x7d657Ddcf7e2A5fD118dC8A6dDc3dC308AdC2728"
+LIVE_RAINBOW_NEAR = "0x23Ddd3e3692d1861Ed57EDE224608875809e127f"
+LIVE_TOKEMAK_ETH = "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36"
+LIVE_TOKEMAK_IMPL = "0xb104A7fA1041168556218DDb40Fe2516F88246d5"
 
 
 def _live_usdc_fns() -> list[FunctionIR]:
@@ -3077,6 +3088,65 @@ class Pass26IdleAgglayer(unittest.TestCase):
         self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
         self.assertEqual(LIVE_GOLDFINCH_SENIOR_IMPL.lower()[0:6], "0x656c")
         self.assertEqual(LIVE_SCRVUSD.lower()[0:6], "0x0655")
+        self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
+
+
+class Pass27DebridgeAztecRainbowTokemak(unittest.TestCase):
+    """Pass 27: deBridge / Aztec / Rainbow lock + Tokemak reactor. New hunt."""
+
+    def test_debridge_gate_is_bridge_not_custody(self):
+        src = (FIXTURES / "debridge_gate_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="DeBridgeGate"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("debridge-gate", ir.scope_signals)
+        r = _lane("debridge_gate_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["debridge_gate_like.sol"], LIVE_DEBRIDGE_GATE)
+        self.assertEqual(LIVE_DEBRIDGE_IMPL.lower()[0:6], "0x7971")
+
+    def test_aztec_rollup_is_bridge(self):
+        src = (FIXTURES / "aztec_rollup_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="RollupProcessorV3"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("aztec-rollup", ir.scope_signals)
+        r = _lane("aztec_rollup_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["aztec_rollup_like.sol"], LIVE_AZTEC_ROLLUP)
+        self.assertEqual(LIVE_AZTEC_IMPL.lower()[0:6], "0x7d65")
+
+    def test_rainbow_near_locker_is_bridge(self):
+        src = (FIXTURES / "rainbow_near_locker_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="ERC20Locker"), try_slither=False)
+        self.assertEqual(ir.contract_class, "bridge")
+        self.assertIn("rainbow-near-locker", ir.scope_signals)
+        r = _lane("rainbow_near_locker_like.sol")
+        self.assertEqual(r.contract_class, "bridge")
+        self.assertEqual(_ADDR["rainbow_near_locker_like.sol"], LIVE_RAINBOW_NEAR)
+
+    def test_tokemak_eth_pool_is_vault_not_origin(self):
+        src = (FIXTURES / "tokemak_eth_pool_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="EthPool"), try_slither=False)
+        self.assertEqual(ir.contract_class, "vault")
+        self.assertIn("tokemak-eth-pool", ir.scope_signals)
+        self.assertNotIn("origin-oeth-vault", ir.scope_signals)
+        r = _lane("tokemak_eth_pool_like.sol")
+        self.assertEqual(r.contract_class, "vault")
+        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(_ADDR["tokemak_eth_pool_like.sol"], LIVE_TOKEMAK_ETH)
+        self.assertEqual(LIVE_TOKEMAK_IMPL.lower()[0:6], "0xb104")
+
+    def test_pass26_pins_and_honest_keeps(self):
+        self.assertEqual(_lane("idle_token_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("agglayer_bridge_like.sol").contract_class, "bridge")
+        self.assertEqual(_lane("origin_oeth_vault_like.sol").contract_class, "vault")
+        self.assertEqual(_lane("contango_vault_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("usd0pp_like.sol").contract_class, "custody")
+        self.assertEqual(_lane("dsr_manager_like.sol").contract_class, "custody")
+        src = (FIXTURES / "oz_proxy_sibling_bridge_like.sol").read_text(encoding="utf-8")
+        ir = normalize(_art(src, contract_name="TransparentUpgradeableProxy"), try_slither=False)
+        self.assertIn("diamond-facets-missing", ir.scope_signals)
+        self.assertEqual(LIVE_HOP_ETH.lower()[0:6], "0xb890")
         self.assertEqual(LIVE_RSWETH.lower()[0:6], "0xfae1")
 
 
