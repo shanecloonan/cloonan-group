@@ -9,6 +9,7 @@ import path from "node:path";
 import {
   LANE_A_FIXTURES,
   RESEARCH_FIXTURES,
+  etherscanApiKeys,
   type ResearchFixtureId,
   scannerCapabilities,
   type ScannerCapabilities,
@@ -237,6 +238,7 @@ export async function runResearch(input: ResearchRunInput): Promise<ResearchRunO
     PYTHONPATH: pythonPath,
     PYTHONUNBUFFERED: "1",
     ETH_SCANNER_WORK_DIR: work,
+    ETHERSCAN_API_KEYS: etherscanApiKeys(),
   };
 
   if (!acquireScan()) return fail("a scan is already running");

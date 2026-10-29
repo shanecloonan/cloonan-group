@@ -40,6 +40,19 @@ describe("runLaneA fixture", () => {
     if (out.ok) return;
     assert.match(out.error, /unknown fixture/);
   });
+
+  it("reports live_ingest when ETHERSCAN_API_KEYS is unset", async () => {
+    const saved = process.env.ETHERSCAN_API_KEYS;
+    delete process.env.ETHERSCAN_API_KEYS;
+    try {
+      const out = await runLaneA({ fixture: "not_a_real_fixture" });
+      assert.equal(out.live_ingest, true);
+      assert.equal(out.ok, false);
+    } finally {
+      if (saved == null) delete process.env.ETHERSCAN_API_KEYS;
+      else process.env.ETHERSCAN_API_KEYS = saved;
+    }
+  });
 });
 
 describe("portable CPython pin", () => {

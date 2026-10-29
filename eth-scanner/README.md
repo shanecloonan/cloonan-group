@@ -92,7 +92,7 @@ Vanilla ERC20 `transfer` / `approve` / `transferFrom` are recorded as leads, not
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `ETHERSCAN_API_KEYS` | for live ingest | Comma-separated keys; rotated; default **0.4s** min interval |
+| `ETHERSCAN_API_KEYS` | for live ingest | Comma-separated keys; rotated; default **0.4s** min interval. Empty → built-in free-tier `/test` fallback |
 | `SUPABASE_SERVICE_ROLE_KEY` | for remote persist | Server-side only. Absent → **dry-run** JSON under `eth-scanner/work/` |
 | `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL` | optional | Defaults to `https://xvjqxjakckkbfsdrntwk.supabase.co` |
 | `ETH_RPC_URL` | optional | Read-only `eth_getCode` |
@@ -231,4 +231,4 @@ Triage at **`/test`** (noindex, not in public nav).
 - Optional **local fixture** uses a whitelisted file under `eth-scanner/tests/fixtures/` (`--source`). No arbitrary paths.
 - Each row still has **Download .md** → `GET /api/test/receipt?address=0x…` (`text/markdown` attachment).
 
-**Honesty:** live persist needs `SUPABASE_SERVICE_ROLE_KEY`; live ingest needs `ETHERSCAN_API_KEYS`. If those are unset, Run is still a dry-run: stub decompile (usually `manual-review`) or a local fixture, writing `eth-scanner/work/`. The page chips say which mode you are in. When the service-role key is unset, receipt download serves the latest file under `eth-scanner/work/receipts/` if present, otherwise it rebuilds Markdown from `dry-run-store.json`.
+**Honesty:** live persist needs `SUPABASE_SERVICE_ROLE_KEY`; live ingest uses `ETHERSCAN_API_KEYS` when set, otherwise a built-in free-tier test key so `/test` can fetch verified source without Vercel env. If the service-role key is unset, Run is still a dry-run persist (local `eth-scanner/work/`). The page chips say which mode you are in. When the service-role key is unset, receipt download serves the latest file under `eth-scanner/work/receipts/` if present, otherwise it rebuilds Markdown from `dry-run-store.json`.

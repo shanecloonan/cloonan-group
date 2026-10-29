@@ -1,12 +1,19 @@
 /**
  * Spawn Lane A (python -m eth_scanner). Defensive only — one address, no shell.
- * Never logs secret values. Live persist / ingest follow env; dry-run is the fallback.
+ * Never logs secret values. Live persist follows env; ingest uses ETHERSCAN_API_KEYS
+ * or the free-tier /test fallback. Dry-run persist is the default without a service role.
  */
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { LANE_A_FIXTURES, type FixtureId, scannerCapabilities, type ScannerCapabilities } from "./capabilities";
+import {
+  LANE_A_FIXTURES,
+  etherscanApiKeys,
+  type FixtureId,
+  scannerCapabilities,
+  type ScannerCapabilities,
+} from "./capabilities";
 import { workRoot } from "./local-store";
 import { acquireScan, releaseScan, scanInFlight } from "./scan-lock";
 import {
@@ -237,6 +244,7 @@ export async function runLaneA(input: LaneARunInput): Promise<LaneARunOk | LaneA
     PYTHONPATH: pythonPath,
     PYTHONUNBUFFERED: "1",
     ETH_SCANNER_WORK_DIR: work,
+    ETHERSCAN_API_KEYS: etherscanApiKeys(),
   };
 
   if (!acquireScan()) return fail("a Lane A scan is already running");

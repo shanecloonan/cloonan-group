@@ -15,10 +15,18 @@ from eth_scanner.types import (
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WORK_DIR = ROOT / "work"
 DEFAULT_SUPABASE_URL = "https://xvjqxjakckkbfsdrntwk.supabase.co"
+# Free-tier fallback so /test live ingest works when Vercel env is unset.
+# Env ETHERSCAN_API_KEYS still wins. Never log this value.
+TEST_ETHERSCAN_FALLBACK_KEY = "MB89VXUF27QJHA7QYJMPE9W55UGYZNV39C"
 
 
 def _split_keys(raw: str) -> list[str]:
     return [p.strip() for p in (raw or "").split(",") if p.strip()]
+
+
+def _etherscan_keys() -> list[str]:
+    keys = _split_keys(os.environ.get("ETHERSCAN_API_KEYS", ""))
+    return keys or [TEST_ETHERSCAN_FALLBACK_KEY]
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -90,7 +98,7 @@ def load_settings() -> Settings:
         interval = DEFAULT_ETHERSCAN_INTERVAL_S
     interval = max(0.2, min(interval, 5.0))
     return Settings(
-        etherscan_api_keys=_split_keys(os.environ.get("ETHERSCAN_API_KEYS", "")),
+        etherscan_api_keys=_etherscan_keys(),
         supabase_url=url.rstrip("/"),
         supabase_service_role_key=os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
         eth_rpc_url=os.environ.get("ETH_RPC_URL", ""),
