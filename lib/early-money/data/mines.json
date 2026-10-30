@@ -998,5 +998,2005 @@
   "price": "Modestly underpriced",
   "conf": "Med",
   "early": "Hudbay Minerals"
+ },
+ {
+  "rank": 101,
+  "name": "Morenci",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "Largest US copper mine; leach innovation",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Freeport (FCX)"
+ },
+ {
+  "rank": 102,
+  "name": "Musonoi",
+  "commodity": "Copper, cobalt",
+  "where": "Lualaba, DRC",
+  "why": "Zijin high-grade underground",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Zijin Mining (2899.HK)"
+ },
+ {
+  "rank": 103,
+  "name": "Kolwezi (Zijin)",
+  "commodity": "Copper",
+  "where": "Lualaba, DRC",
+  "why": "Zijin open-pit copper",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Zijin Mining"
+ },
+ {
+  "rank": 104,
+  "name": "Kalumbila / Sentinel",
+  "commodity": "Copper",
+  "where": "North-Western, Zambia",
+  "why": "First Quantum's second Zambian engine",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "First Quantum (FM.TO)"
+ },
+ {
+  "rank": 105,
+  "name": "Motheo",
+  "commodity": "Copper, silver",
+  "where": "Kalahari Copperbelt, Botswana",
+  "why": "Sandfire's expanding Botswana hub",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Sandfire Resources (SFR.AX)"
+ },
+ {
+  "rank": 106,
+  "name": "Centinela",
+  "commodity": "Copper, gold",
+  "where": "Antofagasta, Chile",
+  "why": "Second concentrator expansion",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Antofagasta (ANTO.L)"
+ },
+ {
+  "rank": 107,
+  "name": "Mantoverde",
+  "commodity": "Copper, cobalt",
+  "where": "Atacama, Chile",
+  "why": "Sulphide concentrator plus cobalt",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Capstone Copper"
+ },
+ {
+  "rank": 108,
+  "name": "Quebrada Blanca (QB2)",
+  "commodity": "Copper",
+  "where": "Tarapacá, Chile",
+  "why": "Teck's long-life growth asset fixing tailings",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Teck Resources (TECK)"
+ },
+ {
+  "rank": 109,
+  "name": "Mina Justa",
+  "commodity": "Copper",
+  "where": "Ica, Peru",
+  "why": "Minsur high-grade oxide/sulphide",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Minsur (private)"
+ },
+ {
+  "rank": 110,
+  "name": "Constancia",
+  "commodity": "Copper",
+  "where": "Cusco, Peru",
+  "why": "Hudbay with Pampacancha",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Hudbay Minerals (HBM)"
+ },
+ {
+  "rank": 111,
+  "name": "Buenaventura / San Gabriel",
+  "commodity": "Gold",
+  "where": "Moquegua, Peru",
+  "why": "New Peruvian gold mine",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Buenaventura (BVN)"
+ },
+ {
+  "rank": 112,
+  "name": "Bagdad",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "Freeport automation expansion",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Freeport (FCX)"
+ },
+ {
+  "rank": 113,
+  "name": "Safford / Lone Star",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "Freeport oxide-to-sulphide upside",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Freeport"
+ },
+ {
+  "rank": 114,
+  "name": "Florence Copper",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "In-situ copper recovery; first cathode 2025",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Taseko Mines (TGB)"
+ },
+ {
+  "rank": 115,
+  "name": "Red Chris",
+  "commodity": "Copper, gold",
+  "where": "British Columbia, Canada",
+  "why": "Block cave under construction",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Newmont; Imperial Metals"
+ },
+ {
+  "rank": 116,
+  "name": "New Afton",
+  "commodity": "Copper, gold",
+  "where": "British Columbia, Canada",
+  "why": "C-Zone block cave",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "New Gold (NGD)"
+ },
+ {
+  "rank": 117,
+  "name": "Côté Gold",
+  "commodity": "Gold",
+  "where": "Ontario, Canada",
+  "why": "New large Canadian gold mine",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "IAMGOLD (IAG)"
+ },
+ {
+  "rank": 118,
+  "name": "Detour Lake",
+  "commodity": "Gold",
+  "where": "Ontario, Canada",
+  "why": "Agnico's flagship open pit",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Agnico Eagle (AEM)"
+ },
+ {
+  "rank": 119,
+  "name": "Canadian Malartic / Odyssey",
+  "commodity": "Gold",
+  "where": "Quebec, Canada",
+  "why": "Underground transition",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Agnico Eagle"
+ },
+ {
+  "rank": 120,
+  "name": "Greenstone",
+  "commodity": "Gold",
+  "where": "Ontario, Canada",
+  "why": "Equinox new open pit",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Equinox Gold (EQX)"
+ },
+ {
+  "rank": 121,
+  "name": "Eskay Creek",
+  "commodity": "Gold, silver",
+  "where": "British Columbia, Canada",
+  "why": "Skeena high-grade restart",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Skeena Resources (SKE)"
+ },
+ {
+  "rank": 122,
+  "name": "Blackwater",
+  "commodity": "Gold",
+  "where": "British Columbia, Canada",
+  "why": "Artemis new mine",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Artemis Gold (ARTG.V)"
+ },
+ {
+  "rank": 123,
+  "name": "Tasiast",
+  "commodity": "Gold",
+  "where": "Mauritania",
+  "why": "Kinross 24k throughput",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Kinross (KGC)"
+ },
+ {
+  "rank": 124,
+  "name": "Sukari",
+  "commodity": "Gold",
+  "where": "Egypt",
+  "why": "Centamin's Egyptian mine, now AngloGold",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "AngloGold Ashanti"
+ },
+ {
+  "rank": 125,
+  "name": "Ity",
+  "commodity": "Gold",
+  "where": "Côte d'Ivoire",
+  "why": "Endeavour CIL",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Endeavour Mining (EDV.L)"
+ },
+ {
+  "rank": 126,
+  "name": "Lafigué",
+  "commodity": "Gold",
+  "where": "Côte d'Ivoire",
+  "why": "Endeavour new mine",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Endeavour Mining"
+ },
+ {
+  "rank": 127,
+  "name": "Sabodala-Massawa",
+  "commodity": "Gold",
+  "where": "Senegal",
+  "why": "Endeavour expansion",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Endeavour Mining"
+ },
+ {
+  "rank": 128,
+  "name": "Obi Island (Harita)",
+  "commodity": "Nickel",
+  "where": "North Maluku, Indonesia",
+  "why": "HPAL MHP for batteries",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Trimegah Bangun Persada (NCKL.JK)"
+ },
+ {
+  "rank": 129,
+  "name": "Eneabba",
+  "commodity": "Rare earths",
+  "where": "Western Australia",
+  "why": "Iluka's government-backed refinery",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Iluka Resources (ILU.AX)"
+ },
+ {
+  "rank": 130,
+  "name": "Araxá",
+  "commodity": "Niobium",
+  "where": "Minas Gerais, Brazil",
+  "why": "CBMM's ~80% global niobium monopoly",
+  "price": "Fair",
+  "conf": "High",
+  "early": "CBMM (private)"
+ },
+ {
+  "rank": 131,
+  "name": "Moma",
+  "commodity": "Ilmenite, zircon",
+  "where": "Mozambique",
+  "why": "Kenmare heavy mineral sands",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Kenmare Resources (KMR.L)"
+ },
+ {
+  "rank": 132,
+  "name": "White Mesa Mill",
+  "commodity": "Uranium, rare earths",
+  "where": "Utah, USA",
+  "why": "Only US conventional U mill doing REE",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Energy Fuels (UUUU)"
+ },
+ {
+  "rank": 133,
+  "name": "Pinyon Plain",
+  "commodity": "Uranium",
+  "where": "Arizona, USA",
+  "why": "Highest-grade US uranium mine",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Energy Fuels"
+ },
+ {
+  "rank": 134,
+  "name": "Timok (Čukaru Peki)",
+  "commodity": "Copper, gold",
+  "where": "Serbia",
+  "why": "Zijin high-grade",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Zijin Mining"
+ },
+ {
+  "rank": 135,
+  "name": "Polkowice-Sieroszowice",
+  "commodity": "Copper, silver",
+  "where": "Lower Silesia, Poland",
+  "why": "KGHM deep copper; top silver producer",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "KGHM (KGH.WA)"
+ },
+ {
+  "rank": 136,
+  "name": "Mittersill",
+  "commodity": "Tungsten",
+  "where": "Austria",
+  "why": "Sandvik's EU tungsten",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Sandvik (SAND.ST)"
+ },
+ {
+  "rank": 137,
+  "name": "Rentails / Renison",
+  "commodity": "Tin",
+  "where": "Tasmania, Australia",
+  "why": "Metals X/Bluestone tin",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Metals X (MLX.AX)"
+ },
+ {
+  "rank": 138,
+  "name": "San Rafael",
+  "commodity": "Tin",
+  "where": "Puno, Peru",
+  "why": "Minsur high-grade tin",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Minsur"
+ },
+ {
+  "rank": 139,
+  "name": "Carrapateena",
+  "commodity": "Copper, gold",
+  "where": "South Australia",
+  "why": "BHP-owned block cave",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "BHP"
+ },
+ {
+  "rank": 140,
+  "name": "CSA (Cobar)",
+  "commodity": "Copper",
+  "where": "NSW, Australia",
+  "why": "Metals Acquisition Ltd high-grade",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Metals Acquisition (MTAL)"
+ },
+ {
+  "rank": 141,
+  "name": "Waihi / Wharekirauponga",
+  "commodity": "Gold",
+  "where": "New Zealand",
+  "why": "OceanaGold fast-track",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "OceanaGold (OGC.TO)"
+ },
+ {
+  "rank": 142,
+  "name": "Iron Bridge",
+  "commodity": "Iron ore (magnetite)",
+  "where": "Western Australia",
+  "why": "Fortescue 67% Fe concentrate",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Fortescue (FMG.AX)"
+ },
+ {
+  "rank": 143,
+  "name": "Gudai-Darri",
+  "commodity": "Iron ore",
+  "where": "Western Australia",
+  "why": "Rio's newest autonomous Pilbara mine",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Rio Tinto"
+ },
+ {
+  "rank": 144,
+  "name": "Mont-Wright / Fire Lake",
+  "commodity": "Iron ore",
+  "where": "Quebec, Canada",
+  "why": "ArcelorMittal DR-grade concentrate",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "ArcelorMittal (MT)"
+ },
+ {
+  "rank": 145,
+  "name": "Bloom Lake",
+  "commodity": "Iron ore",
+  "where": "Quebec, Canada",
+  "why": "Champion 69% Fe DR-grade",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Champion Iron (CIA.AX)"
+ },
+ {
+  "rank": 146,
+  "name": "Minas-Rio",
+  "commodity": "Iron ore",
+  "where": "Minas Gerais, Brazil",
+  "why": "Anglo pellet-feed",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Anglo American"
+ },
+ {
+  "rank": 147,
+  "name": "Serra Sul expansions",
+  "commodity": "Iron ore",
+  "where": "Pará, Brazil",
+  "why": "Vale S11D+ 20Mt",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Vale"
+ },
+ {
+  "rank": 148,
+  "name": "Mount Milligan",
+  "commodity": "Copper, gold",
+  "where": "British Columbia, Canada",
+  "why": "Centerra life extension",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Centerra Gold"
+ },
+ {
+  "rank": 149,
+  "name": "Chelopech",
+  "commodity": "Gold, copper",
+  "where": "Bulgaria",
+  "why": "Dundee high-grade",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Dundee Precious Metals (DPM.TO)"
+ },
+ {
+  "rank": 150,
+  "name": "Skouries",
+  "commodity": "Gold, copper",
+  "where": "Greece",
+  "why": "Eldorado restart",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Eldorado Gold (EGO)"
+ },
+ {
+  "rank": 151,
+  "name": "Rochester",
+  "commodity": "Silver, gold",
+  "where": "Nevada, USA",
+  "why": "Coeur heap leach expansion",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Coeur Mining"
+ },
+ {
+  "rank": 152,
+  "name": "Las Chispas",
+  "commodity": "Silver, gold",
+  "where": "Sonora, Mexico",
+  "why": "High-grade silver",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Coeur Mining"
+ },
+ {
+  "rank": 153,
+  "name": "Juanicipio",
+  "commodity": "Silver",
+  "where": "Zacatecas, Mexico",
+  "why": "MAG/Fresnillo high-grade",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Pan American (PAAS)"
+ },
+ {
+  "rank": 154,
+  "name": "Kucing Liar",
+  "commodity": "Copper, gold",
+  "where": "Papua, Indonesia",
+  "why": "Freeport next block cave",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Freeport"
+ },
+ {
+  "rank": 155,
+  "name": "Moanda",
+  "commodity": "Manganese",
+  "where": "Gabon",
+  "why": "Eramet Comilog world-leading manganese",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Eramet (ERA.PA)"
+ },
+ {
+  "rank": 156,
+  "name": "Hermosa",
+  "commodity": "Zinc, manganese",
+  "where": "Arizona, USA",
+  "why": "First FAST-41 US critical-minerals project",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "South32"
+ },
+ {
+  "rank": 157,
+  "name": "Green River trona",
+  "commodity": "Soda ash",
+  "where": "Wyoming, USA",
+  "why": "World's largest trona deposit",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Genesis Energy; Sisecam"
+ },
+ {
+  "rank": 158,
+  "name": "Fruta del Norte",
+  "commodity": "Gold",
+  "where": "Ecuador",
+  "why": "Lundin Gold high-grade",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Lundin Gold (LUG.TO)"
+ },
+ {
+  "rank": 159,
+  "name": "Media Luna",
+  "commodity": "Gold, copper",
+  "where": "Guerrero, Mexico",
+  "why": "Torex new underground",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Torex Gold (TXG.TO)"
+ },
+ {
+  "rank": 160,
+  "name": "Metalkol RTR",
+  "commodity": "Copper, cobalt",
+  "where": "Lualaba, DRC",
+  "why": "Tailings reprocessing at scale",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "ERG (private)"
+ },
+ {
+  "rank": 161,
+  "name": "Mopani",
+  "commodity": "Copper",
+  "where": "Copperbelt, Zambia",
+  "why": "IRH-backed revival of deep Zambian copper",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "International Resources Holding"
+ },
+ {
+  "rank": 162,
+  "name": "Konkola Copper Mines",
+  "commodity": "Copper",
+  "where": "Copperbelt, Zambia",
+  "why": "Vedanta-returned high-grade deep mine",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Vedanta (VEDL.NS)"
+ },
+ {
+  "rank": 163,
+  "name": "Mowana / Kalahari Copperbelt projects",
+  "commodity": "Copper",
+  "where": "Botswana",
+  "why": "District emerging around Khoemacau and Motheo",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "MMG; Cobre Ltd"
+ },
+ {
+  "rank": 164,
+  "name": "Western Forelands",
+  "commodity": "Copper",
+  "where": "Lualaba, DRC",
+  "why": "Ivanhoe exploration licenses next to Kamoa",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ivanhoe Mines"
+ },
+ {
+  "rank": 165,
+  "name": "Spence",
+  "commodity": "Copper",
+  "where": "Antofagasta, Chile",
+  "why": "BHP hypogene concentrator",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "BHP"
+ },
+ {
+  "rank": 166,
+  "name": "Santo Domingo",
+  "commodity": "Copper, iron",
+  "where": "Atacama, Chile",
+  "why": "Permitted Capstone growth project",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Capstone Copper"
+ },
+ {
+  "rank": 167,
+  "name": "Candelaria",
+  "commodity": "Copper, gold",
+  "where": "Atacama, Chile",
+  "why": "Lundin's cash engine",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Lundin Mining (LUN.TO)"
+ },
+ {
+  "rank": 168,
+  "name": "Nueva Unión",
+  "commodity": "Copper, gold",
+  "where": "Atacama, Chile",
+  "why": "Teck/Newmont combined project",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Teck; Newmont"
+ },
+ {
+  "rank": 169,
+  "name": "Relincho",
+  "commodity": "Copper, molybdenum",
+  "where": "Atacama, Chile",
+  "why": "Teck/ Codelco development",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Teck"
+ },
+ {
+  "rank": 170,
+  "name": "El Abra",
+  "commodity": "Copper",
+  "where": "Antofagasta, Chile",
+  "why": "Freeport/Codelco expansion study",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Freeport (FCX)"
+ },
+ {
+  "rank": 171,
+  "name": "Michiquillay",
+  "commodity": "Copper",
+  "where": "Cajamarca, Peru",
+  "why": "Southern Copper next-wave greenfield",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Southern Copper (SCCO)"
+ },
+ {
+  "rank": 172,
+  "name": "Santa Cruz",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "High-grade underground on private land",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ivanhoe Electric (IE)"
+ },
+ {
+  "rank": 173,
+  "name": "Twin Metals",
+  "commodity": "Copper, nickel",
+  "where": "Minnesota, USA",
+  "why": "Antofagasta asset; leases reinstated",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Antofagasta"
+ },
+ {
+  "rank": 174,
+  "name": "Kennecott (Bingham Canyon)",
+  "commodity": "Copper, gold, molybdenum",
+  "where": "Utah, USA",
+  "why": "Rio's US copper plus tellurium",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Rio Tinto (RIO)"
+ },
+ {
+  "rank": 175,
+  "name": "Highland Valley Copper",
+  "commodity": "Copper",
+  "where": "British Columbia, Canada",
+  "why": "Teck mine life extension",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Teck"
+ },
+ {
+  "rank": 176,
+  "name": "Galore Creek",
+  "commodity": "Copper, gold",
+  "where": "British Columbia, Canada",
+  "why": "Newmont/Teck mega-project",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Newmont; Teck"
+ },
+ {
+  "rank": 177,
+  "name": "KSM (Kerr-Sulphurets-Mitchell)",
+  "commodity": "Gold, copper",
+  "where": "British Columbia, Canada",
+  "why": "One of the world's largest undeveloped gold-copper",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Seabridge Gold (SA)"
+ },
+ {
+  "rank": 178,
+  "name": "Brucejack",
+  "commodity": "Gold",
+  "where": "British Columbia, Canada",
+  "why": "High-grade Newmont underground",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Newmont"
+ },
+ {
+  "rank": 179,
+  "name": "Paracatu",
+  "commodity": "Gold",
+  "where": "Minas Gerais, Brazil",
+  "why": "Kinross long-life low-grade",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Kinross"
+ },
+ {
+  "rank": 180,
+  "name": "Obuasi",
+  "commodity": "Gold",
+  "where": "Ghana",
+  "why": "AngloGold underground redevelopment",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "AngloGold Ashanti (AU)"
+ },
+ {
+  "rank": 181,
+  "name": "Tarkwa",
+  "commodity": "Gold",
+  "where": "Ghana",
+  "why": "Gold Fields Ghana anchor",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Gold Fields"
+ },
+ {
+  "rank": 182,
+  "name": "Geita",
+  "commodity": "Gold",
+  "where": "Tanzania",
+  "why": "AngloGold underground",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AngloGold Ashanti"
+ },
+ {
+  "rank": 183,
+  "name": "Batu Hijau / Elang",
+  "commodity": "Copper, gold",
+  "where": "Sumbawa, Indonesia",
+  "why": "Amman Mineral smelter plus Elang",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Amman Mineral (AMMN.JK)"
+ },
+ {
+  "rank": 184,
+  "name": "Morowali (IMIP)",
+  "commodity": "Nickel",
+  "where": "Central Sulawesi, Indonesia",
+  "why": "World's largest nickel industrial park",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Tsingshan (private); Nickel Industries (NIC.AX)"
+ },
+ {
+  "rank": 185,
+  "name": "Raglan",
+  "commodity": "Nickel, copper",
+  "where": "Quebec, Canada",
+  "why": "Glencore Arctic nickel",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Glencore"
+ },
+ {
+  "rank": 186,
+  "name": "Wodgina",
+  "commodity": "Lithium",
+  "where": "Western Australia",
+  "why": "Albemarle/MinRes hard rock",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Albemarle (ALB); MinRes"
+ },
+ {
+  "rank": 187,
+  "name": "Tanco",
+  "commodity": "Lithium, cesium, tantalum",
+  "where": "Manitoba, Canada",
+  "why": "Sinomine cesium formate source",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Sinomine (002738.SZ)"
+ },
+ {
+  "rank": 188,
+  "name": "Ngualla",
+  "commodity": "Rare earths",
+  "where": "Tanzania",
+  "why": "High-grade NdPr",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Peak Rare Earths (PEK.AX)"
+ },
+ {
+  "rank": 189,
+  "name": "Kangankunde",
+  "commodity": "Rare earths",
+  "where": "Malawi",
+  "why": "Large monazite carbonatite",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Lindian Resources (LIN.AX)"
+ },
+ {
+  "rank": 190,
+  "name": "Longonjo",
+  "commodity": "Rare earths",
+  "where": "Angola",
+  "why": "NdPr with UK refinery plan",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Pensana (PRE.L)"
+ },
+ {
+  "rank": 191,
+  "name": "Browns Range",
+  "commodity": "Rare earths (dysprosium)",
+  "where": "Western Australia",
+  "why": "Heavy rare-earth xenotime",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Northern Minerals (NTU.AX)"
+ },
+ {
+  "rank": 192,
+  "name": "Elk Creek",
+  "commodity": "Niobium, scandium, titanium",
+  "where": "Nebraska, USA",
+  "why": "Only US niobium project",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "NioCorp (NB)"
+ },
+ {
+  "rank": 193,
+  "name": "Catalão / Boa Vista",
+  "commodity": "Niobium",
+  "where": "Goiás, Brazil",
+  "why": "CMOC niobium",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CMOC (3993.HK)"
+ },
+ {
+  "rank": 194,
+  "name": "Kiruna",
+  "commodity": "Iron ore",
+  "where": "Norrbotten, Sweden",
+  "why": "LKAB DRI pellets for fossil-free steel",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "LKAB (state)"
+ },
+ {
+  "rank": 195,
+  "name": "Saskatoon REE processing (SRC)",
+  "commodity": "Rare earths",
+  "where": "Saskatchewan, Canada",
+  "why": "Government separation facility",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Saskatchewan Research Council"
+ },
+ {
+  "rank": 196,
+  "name": "Lac Tio",
+  "commodity": "Ilmenite (titanium)",
+  "where": "Quebec, Canada",
+  "why": "Rio Tinto titanium feedstock",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Rio Tinto"
+ },
+ {
+  "rank": 197,
+  "name": "Cataby / Jacinth-Ambrosia",
+  "commodity": "Zircon, rutile",
+  "where": "Australia",
+  "why": "Iluka mineral sands",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Iluka Resources"
+ },
+ {
+  "rank": 198,
+  "name": "Toliara",
+  "commodity": "Ilmenite, zircon, monazite",
+  "where": "Madagascar",
+  "why": "Base Resources/Energy Fuels",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Energy Fuels (UUUU)"
+ },
+ {
+  "rank": 199,
+  "name": "Lost Creek",
+  "commodity": "Uranium",
+  "where": "Wyoming, USA",
+  "why": "ISR producer",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Ur-Energy (URG)"
+ },
+ {
+  "rank": 200,
+  "name": "Gryphon",
+  "commodity": "Uranium",
+  "where": "Saskatchewan, Canada",
+  "why": "Denison secondary deposit",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Denison Mines (DNN)"
+ },
+ {
+  "rank": 201,
+  "name": "Patterson Lake South (PLS)",
+  "commodity": "Uranium",
+  "where": "Saskatchewan, Canada",
+  "why": "Fission/Paladin high-grade",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Paladin Energy (PDN.AX)"
+ },
+ {
+  "rank": 202,
+  "name": "Hurricane",
+  "commodity": "Uranium",
+  "where": "Saskatchewan, Canada",
+  "why": "IsoEnergy ultra-high-grade",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "IsoEnergy (ISO.TO)"
+ },
+ {
+  "rank": 203,
+  "name": "Katco (Moinkum)",
+  "commodity": "Uranium",
+  "where": "Kazakhstan",
+  "why": "Orano/Kazatomprom ISR",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Orano (state)"
+ },
+ {
+  "rank": 204,
+  "name": "Tumas",
+  "commodity": "Uranium",
+  "where": "Namibia",
+  "why": "Deep Yellow new mine",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Deep Yellow (DYL.AX)"
+ },
+ {
+  "rank": 205,
+  "name": "Etango",
+  "commodity": "Uranium",
+  "where": "Namibia",
+  "why": "Bannerman heap leach",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Bannerman Energy (BMN.AX)"
+ },
+ {
+  "rank": 206,
+  "name": "Kayelekera",
+  "commodity": "Uranium",
+  "where": "Malawi",
+  "why": "Lotus Resources restart",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Lotus Resources (LOT.AX)"
+ },
+ {
+  "rank": 207,
+  "name": "Aktogay",
+  "commodity": "Copper",
+  "where": "Kazakhstan",
+  "why": "KAZ Minerals concentrator expansion",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "KAZ Minerals"
+ },
+ {
+  "rank": 208,
+  "name": "Almalyk (Yoshlik)",
+  "commodity": "Copper, gold",
+  "where": "Uzbekistan",
+  "why": "One of the largest new copper builds globally",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Almalyk MMC (state; Eurobonds)"
+ },
+ {
+  "rank": 209,
+  "name": "Kounrad / Sary-Oba",
+  "commodity": "Copper",
+  "where": "Kazakhstan",
+  "why": "Central Asia Metals small producer",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Central Asia Metals (CAML.L)"
+ },
+ {
+  "rank": 210,
+  "name": "Julong (Qulong)",
+  "commodity": "Copper",
+  "where": "Tibet, China",
+  "why": "China's largest copper mine expansion",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Zijin Mining"
+ },
+ {
+  "rank": 211,
+  "name": "Aitik",
+  "commodity": "Copper, gold",
+  "where": "Sweden",
+  "why": "Boliden low-grade efficient pit",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Boliden (BOL.ST)"
+ },
+ {
+  "rank": 212,
+  "name": "Kevitsa",
+  "commodity": "Nickel, copper, PGM",
+  "where": "Finland",
+  "why": "Boliden Arctic mine",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Boliden"
+ },
+ {
+  "rank": 213,
+  "name": "Garpenberg",
+  "commodity": "Zinc, silver",
+  "where": "Sweden",
+  "why": "Boliden high-grade zinc",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Boliden"
+ },
+ {
+  "rank": 214,
+  "name": "Riotinto (Proyecto Riotinto)",
+  "commodity": "Copper",
+  "where": "Andalusia, Spain",
+  "why": "Atalaya historic district",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Atalaya Mining (ATYM.L)"
+ },
+ {
+  "rank": 215,
+  "name": "Hemerdon (Drakelands)",
+  "commodity": "Tungsten, tin",
+  "where": "Devon, UK",
+  "why": "Restart of Europe's large tungsten",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Tungsten West (TUN.L)"
+ },
+ {
+  "rank": 216,
+  "name": "South Crofty",
+  "commodity": "Tin",
+  "where": "Cornwall, UK",
+  "why": "Tin revival",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Cornish Metals (CUSN.L)"
+ },
+ {
+  "rank": 217,
+  "name": "Panasqueira",
+  "commodity": "Tungsten",
+  "where": "Portugal",
+  "why": "Century-old tungsten",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Almonty Industries (ALM.TO)"
+ },
+ {
+  "rank": 218,
+  "name": "Barruecopardo",
+  "commodity": "Tungsten",
+  "where": "Spain",
+  "why": "Saloro tungsten",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 219,
+  "name": "Cantung / Mactung",
+  "commodity": "Tungsten",
+  "where": "Yukon/NWT, Canada",
+  "why": "Fireweed Metals; DoD-funded",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Fireweed Metals (FWZ.V)"
+ },
+ {
+  "rank": 220,
+  "name": "Prominent Hill",
+  "commodity": "Copper, gold",
+  "where": "South Australia",
+  "why": "BHP Copper SA hub",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "BHP"
+ },
+ {
+  "rank": 221,
+  "name": "Northparkes",
+  "commodity": "Copper, gold",
+  "where": "NSW, Australia",
+  "why": "Evolution block caves",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Evolution Mining (EVN.AX)"
+ },
+ {
+  "rank": 222,
+  "name": "Ernest Henry",
+  "commodity": "Copper, gold",
+  "where": "Queensland, Australia",
+  "why": "Evolution underground",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Evolution Mining"
+ },
+ {
+  "rank": 223,
+  "name": "Havieron",
+  "commodity": "Gold, copper",
+  "where": "Western Australia",
+  "why": "Greatland under Telfer",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Greatland (GGP.L)"
+ },
+ {
+  "rank": 224,
+  "name": "Tropicana",
+  "commodity": "Gold",
+  "where": "Western Australia",
+  "why": "AngloGold/Regis",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Regis Resources (RRL.AX)"
+ },
+ {
+  "rank": 225,
+  "name": "Gruyere",
+  "commodity": "Gold",
+  "where": "Western Australia",
+  "why": "Gold Fields/Gold Road",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Gold Fields"
+ },
+ {
+  "rank": 226,
+  "name": "Mount Morgans / Leonora hub",
+  "commodity": "Gold",
+  "where": "Western Australia",
+  "why": "Genesis/Gold Fields",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Genesis Minerals"
+ },
+ {
+  "rank": 227,
+  "name": "Fosterville",
+  "commodity": "Gold",
+  "where": "Victoria, Australia",
+  "why": "Agnico high-grade",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Agnico Eagle"
+ },
+ {
+  "rank": 228,
+  "name": "Didipio",
+  "commodity": "Gold, copper",
+  "where": "Philippines",
+  "why": "OceanaGold Philippines IPO",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "OceanaGold"
+ },
+ {
+  "rank": 229,
+  "name": "Wafi-Golpu",
+  "commodity": "Copper, gold",
+  "where": "PNG",
+  "why": "Newmont/Harmony permitting",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Harmony Gold (HMY)"
+ },
+ {
+  "rank": 230,
+  "name": "Kolomela / Sishen",
+  "commodity": "Iron ore",
+  "where": "Northern Cape, South Africa",
+  "why": "Kumba high-grade lump",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Kumba Iron Ore (KIO.JO)"
+ },
+ {
+  "rank": 231,
+  "name": "Western Range",
+  "commodity": "Iron ore",
+  "where": "Western Australia",
+  "why": "Rio/Baowu JV",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Rio Tinto"
+ },
+ {
+  "rank": 232,
+  "name": "Roy Hill",
+  "commodity": "Iron ore",
+  "where": "Western Australia",
+  "why": "Hancock's low-cost mine",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Hancock (private)"
+ },
+ {
+  "rank": 233,
+  "name": "Itabira / Mariana",
+  "commodity": "Iron ore",
+  "where": "Minas Gerais, Brazil",
+  "why": "Vale southern system",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Vale (VALE)"
+ },
+ {
+  "rank": 234,
+  "name": "Kyzyl",
+  "commodity": "Gold",
+  "where": "Kazakhstan",
+  "why": "Solidcore (ex-Polymetal)",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Solidcore Resources (AIX)"
+ },
+ {
+  "rank": 235,
+  "name": "Hod Maden",
+  "commodity": "Copper, gold",
+  "where": "Artvin, Türkiye",
+  "why": "High-grade Türkiye copper-gold",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "SSR Mining; Lidya"
+ },
+ {
+  "rank": 236,
+  "name": "Čoka Rakita",
+  "commodity": "Gold",
+  "where": "Serbia",
+  "why": "Dundee new mine",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Dundee Precious Metals"
+ },
+ {
+  "rank": 237,
+  "name": "Kışladağ",
+  "commodity": "Gold",
+  "where": "Türkiye",
+  "why": "Eldorado heap leach",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Eldorado Gold"
+ },
+ {
+  "rank": 238,
+  "name": "Fort Knox",
+  "commodity": "Gold",
+  "where": "Alaska, USA",
+  "why": "Kinross Alaska",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Kinross"
+ },
+ {
+  "rank": 239,
+  "name": "Palmarejo",
+  "commodity": "Silver, gold",
+  "where": "Chihuahua, Mexico",
+  "why": "Coeur Mexico",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Coeur Mining"
+ },
+ {
+  "rank": 240,
+  "name": "La Colorada",
+  "commodity": "Silver",
+  "where": "Zacatecas, Mexico",
+  "why": "Skarn upside",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Pan American Silver"
+ },
+ {
+  "rank": 241,
+  "name": "Escobal",
+  "commodity": "Silver",
+  "where": "Guatemala",
+  "why": "Suspended by ILO consultation",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Pan American Silver"
+ },
+ {
+  "rank": 242,
+  "name": "Navidad",
+  "commodity": "Silver, lead",
+  "where": "Chubut, Argentina",
+  "why": "Blocked by provincial law",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Pan American Silver"
+ },
+ {
+  "rank": 243,
+  "name": "San Dimas",
+  "commodity": "Silver, gold",
+  "where": "Durango, Mexico",
+  "why": "First Majestic flagship",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "First Majestic (AG)"
+ },
+ {
+  "rank": 244,
+  "name": "Greens Creek",
+  "commodity": "Silver, zinc",
+  "where": "Alaska, USA",
+  "why": "Hecla flagship",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Hecla Mining (HL)"
+ },
+ {
+  "rank": 245,
+  "name": "Lucky Friday",
+  "commodity": "Silver",
+  "where": "Idaho, USA",
+  "why": "Hecla deep silver",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Hecla Mining"
+ },
+ {
+  "rank": 246,
+  "name": "Lumina Copper Taca Taca",
+  "commodity": "Copper",
+  "where": "Salta, Argentina",
+  "why": "First Quantum large porphyry",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "First Quantum"
+ },
+ {
+  "rank": 247,
+  "name": "MARA (Agua Rica + Alumbrera)",
+  "commodity": "Copper, gold",
+  "where": "Catamarca, Argentina",
+  "why": "Glencore RIGI-backed project",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Glencore"
+ },
+ {
+  "rank": 248,
+  "name": "El Pachón",
+  "commodity": "Copper",
+  "where": "San Juan, Argentina",
+  "why": "Glencore RIGI copper",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Glencore"
+ },
+ {
+  "rank": 249,
+  "name": "Altar",
+  "commodity": "Copper, gold",
+  "where": "San Juan, Argentina",
+  "why": "Aldebaran large porphyry",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Aldebaran Resources"
+ },
+ {
+  "rank": 250,
+  "name": "Rincon",
+  "commodity": "Lithium",
+  "where": "Salta, Argentina",
+  "why": "Rio Tinto $2.5B DLE plant",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Rio Tinto"
+ },
+ {
+  "rank": 251,
+  "name": "Impala Rustenburg",
+  "commodity": "Platinum",
+  "where": "North West, South Africa",
+  "why": "Implats core",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Impala Platinum (IMP.JO)"
+ },
+ {
+  "rank": 252,
+  "name": "Zondereinde",
+  "commodity": "Platinum",
+  "where": "Limpopo, South Africa",
+  "why": "Northam deep mine",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Northam Platinum"
+ },
+ {
+  "rank": 253,
+  "name": "GEMCO (Groote Eylandt)",
+  "commodity": "Manganese",
+  "where": "Northern Territory, Australia",
+  "why": "South32 high-grade Mn after cyclone",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "South32"
+ },
+ {
+  "rank": 254,
+  "name": "Rampura Agucha",
+  "commodity": "Zinc",
+  "where": "Rajasthan, India",
+  "why": "Hindustan Zinc high-grade",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Hindustan Zinc (HINDZINC.NS)"
+ },
+ {
+  "rank": 255,
+  "name": "Boron (Rio Tinto)",
+  "commodity": "Borates",
+  "where": "California, USA",
+  "why": "Largest borate mine; Fort Cady",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Rio Tinto"
+ },
+ {
+  "rank": 256,
+  "name": "Kırka / Emet",
+  "commodity": "Borates",
+  "where": "Türkiye",
+  "why": "Eti Maden borate monopoly",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "State"
+ },
+ {
+  "rank": 257,
+  "name": "Minntac",
+  "commodity": "Iron ore",
+  "where": "Minnesota, USA",
+  "why": "Taconite pellets for US steel",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Nippon Steel (US Steel)"
+ },
+ {
+  "rank": 258,
+  "name": "Cascabel (Alpala)",
+  "commodity": "Copper, gold",
+  "where": "Ecuador",
+  "why": "SolGold Tier-1 porphyry",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "SolGold (SOLG.L)"
+ },
+ {
+  "rank": 259,
+  "name": "Deziwa",
+  "commodity": "Copper, cobalt",
+  "where": "Lualaba, DRC",
+  "why": "Gécamines/CNMC copper-cobalt growth",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "CNMC (1258.HK)"
+ },
+ {
+  "rank": 260,
+  "name": "Mutoshi",
+  "commodity": "Copper, cobalt",
+  "where": "Lualaba, DRC",
+  "why": "Chemaf asset; restart optionality",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 261,
+  "name": "Frontier mine",
+  "commodity": "Copper",
+  "where": "Haut-Katanga, DRC",
+  "why": "ERG open pit near Zambian border",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "ERG (private)"
+ },
+ {
+  "rank": 262,
+  "name": "Sicomines",
+  "commodity": "Copper, cobalt",
+  "where": "Lualaba, DRC",
+  "why": "China-for-infrastructure copper mine",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "China Railway Group"
+ },
+ {
+  "rank": 263,
+  "name": "Lubambe",
+  "commodity": "Copper",
+  "where": "Copperbelt, Zambia",
+  "why": "Small underground restart",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 264,
+  "name": "Enterprise nickel",
+  "commodity": "Nickel",
+  "where": "North-Western, Zambia",
+  "why": "Rare Zambian nickel sulphide",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "First Quantum"
+ },
+ {
+  "rank": 265,
+  "name": "Kipoi",
+  "commodity": "Copper",
+  "where": "Haut-Katanga, DRC",
+  "why": "Tiger/ERG oxide copper",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 266,
+  "name": "Zaldívar",
+  "commodity": "Copper",
+  "where": "Antofagasta, Chile",
+  "why": "Antofagasta/Barrick leach",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Antofagasta"
+ },
+ {
+  "rank": 267,
+  "name": "Sierra Gorda",
+  "commodity": "Copper, molybdenum",
+  "where": "Antofagasta, Chile",
+  "why": "KGHM/South32 large-scale porphyry",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "KGHM (KGH.WA); South32"
+ },
+ {
+  "rank": 268,
+  "name": "Mantos Blancos",
+  "commodity": "Copper",
+  "where": "Antofagasta, Chile",
+  "why": "Capstone debottleneck",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Capstone Copper (CS.TO)"
+ },
+ {
+  "rank": 269,
+  "name": "Caserones",
+  "commodity": "Copper",
+  "where": "Atacama, Chile",
+  "why": "Lundin's high-altitude porphyry",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Lundin Mining"
+ },
+ {
+  "rank": 270,
+  "name": "Radomiro Tomic",
+  "commodity": "Copper",
+  "where": "Antofagasta, Chile",
+  "why": "Codelco sulphide transition",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Codelco bonds"
+ },
+ {
+  "rank": 271,
+  "name": "Ministro Hales",
+  "commodity": "Copper",
+  "where": "Antofagasta, Chile",
+  "why": "Codelco underground transition",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Codelco bonds"
+ },
+ {
+  "rank": 272,
+  "name": "Gabriela Mistral",
+  "commodity": "Copper",
+  "where": "Antofagasta, Chile",
+  "why": "Codelco leach operation",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Codelco bonds"
+ },
+ {
+  "rank": 273,
+  "name": "Cerro Colorado",
+  "commodity": "Copper",
+  "where": "Tarapacá, Chile",
+  "why": "BHP closure-to-restart option",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "BHP"
+ },
+ {
+  "rank": 274,
+  "name": "Toromocho",
+  "commodity": "Copper",
+  "where": "Junín, Peru",
+  "why": "Chinalco expansion",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Chinalco (2600.HK)"
+ },
+ {
+  "rank": 275,
+  "name": "Antapaccay / Coroccohuayco",
+  "commodity": "Copper",
+  "where": "Cusco, Peru",
+  "why": "Glencore expansion",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Glencore"
+ },
+ {
+  "rank": 276,
+  "name": "Los Chancas",
+  "commodity": "Copper, molybdenum",
+  "where": "Apurímac, Peru",
+  "why": "Southern Copper development",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Southern Copper"
+ },
+ {
+  "rank": 277,
+  "name": "Zafranal",
+  "commodity": "Copper, gold",
+  "where": "Arequipa, Peru",
+  "why": "Teck/Mitsubishi project",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Teck"
+ },
+ {
+  "rank": 278,
+  "name": "La Granja",
+  "commodity": "Copper",
+  "where": "Cajamarca, Peru",
+  "why": "Giant low-grade porphyry",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "First Quantum"
+ },
+ {
+  "rank": 279,
+  "name": "Yanacocha Sulfides",
+  "commodity": "Gold, copper",
+  "where": "Cajamarca, Peru",
+  "why": "Newmont deferred sulphide project",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Newmont (NEM)"
+ },
+ {
+  "rank": 280,
+  "name": "Cerro Corona",
+  "commodity": "Gold, copper",
+  "where": "Cajamarca, Peru",
+  "why": "Gold Fields mature operation",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Gold Fields (GFI)"
+ },
+ {
+  "rank": 281,
+  "name": "Pebble",
+  "commodity": "Copper, gold",
+  "where": "Alaska, USA",
+  "why": "World-class deposit blocked by EPA veto",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Northern Dynasty (NAK)"
+ },
+ {
+  "rank": 282,
+  "name": "Pinto Valley",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "Life extension",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Capstone Copper"
+ },
+ {
+  "rank": 283,
+  "name": "Gunnison / Johnson Camp",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "Small ISR-style copper",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Gunnison Copper"
+ },
+ {
+  "rank": 284,
+  "name": "Black Butte",
+  "commodity": "Copper",
+  "where": "Montana, USA",
+  "why": "Small high-grade copper",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Sandfire America"
+ },
+ {
+  "rank": 285,
+  "name": "NorthMet / NewRange",
+  "commodity": "Copper, nickel, PGM",
+  "where": "Minnesota, USA",
+  "why": "Glencore/Teck JV; permitting fights",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Teck; Glencore"
+ },
+ {
+  "rank": 286,
+  "name": "Eagle mine",
+  "commodity": "Nickel, copper",
+  "where": "Michigan, USA",
+  "why": "Only US primary nickel",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Lundin Mining"
+ },
+ {
+  "rank": 287,
+  "name": "Highland Copper Copperwood",
+  "commodity": "Copper",
+  "where": "Michigan, USA",
+  "why": "Permitted small copper",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Highland Copper"
+ },
+ {
+  "rank": 288,
+  "name": "Schaft Creek",
+  "commodity": "Copper, gold",
+  "where": "British Columbia, Canada",
+  "why": "Teck/Copper Fox",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Copper Fox (CUU.V)"
+ },
+ {
+  "rank": 289,
+  "name": "Copper Mountain",
+  "commodity": "Copper",
+  "where": "British Columbia, Canada",
+  "why": "Hudbay turnaround",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Hudbay"
+ },
+ {
+  "rank": 290,
+  "name": "Hemlo",
+  "commodity": "Gold",
+  "where": "Ontario, Canada",
+  "why": "Re-energized by Barrick sale",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Carcetti / Hemlo Mining"
+ },
+ {
+  "rank": 291,
+  "name": "Valentine",
+  "commodity": "Gold",
+  "where": "Newfoundland, Canada",
+  "why": "Calibre/Equinox ramp-up",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Equinox Gold"
+ },
+ {
+  "rank": 292,
+  "name": "Back River (Goose)",
+  "commodity": "Gold",
+  "where": "Nunavut, Canada",
+  "why": "B2Gold Arctic mine",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "B2Gold (BTG)"
+ },
+ {
+  "rank": 293,
+  "name": "Fekola",
+  "commodity": "Gold",
+  "where": "Mali",
+  "why": "B2Gold flagship",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "B2Gold"
+ },
+ {
+  "rank": 294,
+  "name": "Loulo-Gounkoto",
+  "commodity": "Gold",
+  "where": "Mali",
+  "why": "Barrick dispute with junta",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Barrick (GOLD)"
+ },
+ {
+  "rank": 295,
+  "name": "Sadiola",
+  "commodity": "Gold",
+  "where": "Mali",
+  "why": "Allied Gold expansion",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Allied Gold"
+ },
+ {
+  "rank": 296,
+  "name": "Ahafo",
+  "commodity": "Gold",
+  "where": "Ghana",
+  "why": "Sold by Newmont to Zijin",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Newmont"
+ },
+ {
+  "rank": 297,
+  "name": "North Mara / Bulyanhulu",
+  "commodity": "Gold",
+  "where": "Tanzania",
+  "why": "Barrick Twiga JV",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Barrick"
+ },
+ {
+  "rank": 298,
+  "name": "Siguiri",
+  "commodity": "Gold",
+  "where": "Guinea",
+  "why": "AngloGold Guinea",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "AngloGold Ashanti"
+ },
+ {
+  "rank": 299,
+  "name": "Hounde",
+  "commodity": "Gold",
+  "where": "Burkina Faso",
+  "why": "Endeavour flagship in coup-prone state",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Endeavour Mining"
+ },
+ {
+  "rank": 300,
+  "name": "Kiaka",
+  "commodity": "Gold",
+  "where": "Burkina Faso",
+  "why": "West African Resources new mine",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "West African Resources (WAF.AX)"
  }
 ]
