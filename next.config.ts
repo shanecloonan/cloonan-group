@@ -38,6 +38,12 @@ const nextConfig: NextConfig = {
     "/api/test/receipt": ["./eth-scanner/.runtime/**/*"],
     "/api/test": ["./eth-scanner/.runtime/**/*"],
   },
+  async redirects() {
+    return [
+      { source: "/fund", destination: "/research", permanent: true },
+      { source: "/fund/:path*", destination: "/research/:path*", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
