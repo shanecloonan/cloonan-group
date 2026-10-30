@@ -219,11 +219,8 @@ export default function FundApp() {
         <header className="border-b border-brand-800/80 pb-8">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-gold/80">
-                MoneyFund · Research Desk
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-50 sm:text-[2.6rem]">
-                Early Money
+              <h1 className="text-3xl font-semibold tracking-tight text-brand-50 sm:text-[2.6rem]">
+                MoneyFund Research Desk
               </h1>
               <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-brand-400">
                 Thesis tracker for the 2027–2047 allocation horizon. Eleven books, ranked by
