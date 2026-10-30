@@ -1,0 +1,902 @@
+[
+ {
+  "rank": 1,
+  "name": "NVIDIA Rubin GPU / Vera Rubin NVL72",
+  "maker": "NVIDIA",
+  "why": "Default AI-factory accelerator from H2 2026; 288GB HBM4, CUDA lock-in, 7-chip platform",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "NVDA (about 17.5x forward EPS)"
+ },
+ {
+  "rank": 2,
+  "name": "TSMC N2 / N2P / A16 process family",
+  "maker": "TSMC",
+  "why": "Sole volume leading-edge foundry for Apple, NVIDIA, AMD; A16 backside power ramps 2027 with NVIDIA first",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "TSM ADR or 2330.TW"
+ },
+ {
+  "rank": 3,
+  "name": "SK hynix HBM4 / HBM4E",
+  "maker": "SK hynix",
+  "why": "50% of HBM revenue (Q2 2026); shortages guided through 2030",
+  "price": "Strongly underpriced",
+  "conf": "High",
+  "early": "000660.KS (about 4x 2027 EPS); Korea ETFs (EWY)"
+ },
+ {
+  "rank": 4,
+  "name": "ASML EUV: NXE:3800E and High-NA EXE:5200B",
+  "maker": "ASML",
+  "why": "Monopoly lithography for every node below 7nm; High-NA in HVM at Intel, DRAM makers 2028",
+  "price": "Fair",
+  "conf": "High",
+  "early": "ASML (NASDAQ / Euronext)"
+ },
+ {
+  "rank": 5,
+  "name": "TSMC CoWoS-L / SoIC advanced packaging",
+  "maker": "TSMC",
+  "why": "Binding constraint on AI accelerator output; every HBM GPU/ASIC passes through it",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "TSM; suppliers Besi, ASMPT"
+ },
+ {
+  "rank": 6,
+  "name": "NVIDIA Rubin Ultra + Kyber NVL144 rack",
+  "maker": "NVIDIA",
+  "why": "H2 2027: 4 compute dies, 1TB HBM4E, NVLink 7, 144 GPUs per rack",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "NVDA"
+ },
+ {
+  "rank": 7,
+  "name": "Samsung HBM4 / HBM4E",
+  "maker": "Samsung Electronics",
+  "why": "First HBM4 qualified on Rubin; share heading to about 40%; 2027 volume sold out",
+  "price": "Strongly underpriced",
+  "conf": "High",
+  "early": "005930.KS or Samsung GDR (SMSN.L)"
+ },
+ {
+  "rank": 8,
+  "name": "Micron HBM4 / 1-gamma DRAM",
+  "maker": "Micron",
+  "why": "Only US HBM maker; HBM4 in volume, HBM4E 2027; DRAM supercycle",
+  "price": "Strongly underpriced",
+  "conf": "High",
+  "early": "MU (about 6x forward EPS)"
+ },
+ {
+  "rank": 9,
+  "name": "Google TPU 8t / 8i (after Ironwood TPU7x)",
+  "maker": "Google + Broadcom",
+  "why": "Strongest non-NVIDIA stack; split training/inference chips; sold to Meta, Anthropic",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "GOOGL; AVGO (design partner)"
+ },
+ {
+  "rank": 10,
+  "name": "NVIDIA Feynman GPU + Rosa CPU (2028)",
+  "maker": "NVIDIA",
+  "why": "Die-stacked GPU, custom HBM, optical NVLink to 576-1152 GPU domains",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NVDA"
+ },
+ {
+  "rank": 11,
+  "name": "AMD Instinct MI455X / Helios rack",
+  "maker": "AMD",
+  "why": "Only merchant GPU rival at rack scale; 432GB HBM4; Meta 6GW and OpenAI deals",
+  "price": "Fair",
+  "conf": "High",
+  "early": "AMD"
+ },
+ {
+  "rank": 12,
+  "name": "Broadcom custom AI XPU platform",
+  "maker": "Broadcom",
+  "why": "Builds TPUs plus Meta, OpenAI, others' ASICs; 3.5D XDSiP packaging",
+  "price": "Fair",
+  "conf": "High",
+  "early": "AVGO"
+ },
+ {
+  "rank": 13,
+  "name": "Broadcom Tomahawk 6 / TH6-Davisson CPO switch",
+  "maker": "Broadcom",
+  "why": "102.4 Tbps Ethernet, first co-packaged-optics switch at scale",
+  "price": "Fair",
+  "conf": "High",
+  "early": "AVGO"
+ },
+ {
+  "rank": 14,
+  "name": "NVIDIA Spectrum-6 / Spectrum-X Photonics switches",
+  "maker": "NVIDIA",
+  "why": "Scale-out Ethernet with CPO; networking is NVIDIA's fastest-growing line",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "NVDA"
+ },
+ {
+  "rank": 15,
+  "name": "NVIDIA NVLink 6/7 switch + ConnectX-9 SuperNIC",
+  "maker": "NVIDIA",
+  "why": "Scale-up fabric moat that rivals (UALink) are still chasing",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "NVDA"
+ },
+ {
+  "rank": 16,
+  "name": "AWS Trainium3 / Trainium4",
+  "maker": "Amazon (Annapurna Labs)",
+  "why": "GA in 2026, 144-chip UltraServers; Anthropic anchor; cheapest-at-scale story",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "AMZN; MRVL, Alchip (3661.TW)"
+ },
+ {
+  "rank": 17,
+  "name": "Apple M-series (M6 on TSMC N2)",
+  "maker": "Apple",
+  "why": "Leading client SoC; unified memory makes Macs local-AI machines",
+  "price": "Modestly overpriced",
+  "conf": "High",
+  "early": "AAPL"
+ },
+ {
+  "rank": 18,
+  "name": "Apple A-series iPhone SoC (A20 on N2)",
+  "maker": "Apple",
+  "why": "Largest premium-phone installed base; on-device AI gateway",
+  "price": "Modestly overpriced",
+  "conf": "High",
+  "early": "AAPL"
+ },
+ {
+  "rank": 19,
+  "name": "Intel 18A / 14A process (with High-NA)",
+  "maker": "Intel Foundry",
+  "why": "Only Western leading-edge alternative to TSMC; 14A risk production 2027",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "INTC (about 54x forward EPS)"
+ },
+ {
+  "rank": 20,
+  "name": "NVIDIA Groq 3 LPU / LP35 / LP40",
+  "maker": "NVIDIA (Groq IP)",
+  "why": "SRAM-heavy low-latency inference racks; agentic token serving",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NVDA"
+ },
+ {
+  "rank": 21,
+  "name": "NVIDIA BlueField-4 DPU / STX storage",
+  "maker": "NVIDIA",
+  "why": "KV-cache and context-memory storage tier for agentic AI",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NVDA"
+ },
+ {
+  "rank": 22,
+  "name": "Applied Materials GAA and backside-power tools",
+  "maker": "Applied Materials",
+  "why": "Largest tool vendor; gains share in GAA, backside power, HBM",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "AMAT"
+ },
+ {
+  "rank": 23,
+  "name": "Lam Research etch / deposition (Akara, ALTUS)",
+  "maker": "Lam Research",
+  "why": "Etch intensity rises with GAA, 3D NAND, HBM TSVs",
+  "price": "Fair",
+  "conf": "High",
+  "early": "LRCX"
+ },
+ {
+  "rank": 24,
+  "name": "KLA inspection and metrology",
+  "maker": "KLA",
+  "why": "Process control mandatory at 2nm and below; high margins",
+  "price": "Modestly overpriced",
+  "conf": "High",
+  "early": "KLAC"
+ },
+ {
+  "rank": 25,
+  "name": "Tokyo Electron coater/developer and etch",
+  "maker": "Tokyo Electron",
+  "why": "Near-monopoly EUV track; etch and cleaning share",
+  "price": "Fair",
+  "conf": "High",
+  "early": "8035.T; TOELY ADR"
+ },
+ {
+  "rank": 26,
+  "name": "Qualcomm Snapdragon 8 Elite / X2 Elite",
+  "maker": "Qualcomm",
+  "why": "Android flagship and Windows-on-Arm SoCs; AI200/250 inference cards",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "QCOM"
+ },
+ {
+  "rank": 27,
+  "name": "Arm Neoverse / Lumex compute subsystems",
+  "maker": "Arm Holdings",
+  "why": "ISA under Vera, Graviton, Axion, Cobalt, phones; royalties rise per chip",
+  "price": "Strongly overpriced",
+  "conf": "High",
+  "early": "ARM"
+ },
+ {
+  "rank": 28,
+  "name": "Samsung SF2 (2nm GAA) foundry",
+  "maker": "Samsung Foundry",
+  "why": "Credible second source; Tesla AI5/AI6 at Taylor, Texas",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 29,
+  "name": "AMD EPYC Venice (Zen 6, TSMC N2)",
+  "maker": "AMD",
+  "why": "Leading x86 server CPU; agentic AI revives CPU demand",
+  "price": "Fair",
+  "conf": "High",
+  "early": "AMD"
+ },
+ {
+  "rank": 30,
+  "name": "NVIDIA Vera CPU",
+  "maker": "NVIDIA",
+  "why": "88 custom Arm cores; sold standalone in Vera CPU racks",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NVDA"
+ },
+ {
+  "rank": 31,
+  "name": "Microsoft Maia 200",
+  "maker": "Microsoft",
+  "why": "Azure's in-house inference ASIC; cuts NVIDIA dependence",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "MSFT"
+ },
+ {
+  "rank": 32,
+  "name": "Meta MTIA (v2/v3)",
+  "maker": "Meta (with Broadcom)",
+  "why": "Ranking/recs plus inference silicon at Meta scale",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "META; AVGO"
+ },
+ {
+  "rank": 33,
+  "name": "Marvell custom ASICs + 1.6T optical DSPs",
+  "maker": "Marvell",
+  "why": "AWS Trainium partner; electro-optics DSPs for every AI cluster",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "MRVL"
+ },
+ {
+  "rank": 34,
+  "name": "1.6T optical transceivers and EML lasers",
+  "maker": "Lumentum / Coherent",
+  "why": "Optics content per GPU rising; laser supply tight",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "LITE, COHR"
+ },
+ {
+  "rank": 35,
+  "name": "Credo HiWire active electrical cables",
+  "maker": "Credo",
+  "why": "In-rack copper links for scale-up; fast-growing",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "CRDO"
+ },
+ {
+  "rank": 36,
+  "name": "Astera Labs Scorpio switches / Aries retimers",
+  "maker": "Astera Labs",
+  "why": "PCIe/UALink connectivity for custom-ASIC racks",
+  "price": "Strongly overpriced",
+  "conf": "Med",
+  "early": "ALAB"
+ },
+ {
+  "rank": 37,
+  "name": "Tesla AI5 / AI6 inference chip",
+  "maker": "Tesla (fab: Samsung, TSMC)",
+  "why": "Optimus first (about Apr 2027), then FSD and data centers",
+  "price": "Strongly overpriced",
+  "conf": "Med",
+  "early": "TSLA; 005930.KS"
+ },
+ {
+  "rank": 38,
+  "name": "NVIDIA Jetson Thor / DRIVE Thor",
+  "maker": "NVIDIA",
+  "why": "Default brain for humanoids and L3/L4 cars outside Tesla",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NVDA"
+ },
+ {
+  "rank": 39,
+  "name": "Tesla Optimus humanoid robot",
+  "maker": "Tesla",
+  "why": "Fremont production started Oct 2026; 2027 external deliveries targeted",
+  "price": "Strongly overpriced",
+  "conf": "Low",
+  "early": "TSLA"
+ },
+ {
+  "rank": 40,
+  "name": "ASM International ALD / epi tools",
+  "maker": "ASM International",
+  "why": "ALD leader for GAA gate stacks",
+  "price": "Fair",
+  "conf": "High",
+  "early": "ASM.AS"
+ },
+ {
+  "rank": 41,
+  "name": "Advantest V93000 / T5801 testers",
+  "maker": "Advantest",
+  "why": "AI SoC and HBM test time explodes with complexity",
+  "price": "Modestly overpriced",
+  "conf": "High",
+  "early": "6857.T"
+ },
+ {
+  "rank": 42,
+  "name": "BE Semiconductor hybrid bonders",
+  "maker": "Besi",
+  "why": "Hybrid bonding for HBM4E/HBM5 and SoIC",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "BESI.AS"
+ },
+ {
+  "rank": 43,
+  "name": "Hanmi TC bonders for HBM",
+  "maker": "Hanmi Semiconductor",
+  "why": "Thermo-compression bonders for SK hynix HBM stacks",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "042700.KS"
+ },
+ {
+  "rank": 44,
+  "name": "DISCO grinders / dicers",
+  "maker": "DISCO",
+  "why": "Wafer thinning and dicing for HBM and chiplets",
+  "price": "Modestly overpriced",
+  "conf": "High",
+  "early": "6146.T"
+ },
+ {
+  "rank": 45,
+  "name": "Lasertec ACTIS actinic EUV mask inspection",
+  "maker": "Lasertec",
+  "why": "Sole actinic EUV mask inspector",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "6920.T"
+ },
+ {
+  "rank": 46,
+  "name": "Ibiden / ABF substrates (Ajinomoto film)",
+  "maker": "Ibiden; Ajinomoto",
+  "why": "Large AI package substrates are a choke point",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "4062.T; 2802.T"
+ },
+ {
+  "rank": 47,
+  "name": "Shin-Etsu / SUMCO 300mm wafers",
+  "maker": "Shin-Etsu; SUMCO",
+  "why": "Raw silicon for all fabs; cyclical trough exiting",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "4063.T; 3436.T"
+ },
+ {
+  "rank": 48,
+  "name": "Monolithic Power GPU voltage regulators",
+  "maker": "Monolithic Power Systems",
+  "why": "Power delivery per GPU climbs with 1-2kW parts",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "MPWR"
+ },
+ {
+  "rank": 49,
+  "name": "Infineon SiC / GaN for 800V DC AI racks",
+  "maker": "Infineon",
+  "why": "800VDC rack power and EV inverters",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "IFX.DE; IFNNY"
+ },
+ {
+  "rank": 50,
+  "name": "Vertiv liquid cooling CDUs and power",
+  "maker": "Vertiv",
+  "why": "Every Rubin/Kyber rack is liquid-cooled",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "VRT"
+ },
+ {
+  "rank": 51,
+  "name": "Enterprise QLC SSDs (Solidigm / Samsung)",
+  "maker": "SK hynix (Solidigm); Samsung",
+  "why": "Inference context and data lakes shift to high-capacity flash",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "000660.KS; 005930.KS"
+ },
+ {
+  "rank": 52,
+  "name": "Kioxia / Sandisk BiCS 3D NAND",
+  "maker": "Kioxia; Sandisk",
+  "why": "NAND supply tight on AI storage demand",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "285A.T; SNDK"
+ },
+ {
+  "rank": 53,
+  "name": "Seagate Mozaic HAMR hard drives",
+  "maker": "Seagate",
+  "why": "30TB+ nearline HDD remains cheapest bulk storage",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "STX"
+ },
+ {
+  "rank": 54,
+  "name": "LPDDR6 and SOCAMM2 server memory",
+  "maker": "Samsung; Micron; SK hynix",
+  "why": "Low-power memory for Vera CPUs, AI PCs, robots",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "MU; 005930.KS; 000660.KS"
+ },
+ {
+  "rank": 55,
+  "name": "CXL memory expanders (CMM-D, Leo)",
+  "maker": "Samsung; Astera Labs",
+  "why": "Memory pooling for inference servers",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "005930.KS; ALAB"
+ },
+ {
+  "rank": 56,
+  "name": "AWS Graviton5",
+  "maker": "Amazon",
+  "why": "Arm server CPU now majority of new AWS CPU capacity",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "AMZN"
+ },
+ {
+  "rank": 57,
+  "name": "Google Axion",
+  "maker": "Google",
+  "why": "Arm CPU for Google Cloud general compute",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "GOOGL"
+ },
+ {
+  "rank": 58,
+  "name": "Intel Xeon 6 / Clearwater Forest (18A)",
+  "maker": "Intel",
+  "why": "Largest x86 server installed base; 18A proof point",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "INTC"
+ },
+ {
+  "rank": 59,
+  "name": "NVIDIA DGX Spark / GB10 desktop AI",
+  "maker": "NVIDIA + MediaTek",
+  "why": "Personal AI supercomputer class; local agents",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NVDA; 2454.TW"
+ },
+ {
+  "rank": 60,
+  "name": "NVIDIA GeForce RTX 50 / next-gen GPUs",
+  "maker": "NVIDIA",
+  "why": "Gaming plus local AI inference PCs",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "NVDA"
+ },
+ {
+  "rank": 61,
+  "name": "AMD Ryzen AI Max (Strix Halo successors)",
+  "maker": "AMD",
+  "why": "128GB unified-memory x86 AI laptops and mini-PCs",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AMD"
+ },
+ {
+  "rank": 62,
+  "name": "MediaTek Dimensity 9500 / AI ASICs",
+  "maker": "MediaTek",
+  "why": "Flagship Android SoC plus Google TPU co-design work",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "2454.TW"
+ },
+ {
+  "rank": 63,
+  "name": "Huawei Ascend 950 / 960",
+  "maker": "Huawei (HiSilicon)",
+  "why": "China's main domestic AI accelerator",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "Private; proxy SMIC (0981.HK)"
+ },
+ {
+  "rank": 64,
+  "name": "SMIC N+3 (5-7nm class) process",
+  "maker": "SMIC",
+  "why": "China's only advanced logic foundry under export controls",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "0981.HK; 688981.SS"
+ },
+ {
+  "rank": 65,
+  "name": "Cambricon Siyuan 690",
+  "maker": "Cambricon",
+  "why": "Listed Chinese AI accelerator pure-play",
+  "price": "Strongly overpriced",
+  "conf": "Low",
+  "early": "688256.SS"
+ },
+ {
+  "rank": 66,
+  "name": "CXMT DDR5 / HBM3",
+  "maker": "ChangXin Memory",
+  "why": "China's DRAM champion; 10% DRAM share",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private (IPO pending)"
+ },
+ {
+  "rank": 67,
+  "name": "Cerebras WSE-3 / CS-3",
+  "maker": "Cerebras",
+  "why": "Wafer-scale inference; OpenAI 750MW deal",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "CBRS (IPO May 2026)"
+ },
+ {
+  "rank": 68,
+  "name": "IBM Quantum Nighthawk to Starling (2029)",
+  "maker": "IBM",
+  "why": "Clearest fault-tolerant roadmap: 200 logical qubits by 2029",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "IBM"
+ },
+ {
+  "rank": 69,
+  "name": "Google Willow quantum processor line",
+  "maker": "Google Quantum AI",
+  "why": "Below-threshold error correction leader",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "GOOGL"
+ },
+ {
+  "rank": 70,
+  "name": "Quantinuum Helios / Sol / Apollo",
+  "maker": "Quantinuum",
+  "why": "Trapped-ion with about 48-50 logical qubits",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "HON (majority owner)"
+ },
+ {
+  "rank": 71,
+  "name": "IonQ Tempo trapped-ion systems",
+  "maker": "IonQ",
+  "why": "Listed pure-play with acquisitive roadmap",
+  "price": "Strongly overpriced",
+  "conf": "Low",
+  "early": "IONQ"
+ },
+ {
+  "rank": 72,
+  "name": "Microsoft Majorana topological qubit",
+  "maker": "Microsoft",
+  "why": "High-risk route to scalable qubits",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "MSFT"
+ },
+ {
+  "rank": 73,
+  "name": "PsiQuantum photonic quantum chips",
+  "maker": "PsiQuantum (fab: GlobalFoundries)",
+  "why": "Utility-scale photonic QC sites in Brisbane, Chicago",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private; GFS"
+ },
+ {
+  "rank": 74,
+  "name": "STM32 microcontrollers",
+  "maker": "STMicroelectronics",
+  "why": "Ubiquitous MCU in industrial, robots, IoT",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "STM"
+ },
+ {
+  "rank": 75,
+  "name": "NXP S32 automotive processors",
+  "maker": "NXP",
+  "why": "Software-defined-vehicle zonal compute",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NXPI"
+ },
+ {
+  "rank": 76,
+  "name": "Texas Instruments analog / embedded",
+  "maker": "Texas Instruments",
+  "why": "Power and signal chips in every device; US fabs",
+  "price": "Fair",
+  "conf": "High",
+  "early": "TXN"
+ },
+ {
+  "rank": 77,
+  "name": "Renesas R-Car X5",
+  "maker": "Renesas",
+  "why": "Japanese auto SoC/MCU leader",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "6723.T"
+ },
+ {
+  "rank": 78,
+  "name": "Mobileye EyeQ6 / EyeQ Ultra",
+  "maker": "Mobileye",
+  "why": "ADAS chips in tens of millions of cars",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "MBLY"
+ },
+ {
+  "rank": 79,
+  "name": "Waymo Driver (6th gen)",
+  "maker": "Waymo",
+  "why": "Leading robotaxi hardware stack",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "GOOGL"
+ },
+ {
+  "rank": 80,
+  "name": "Sony IMX / LYTIA image sensors",
+  "maker": "Sony Semiconductor",
+  "why": "Eyes of phones, cars and robots",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "6758.T; SONY"
+ },
+ {
+  "rank": 81,
+  "name": "Hesai AT-series lidar",
+  "maker": "Hesai",
+  "why": "Volume lidar leader for cars and robots",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "HSAI"
+ },
+ {
+  "rank": 82,
+  "name": "Starlink terminal + V3 satellites",
+  "maker": "SpaceX",
+  "why": "Global broadband and future orbital compute",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private; watch for SpaceX listing"
+ },
+ {
+  "rank": 83,
+  "name": "Meta Ray-Ban Display / Orion glasses",
+  "maker": "Meta + EssilorLuxottica",
+  "why": "Leading AI wearable form factor",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "META; EL.PA"
+ },
+ {
+  "rank": 84,
+  "name": "Apple iPhone (device)",
+  "maker": "Apple",
+  "why": "Main consumer AI endpoint",
+  "price": "Modestly overpriced",
+  "conf": "High",
+  "early": "AAPL"
+ },
+ {
+  "rank": 85,
+  "name": "Samsung Exynos 2600 (SF2) / Galaxy",
+  "maker": "Samsung",
+  "why": "2nm phone SoC proves Samsung foundry",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 86,
+  "name": "Intel Gaudi 3 / Jaguar Shores",
+  "maker": "Intel",
+  "why": "Long-shot Intel AI accelerator",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "INTC"
+ },
+ {
+  "rank": 87,
+  "name": "AMD Versal / Lattice Nexus FPGAs",
+  "maker": "AMD; Lattice",
+  "why": "Adaptable edge and defense compute",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "AMD; LSCC"
+ },
+ {
+  "rank": 88,
+  "name": "Cadence Palladium / Protium emulators",
+  "maker": "Cadence",
+  "why": "Hardware every chip team buys to verify designs",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "CDNS"
+ },
+ {
+  "rank": 89,
+  "name": "Teradyne UltraFLEX / Magnum testers",
+  "maker": "Teradyne",
+  "why": "SoC and memory test; robotics arm",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "TER"
+ },
+ {
+  "rank": 90,
+  "name": "Corning glass-core substrates and fiber",
+  "maker": "Corning",
+  "why": "Fiber for AI clusters; glass substrates late 2020s",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "GLW"
+ },
+ {
+  "rank": 91,
+  "name": "Navitas GaN power ICs",
+  "maker": "Navitas",
+  "why": "GaN for 800VDC data-center power",
+  "price": "Strongly overpriced",
+  "conf": "Low",
+  "early": "NVTS"
+ },
+ {
+  "rank": 92,
+  "name": "Tenstorrent Blackhole / Ascalon RISC-V",
+  "maker": "Tenstorrent",
+  "why": "Open RISC-V AI and CPU IP challenger",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 93,
+  "name": "Etched Sohu transformer ASIC",
+  "maker": "Etched",
+  "why": "Fixed-function transformer inference",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 94,
+  "name": "Lightmatter Passage photonic interconnect",
+  "maker": "Lightmatter",
+  "why": "3D photonic interposers for scale-up",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 95,
+  "name": "Ayar Labs TeraPHY optical I/O",
+  "maker": "Ayar Labs",
+  "why": "Optical chiplet I/O for GPUs",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 96,
+  "name": "Unitree G1 / H2 humanoids",
+  "maker": "Unitree Robotics",
+  "why": "Lowest-cost volume humanoids",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "STAR Market listing (check status)"
+ },
+ {
+  "rank": 97,
+  "name": "Figure 03 humanoid",
+  "maker": "Figure AI",
+  "why": "Well-funded US humanoid rival to Optimus",
+  "price": "Strongly overpriced",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 98,
+  "name": "Boston Dynamics electric Atlas",
+  "maker": "Hyundai",
+  "why": "Factory humanoid deployed at Hyundai plants",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "005380.KS"
+ },
+ {
+  "rank": 99,
+  "name": "Neuralink N1 implant",
+  "maker": "Neuralink",
+  "why": "Brain-computer interface device class",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Private"
+ },
+ {
+  "rank": 100,
+  "name": "Nintendo Switch 2 (NVIDIA T239)",
+  "maker": "Nintendo",
+  "why": "Largest dedicated console base",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "7974.T"
+ }
+]
