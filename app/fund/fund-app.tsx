@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import {
   ROWS,
   SECTIONS,
@@ -186,6 +187,31 @@ export default function FundApp() {
 
   const colCount = section ? section.columns.length + 4 : 7;
 
+  // Window virtualization: only rows near the viewport are mounted, so the
+  // table stays fast with thousands of positions. Each virtual item is one
+  // <tbody> (main row + optional detail row) measured for its real height.
+  const tableRef = useRef<HTMLTableElement>(null);
+  const [scrollMargin, setScrollMargin] = useState(0);
+  useLayoutEffect(() => {
+    const el = tableRef.current;
+    if (!el) return;
+    const update = () => setScrollMargin(el.getBoundingClientRect().top + window.scrollY);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(document.body);
+    return () => ro.disconnect();
+  }, []);
+  const virtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: () => 58,
+    overscan: 12,
+    scrollMargin,
+    getItemKey: (i) => rows[i].uid,
+  });
+  const vItems = virtualizer.getVirtualItems();
+  const padTop = vItems.length ? vItems[0].start - scrollMargin : 0;
+  const padBottom = vItems.length ? virtualizer.getTotalSize() - (vItems[vItems.length - 1].end - scrollMargin) : 0;
+
   return (
     <main className="min-h-screen bg-brand-950 text-brand-200">
       <div className="mx-auto max-w-[1400px] px-5 pb-24 pt-12 sm:px-8">
@@ -317,7 +343,7 @@ export default function FundApp() {
 
         {/* Table */}
         <div className="overflow-x-auto rounded-md border border-brand-800/80">
-          <table className="w-full border-collapse text-left text-[12.5px] leading-snug">
+          <table ref={tableRef} className="w-full border-collapse text-left text-[12.5px] leading-snug">
             <thead className="sticky top-0 bg-brand-900/95 backdrop-blur">
               <tr className="text-[10px] uppercase tracking-[0.16em] text-brand-500">
                 <th className="w-10 px-3 py-2.5 font-medium">#</th>
@@ -339,19 +365,28 @@ export default function FundApp() {
                 <th className="px-3 py-2.5 font-medium">Conf</th>
               </tr>
             </thead>
-            <tbody>
-              {rows.length === 0 && (
+            {rows.length === 0 && (
+              <tbody>
                 <tr>
                   <td colSpan={colCount} className="px-3 py-16 text-center text-brand-500">
                     No positions match these filters.
                   </td>
                 </tr>
-              )}
-              {rows.map((r) => {
+              </tbody>
+            )}
+            {padTop > 0 && (
+              <tbody aria-hidden>
+                <tr>
+                  <td colSpan={colCount} style={{ height: padTop, padding: 0 }} />
+                </tr>
+              </tbody>
+            )}
+            {vItems.map((vi) => {
+                const r = rows[vi.index];
                 const def = SECTION_BY_ID[r.section];
                 const isOpen = open === r.uid;
                 return (
-                  <Fragment key={r.uid}>
+                  <tbody key={r.uid} data-index={vi.index} ref={virtualizer.measureElement}>
                     <tr
                       onClick={() => setOpen(isOpen ? null : r.uid)}
                       className={`cursor-pointer border-t border-brand-800/60 align-top transition-colors hover:bg-brand-900/60 ${
@@ -415,10 +450,16 @@ export default function FundApp() {
                         </td>
                       </tr>
                     )}
-                  </Fragment>
+                  </tbody>
                 );
               })}
-            </tbody>
+            {padBottom > 0 && (
+              <tbody aria-hidden>
+                <tr>
+                  <td colSpan={colCount} style={{ height: padBottom, padding: 0 }} />
+                </tr>
+              </tbody>
+            )}
           </table>
         </div>
 

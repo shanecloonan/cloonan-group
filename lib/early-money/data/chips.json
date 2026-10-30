@@ -898,5 +898,1805 @@
   "price": "Fair",
   "conf": "Med",
   "early": "7974.T"
+ },
+ {
+  "rank": 101,
+  "name": "NVIDIA Blackwell Ultra B300 / GB300 NVL72",
+  "maker": "NVIDIA",
+  "why": "Installed-base workhorse through 2027; 288GB HBM3E, FP4 inference leader",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "NVDA"
+ },
+ {
+  "rank": 102,
+  "name": "AMD Turin Dense EPYC 9965",
+  "maker": "AMD",
+  "why": "192-core Zen 5c server consolidation",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "AMD"
+ },
+ {
+  "rank": 103,
+  "name": "NVIDIA Spectrum-X Ethernet (SN5600)",
+  "maker": "NVIDIA",
+  "why": "AI Ethernet run-rate now multi-$10B",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "NVDA"
+ },
+ {
+  "rank": 104,
+  "name": "SK hynix 321-layer 4D NAND",
+  "maker": "SK hynix",
+  "why": "Highest-layer NAND in production",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "000660.KS"
+ },
+ {
+  "rank": 105,
+  "name": "SK hynix / Solidigm 122TB QLC eSSD",
+  "maker": "SK hynix",
+  "why": "AI data-lake SSD leader",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "000660.KS"
+ },
+ {
+  "rank": 106,
+  "name": "Samsung 1c DRAM",
+  "maker": "Samsung",
+  "why": "Sixth-gen 10nm-class DRAM restoring cost lead",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 107,
+  "name": "TSMC N3P / N3X",
+  "maker": "TSMC",
+  "why": "Workhorse node for 2025-27 accelerators",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "TSM"
+ },
+ {
+  "rank": 108,
+  "name": "Lam Research Kiyo / Vantex cryo etch",
+  "maker": "Lam Research",
+  "why": "Cryogenic etch for 400+ layer NAND",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "LRCX"
+ },
+ {
+  "rank": 109,
+  "name": "AMD Instinct MI355X",
+  "maker": "AMD",
+  "why": "CDNA 4 on N3; 288GB HBM3E; Oracle and neocloud volume",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "AMD"
+ },
+ {
+  "rank": 110,
+  "name": "AMD Instinct MI500 (2027)",
+  "maker": "AMD",
+  "why": "Annual cadence after MI400; rack-scale with Venice CPUs and Vulcano NICs",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "AMD"
+ },
+ {
+  "rank": 111,
+  "name": "Broadcom Jericho 4 / Tomahawk Ultra",
+  "maker": "Broadcom",
+  "why": "Scale-across and scale-up Ethernet for AI fabrics",
+  "price": "Fair",
+  "conf": "High",
+  "early": "AVGO"
+ },
+ {
+  "rank": 112,
+  "name": "OpenAI–Broadcom custom accelerator (Titan)",
+  "maker": "OpenAI + Broadcom",
+  "why": "10GW custom XPU program from late 2026",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "AVGO"
+ },
+ {
+  "rank": 113,
+  "name": "Anthropic TPU allocation (Ironwood scale-out)",
+  "maker": "Google + Broadcom",
+  "why": "Up to 1M TPUs committed; validates TPU merchant model",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "GOOGL; AVGO"
+ },
+ {
+  "rank": 114,
+  "name": "Intel Panther Lake (Core Ultra 300, 18A)",
+  "maker": "Intel",
+  "why": "First 18A client volume; proves the node",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "INTC"
+ },
+ {
+  "rank": 115,
+  "name": "AMD Ryzen 9000X3D / 3D V-Cache",
+  "maker": "AMD",
+  "why": "Hybrid-bonded SRAM stacking dominates gaming CPUs",
+  "price": "Fair",
+  "conf": "High",
+  "early": "AMD"
+ },
+ {
+  "rank": 116,
+  "name": "NVIDIA Grace CPU",
+  "maker": "NVIDIA",
+  "why": "Arm server CPU anchoring GB200/GB300",
+  "price": "Fair",
+  "conf": "High",
+  "early": "NVDA"
+ },
+ {
+  "rank": 117,
+  "name": "NVIDIA Quantum-X800 InfiniBand",
+  "maker": "NVIDIA",
+  "why": "Lowest-latency training fabric",
+  "price": "Fair",
+  "conf": "High",
+  "early": "NVDA"
+ },
+ {
+  "rank": 118,
+  "name": "NVIDIA DRIVE AGX Hyperion 10",
+  "maker": "NVIDIA",
+  "why": "Level-4 reference platform for robotaxi OEMs",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NVDA"
+ },
+ {
+  "rank": 119,
+  "name": "Apple M5 / M5 Pro / M5 Max",
+  "maker": "Apple",
+  "why": "Neural accelerators in every GPU core; on-device LLMs",
+  "price": "Fair",
+  "conf": "High",
+  "early": "AAPL"
+ },
+ {
+  "rank": 120,
+  "name": "MediaTek Dimensity 9400+",
+  "maker": "MediaTek",
+  "why": "Flagship Android share gains vs Snapdragon",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "2454.TW"
+ },
+ {
+  "rank": 121,
+  "name": "MediaTek Dimensity Auto cockpit SoC",
+  "maker": "MediaTek",
+  "why": "NVIDIA-GPU-enabled auto cockpit chips",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "2454.TW"
+ },
+ {
+  "rank": 122,
+  "name": "Qualcomm Snapdragon Ride Flex / Elite",
+  "maker": "Qualcomm",
+  "why": "Auto pipeline above $45B; central compute wins",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "QCOM"
+ },
+ {
+  "rank": 123,
+  "name": "Marvell Ara 1.6T 3nm PAM4 DSP",
+  "maker": "Marvell",
+  "why": "Leading 1.6T optical DSP",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "MRVL"
+ },
+ {
+  "rank": 124,
+  "name": "Rambus HBM4 controllers and DDR5 RCDs",
+  "maker": "Rambus",
+  "why": "Memory interface chips scale with server DDR5/MRDIMM",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "RMBS"
+ },
+ {
+  "rank": 125,
+  "name": "Montage Technology DDR5 RCD / MRCD",
+  "maker": "Montage",
+  "why": "Leading memory buffer supplier; MRDIMM ramp",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "688008.SS"
+ },
+ {
+  "rank": 126,
+  "name": "Micron 9650 PCIe Gen6 SSD",
+  "maker": "Micron",
+  "why": "First Gen6 data center SSD",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "MU"
+ },
+ {
+  "rank": 127,
+  "name": "Micron G9 NAND (276-layer)",
+  "maker": "Micron",
+  "why": "Cost-leading NAND node",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "MU"
+ },
+ {
+  "rank": 128,
+  "name": "Micron SOCAMM2 LPDDR5X",
+  "maker": "Micron",
+  "why": "Low-power memory modules for Vera CPU",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "MU"
+ },
+ {
+  "rank": 129,
+  "name": "Micron GDDR7",
+  "maker": "Micron",
+  "why": "Graphics and inference memory",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "MU"
+ },
+ {
+  "rank": 130,
+  "name": "Samsung V-NAND V9/V10",
+  "maker": "Samsung",
+  "why": "400+ layer NAND roadmap",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 131,
+  "name": "Samsung PM1763 Gen6 SSD",
+  "maker": "Samsung",
+  "why": "Enterprise Gen6 SSD",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 132,
+  "name": "Samsung GDDR7 24Gb",
+  "maker": "Samsung",
+  "why": "Highest-density GDDR7 for RTX 50",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 133,
+  "name": "Samsung Taylor fab / Tesla AI6 contract",
+  "maker": "Samsung",
+  "why": "$16.5B Tesla deal anchors US 2nm",
+  "price": "Strongly underpriced",
+  "conf": "Low",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 134,
+  "name": "Kioxia BiCS10 (332-layer)",
+  "maker": "Kioxia",
+  "why": "CBA NAND with Sandisk",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "285A.T"
+ },
+ {
+  "rank": 135,
+  "name": "Sandisk UltraQLC 256TB SSD",
+  "maker": "Sandisk",
+  "why": "Hyperscale capacity SSD",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "SNDK"
+ },
+ {
+  "rank": 136,
+  "name": "Western Digital UltraSMR / ePMR HDD",
+  "maker": "Western Digital",
+  "why": "36TB+ drives for cold AI data",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "WDC"
+ },
+ {
+  "rank": 137,
+  "name": "Seagate Exos M 36TB HAMR",
+  "maker": "Seagate",
+  "why": "Areal-density lead in nearline",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "STX"
+ },
+ {
+  "rank": 138,
+  "name": "TSMC A14 (1.4nm, 2028)",
+  "maker": "TSMC",
+  "why": "Next GAA node for 2028",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "TSM"
+ },
+ {
+  "rank": 139,
+  "name": "TSMC COUPE co-packaged optics",
+  "maker": "TSMC",
+  "why": "Silicon-photonics engine for CPO switches",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "TSM"
+ },
+ {
+  "rank": 140,
+  "name": "GlobalFoundries 22FDX / 12LP+",
+  "maker": "GlobalFoundries",
+  "why": "Western mature-node and RF foundry",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "GFS"
+ },
+ {
+  "rank": 141,
+  "name": "GlobalFoundries GF Fotonix",
+  "maker": "GlobalFoundries",
+  "why": "Monolithic silicon photonics platform",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "GFS"
+ },
+ {
+  "rank": 142,
+  "name": "Applied Materials Centura Sculpta",
+  "maker": "Applied Materials",
+  "why": "Pattern shaping cuts EUV passes",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "AMAT"
+ },
+ {
+  "rank": 143,
+  "name": "Applied Materials Kinex hybrid bonding",
+  "maker": "Applied Materials + Besi",
+  "why": "Integrated die-to-wafer bonding",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "AMAT; BESI.AS"
+ },
+ {
+  "rank": 144,
+  "name": "Applied Materials Producer XP Pioneer CVD",
+  "maker": "Applied Materials",
+  "why": "Backside power deposition",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "AMAT"
+ },
+ {
+  "rank": 145,
+  "name": "Lam Research SABRE 3D",
+  "maker": "Lam Research",
+  "why": "Electroplating for HBM TSVs",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "LRCX"
+ },
+ {
+  "rank": 146,
+  "name": "Lam Research Aether dry resist",
+  "maker": "Lam Research",
+  "why": "Dry EUV photoresist",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "LRCX"
+ },
+ {
+  "rank": 147,
+  "name": "KLA eSL10 e-beam patterned wafer inspection",
+  "maker": "KLA",
+  "why": "E-beam defect discovery at GAA",
+  "price": "Fair",
+  "conf": "High",
+  "early": "KLAC"
+ },
+ {
+  "rank": 148,
+  "name": "Tokyo Electron Ulucus / Acrevia",
+  "maker": "Tokyo Electron",
+  "why": "Bonding and gas-cluster beam tools",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "8035.T"
+ },
+ {
+  "rank": 149,
+  "name": "Tokyo Electron cryo etch",
+  "maker": "Tokyo Electron",
+  "why": "Challenger for 3D NAND etch",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "8035.T"
+ },
+ {
+  "rank": 150,
+  "name": "ASML NXT:2100i DUV immersion",
+  "maker": "ASML",
+  "why": "DUV workhorse; China demand normalizing",
+  "price": "Fair",
+  "conf": "High",
+  "early": "ASML"
+ },
+ {
+  "rank": 151,
+  "name": "Screen Holdings wafer cleaners",
+  "maker": "Screen",
+  "why": "Leading single-wafer clean",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "7735.T"
+ },
+ {
+  "rank": 152,
+  "name": "Kokusai Electric batch ALD",
+  "maker": "Kokusai",
+  "why": "Batch deposition for 3D NAND and DRAM",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "6525.T"
+ },
+ {
+  "rank": 153,
+  "name": "Ebara CMP systems",
+  "maker": "Ebara",
+  "why": "Number-two CMP tool",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "6361.T"
+ },
+ {
+  "rank": 154,
+  "name": "Onto Innovation Dragonfly G5 inspection",
+  "maker": "Onto Innovation",
+  "why": "Advanced-packaging inspection for HBM",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "ONTO"
+ },
+ {
+  "rank": 155,
+  "name": "Camtek Hawk / Eagle G5",
+  "maker": "Camtek",
+  "why": "Inspection for HBM and chiplets",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "CAMT"
+ },
+ {
+  "rank": 156,
+  "name": "Nova PRISM / Elipson metrology",
+  "maker": "Nova",
+  "why": "Materials metrology for GAA",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NVMI"
+ },
+ {
+  "rank": 157,
+  "name": "FormFactor HBM probe cards",
+  "maker": "FormFactor",
+  "why": "HBM DRAM probe leader",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "FORM"
+ },
+ {
+  "rank": 158,
+  "name": "Technoprobe probe cards",
+  "maker": "Technoprobe",
+  "why": "Logic probe cards for AI GPUs",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "TPRO.MI"
+ },
+ {
+  "rank": 159,
+  "name": "ASMPT TCB bonders for HBM",
+  "maker": "ASMPT",
+  "why": "Thermo-compression bonders for HBM4",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "0522.HK"
+ },
+ {
+  "rank": 160,
+  "name": "Unimicron ABF substrates",
+  "maker": "Unimicron",
+  "why": "Largest ABF substrate maker",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "3037.TW"
+ },
+ {
+  "rank": 161,
+  "name": "Samsung Electro-Mechanics FC-BGA / glass core",
+  "maker": "SEMCO",
+  "why": "Substrates and MLCCs for AI servers",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "009150.KS"
+ },
+ {
+  "rank": 162,
+  "name": "Resonac packaging materials",
+  "maker": "Resonac",
+  "why": "Underfill, mold and film for advanced packaging",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "4004.T"
+ },
+ {
+  "rank": 163,
+  "name": "JSR / Tokyo Ohka EUV photoresist",
+  "maker": "JSR + TOK",
+  "why": "EUV resist duopoly",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "4186.T"
+ },
+ {
+  "rank": 164,
+  "name": "Shin-Etsu EUV photomask blanks",
+  "maker": "Shin-Etsu",
+  "why": "Mask blanks plus resist",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "4063.T"
+ },
+ {
+  "rank": 165,
+  "name": "Coherent 200mm SiC substrates",
+  "maker": "Coherent",
+  "why": "SiC substrate number two",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "COHR"
+ },
+ {
+  "rank": 166,
+  "name": "Entegris advanced materials",
+  "maker": "Entegris",
+  "why": "Filters and chemistries per wafer",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "ENTG"
+ },
+ {
+  "rank": 167,
+  "name": "Linde / Air Liquide electronic gases",
+  "maker": "Linde + Air Liquide",
+  "why": "Ultra-pure gases for fabs",
+  "price": "Fair",
+  "conf": "High",
+  "early": "LIN; AI.PA"
+ },
+ {
+  "rank": 168,
+  "name": "Infineon CoolSiC MOSFET Gen2",
+  "maker": "Infineon",
+  "why": "SiC for EV traction and AI PSUs",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "IFX.DE"
+ },
+ {
+  "rank": 169,
+  "name": "Infineon AURIX TC4x",
+  "maker": "Infineon",
+  "why": "Auto MCU leader",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "IFX.DE"
+ },
+ {
+  "rank": 170,
+  "name": "Infineon CoolGaN 300mm",
+  "maker": "Infineon",
+  "why": "First 300mm GaN power wafers",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "IFX.DE"
+ },
+ {
+  "rank": 171,
+  "name": "STMicro SiC (Catania) / STPOWER",
+  "maker": "STMicro",
+  "why": "Tesla SiC supplier",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "STM"
+ },
+ {
+  "rank": 172,
+  "name": "onsemi EliteSiC",
+  "maker": "onsemi",
+  "why": "SiC traction for EVs",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "ON"
+ },
+ {
+  "rank": 173,
+  "name": "onsemi Hyperlux image sensors",
+  "maker": "onsemi",
+  "why": "Auto ADAS sensors",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "ON"
+ },
+ {
+  "rank": 174,
+  "name": "Renesas power stages for AI",
+  "maker": "Renesas",
+  "why": "Server power plus Intersil heritage",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "6723.T"
+ },
+ {
+  "rank": 175,
+  "name": "Microchip PIC / AVR MCUs",
+  "maker": "Microchip",
+  "why": "Embedded MCU leader exiting destock",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "MCHP"
+ },
+ {
+  "rank": 176,
+  "name": "Espressif ESP32",
+  "maker": "Espressif",
+  "why": "Default low-cost Wi-Fi MCU",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "688018.SS"
+ },
+ {
+  "rank": 177,
+  "name": "NXP i.MX 95",
+  "maker": "NXP",
+  "why": "Industrial/auto applications processor",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NXPI"
+ },
+ {
+  "rank": 178,
+  "name": "NXP S32N55 central compute",
+  "maker": "NXP",
+  "why": "Software-defined vehicle processor",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "NXPI"
+ },
+ {
+  "rank": 179,
+  "name": "Renesas RA / RX MCUs",
+  "maker": "Renesas",
+  "why": "MCU number two globally",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "6723.T"
+ },
+ {
+  "rank": 180,
+  "name": "Murata RF modules and MLCCs",
+  "maker": "Murata",
+  "why": "MLCC demand from AI servers",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "6981.T"
+ },
+ {
+  "rank": 181,
+  "name": "MaxLinear / Silicon Motion SSD controllers",
+  "maker": "Silicon Motion",
+  "why": "Merchant SSD controller leader",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "SIMO"
+ },
+ {
+  "rank": 182,
+  "name": "Phison enterprise SSD controllers",
+  "maker": "Phison",
+  "why": "aiDAPTIV SSD caching for AI",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "8299.TWO"
+ },
+ {
+  "rank": 183,
+  "name": "Alchip ASIC design services",
+  "maker": "Alchip",
+  "why": "AWS Trainium design partner",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "3661.TW"
+ },
+ {
+  "rank": 184,
+  "name": "Siemens EDA Calibre",
+  "maker": "Siemens",
+  "why": "Physical verification sign-off standard",
+  "price": "Fair",
+  "conf": "High",
+  "early": "SIE.DE"
+ },
+ {
+  "rank": 185,
+  "name": "Coherent 1.6T transceivers / InP 6-inch",
+  "maker": "Coherent",
+  "why": "Vertically integrated optics",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "COHR"
+ },
+ {
+  "rank": 186,
+  "name": "Sumitomo / JX InP and GaAs substrates",
+  "maker": "JX Advanced Metals",
+  "why": "Indium phosphide substrate leader",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "5016.T"
+ },
+ {
+  "rank": 187,
+  "name": "Corning hollow-core and multicore fiber",
+  "maker": "Corning",
+  "why": "Fiber for AI campuses",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "GLW"
+ },
+ {
+  "rank": 188,
+  "name": "Wiwynn / Quanta / Foxconn GB300 racks",
+  "maker": "Foxconn",
+  "why": "Rack-level integration",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "2317.TW"
+ },
+ {
+  "rank": 189,
+  "name": "Dell PowerEdge XE9780",
+  "maker": "Dell",
+  "why": "Enterprise AI factory servers",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "DELL"
+ },
+ {
+  "rank": 190,
+  "name": "Cisco Silicon One G300",
+  "maker": "Cisco",
+  "why": "Merchant-class AI switch silicon",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "CSCO"
+ },
+ {
+  "rank": 191,
+  "name": "Apple Secure Enclave / Private Cloud Compute",
+  "maker": "Apple",
+  "why": "Hardware root of trust",
+  "price": "Fair",
+  "conf": "High",
+  "early": "AAPL"
+ },
+ {
+  "rank": 192,
+  "name": "Qualcomm Snapdragon AR1+ Gen 1",
+  "maker": "Qualcomm",
+  "why": "On-glasses AI SoC",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "QCOM"
+ },
+ {
+  "rank": 193,
+  "name": "Dexcom G7 / Stelo CGM ASIC",
+  "maker": "Dexcom",
+  "why": "OTC CGM",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "DXCM"
+ },
+ {
+  "rank": 194,
+  "name": "AMD Pensando Vulcano / Pollara NICs",
+  "maker": "AMD",
+  "why": "Ultra Ethernet AI NICs closing the gap with ConnectX",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AMD"
+ },
+ {
+  "rank": 195,
+  "name": "Broadcom Thor Ultra 800G NIC",
+  "maker": "Broadcom",
+  "why": "First UEC-compliant 800G AI NIC",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AVGO"
+ },
+ {
+  "rank": 196,
+  "name": "AWS Inferentia2 / Inferentia3",
+  "maker": "Amazon",
+  "why": "In-house inference silicon lowering Bedrock costs",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AMZN"
+ },
+ {
+  "rank": 197,
+  "name": "Microsoft Cobalt 200 Arm CPU",
+  "maker": "Microsoft",
+  "why": "Azure-native Arm server CPU; cost lever vs x86",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "MSFT; ARM"
+ },
+ {
+  "rank": 198,
+  "name": "Qualcomm AI200 / AI250 rack accelerators",
+  "maker": "Qualcomm",
+  "why": "LPDDR-based inference racks from 2026; Humain anchor customer",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "QCOM"
+ },
+ {
+  "rank": 199,
+  "name": "Intel Nova Lake (Core Ultra 400)",
+  "maker": "Intel",
+  "why": "2026 desktop/mobile with N2 compute tiles",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "INTC"
+ },
+ {
+  "rank": 200,
+  "name": "AMD Zen 6 Ryzen (Medusa)",
+  "maker": "AMD",
+  "why": "N2/N3 client CPUs keeping share gains",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AMD"
+ },
+ {
+  "rank": 201,
+  "name": "AMD Radeon RX 9000 (RDNA 4)",
+  "maker": "AMD",
+  "why": "Mid-range GPU share recovery",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AMD"
+ },
+ {
+  "rank": 202,
+  "name": "NVIDIA N1X / GB10 Windows-on-Arm PC chip",
+  "maker": "NVIDIA + MediaTek",
+  "why": "NVIDIA enters PC CPUs with MediaTek",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "NVDA; 2454.TW"
+ },
+ {
+  "rank": 203,
+  "name": "NVIDIA IGX Thor (industrial edge)",
+  "maker": "NVIDIA",
+  "why": "Safety-certified edge AI for medical and industrial",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "NVDA"
+ },
+ {
+  "rank": 204,
+  "name": "NVIDIA RTX PRO 6000 Blackwell Server",
+  "maker": "NVIDIA",
+  "why": "Enterprise AI factory card for on-prem",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "NVDA"
+ },
+ {
+  "rank": 205,
+  "name": "Apple C1 / C2 modem",
+  "maker": "Apple",
+  "why": "In-house cellular modem replacing Qualcomm",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AAPL"
+ },
+ {
+  "rank": 206,
+  "name": "Apple N1 wireless chip",
+  "maker": "Apple",
+  "why": "In-house Wi-Fi 7/Bluetooth replacing Broadcom",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AAPL"
+ },
+ {
+  "rank": 207,
+  "name": "Google Tensor G5 (TSMC N3)",
+  "maker": "Google",
+  "why": "First fully Google-designed phone SoC on TSMC",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "GOOGL"
+ },
+ {
+  "rank": 208,
+  "name": "Samsung Exynos 2500",
+  "maker": "Samsung",
+  "why": "First 3nm GAA phone SoC; foundry proof point",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 209,
+  "name": "MediaTek Kompanio Ultra Chromebook SoC",
+  "maker": "MediaTek",
+  "why": "Arm Chromebook leadership",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "2454.TW"
+ },
+ {
+  "rank": 210,
+  "name": "Qualcomm FastConnect 7900 Wi-Fi 7",
+  "maker": "Qualcomm",
+  "why": "Connectivity attach across devices",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "QCOM"
+ },
+ {
+  "rank": 211,
+  "name": "Broadcom BCM6726 Wi-Fi 8 platform",
+  "maker": "Broadcom",
+  "why": "Early Wi-Fi 8 silicon for routers",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AVGO"
+ },
+ {
+  "rank": 212,
+  "name": "Credo Lightning / Bluebird optical DSPs",
+  "maker": "Credo",
+  "why": "Low-power DSPs extending AEC lead into optics",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CRDO"
+ },
+ {
+  "rank": 213,
+  "name": "Credo ZeroFlap AECs for scale-up",
+  "maker": "Credo",
+  "why": "Reliability-tuned cables for 1.6T racks",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CRDO"
+ },
+ {
+  "rank": 214,
+  "name": "Astera Labs Taurus Ethernet SCMs",
+  "maker": "Astera Labs",
+  "why": "Smart cable modules for 800G",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "ALAB"
+ },
+ {
+  "rank": 215,
+  "name": "Broadcom Vantage 5 PCIe 6 switch",
+  "maker": "Broadcom",
+  "why": "PCIe 6 fabric for GPU servers",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AVGO"
+ },
+ {
+  "rank": 216,
+  "name": "Microchip Switchtec PCIe Gen 6",
+  "maker": "Microchip",
+  "why": "PCIe 6 switches for AI servers",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "MCHP"
+ },
+ {
+  "rank": 217,
+  "name": "Sandisk High Bandwidth Flash (HBF)",
+  "maker": "Sandisk + SK hynix",
+  "why": "NAND-based HBM alternative for inference",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "SNDK"
+ },
+ {
+  "rank": 218,
+  "name": "Nanya Technology DDR4/DDR5",
+  "maker": "Nanya",
+  "why": "Taiwan DRAM leveraged to legacy shortage",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "2408.TW"
+ },
+ {
+  "rank": 219,
+  "name": "Winbond CUBE edge memory",
+  "maker": "Winbond",
+  "why": "Custom ultra-bandwidth DRAM for edge AI",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "2344.TW"
+ },
+ {
+  "rank": 220,
+  "name": "TSMC Arizona Fab 21 (N4/N3)",
+  "maker": "TSMC",
+  "why": "US leading-edge supply for Apple, NVIDIA, AMD",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "TSM"
+ },
+ {
+  "rank": 221,
+  "name": "TSMC CoPoS / CoWoP panel packaging",
+  "maker": "TSMC",
+  "why": "Panel-level packaging from 2028",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "TSM"
+ },
+ {
+  "rank": 222,
+  "name": "TSMC N12e / N6 for edge AI",
+  "maker": "TSMC",
+  "why": "Mature nodes for IoT AI",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "TSM"
+ },
+ {
+  "rank": 223,
+  "name": "Intel EMIB-T packaging",
+  "maker": "Intel",
+  "why": "Packaging service with outside customers",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "INTC"
+ },
+ {
+  "rank": 224,
+  "name": "Samsung I-Cube / X-Cube packaging",
+  "maker": "Samsung",
+  "why": "Turnkey HBM+logic packaging",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 225,
+  "name": "UMC 22/28nm and Intel 12nm partnership",
+  "maker": "UMC",
+  "why": "Mature node with US 12nm path",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "UMC"
+ },
+ {
+  "rank": 226,
+  "name": "Tower Semiconductor SiPho / SiGe",
+  "maker": "Tower",
+  "why": "Leading foundry for 800G/1.6T photonics",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "TSEM"
+ },
+ {
+  "rank": 227,
+  "name": "SMIC N+2 7nm",
+  "maker": "SMIC",
+  "why": "Kirin and Ascend production node",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "0981.HK"
+ },
+ {
+  "rank": 228,
+  "name": "X-FAB specialty analog foundry",
+  "maker": "X-FAB",
+  "why": "SiC/MEMS analog foundry",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "XFAB.PA"
+ },
+ {
+  "rank": 229,
+  "name": "Alibaba T-Head PPU / Zhenwu",
+  "maker": "Alibaba",
+  "why": "In-house AI accelerator",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "BABA"
+ },
+ {
+  "rank": 230,
+  "name": "Baidu Kunlun P800 / M100",
+  "maker": "Baidu",
+  "why": "Kunlun clusters for Ernie; spinout planned",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "BIDU"
+ },
+ {
+  "rank": 231,
+  "name": "Horizon Robotics Journey 6",
+  "maker": "Horizon Robotics",
+  "why": "Leading China ADAS SoC",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "9660.HK"
+ },
+ {
+  "rank": 232,
+  "name": "NAURA etch/deposition",
+  "maker": "NAURA",
+  "why": "China's largest WFE vendor",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "002371.SZ"
+ },
+ {
+  "rank": 233,
+  "name": "AMEC etch tools",
+  "maker": "AMEC",
+  "why": "China CCP etch with 5nm qualification",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "688012.SS"
+ },
+ {
+  "rank": 234,
+  "name": "KLA Gen5 Axion X-ray metrology",
+  "maker": "KLA",
+  "why": "3D NAND and GAA metrology",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "KLAC"
+ },
+ {
+  "rank": 235,
+  "name": "ASML YieldStar / HMI e-beam",
+  "maker": "ASML",
+  "why": "Metrology and e-beam inspection",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "ASML"
+ },
+ {
+  "rank": 236,
+  "name": "Canon nanoimprint lithography FPA-1200NZ2C",
+  "maker": "Canon",
+  "why": "Low-cost alternative to EUV for memory",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "7751.T"
+ },
+ {
+  "rank": 237,
+  "name": "Advantest T2000 / SoC test",
+  "maker": "Advantest",
+  "why": "SoC test duopoly with Teradyne",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "6857.T"
+ },
+ {
+  "rank": 238,
+  "name": "Tokyo Seimitsu probers",
+  "maker": "Tokyo Seimitsu",
+  "why": "Wafer probers plus dicers",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "7729.T"
+ },
+ {
+  "rank": 239,
+  "name": "MPI Corporation probe cards",
+  "maker": "MPI",
+  "why": "Taiwan probe cards for CoWoS",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "6223.TWO"
+ },
+ {
+  "rank": 240,
+  "name": "Cohu automated test handlers",
+  "maker": "Cohu",
+  "why": "Test handlers at cycle trough",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "COHU"
+ },
+ {
+  "rank": 241,
+  "name": "Kulicke & Soffa fluxless TCB",
+  "maker": "K&S",
+  "why": "Advanced bonders; net cash",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "KLIC"
+ },
+ {
+  "rank": 242,
+  "name": "EV Group wafer bonders",
+  "maker": "EV Group",
+  "why": "Hybrid bonding pioneer",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Private"
+ },
+ {
+  "rank": 243,
+  "name": "SEMES / PSK deposition and strip",
+  "maker": "PSK",
+  "why": "Korean strip/descum tools",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "319660.KS"
+ },
+ {
+  "rank": 244,
+  "name": "Wonik IPS deposition",
+  "maker": "Wonik IPS",
+  "why": "Korean ALD/CVD supplier",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "240810.KQ"
+ },
+ {
+  "rank": 245,
+  "name": "Shinko Electric substrates",
+  "maker": "Shinko",
+  "why": "Flip-chip substrates; JIC owned",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Private"
+ },
+ {
+  "rank": 246,
+  "name": "AT&S IC substrates",
+  "maker": "AT&S",
+  "why": "European ABF substrates at Kulim",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "ATS.VI"
+ },
+ {
+  "rank": 247,
+  "name": "Hoya EUV mask blanks",
+  "maker": "Hoya",
+  "why": "Dominant EUV mask blank supplier",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "7741.T"
+ },
+ {
+  "rank": 248,
+  "name": "GlobalWafers Texas fab",
+  "maker": "GlobalWafers",
+  "why": "US 300mm wafer supply",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "6488.TWO"
+ },
+ {
+  "rank": 249,
+  "name": "Siltronic 300mm wafers",
+  "maker": "Siltronic",
+  "why": "European wafer supplier",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "WAF.DE"
+ },
+ {
+  "rank": 250,
+  "name": "Soitec SOI / Smart Cut",
+  "maker": "Soitec",
+  "why": "RF-SOI and FD-SOI substrates",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "SOI.PA"
+ },
+ {
+  "rank": 251,
+  "name": "STMicro BCD power for AI servers",
+  "maker": "STMicro",
+  "why": "Smart power for 48V racks",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "STM"
+ },
+ {
+  "rank": 252,
+  "name": "Power Integrations PowiGaN 1250V",
+  "maker": "Power Integrations",
+  "why": "High-voltage GaN switchers",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "POWI"
+ },
+ {
+  "rank": 253,
+  "name": "Texas Instruments 300mm Sherman fab",
+  "maker": "TI",
+  "why": "US analog capacity at scale",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "TXN"
+ },
+ {
+  "rank": 254,
+  "name": "Analog Devices precision converters",
+  "maker": "ADI",
+  "why": "Industrial/medical signal chain",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "ADI"
+ },
+ {
+  "rank": 255,
+  "name": "AMD Versal AI Edge Gen 2",
+  "maker": "AMD",
+  "why": "Adaptive SoCs for automotive and aerospace",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AMD"
+ },
+ {
+  "rank": 256,
+  "name": "Microchip PolarFire SoC",
+  "maker": "Microchip",
+  "why": "Radiation-tolerant FPGAs for space and defense",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "MCHP"
+ },
+ {
+  "rank": 257,
+  "name": "NXP Kinetis / MCX MCUs",
+  "maker": "NXP",
+  "why": "General-purpose MCU line",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "NXPI"
+ },
+ {
+  "rank": 258,
+  "name": "TI TDA4 / Jacinto ADAS",
+  "maker": "TI",
+  "why": "Low-cost ADAS processors",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "TXN"
+ },
+ {
+  "rank": 259,
+  "name": "Sony IMX990 SWIR / event sensors",
+  "maker": "Sony",
+  "why": "Industrial and auto sensing",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "SONY"
+ },
+ {
+  "rank": 260,
+  "name": "Samsung ISOCELL HP2 / GNJ",
+  "maker": "Samsung",
+  "why": "200MP sensors",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "005930.KS"
+ },
+ {
+  "rank": 261,
+  "name": "OmniVision OV50 / auto sensors",
+  "maker": "OmniVision",
+  "why": "Will Semi image sensors",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "603501.SS"
+ },
+ {
+  "rank": 262,
+  "name": "TI AWR2944 mmWave radar",
+  "maker": "TI",
+  "why": "Auto radar SoC",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "TXN"
+ },
+ {
+  "rank": 263,
+  "name": "Infineon RASIC radar",
+  "maker": "Infineon",
+  "why": "Auto radar chipsets",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "IFX.DE"
+ },
+ {
+  "rank": 264,
+  "name": "Qorvo / Skyworks RF front-end",
+  "maker": "Qorvo + Skyworks",
+  "why": "Merger creates US RF champion",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "QRVO; SWKS"
+ },
+ {
+  "rank": 265,
+  "name": "Broadcom FBAR filters",
+  "maker": "Broadcom",
+  "why": "Premium RF filters in iPhone",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AVGO"
+ },
+ {
+  "rank": 266,
+  "name": "Realtek networking/audio ICs",
+  "maker": "Realtek",
+  "why": "Ethernet and PC peripherals",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "2379.TW"
+ },
+ {
+  "rank": 267,
+  "name": "Novatek display drivers",
+  "maker": "Novatek",
+  "why": "DDIC leader; OLED growth",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "3034.TW"
+ },
+ {
+  "rank": 268,
+  "name": "Parade Technologies high-speed interfaces",
+  "maker": "Parade",
+  "why": "DisplayPort/retimers",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "4966.TWO"
+ },
+ {
+  "rank": 269,
+  "name": "Global Unichip (GUC)",
+  "maker": "GUC",
+  "why": "TSMC-affiliated ASIC design house",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "3443.TW"
+ },
+ {
+  "rank": 270,
+  "name": "Socionext custom SoCs",
+  "maker": "Socionext",
+  "why": "Japan custom SoC house",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "6526.T"
+ },
+ {
+  "rank": 271,
+  "name": "Cadence Tensilica / Neo NPU IP",
+  "maker": "Cadence",
+  "why": "DSP and NPU IP",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CDNS"
+ },
+ {
+  "rank": 272,
+  "name": "Synopsys DesignWare interface IP",
+  "maker": "Synopsys",
+  "why": "PCIe/UCIe/HBM IP monopoly-like",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "SNPS"
+ },
+ {
+  "rank": 273,
+  "name": "Synopsys ZeBu / HAPS emulation",
+  "maker": "Synopsys",
+  "why": "Hardware-assisted verification",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "SNPS"
+ },
+ {
+  "rank": 274,
+  "name": "Ansys RedHawk-SC (now Synopsys)",
+  "maker": "Synopsys",
+  "why": "Multiphysics for 3D-IC",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "SNPS"
+ },
+ {
+  "rank": 275,
+  "name": "UCIe chiplet ecosystem",
+  "maker": "UCIe Consortium",
+  "why": "Open die-to-die standard",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "SNPS; CDNS"
+ },
+ {
+  "rank": 276,
+  "name": "Lumentum R300 optical circuit switch",
+  "maker": "Lumentum",
+  "why": "OCS for Google-style fabrics",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "LITE"
+ },
+ {
+  "rank": 277,
+  "name": "Lumentum 200G-per-lane EMLs",
+  "maker": "Lumentum",
+  "why": "InP lasers for 1.6T",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "LITE"
+ },
+ {
+  "rank": 278,
+  "name": "Broadcom 200G VCSEL/EML",
+  "maker": "Broadcom",
+  "why": "Merchant lasers",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "AVGO"
+ },
+ {
+  "rank": 279,
+  "name": "Innolight 1.6T transceivers",
+  "maker": "Innolight",
+  "why": "Largest AI transceiver supplier",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "300308.SZ"
+ },
+ {
+  "rank": 280,
+  "name": "Eoptolink LPO / 1.6T",
+  "maker": "Eoptolink",
+  "why": "Linear-drive optics",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "300502.SZ"
+ },
+ {
+  "rank": 281,
+  "name": "Sumitomo Electric InP lasers",
+  "maker": "Sumitomo Electric",
+  "why": "Optical components and cables",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "5802.T"
+ },
+ {
+  "rank": 282,
+  "name": "Mitsubishi Electric EML lasers",
+  "maker": "Mitsubishi Electric",
+  "why": "InP lasers for datacom",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "6503.T"
+ },
+ {
+  "rank": 283,
+  "name": "Fujikura high-density fiber cable",
+  "maker": "Fujikura",
+  "why": "AI DC fiber plus HTS tape",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "5803.T"
+ },
+ {
+  "rank": 284,
+  "name": "Amphenol NVLink copper backplanes",
+  "maker": "Amphenol",
+  "why": "Copper cartridges in NVL72 racks",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "APH"
+ },
+ {
+  "rank": 285,
+  "name": "TE Connectivity high-speed connectors",
+  "maker": "TE",
+  "why": "AI server interconnect",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "TEL"
+ },
+ {
+  "rank": 286,
+  "name": "Delta Electronics 800V HVDC power shelves",
+  "maker": "Delta",
+  "why": "Power for Kyber racks",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "2308.TW"
+ },
+ {
+  "rank": 287,
+  "name": "Lite-On AI server PSUs",
+  "maker": "Lite-On",
+  "why": "Server power supplies",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "2301.TW"
+ },
+ {
+  "rank": 288,
+  "name": "AVC / Auras cold plates",
+  "maker": "Asia Vital",
+  "why": "GPU cold plates and CDUs",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "3017.TW"
+ },
+ {
+  "rank": 289,
+  "name": "Supermicro DLC-2 liquid-cooled racks",
+  "maker": "Supermicro",
+  "why": "Rack-scale integrator",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "SMCI"
+ },
+ {
+  "rank": 290,
+  "name": "HPE Cray EX4000",
+  "maker": "HPE",
+  "why": "Supercomputers and sovereign AI",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "HPE"
+ },
+ {
+  "rank": 291,
+  "name": "Lenovo ThinkSystem Neptune",
+  "maker": "Lenovo",
+  "why": "Liquid-cooled AI servers",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "0992.HK"
+ },
+ {
+  "rank": 292,
+  "name": "Arista 7800R4 AI spine",
+  "maker": "Arista",
+  "why": "AI back-end Ethernet",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "ANET"
+ },
+ {
+  "rank": 293,
+  "name": "Ciena WaveLogic 6 Extreme",
+  "maker": "Ciena",
+  "why": "1.6T coherent for DCI",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CIEN"
+ },
+ {
+  "rank": 294,
+  "name": "Nokia / Infinera ICE-X pluggables",
+  "maker": "Nokia",
+  "why": "Coherent pluggables",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "NOK"
+ },
+ {
+  "rank": 295,
+  "name": "Marvell COLORZ 800 ZR/ZR+",
+  "maker": "Marvell",
+  "why": "DCI pluggables",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "MRVL"
+ },
+ {
+  "rank": 296,
+  "name": "IBM Telum II / Spyre accelerator",
+  "maker": "IBM",
+  "why": "Mainframe on-chip AI",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "IBM"
+ },
+ {
+  "rank": 297,
+  "name": "Allegro MicroSystems current sensors",
+  "maker": "Allegro",
+  "why": "Magnetic sensors for EVs and robots",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "ALGM"
+ },
+ {
+  "rank": 298,
+  "name": "TDK InvenSense MEMS IMUs",
+  "maker": "TDK",
+  "why": "Motion sensors",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "6762.T"
+ },
+ {
+  "rank": 299,
+  "name": "Bosch Sensortec MEMS",
+  "maker": "Bosch",
+  "why": "Consumer MEMS leader",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Private"
+ },
+ {
+  "rank": 300,
+  "name": "SiTime Elite RF MEMS timing",
+  "maker": "SiTime",
+  "why": "MEMS clocks for AI servers",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "SITM"
  }
 ]

@@ -998,5 +998,2005 @@
   "price": "Fair",
   "conf": "Low",
   "early": "Ph3 on hold"
+ },
+ {
+  "rank": 101,
+  "name": "Brukinsa (zanubrutinib)",
+  "maker": "BeOne Medicines",
+  "indication": "CLL, lymphomas",
+  "why": "Best-in-class BTKi taking share globally",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Approved"
+ },
+ {
+  "rank": 102,
+  "name": "Bimzelx (bimekizumab)",
+  "maker": "UCB",
+  "indication": "Psoriasis, HS, PsA",
+  "why": "IL-17A/F best-in-class",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Approved"
+ },
+ {
+  "rank": 103,
+  "name": "Imfinzi (durvalumab)",
+  "maker": "AstraZeneca",
+  "indication": "Lung, bladder, gastric, liver",
+  "why": "Perioperative wins broaden use",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 104,
+  "name": "Darzalex Faspro (daratumumab SC)",
+  "maker": "J&J / Genmab",
+  "indication": "Multiple myeloma",
+  "why": "Backbone of myeloma; Genmab royalties",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Approved"
+ },
+ {
+  "rank": 105,
+  "name": "sonrotoclax",
+  "maker": "BeOne Medicines",
+  "indication": "CLL, MCL",
+  "why": "Next-gen BCL2 to pair with Brukinsa",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 106,
+  "name": "BGB-16673 (BTK degrader)",
+  "maker": "BeOne Medicines",
+  "indication": "CLL",
+  "why": "Degrader for BTKi-resistant disease",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 107,
+  "name": "Epkinly (epcoritamab)",
+  "maker": "AbbVie / Genmab",
+  "indication": "Lymphoma",
+  "why": "Subcutaneous bispecific expanding to 2L",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 108,
+  "name": "Blenrep (belantamab mafodotin)",
+  "maker": "GSK",
+  "indication": "Multiple myeloma",
+  "why": "BCMA ADC returned on DREAMM-7/8 survival",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 109,
+  "name": "anitocabtagene autoleucel (anito-cel)",
+  "maker": "Arcellx / Kite (Gilead)",
+  "indication": "Multiple myeloma",
+  "why": "BCMA CAR-T with no delayed neurotoxicity so far",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 110,
+  "name": "Ziihera (zanidatamab)",
+  "maker": "Jazz / Zymeworks",
+  "indication": "HER2+ biliary, gastric",
+  "why": "HER2 bispecific; HERIZON-GEA-01 win",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 111,
+  "name": "Itovebi (inavolisib)",
+  "maker": "Roche",
+  "indication": "PIK3CA breast cancer",
+  "why": "Selective PI3Kα with survival benefit",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 112,
+  "name": "Nubeqa (darolutamide)",
+  "maker": "Bayer",
+  "indication": "Prostate cancer",
+  "why": "Fastest-growing ARi",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 113,
+  "name": "zoldonrasib (RMC-9805)",
+  "maker": "Revolution Medicines",
+  "indication": "KRAS G12D",
+  "why": "Mutant-selective G12D",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 114,
+  "name": "elironrasib (RMC-6291)",
+  "maker": "Revolution Medicines",
+  "indication": "KRAS G12C",
+  "why": "Tri-complex G12C(ON)",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 115,
+  "name": "zidesamtinib (NVL-520)",
+  "maker": "Nuvalent",
+  "indication": "ROS1 lung cancer",
+  "why": "Brain-penetrant ROS1; filed 2025",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 116,
+  "name": "neladalkib (NVL-655)",
+  "maker": "Nuvalent",
+  "indication": "ALK lung cancer",
+  "why": "ALK challenger to lorlatinib",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 117,
+  "name": "ifinatamab deruxtecan (I-DXd)",
+  "maker": "Merck / Daiichi",
+  "indication": "Small-cell lung cancer",
+  "why": "B7-H3 ADC breakthrough",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 118,
+  "name": "rinatabart sesutecan (Rina-S)",
+  "maker": "Genmab",
+  "indication": "Ovarian cancer",
+  "why": "FRα ADC for all expression levels",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 119,
+  "name": "SKB264 China (Jiataile)",
+  "maker": "Kelun-Biotech",
+  "indication": "TNBC, lung cancer",
+  "why": "China-first TROP2 ADC",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved (China)"
+ },
+ {
+  "rank": 120,
+  "name": "Revuforj (revumenib)",
+  "maker": "Syndax",
+  "indication": "KMT2A/NPM1 leukemia",
+  "why": "First menin inhibitor",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 121,
+  "name": "Komzifti (ziftomenib)",
+  "maker": "Kura Oncology / Kyowa Kirin",
+  "indication": "NPM1 AML",
+  "why": "Second menin inhibitor",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 122,
+  "name": "Reblozyl (luspatercept)",
+  "maker": "BMS",
+  "indication": "MDS anemia",
+  "why": "First-line MDS expansion",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 123,
+  "name": "rusfertide",
+  "maker": "Takeda / Protagonist",
+  "indication": "Polycythemia vera",
+  "why": "Hepcidin mimetic with Ph3 win",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 124,
+  "name": "Besremi (ropeginterferon alfa-2b)",
+  "maker": "PharmaEssentia",
+  "indication": "Polycythemia vera, ET",
+  "why": "Long-acting interferon",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 125,
+  "name": "Hemlibra (emicizumab)",
+  "maker": "Roche / Chugai",
+  "indication": "Hemophilia A",
+  "why": "Standard of care prophylaxis",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Approved"
+ },
+ {
+  "rank": 126,
+  "name": "Empaveli / Syfovre (pegcetacoplan)",
+  "maker": "Apellis",
+  "indication": "PNH, geographic atrophy, C3G",
+  "why": "C3 franchise across eye and kidney",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 127,
+  "name": "atacicept",
+  "maker": "Vera Therapeutics",
+  "indication": "IgA nephropathy",
+  "why": "BAFF/APRIL dual blocker",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 128,
+  "name": "muvalaplin",
+  "maker": "Eli Lilly",
+  "indication": "Lp(a)",
+  "why": "Oral Lp(a) inhibitor",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 129,
+  "name": "plozasiran (Redemplo)",
+  "maker": "Arrowhead",
+  "indication": "FCS, severe hypertriglyceridemia",
+  "why": "APOC3 siRNA approved 2025",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 130,
+  "name": "mazdutide",
+  "maker": "Innovent / Lilly",
+  "indication": "Obesity, T2D (China)",
+  "why": "GLP-1/glucagon approved in China",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved (China)"
+ },
+ {
+  "rank": 131,
+  "name": "Livdelzi (seladelpar)",
+  "maker": "Gilead",
+  "indication": "Primary biliary cholangitis",
+  "why": "Itch benefit drives share",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 132,
+  "name": "Biktarvy (bictegravir/FTC/TAF)",
+  "maker": "Gilead",
+  "indication": "HIV",
+  "why": "Dominant HIV pill through 2033",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Approved"
+ },
+ {
+  "rank": 133,
+  "name": "Beyfortus (nirsevimab)",
+  "maker": "Sanofi / AstraZeneca",
+  "indication": "Infant RSV",
+  "why": "Season-long infant protection",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 134,
+  "name": "Shingrix (zoster vaccine)",
+  "maker": "GSK",
+  "indication": "Shingles",
+  "why": "Ex-US growth and dementia signal",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 135,
+  "name": "zoliflodacin",
+  "maker": "Innoviva / GARDP",
+  "indication": "Gonorrhea",
+  "why": "First new oral gonorrhea antibiotic",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 136,
+  "name": "gepotidacin (Blujepa)",
+  "maker": "GSK",
+  "indication": "UTI, gonorrhea",
+  "why": "First new oral UTI antibiotic class in decades",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 137,
+  "name": "Nemluvio (nemolizumab)",
+  "maker": "Galderma",
+  "indication": "Prurigo nodularis, AD",
+  "why": "IL-31 itch",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 138,
+  "name": "zasocitinib (TAK-279)",
+  "maker": "Takeda",
+  "indication": "Psoriasis",
+  "why": "Highly selective TYK2",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 139,
+  "name": "Tremfya (guselkumab) IBD",
+  "maker": "J&J",
+  "indication": "UC, Crohn's",
+  "why": "SC induction in IBD",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 140,
+  "name": "obefazimod",
+  "maker": "Abivax",
+  "indication": "Ulcerative colitis",
+  "why": "miR-124 enhancer with Ph3 win",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 141,
+  "name": "Ocrevus Zunovo (ocrelizumab SC)",
+  "maker": "Roche",
+  "indication": "Multiple sclerosis",
+  "why": "Twice-yearly SC",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Approved"
+ },
+ {
+  "rank": 142,
+  "name": "Briumvi (ublituximab)",
+  "maker": "TG Therapeutics",
+  "indication": "Multiple sclerosis",
+  "why": "Fast-growing anti-CD20",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 143,
+  "name": "Leqembi / Leqembi Iqlik (lecanemab)",
+  "maker": "Eisai / Biogen",
+  "indication": "Early Alzheimer's",
+  "why": "SC autoinjector at-home maintenance",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 144,
+  "name": "del-zota (delpacibart zotadirsen)",
+  "maker": "Avidity / Novartis",
+  "indication": "DMD exon 44",
+  "why": "Antibody-oligo conjugate; Novartis acquired Avidity",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 145,
+  "name": "del-desiran",
+  "maker": "Avidity / Novartis",
+  "indication": "Myotonic dystrophy type 1",
+  "why": "First DM1 disease-modifier",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 146,
+  "name": "Uzedy (risperidone LAI)",
+  "maker": "Teva",
+  "indication": "Schizophrenia",
+  "why": "SC long-acting",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 147,
+  "name": "Auvelity (dextromethorphan-bupropion)",
+  "maker": "Axsome",
+  "indication": "MDD, Alzheimer's agitation",
+  "why": "Rapid-onset antidepressant",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 148,
+  "name": "oveporexton (TAK-861)",
+  "maker": "Takeda",
+  "indication": "Narcolepsy type 1",
+  "why": "First orexin agonist",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 149,
+  "name": "XEN1101 (azetukalner)",
+  "maker": "Xenon",
+  "indication": "Focal seizures",
+  "why": "Kv7 opener",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 150,
+  "name": "Xcopri (cenobamate)",
+  "maker": "SK Life Science",
+  "indication": "Focal seizures",
+  "why": "Seizure-freedom leader",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 151,
+  "name": "Alyftrek (vanzacaftor triple)",
+  "maker": "Vertex",
+  "indication": "Cystic fibrosis",
+  "why": "Once-daily CF with royalty savings",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Approved"
+ },
+ {
+  "rank": 152,
+  "name": "inaxaplin",
+  "maker": "Vertex",
+  "indication": "APOL1 kidney disease",
+  "why": "First precision kidney drug",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 153,
+  "name": "Trikafta (elexacaftor/tezacaftor/ivacaftor)",
+  "maker": "Vertex",
+  "indication": "Cystic fibrosis",
+  "why": "Cash engine",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Approved"
+ },
+ {
+  "rank": 154,
+  "name": "TransCon CNP (navepegritide)",
+  "maker": "Ascendis",
+  "indication": "Achondroplasia",
+  "why": "Weekly CNP",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 155,
+  "name": "infigratinib (achondroplasia)",
+  "maker": "BridgeBio",
+  "indication": "Achondroplasia",
+  "why": "Oral FGFR3",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 156,
+  "name": "Yorvipath (palopegteriparatide)",
+  "maker": "Ascendis",
+  "indication": "Hypoparathyroidism",
+  "why": "Strong launch",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 157,
+  "name": "Vyjuvek (beremagene geperpavec)",
+  "maker": "Krystal Biotech",
+  "indication": "Dystrophic EB",
+  "why": "Topical gene therapy",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 158,
+  "name": "Tzield (teplizumab)",
+  "maker": "Sanofi",
+  "indication": "Type 1 diabetes delay",
+  "why": "First T1D disease-modifier",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 159,
+  "name": "efsitora alfa",
+  "maker": "Eli Lilly",
+  "indication": "Type 2 diabetes",
+  "why": "Weekly basal insulin",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 160,
+  "name": "Voquezna (vonoprazan)",
+  "maker": "Phathom",
+  "indication": "Erosive esophagitis, H. pylori",
+  "why": "PCAB displacing PPIs",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 161,
+  "name": "lorundrostat",
+  "maker": "Mineralys",
+  "indication": "Hypertension",
+  "why": "Aldosterone synthase inhibitor",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 162,
+  "name": "Garadacimab (Andembry)",
+  "maker": "CSL",
+  "indication": "Hereditary angioedema",
+  "why": "Monthly FXIIa antibody",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 163,
+  "name": "Xdemvy (lotilaner)",
+  "maker": "Tarsus",
+  "indication": "Demodex blepharitis",
+  "why": "Fast-growing eye launch",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 164,
+  "name": "veligrotug (VRDN-001)",
+  "maker": "Viridian",
+  "indication": "Thyroid eye disease",
+  "why": "Shorter IGF-1R course",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 165,
+  "name": "Sephience (sepiapterin)",
+  "maker": "PTC",
+  "indication": "PKU",
+  "why": "Best-in-class PKU",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 166,
+  "name": "Vykat XR (diazoxide choline)",
+  "maker": "Soleno",
+  "indication": "Prader-Willi hyperphagia",
+  "why": "First PWS hyperphagia drug",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 167,
+  "name": "bezuclastinib",
+  "maker": "Cogent",
+  "indication": "GIST, systemic mastocytosis",
+  "why": "KIT inhibitor with Ph3 wins",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 168,
+  "name": "cretostimogene grenadenorepvec",
+  "maker": "CG Oncology",
+  "indication": "BCG-unresponsive NMIBC",
+  "why": "Oncolytic adenovirus; durable CRs",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 169,
+  "name": "Welireg (belzutifan)",
+  "maker": "Merck",
+  "indication": "VHL, RCC, pheo",
+  "why": "HIF-2α expansion",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 170,
+  "name": "zanzalintinib",
+  "maker": "Exelixis",
+  "indication": "CRC, NET, RCC",
+  "why": "Cabozantinib successor with STELLAR-303 win",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filed"
+ },
+ {
+  "rank": 171,
+  "name": "Braftovi (encorafenib) BREAKWATER",
+  "maker": "Pfizer",
+  "indication": "BRAF V600E CRC",
+  "why": "First-line accelerated approval",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 172,
+  "name": "taletrectinib (Ibtrozi)",
+  "maker": "Nuvation Bio",
+  "indication": "ROS1 lung cancer",
+  "why": "Approved 2025",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 173,
+  "name": "Opdivo / Opdivo Qvantig (nivolumab)",
+  "maker": "Bristol Myers Squibb",
+  "indication": "Multiple cancers",
+  "why": "Subcutaneous switch defends PD-1 franchise into 2028 LOE",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 174,
+  "name": "Calquence (acalabrutinib)",
+  "maker": "AstraZeneca",
+  "indication": "CLL, MCL",
+  "why": "Fixed-duration combos extend BTK lifecycle",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 175,
+  "name": "Venclexta (venetoclax)",
+  "maker": "AbbVie / Roche",
+  "indication": "CLL, AML",
+  "why": "Fixed-duration standard",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 176,
+  "name": "Columvi (glofitamab)",
+  "maker": "Roche",
+  "indication": "DLBCL",
+  "why": "CD20xCD3 bispecific moving earlier",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 177,
+  "name": "Elrexfio (elranatamab)",
+  "maker": "Pfizer",
+  "indication": "Multiple myeloma",
+  "why": "BCMA bispecific",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 178,
+  "name": "Breyanzi (lisocabtagene maraleucel)",
+  "maker": "Bristol Myers Squibb",
+  "indication": "Lymphoma, CLL",
+  "why": "Broadest CAR-T label",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 179,
+  "name": "Yescarta (axicabtagene ciloleucel)",
+  "maker": "Kite (Gilead)",
+  "indication": "Large B-cell lymphoma",
+  "why": "Second-line standard",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 180,
+  "name": "Aucatzyl (obecabtagene autoleucel)",
+  "maker": "Autolus",
+  "indication": "Adult B-ALL",
+  "why": "Lower-toxicity CD19 CAR-T",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved"
+ },
+ {
+  "rank": 181,
+  "name": "CAR-T for lupus (in vivo and autologous)",
+  "maker": "Kyverna / Cabaletta / BMS",
+  "indication": "Lupus, myositis, MS",
+  "why": "Immune reset could transform autoimmunity",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph1/2"
+ },
+ {
+  "rank": 182,
+  "name": "in vivo CAR-T (Capstan, Interius, EsoBiotec)",
+  "maker": "AbbVie / AstraZeneca / Gilead",
+  "indication": "Autoimmune, cancer",
+  "why": "Off-the-shelf CAR-T without apheresis; big pharma bought in",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph1"
+ },
+ {
+  "rank": 183,
+  "name": "Tevimbra (tislelizumab)",
+  "maker": "BeOne Medicines",
+  "indication": "Lung, esophageal cancer",
+  "why": "Lower-cost PD-1 with global label",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 184,
+  "name": "Phesgo (pertuzumab/trastuzumab SC)",
+  "maker": "Roche",
+  "indication": "HER2+ breast",
+  "why": "SC fixed-dose",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 185,
+  "name": "Truqap (capivasertib)",
+  "maker": "AstraZeneca",
+  "indication": "HR+ breast cancer",
+  "why": "AKT pathway",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 186,
+  "name": "Verzenio (abemaciclib)",
+  "maker": "Eli Lilly",
+  "indication": "HR+ breast cancer",
+  "why": "Adjuvant use grows",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 187,
+  "name": "Lynparza (olaparib)",
+  "maker": "AstraZeneca / Merck",
+  "indication": "PARP-sensitive cancers",
+  "why": "Mature PARP",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 188,
+  "name": "Erleada (apalutamide)",
+  "maker": "J&J",
+  "indication": "Prostate cancer",
+  "why": "ARi with blockbuster scale",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 189,
+  "name": "Lu-PSMA next-gen (Ac-225 PSMA)",
+  "maker": "Novartis / Bayer",
+  "indication": "Prostate cancer",
+  "why": "Alpha emitters extend radioligand lead",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph1/2"
+ },
+ {
+  "rank": 190,
+  "name": "RYZ101 (Ac-225 dotatate)",
+  "maker": "BMS / RayzeBio",
+  "indication": "Neuroendocrine tumors",
+  "why": "Alpha radiopharma with supply moat",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 191,
+  "name": "Lutathera (Lu-177 dotatate)",
+  "maker": "Novartis",
+  "indication": "Neuroendocrine tumors",
+  "why": "First-line expansion",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 192,
+  "name": "divarasib",
+  "maker": "Roche",
+  "indication": "KRAS G12C",
+  "why": "Potent next-gen G12C",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 193,
+  "name": "Lorbrena (lorlatinib)",
+  "maker": "Pfizer",
+  "indication": "ALK lung cancer",
+  "why": "5-year PFS benchmark",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 194,
+  "name": "raludotatug deruxtecan (R-DXd)",
+  "maker": "Merck / Daiichi",
+  "indication": "Ovarian cancer",
+  "why": "CDH6 ADC",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 195,
+  "name": "Elahere (mirvetuximab soravtansine)",
+  "maker": "AbbVie",
+  "indication": "Ovarian cancer",
+  "why": "FRα ADC",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 196,
+  "name": "izalontamab brengitecan (iza-bren)",
+  "maker": "BMS / SystImmune",
+  "indication": "Lung, breast cancer",
+  "why": "EGFRxHER3 bispecific ADC",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 197,
+  "name": "BL-B01D1",
+  "maker": "Biokin / BMS",
+  "indication": "Solid tumors",
+  "why": "China-origin bispecific ADC",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 198,
+  "name": "Opdualag (nivolumab + relatlimab)",
+  "maker": "BMS",
+  "indication": "Melanoma",
+  "why": "First LAG-3 combo",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 199,
+  "name": "Kimmtrak (tebentafusp)",
+  "maker": "Immunocore",
+  "indication": "Uveal melanoma",
+  "why": "TCR bispecific",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 200,
+  "name": "Libtayo (cemiplimab)",
+  "maker": "Regeneron",
+  "indication": "Skin cancers",
+  "why": "Adjuvant CSCC win",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 201,
+  "name": "Vorasidenib (Voranigo)",
+  "maker": "Servier",
+  "indication": "IDH-mutant glioma",
+  "why": "First targeted glioma drug",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 202,
+  "name": "Ojjaara (momelotinib)",
+  "maker": "GSK",
+  "indication": "Myelofibrosis anemia",
+  "why": "Anemia-friendly JAK",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 203,
+  "name": "Altuviiio (efanesoctocog alfa)",
+  "maker": "Sanofi / Sobi",
+  "indication": "Hemophilia A",
+  "why": "Weekly factor VIII",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 204,
+  "name": "mitapivat (Pyrukynd)",
+  "maker": "Agios",
+  "indication": "Thalassemia, SCD",
+  "why": "PK activator label expansion",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved"
+ },
+ {
+  "rank": 205,
+  "name": "Ultomiris (ravulizumab)",
+  "maker": "AstraZeneca (Alexion)",
+  "indication": "PNH, gMG, NMOSD",
+  "why": "Long-acting C5",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 206,
+  "name": "atrasentan (Vanrafia)",
+  "maker": "Novartis",
+  "indication": "IgA nephropathy",
+  "why": "Endothelin antagonist",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 207,
+  "name": "Jardiance (empagliflozin)",
+  "maker": "Boehringer / Lilly",
+  "indication": "Heart failure, CKD, T2D",
+  "why": "SGLT2 class scale; IRA price cut",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 208,
+  "name": "Camzyos (mavacamten)",
+  "maker": "BMS",
+  "indication": "Obstructive HCM",
+  "why": "First myosin inhibitor",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 209,
+  "name": "pelacarsen",
+  "maker": "Novartis / Ionis",
+  "indication": "Lp(a)",
+  "why": "First Lp(a) outcome trial readout",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 210,
+  "name": "Nexletol / Nexlizet (bempedoic acid)",
+  "maker": "Esperion",
+  "indication": "LDL lowering",
+  "why": "CLEAR Outcomes label",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved"
+ },
+ {
+  "rank": 211,
+  "name": "VERVE-102 (PCSK9 base editing)",
+  "maker": "Eli Lilly (Verve)",
+  "indication": "Heterozygous FH",
+  "why": "One-shot LDL lowering; Lilly bought Verve",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph1/2"
+ },
+ {
+  "rank": 212,
+  "name": "Cabenuva (cabotegravir + rilpivirine)",
+  "maker": "ViiV (GSK)",
+  "indication": "HIV",
+  "why": "Long-acting HIV share gains",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 213,
+  "name": "Apretude (cabotegravir LA)",
+  "maker": "ViiV (GSK)",
+  "indication": "HIV PrEP",
+  "why": "Bimonthly injectable PrEP",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 214,
+  "name": "Prevymis (letermovir)",
+  "maker": "Merck",
+  "indication": "CMV prophylaxis",
+  "why": "Transplant standard",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 215,
+  "name": "Xofluza (baloxavir)",
+  "maker": "Roche / Shionogi",
+  "indication": "Influenza",
+  "why": "Transmission reduction label",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved"
+ },
+ {
+  "rank": 216,
+  "name": "Arexvy (RSV vaccine)",
+  "maker": "GSK",
+  "indication": "RSV older adults",
+  "why": "ACIP restrictions cap demand",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 217,
+  "name": "Prevnar 20 / PCV25",
+  "maker": "Pfizer",
+  "indication": "Pneumococcal disease",
+  "why": "Franchise defense vs V116/VAX-31",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 218,
+  "name": "Vimkunya (chikungunya VLP vaccine)",
+  "maker": "Bavarian Nordic",
+  "indication": "Chikungunya",
+  "why": "Safer VLP chikungunya",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved"
+ },
+ {
+  "rank": 219,
+  "name": "Qdenga (TAK-003)",
+  "maker": "Takeda",
+  "indication": "Dengue",
+  "why": "Dengue vaccine for endemic regions",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved"
+ },
+ {
+  "rank": 220,
+  "name": "Butantan-DV dengue vaccine",
+  "maker": "Instituto Butantan / MSD",
+  "indication": "Dengue",
+  "why": "Single-dose dengue",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved (Brazil)"
+ },
+ {
+  "rank": 221,
+  "name": "zosurabalpin",
+  "maker": "Roche",
+  "indication": "CRAB infections",
+  "why": "Novel antibiotic class",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 222,
+  "name": "fosmanogepix",
+  "maker": "Basilea",
+  "indication": "Invasive fungal infections",
+  "why": "First-in-class Gwt1",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 223,
+  "name": "verekitug",
+  "maker": "Upstream Bio",
+  "indication": "Asthma, CRSwNP",
+  "why": "TSLP receptor antibody",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph2"
+ },
+ {
+  "rank": 224,
+  "name": "Nucala (mepolizumab) COPD",
+  "maker": "GSK",
+  "indication": "COPD, asthma",
+  "why": "COPD label expansion",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 225,
+  "name": "Fasenra (benralizumab)",
+  "maker": "AstraZeneca",
+  "indication": "Asthma, EGPA",
+  "why": "Mature IL-5",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 226,
+  "name": "Ebglyss (lebrikizumab)",
+  "maker": "Eli Lilly / Almirall",
+  "indication": "Atopic dermatitis",
+  "why": "Monthly IL-13",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 227,
+  "name": "Sotyktu (deucravacitinib)",
+  "maker": "BMS",
+  "indication": "Psoriasis, PsA, SLE",
+  "why": "Oral TYK2; lupus Ph3",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 228,
+  "name": "Omvoh (mirikizumab)",
+  "maker": "Eli Lilly",
+  "indication": "UC, Crohn's",
+  "why": "IL-23p19",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 229,
+  "name": "Entyvio (vedolizumab)",
+  "maker": "Takeda",
+  "indication": "UC, Crohn's",
+  "why": "Gut-selective franchise",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 230,
+  "name": "afimkibart (RVT-3101)",
+  "maker": "Roche",
+  "indication": "UC, Crohn's",
+  "why": "TL1A",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 231,
+  "name": "Opzelura (ruxolitinib cream)",
+  "maker": "Incyte",
+  "indication": "Vitiligo, AD",
+  "why": "Topical JAK",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 232,
+  "name": "Cosentyx (secukinumab)",
+  "maker": "Novartis",
+  "indication": "Psoriasis, HS, PsA",
+  "why": "Mature IL-17",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 233,
+  "name": "Taltz (ixekizumab)",
+  "maker": "Eli Lilly",
+  "indication": "Psoriasis",
+  "why": "Mature IL-17",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 234,
+  "name": "Benlysta (belimumab)",
+  "maker": "GSK",
+  "indication": "Lupus",
+  "why": "SC lupus standard",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 235,
+  "name": "Saphnelo (anifrolumab)",
+  "maker": "AstraZeneca",
+  "indication": "Lupus",
+  "why": "Type I IFN; SC formulation",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 236,
+  "name": "dapirolizumab pegol",
+  "maker": "UCB / Biogen",
+  "indication": "Lupus",
+  "why": "CD40L with Ph3 win",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 237,
+  "name": "obinutuzumab lupus nephritis (Gazyva)",
+  "maker": "Roche",
+  "indication": "Lupus nephritis",
+  "why": "Approved 2025 expansion",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 238,
+  "name": "batoclimab / IMVT-1402",
+  "maker": "Immunovant",
+  "indication": "Graves', MG, CIDP",
+  "why": "Next-gen FcRn",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 239,
+  "name": "Uplizna (inebilizumab)",
+  "maker": "Amgen",
+  "indication": "NMOSD, IgG4-RD, gMG",
+  "why": "Label expansions",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 240,
+  "name": "Kesimpta (ofatumumab)",
+  "maker": "Novartis",
+  "indication": "Multiple sclerosis",
+  "why": "Self-injected anti-CD20",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 241,
+  "name": "BIIB080 (tau ASO)",
+  "maker": "Biogen",
+  "indication": "Alzheimer's",
+  "why": "First tau-lowering",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph2"
+ },
+ {
+  "rank": 242,
+  "name": "Vyalev (foscarbidopa/foslevodopa)",
+  "maker": "AbbVie",
+  "indication": "Advanced Parkinson's",
+  "why": "24-hour subcutaneous infusion",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 243,
+  "name": "bemdaneprocel",
+  "maker": "BlueRock (Bayer)",
+  "indication": "Parkinson's",
+  "why": "Stem-cell dopamine neurons",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 244,
+  "name": "Skyclarys (omaveloxolone)",
+  "maker": "Biogen",
+  "indication": "Friedreich's ataxia",
+  "why": "First FA therapy",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 245,
+  "name": "Evrysdi tablet (risdiplam)",
+  "maker": "Roche / PTC",
+  "indication": "SMA",
+  "why": "Oral tablet",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 246,
+  "name": "DYNE-101",
+  "maker": "Dyne",
+  "indication": "Myotonic dystrophy type 1",
+  "why": "FORCE platform",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 247,
+  "name": "empasiprubart",
+  "maker": "argenx",
+  "indication": "MMN, CIDP",
+  "why": "C2 inhibitor",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 248,
+  "name": "Ingrezza (valbenazine)",
+  "maker": "Neurocrine",
+  "indication": "Tardive dyskinesia, chorea",
+  "why": "VMAT2 leader",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 249,
+  "name": "NBI-'568 (direclidine)",
+  "maker": "Neurocrine",
+  "indication": "Schizophrenia",
+  "why": "Selective M4 agonist",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 250,
+  "name": "olanzapine LAI (TEV-'749)",
+  "maker": "Teva",
+  "indication": "Schizophrenia",
+  "why": "No PDSS monitoring",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Filed"
+ },
+ {
+  "rank": 251,
+  "name": "AXS-05 Alzheimer's agitation",
+  "maker": "Axsome",
+  "indication": "AD agitation",
+  "why": "Label expansion",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Filed"
+ },
+ {
+  "rank": 252,
+  "name": "ALKS 2680 (alixorexton)",
+  "maker": "Alkermes",
+  "indication": "Narcolepsy",
+  "why": "Orexin agonist",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 253,
+  "name": "Xywav (low-sodium oxybate)",
+  "maker": "Jazz",
+  "indication": "Narcolepsy, IH",
+  "why": "Low-sodium franchise",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 254,
+  "name": "Fintepla (fenfluramine)",
+  "maker": "UCB",
+  "indication": "Dravet, LGS",
+  "why": "Rare epilepsy",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 255,
+  "name": "zorevunersen",
+  "maker": "Stoke",
+  "indication": "Dravet syndrome",
+  "why": "Disease-modifying ASO",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 256,
+  "name": "Nurtec ODT (rimegepant)",
+  "maker": "Pfizer",
+  "indication": "Migraine",
+  "why": "Oral gepant",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 257,
+  "name": "Qulipta (atogepant)",
+  "maker": "AbbVie",
+  "indication": "Migraine prevention",
+  "why": "Oral preventive",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 258,
+  "name": "Lu AG09222 (PACAP antibody)",
+  "maker": "Lundbeck",
+  "indication": "Migraine",
+  "why": "Beyond-CGRP target",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph2"
+ },
+ {
+  "rank": 259,
+  "name": "Voxzogo (vosoritide)",
+  "maker": "BioMarin",
+  "indication": "Achondroplasia",
+  "why": "Competition from Ascendis",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 260,
+  "name": "encaleret",
+  "maker": "BridgeBio",
+  "indication": "ADH1 hypocalcemia",
+  "why": "Calcilytic Ph3 win",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Filed"
+ },
+ {
+  "rank": 261,
+  "name": "BBP-418",
+  "maker": "BridgeBio",
+  "indication": "LGMD2I",
+  "why": "Ribitol replacement",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Filed"
+ },
+ {
+  "rank": 262,
+  "name": "Skytrofa (lonapegsomatropin)",
+  "maker": "Ascendis",
+  "indication": "Growth hormone deficiency",
+  "why": "Weekly GH",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 263,
+  "name": "Strensiq (asfotase alfa)",
+  "maker": "AstraZeneca",
+  "indication": "Hypophosphatasia",
+  "why": "Rare bone",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 264,
+  "name": "Evenity (romosozumab)",
+  "maker": "Amgen / UCB",
+  "indication": "Osteoporosis",
+  "why": "Anabolic bone builder",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 265,
+  "name": "Pombiliti + Opfolda",
+  "maker": "Amicus",
+  "indication": "Pompe disease",
+  "why": "Next-gen ERT",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved"
+ },
+ {
+  "rank": 266,
+  "name": "Nexviazyme (avalglucosidase)",
+  "maker": "Sanofi",
+  "indication": "Pompe disease",
+  "why": "Second-gen ERT",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 267,
+  "name": "Galafold (migalastat)",
+  "maker": "Amicus",
+  "indication": "Fabry disease",
+  "why": "Oral chaperone",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 268,
+  "name": "Crysvita (burosumab)",
+  "maker": "Kyowa Kirin / Ultragenyx",
+  "indication": "XLH",
+  "why": "Standard of care",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 269,
+  "name": "Fazirsiran",
+  "maker": "Takeda / Arrowhead",
+  "indication": "AATD liver disease",
+  "why": "siRNA reducing Z-AAT",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 270,
+  "name": "BEAM-302",
+  "maker": "Beam Therapeutics",
+  "indication": "AATD",
+  "why": "First in vivo base-editing correction",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph1/2"
+ },
+ {
+  "rank": 271,
+  "name": "WVE-006",
+  "maker": "Wave Life Sciences",
+  "indication": "AATD",
+  "why": "RNA editing of SERPINA1",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph1/2"
+ },
+ {
+  "rank": 272,
+  "name": "WVE-007",
+  "maker": "Wave Life Sciences",
+  "indication": "Obesity",
+  "why": "INHBE siRNA fat-loss muscle-sparing",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph1"
+ },
+ {
+  "rank": 273,
+  "name": "Oxlumo (lumasiran)",
+  "maker": "Alnylam",
+  "indication": "PH1",
+  "why": "siRNA",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 274,
+  "name": "mivelsiran",
+  "maker": "Alnylam",
+  "indication": "Cerebral amyloid angiopathy, AD",
+  "why": "CNS siRNA",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph2"
+ },
+ {
+  "rank": 275,
+  "name": "elebsiran + tobevibart",
+  "maker": "Vir",
+  "indication": "Hepatitis delta",
+  "why": "Functional HDV cure",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 276,
+  "name": "Awiqli (insulin icodec)",
+  "maker": "Novo Nordisk",
+  "indication": "Diabetes",
+  "why": "Weekly basal insulin; US CRL then resubmission",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Filed (US)"
+ },
+ {
+  "rank": 277,
+  "name": "Rybelsus (oral semaglutide)",
+  "maker": "Novo Nordisk",
+  "indication": "Type 2 diabetes",
+  "why": "CV outcomes added",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 278,
+  "name": "aleniglipron (GSBR-1290)",
+  "maker": "Structure Therapeutics",
+  "indication": "Obesity",
+  "why": "Oral small-molecule GLP-1",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph2b"
+ },
+ {
+  "rank": 279,
+  "name": "navenibart",
+  "maker": "Astria",
+  "indication": "Hereditary angioedema",
+  "why": "Every 3-6 months",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 280,
+  "name": "Orladeyo (berotralstat)",
+  "maker": "BioCryst",
+  "indication": "Hereditary angioedema",
+  "why": "Oral HAE prophylaxis",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 281,
+  "name": "Takhzyro (lanadelumab)",
+  "maker": "Takeda",
+  "indication": "Hereditary angioedema",
+  "why": "Market leader",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 282,
+  "name": "NTLA-2002 (lonvo-z)",
+  "maker": "Intellia",
+  "indication": "Hereditary angioedema",
+  "why": "One-time CRISPR HAE cure",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Filed"
+ },
+ {
+  "rank": 283,
+  "name": "Wezlana / ustekinumab biosimilars",
+  "maker": "Amgen / others",
+  "indication": "Psoriasis, IBD",
+  "why": "Biosimilar erosion of Stelara",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 284,
+  "name": "Humira biosimilars (adalimumab)",
+  "maker": "Various",
+  "indication": "Immunology",
+  "why": "Price collapse dynamics",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 285,
+  "name": "4D-150",
+  "maker": "4D Molecular Therapeutics",
+  "indication": "Wet AMD",
+  "why": "Intravitreal gene therapy",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 286,
+  "name": "EYP-1901 (Duravyu)",
+  "maker": "EyePoint",
+  "indication": "Wet AMD",
+  "why": "Six-month TKI insert",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 287,
+  "name": "OTX-TKI (Axpaxli)",
+  "maker": "Ocular Therapeutix",
+  "indication": "Wet AMD",
+  "why": "TKI hydrogel",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 288,
+  "name": "Tepezza (teprotumumab)",
+  "maker": "Amgen",
+  "indication": "Thyroid eye disease",
+  "why": "SC version coming",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 289,
+  "name": "Rezurock (belumosudil)",
+  "maker": "Sanofi",
+  "indication": "Chronic GVHD",
+  "why": "ROCK2",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 290,
+  "name": "Ogsiveo (nirogacestat)",
+  "maker": "SpringWorks (Merck KGaA)",
+  "indication": "Desmoid tumors",
+  "why": "First desmoid therapy",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 291,
+  "name": "Ayvakit (avapritinib)",
+  "maker": "Blueprint (Sanofi)",
+  "indication": "Systemic mastocytosis",
+  "why": "SM franchise",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 292,
+  "name": "barzolvolimab",
+  "maker": "Celldex",
+  "indication": "Chronic urticaria",
+  "why": "KIT antibody depletes mast cells",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 293,
+  "name": "Xolair (omalizumab) food allergy",
+  "maker": "Novartis / Genentech",
+  "indication": "Food allergy",
+  "why": "Multi-allergen protection",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 294,
+  "name": "Neffy (epinephrine nasal)",
+  "maker": "ARS Pharma",
+  "indication": "Anaphylaxis",
+  "why": "Needle-free epinephrine",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Approved"
+ },
+ {
+  "rank": 295,
+  "name": "TAR-210 (erdafitinib system)",
+  "maker": "J&J",
+  "indication": "FGFR NMIBC",
+  "why": "Intravesical erdafitinib",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 296,
+  "name": "casdatifan",
+  "maker": "Arcus",
+  "indication": "Clear-cell RCC",
+  "why": "Next-gen HIF-2α",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 297,
+  "name": "Vyloy (zolbetuximab)",
+  "maker": "Astellas",
+  "indication": "Claudin 18.2 gastric",
+  "why": "First CLDN18.2",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 298,
+  "name": "CLDN18.2 ADCs (AZD0901, IBI343)",
+  "maker": "AstraZeneca / Innovent",
+  "indication": "Gastric, pancreatic",
+  "why": "Next wave beyond zolbetuximab",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 299,
+  "name": "Imjudo + Imfinzi (STRIDE)",
+  "maker": "AstraZeneca",
+  "indication": "Hepatocellular carcinoma",
+  "why": "One-time CTLA-4 priming",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approved"
+ },
+ {
+  "rank": 300,
+  "name": "firmonertinib",
+  "maker": "ArriVent / Allist",
+  "indication": "EGFR exon20 / PACC",
+  "why": "Brain-penetrant EGFR",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
  }
 ]
