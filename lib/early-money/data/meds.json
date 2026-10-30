@@ -1,0 +1,1002 @@
+[
+ {
+  "rank": 1,
+  "name": "Zepbound / Mounjaro (tirzepatide)",
+  "maker": "Eli Lilly",
+  "indication": "Obesity, T2D, OSA, HFpEF",
+  "why": "Category leader in incretins; label keeps widening (OSA, HFpEF); likely the world's top-selling drug into the 2030s.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth · US LOE mid-2030s"
+ },
+ {
+  "rank": 2,
+  "name": "Foundayo (orforglipron)",
+  "maker": "Eli Lilly",
+  "indication": "Obesity; T2D filing",
+  "why": "Oral small-molecule GLP-1, approved 1 Apr 2026, no food/water rules, cheap to make; self-pay from $149/mo. Built for global primary-care scale.",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Launch 2026 · ramp 2027–30"
+ },
+ {
+  "rank": 3,
+  "name": "retatrutide",
+  "maker": "Eli Lilly",
+  "indication": "Obesity, T2D, knee OA, OSA",
+  "why": "GIP/GLP-1/glucagon triple agonist; TRIUMPH-1 28.3% weight loss at 80 wk (12 mg). Filing expected ~2027; sets the efficacy ceiling.",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Pre-approval · filing ~2027"
+ },
+ {
+  "rank": 4,
+  "name": "Wegovy / Ozempic / Wegovy pill (semaglutide)",
+  "maker": "Novo Nordisk",
+  "indication": "Obesity, T2D, CV risk, MASH, CKD",
+  "why": "Broadest outcomes evidence in class; Wegovy pill launched Jan 2026 (~$350M Q1). Ex-US generics from 2026, US LOE early 2030s.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Mature · generic erosion ahead"
+ },
+ {
+  "rank": 5,
+  "name": "Keytruda / Keytruda Qlex (pembrolizumab)",
+  "maker": "Merck & Co.",
+  "indication": "Many solid tumors",
+  "why": "Largest oncology drug; US LOE 2028. Subcutaneous Qlex conversion and combos decide how steep the cliff is.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Mature · LOE 2028"
+ },
+ {
+  "rank": 6,
+  "name": "CagriSema (cagrilintide + semaglutide)",
+  "maker": "Novo Nordisk",
+  "indication": "Obesity, T2D",
+  "why": "Amylin + GLP-1 combo filed Dec 2025; FDA decision expected around Q4 2026. Novo's main answer to tirzepatide.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Decision late 2026"
+ },
+ {
+  "rank": 7,
+  "name": "Enhertu (trastuzumab deruxtecan)",
+  "maker": "AstraZeneca / Daiichi Sankyo",
+  "indication": "HER2+/HER2-low breast, gastric, lung",
+  "why": "Template ADC moving into first-line and early breast cancer; patent life well into the 2030s.",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 8,
+  "name": "daraxonrasib",
+  "maker": "Revolution Medicines",
+  "indication": "2L metastatic pancreatic cancer; RAS-mutant tumors",
+  "why": "RASolute 302: OS 13.2 vs 6.7 mo (HR 0.40). First broad RAS(ON) drug; 1L pancreatic, lung and colorectal trials follow.",
+  "price": "Strongly underpriced",
+  "conf": "High",
+  "early": "Filing/approval 2026–27"
+ },
+ {
+  "rank": 9,
+  "name": "Dupixent (dupilumab)",
+  "maker": "Sanofi / Regeneron",
+  "indication": "Atopic dermatitis, asthma, COPD, CSU, EoE, BP",
+  "why": "Type-2 inflammation franchise still adding indications (COPD, CSU, BP); exclusivity runs into the 2030s.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 10,
+  "name": "MariTide (maridebart cafraglutide)",
+  "maker": "Amgen",
+  "indication": "Obesity (monthly)",
+  "why": "Monthly GLP-1 agonist / GIPR antibody; MARITIME-1/2 primary completion from Jan 2027. Tolerability and titration still open questions.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Ph3 data 2027"
+ },
+ {
+  "rank": 11,
+  "name": "Kisunla (donanemab)",
+  "maker": "Eli Lilly",
+  "indication": "Early Alzheimer's disease",
+  "why": "Finite-duration amyloid therapy; $124M Q1 2026. Blood tests and subcutaneous follow-ons (remternetug) widen access.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Early ramp"
+ },
+ {
+  "rank": 12,
+  "name": "trontinemab",
+  "maker": "Roche",
+  "indication": "Early and presymptomatic Alzheimer's",
+  "why": "Brain-shuttle anti-amyloid with fast plaque clearance and low ARIA in Ph2; TRONTIER and PrevenTRON Ph3 complete ~2028.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3 · data ~2028"
+ },
+ {
+  "rank": 13,
+  "name": "Lipfendra (enlicitide)",
+  "maker": "Merck & Co.",
+  "indication": "Hypercholesterolemia incl. HeFH",
+  "why": "First oral PCSK9 inhibitor, approved 15 Jul 2026. A pill could take PCSK9 into mass primary care; CORALreef outcomes trial pending.",
+  "price": "Strongly underpriced",
+  "conf": "High",
+  "early": "Launch 2026"
+ },
+ {
+  "rank": 14,
+  "name": "Baxfendy (baxdrostat)",
+  "maker": "AstraZeneca",
+  "indication": "Uncontrolled / resistant hypertension; CKD combos",
+  "why": "Aldosterone synthase inhibitor approved 15 May 2026; huge population; dapagliflozin combo in CKD next.",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Launch 2026"
+ },
+ {
+  "rank": 15,
+  "name": "sacituzumab tirumotecan (sac-TMT)",
+  "maker": "Merck & Co. / Kelun-Biotech",
+  "indication": "TROP2+ lung, breast and other tumors",
+  "why": "TROP2 ADC with more than 10 global Ph3s; candidate centrepiece of Merck's post-Keytruda portfolio.",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "Ph3 readouts 2026–28"
+ },
+ {
+  "rank": 16,
+  "name": "ivonescimab",
+  "maker": "Summit Therapeutics / Akeso",
+  "indication": "NSCLC (EGFRm post-TKI; 1L)",
+  "why": "PD-1xVEGF bispecific; US PDUFA 14 Nov 2026. HARMONi-3 squamous interim PFS missed its bar (May 2026); final data pending.",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "Binary · PDUFA Nov 2026"
+ },
+ {
+  "rank": 17,
+  "name": "Datroway (datopotamab deruxtecan)",
+  "maker": "AstraZeneca / Daiichi Sankyo",
+  "indication": "HR+ and triple-negative breast cancer, NSCLC",
+  "why": "TROP2 ADC; TNBC and 1L lung (AVANZAR, data moved to Q1 2027) decide whether it becomes a blockbuster.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Readouts 2027"
+ },
+ {
+  "rank": 18,
+  "name": "Yeztugo / Sunlenca (lenacapavir)",
+  "maker": "Gilead",
+  "indication": "HIV PrEP (twice-yearly); HIV treatment",
+  "why": "Twice-yearly injectable PrEP; could reset HIV prevention globally; base for long-acting treatment combos.",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Launch ramp"
+ },
+ {
+  "rank": 19,
+  "name": "obicetrapib",
+  "maker": "NewAmsterdam Pharma / Menarini",
+  "indication": "LDL lowering; ASCVD",
+  "why": "Oral CETP inhibitor with strong LDL and Lp(a) lowering; PREVAIL outcomes trial is the key catalyst.",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "CVOT data ~2026–27"
+ },
+ {
+  "rank": 20,
+  "name": "icotrokinra",
+  "maker": "Johnson & Johnson",
+  "indication": "Plaque psoriasis; ulcerative colitis",
+  "why": "First oral IL-23 receptor peptide; injectable-like efficacy in a pill. Filed 2025; launch expected 2026–27.",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Approval 2026–27"
+ },
+ {
+  "rank": 21,
+  "name": "Skyrizi (risankizumab)",
+  "maker": "AbbVie",
+  "indication": "Psoriasis, PsA, Crohn's, UC",
+  "why": "Replaced Humira as AbbVie's growth engine; IBD share still rising.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 22,
+  "name": "Rinvoq (upadacitinib)",
+  "maker": "AbbVie",
+  "indication": "RA, AD, IBD, GCA; alopecia, vitiligo, SLE trials",
+  "why": "JAK1 inhibitor with expanding label; new dermatology and lupus indications extend the runway.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 23,
+  "name": "lepodisiran",
+  "maker": "Eli Lilly",
+  "indication": "Elevated Lp(a), ASCVD risk",
+  "why": "Once- or twice-yearly siRNA; ACCLAIM-Lp(a) (17,300 patients) completes ~2029. Class discounted after pelacarsen's Sept 2026 miss; contrarian call.",
+  "price": "Strongly underpriced",
+  "conf": "Low",
+  "early": "CVOT ~2029"
+ },
+ {
+  "rank": 24,
+  "name": "olpasiran",
+  "maker": "Amgen",
+  "indication": "Elevated Lp(a), ASCVD",
+  "why": "siRNA with ~95% Lp(a) lowering; OCEAN(a)-Outcomes will test the Lp(a) hypothesis again after HORIZON.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "CVOT data ~2026–27"
+ },
+ {
+  "rank": 25,
+  "name": "Casgevy (exagamglogene autotemcel)",
+  "maker": "Vertex / CRISPR Therapeutics",
+  "indication": "Sickle cell disease, beta-thalassemia",
+  "why": "First approved CRISPR therapy; slow, centre-limited ramp, but it proves the gene-editing cure model.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Slow ramp"
+ },
+ {
+  "rank": 26,
+  "name": "Journavx (suzetrigine)",
+  "maker": "Vertex",
+  "indication": "Acute pain; DPN and LSR trials",
+  "why": "First NaV1.8 non-opioid painkiller; chronic-pain indications would multiply its value.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Launch · chronic pain Ph3"
+ },
+ {
+  "rank": 27,
+  "name": "povetacicept",
+  "maker": "Vertex",
+  "indication": "IgA nephropathy; other B-cell kidney disease",
+  "why": "Dual BAFF/APRIL inhibitor; RAINIER interim supports accelerated filing; best-in-class potential.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filing 2026"
+ },
+ {
+  "rank": 28,
+  "name": "zimislecel (VX-880)",
+  "maker": "Vertex",
+  "indication": "Type 1 diabetes",
+  "why": "Stem-cell islets that made patients insulin-independent; dosing resumed after a manufacturing review; no filing date yet.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3 · timeline TBD"
+ },
+ {
+  "rank": 29,
+  "name": "eloralintide",
+  "maker": "Eli Lilly",
+  "indication": "Obesity",
+  "why": "Amylin agonist with up to ~20% weight loss in Ph2; Ph3 under way; combo partner for tirzepatide.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3 · data ~2028"
+ },
+ {
+  "rank": 30,
+  "name": "amycretin",
+  "maker": "Novo Nordisk",
+  "indication": "Obesity (sc and oral)",
+  "why": "GLP-1/amylin unimolecular agonist; Ph3 started 2026; Novo's next-generation bet.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Ph3 · data ~2028"
+ },
+ {
+  "rank": 31,
+  "name": "survodutide",
+  "maker": "Boehringer Ingelheim / Zealand",
+  "indication": "Obesity; MASH",
+  "why": "GLP-1/glucagon dual agonist with a MASH angle; SYNCHRONIZE Ph3 results due.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Ph3 data 2026–27"
+ },
+ {
+  "rank": 32,
+  "name": "tulisokibart",
+  "maker": "Merck & Co.",
+  "indication": "Ulcerative colitis, Crohn's",
+  "why": "Anti-TL1A with companion diagnostic; Ph3 ARTEMIS/ATLAS readouts ~2027–28.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3 · data 2027–28"
+ },
+ {
+  "rank": 33,
+  "name": "duvakitug",
+  "maker": "Sanofi / Teva",
+  "indication": "Ulcerative colitis, Crohn's",
+  "why": "Anti-TL1A with strong Ph2b remission rates; Ph3 started 2025.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3 · data ~2028"
+ },
+ {
+  "rank": 34,
+  "name": "asundexian",
+  "maker": "Bayer",
+  "indication": "Secondary stroke prevention",
+  "why": "Oral factor XIa inhibitor; OCEANIC-STROKE positive (2025). Bleeding-sparing anticoagulation is a large prize.",
+  "price": "Strongly underpriced",
+  "conf": "Med",
+  "early": "Filing 2026"
+ },
+ {
+  "rank": 35,
+  "name": "milvexian",
+  "maker": "Bristol Myers Squibb / Johnson & Johnson",
+  "indication": "Atrial fibrillation; secondary stroke",
+  "why": "Oral factor XIa; LIBREXIA-ACS stopped for futility, but AF and stroke trials continue.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Ph3 data 2026–27"
+ },
+ {
+  "rank": 36,
+  "name": "abelacimab",
+  "maker": "Novartis (via Anthos)",
+  "indication": "Atrial fibrillation (anticoagulation-unsuitable)",
+  "why": "Monthly factor XI antibody; LILAC-TIMI 76 outcome trial is the catalyst.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Ph3 data ~2026–27"
+ },
+ {
+  "rank": 37,
+  "name": "laroprovstat (AZD0780)",
+  "maker": "AstraZeneca",
+  "indication": "Hypercholesterolemia",
+  "why": "Oral PCSK9 without a fasting requirement; AZURE-LDL/HeFH Ph3 data Q1 2027 (JPM est. $3.2B peak).",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3 data Q1 2027"
+ },
+ {
+  "rank": 38,
+  "name": "Cobenfy (xanomeline-trospium)",
+  "maker": "Bristol Myers Squibb",
+  "indication": "Schizophrenia; AD psychosis trials",
+  "why": "First new antipsychotic mechanism in decades; adjunctive ARIA trial missed; ADEPT readouts drive upside.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Early ramp"
+ },
+ {
+  "rank": 39,
+  "name": "Attruby (acoramidis)",
+  "maker": "BridgeBio",
+  "indication": "ATTR cardiomyopathy",
+  "why": "Near-complete TTR stabiliser with a strong outcomes signal; growing share in a fast-growing, under-diagnosed disease.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 40,
+  "name": "Amvuttra (vutrisiran)",
+  "maker": "Alnylam",
+  "indication": "ATTR cardiomyopathy and polyneuropathy",
+  "why": "Quarterly RNAi silencer with HELIOS-B outcomes win; ATTR-CM launch is driving Alnylam's growth.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 41,
+  "name": "nucresiran",
+  "maker": "Alnylam",
+  "indication": "ATTR amyloidosis",
+  "why": "Next-gen, potentially twice-yearly TTR silencer; TRITON-CM Ph3 extends the franchise into the 2040s.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 42,
+  "name": "zilebesiran",
+  "maker": "Alnylam / Roche",
+  "indication": "Hypertension (high CV risk)",
+  "why": "Twice-yearly siRNA against angiotensinogen; global outcomes trial started 2025. Adherence-proof BP control.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "CVOT · data ~2029+"
+ },
+ {
+  "rank": 43,
+  "name": "Winrevair (sotatercept)",
+  "maker": "Merck & Co.",
+  "indication": "Pulmonary arterial hypertension",
+  "why": "Disease-modifying activin trap; moving earlier in PAH treatment after ZENITH and HYPERION outcomes wins.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 44,
+  "name": "Rezdiffra (resmetirom)",
+  "maker": "Madrigal",
+  "indication": "MASH (F2–F3; F4c trial)",
+  "why": "First approved MASH drug; MAESTRO-NASH OUTCOMES in compensated cirrhosis is the next leg.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Growth · F4c data ~2027"
+ },
+ {
+  "rank": 45,
+  "name": "efruxifermin",
+  "maker": "Novo Nordisk (via Akero)",
+  "indication": "MASH incl. compensated cirrhosis",
+  "why": "FGF21 analog that reversed cirrhosis fibrosis in Ph2b; SYNCHRONY Ph3. Pairs with semaglutide.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ph3 · data 2026–27"
+ },
+ {
+  "rank": 46,
+  "name": "Carvykti (ciltacabtagene autoleucel)",
+  "maker": "Johnson & Johnson / Legend",
+  "indication": "Multiple myeloma",
+  "why": "Best-in-class BCMA CAR-T with OS benefit in second line; capacity is the constraint.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 47,
+  "name": "Rybrevant + Lazcluze (amivantamab + lazertinib)",
+  "maker": "Johnson & Johnson",
+  "indication": "EGFR-mutant NSCLC",
+  "why": "MARIPOSA OS beat osimertinib; a subcutaneous version improves convenience.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 48,
+  "name": "Inlexzo (TAR-200)",
+  "maker": "Johnson & Johnson",
+  "indication": "BCG-unresponsive NMIBC",
+  "why": "Intravesical gemcitabine system approved 2025 with high complete response rates; moving into earlier bladder cancer.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Launch"
+ },
+ {
+  "rank": 49,
+  "name": "Padcev (enfortumab vedotin) + Keytruda",
+  "maker": "Pfizer / Astellas",
+  "indication": "Urothelial cancer incl. muscle-invasive",
+  "why": "EV+P is the new first-line standard; perioperative muscle-invasive trials (EV-303/304) widen it.",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 50,
+  "name": "Imdelltra (tarlatamab)",
+  "maker": "Amgen",
+  "indication": "Small cell lung cancer",
+  "why": "DLL3 T-cell engager with OS win in second line; moving into first line.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 51,
+  "name": "Tryngolza (olezarsen)",
+  "maker": "Ionis",
+  "indication": "FCS; severe hypertriglyceridemia",
+  "why": "sHTG approval 24 Jun 2026 with an 85% cut in acute pancreatitis; a much larger market than FCS.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Launch 2026"
+ },
+ {
+  "rank": 52,
+  "name": "bepirovirsen",
+  "maker": "GSK / Ionis",
+  "indication": "Chronic hepatitis B (functional cure)",
+  "why": "Antisense oligonucleotide aiming at finite-therapy functional cure; B-Well Ph3 program; hundreds of millions infected.",
+  "price": "Strongly underpriced",
+  "conf": "Low",
+  "early": "Filing ~2026–27"
+ },
+ {
+  "rank": 53,
+  "name": "ianalumab",
+  "maker": "Novartis",
+  "indication": "Sjögren's disease; ITP",
+  "why": "First potential disease-modifying Sjögren's drug (BAFF-R); two positive Ph3s.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filing 2026"
+ },
+ {
+  "rank": 54,
+  "name": "Rhapsido (remibrutinib)",
+  "maker": "Novartis",
+  "indication": "Chronic spontaneous urticaria; MS trials",
+  "why": "Oral BTK inhibitor approved for CSU 2025; MS Ph3 is the bigger long-term option.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Launch · MS data ~2026–27"
+ },
+ {
+  "rank": 55,
+  "name": "fenebrutinib",
+  "maker": "Roche",
+  "indication": "Relapsing and primary progressive MS",
+  "why": "Reversible BTK inhibitor; positive Ph3 in RMS and PPMS; oral successor to Ocrevus.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filing 2026"
+ },
+ {
+  "rank": 56,
+  "name": "giredestrant",
+  "maker": "Roche",
+  "indication": "ER+ breast cancer",
+  "why": "Oral SERD with positive evERA and adjuvant lidERA ambitions; adjuvant use is the big market.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filing 2026"
+ },
+ {
+  "rank": 57,
+  "name": "camizestrant",
+  "maker": "AstraZeneca",
+  "indication": "ER+/HER2- breast cancer (ESR1m)",
+  "why": "SERENA-6 switch-on-mutation strategy; ctDNA-guided treatment could become standard.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Approval 2026"
+ },
+ {
+  "rank": 58,
+  "name": "Jaypirca (pirtobrutinib)",
+  "maker": "Eli Lilly",
+  "indication": "CLL, mantle cell lymphoma",
+  "why": "Non-covalent BTK inhibitor moving to earlier CLL lines after head-to-head data.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 59,
+  "name": "intismeran autogene (mRNA-4157/V940)",
+  "maker": "Moderna / Merck & Co.",
+  "indication": "Adjuvant melanoma; NSCLC",
+  "why": "Individualised neoantigen mRNA therapy; INTerpath Ph3 data would validate personalised cancer vaccines.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3 data 2026–27"
+ },
+ {
+  "rank": 60,
+  "name": "pumitamig (BNT327)",
+  "maker": "BioNTech / Bristol Myers Squibb",
+  "indication": "SCLC, TNBC, NSCLC",
+  "why": "PD-L1xVEGF bispecific with a broad Ph3 program; class still unproven against Keytruda in the West.",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 61,
+  "name": "Exdensur (depemokimab)",
+  "maker": "GSK",
+  "indication": "Severe eosinophilic asthma; CRSwNP",
+  "why": "First twice-yearly asthma biologic (approved Dec 2025); convenience could take share.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Launch"
+ },
+ {
+  "rank": 62,
+  "name": "Ohtuvayre (ensifentrine)",
+  "maker": "Merck & Co. (via Verona)",
+  "indication": "COPD maintenance",
+  "why": "First new inhaled COPD mechanism in years; strong early uptake; combo inhalers next.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 63,
+  "name": "Tezspire (tezepelumab)",
+  "maker": "AstraZeneca / Amgen",
+  "indication": "Severe asthma, CRSwNP; COPD trials",
+  "why": "Upstream TSLP blocker; COPD Ph3 could double the opportunity.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 64,
+  "name": "Brinsupri (brensocatib)",
+  "maker": "Insmed",
+  "indication": "Non-cystic fibrosis bronchiectasis",
+  "why": "First DPP1 inhibitor and first bronchiectasis drug (2025); strong launch, but valuation already rich.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Launch"
+ },
+ {
+  "rank": 65,
+  "name": "Myqorzo (aficamten)",
+  "maker": "Cytokinetics",
+  "indication": "Obstructive HCM; nHCM trial",
+  "why": "Next-gen cardiac myosin inhibitor with simpler monitoring than mavacamten.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Launch"
+ },
+ {
+  "rank": 66,
+  "name": "Kerendia (finerenone)",
+  "maker": "Bayer",
+  "indication": "CKD in T2D; HFmrEF/HFpEF",
+  "why": "Non-steroidal MRA now in heart failure; a pillar of cardiorenal therapy.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 67,
+  "name": "Vyvgart (efgartigimod)",
+  "maker": "argenx",
+  "indication": "gMG, CIDP; many autoimmune trials",
+  "why": "FcRn leader with prefilled syringe; many trials, but crowded class and full valuation.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 68,
+  "name": "Imaavy (nipocalimab)",
+  "maker": "Johnson & Johnson",
+  "indication": "gMG; HDFN, other antibody diseases",
+  "why": "Broad-label FcRn blocker; pregnancy (HDFN) data differentiate it.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Launch"
+ },
+ {
+  "rank": 69,
+  "name": "Pluvicto (lutetium-177 vipivotide tetraxetan)",
+  "maker": "Novartis",
+  "indication": "PSMA+ prostate cancer",
+  "why": "Radioligand leader moving earlier (PSMAfore, PSMAddition); the radiopharma platform matters into the 2040s.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 70,
+  "name": "Kisqali (ribociclib)",
+  "maker": "Novartis",
+  "indication": "HR+ early and metastatic breast cancer",
+  "why": "Adjuvant NATALEE label makes it the leading CDK4/6; runs to the 2030s.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 71,
+  "name": "Fabhalta (iptacopan)",
+  "maker": "Novartis",
+  "indication": "PNH, C3G, IgAN",
+  "why": "Oral factor B inhibitor across complement kidney diseases.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 72,
+  "name": "islatravir + lenacapavir (weekly oral)",
+  "maker": "Gilead / Merck & Co.",
+  "indication": "HIV treatment",
+  "why": "Once-weekly oral treatment; Ph3 data support filing; extends HIV franchises past Biktarvy LOE.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Filing 2026–27"
+ },
+ {
+  "rank": 73,
+  "name": "saruparib",
+  "maker": "AstraZeneca",
+  "indication": "mCSPC; PARP-sensitive tumors",
+  "why": "PARP1-selective inhibitor with better tolerability; prostate Ph3 data Q4 2027.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3 data Q4 2027"
+ },
+ {
+  "rank": 74,
+  "name": "Trodelvy (sacituzumab govitecan)",
+  "maker": "Gilead",
+  "indication": "TNBC (1L), HR+ breast cancer",
+  "why": "ASCENT-04 moves it into first-line TNBC with pembrolizumab.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 75,
+  "name": "Tecvayli + Talvey (teclistamab, talquetamab)",
+  "maker": "Johnson & Johnson",
+  "indication": "Multiple myeloma",
+  "why": "Bispecifics moving into earlier lines; combo data (MajesTEC/RedirecTT) drive the franchise.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 76,
+  "name": "Caplyta (lumateperone)",
+  "maker": "Johnson & Johnson",
+  "indication": "Schizophrenia, bipolar depression, adjunct MDD",
+  "why": "Adjunctive MDD approval broadens a well-tolerated antipsychotic; anchors J&J neuroscience.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 77,
+  "name": "Crenessity (crinecerfont)",
+  "maker": "Neurocrine Biosciences",
+  "indication": "Congenital adrenal hyperplasia",
+  "why": "First CRF1 antagonist for CAH; strong early adoption in an orphan market.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Launch"
+ },
+ {
+  "rank": 78,
+  "name": "apitegromab",
+  "maker": "Scholar Rock",
+  "indication": "Spinal muscular atrophy",
+  "why": "Muscle-targeted anti-myostatin; 2025 CRL was manufacturing-site related; resubmission pending.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Resubmission 2026"
+ },
+ {
+  "rank": 79,
+  "name": "tozorakimab",
+  "maker": "AstraZeneca",
+  "indication": "COPD",
+  "why": "Anti-IL-33 with dual mechanism; Ph3 OBERON/TITANIA readouts decide a large COPD opportunity.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Ph3 data 2026–27"
+ },
+ {
+  "rank": 80,
+  "name": "Leqvio (inclisiran)",
+  "maker": "Novartis",
+  "indication": "Hypercholesterolemia",
+  "why": "Twice-yearly LDL siRNA; ORION-4 and VICTORION outcomes data due.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CVOT data 2026"
+ },
+ {
+  "rank": 81,
+  "name": "Repatha (evolocumab)",
+  "maker": "Amgen",
+  "indication": "Hypercholesterolemia; primary prevention",
+  "why": "VESALIUS-CV extends benefit to high-risk primary prevention; faces oral PCSK9 competition.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Mature"
+ },
+ {
+  "rank": 82,
+  "name": "VAX-31",
+  "maker": "Vaxcyte",
+  "indication": "Pneumococcal disease (adults, infants)",
+  "why": "31-valent conjugate vaccine with the broadest coverage; adult Ph3 under way.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 83,
+  "name": "Capvaxive (V116)",
+  "maker": "Merck & Co.",
+  "indication": "Adult pneumococcal disease",
+  "why": "Adult-designed serotype coverage; replacing older pneumococcal vaccines in adults.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 84,
+  "name": "Vabysmo (faricimab)",
+  "maker": "Roche",
+  "indication": "Wet AMD, DME, RVO",
+  "why": "Bispecific Ang-2/VEGF-A; now the leading branded retina drug.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Growth"
+ },
+ {
+  "rank": 85,
+  "name": "Eylea HD (aflibercept 8 mg)",
+  "maker": "Regeneron / Bayer",
+  "indication": "Wet AMD, DME",
+  "why": "Longer dosing intervals defend a franchise eroding to biosimilars and Vabysmo.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Defend"
+ },
+ {
+  "rank": 86,
+  "name": "tavapadon",
+  "maker": "AbbVie",
+  "indication": "Parkinson's disease",
+  "why": "Once-daily D1/D5 partial agonist; filed 2025; motor fluctuations without classic dopamine side effects.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Approval 2026"
+ },
+ {
+  "rank": 87,
+  "name": "COMP360 (psilocybin)",
+  "maker": "Compass Pathways",
+  "indication": "Treatment-resistant depression",
+  "why": "Ph3 COMP005 positive; COMP006 data key; would be the first approved psychedelic therapy.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Ph3 data 2026"
+ },
+ {
+  "rank": 88,
+  "name": "Spravato (esketamine)",
+  "maker": "Johnson & Johnson",
+  "indication": "Treatment-resistant depression",
+  "why": "Monotherapy label broadened use; one of the fastest-growing CNS brands.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Growth"
+ },
+ {
+  "rank": 89,
+  "name": "PF-08634404 (SSGJ-707)",
+  "maker": "Pfizer / 3SBio",
+  "indication": "NSCLC, colorectal and other tumors",
+  "why": "PD-1xVEGF bispecific licensed for $1.25B upfront; global Ph3s start 2026.",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 90,
+  "name": "MET-097i",
+  "maker": "Pfizer (via Metsera)",
+  "indication": "Obesity (monthly)",
+  "why": "Ultra-long-acting injectable GLP-1; centrepiece of Pfizer's ~$10B obesity re-entry.",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "Ph3"
+ },
+ {
+  "rank": 91,
+  "name": "petrelintide",
+  "maker": "Zealand Pharma / Roche",
+  "indication": "Obesity",
+  "why": "Long-acting amylin analog designed for better tolerability; Ph2b data 2026.",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "Ph2b"
+ },
+ {
+  "rank": 92,
+  "name": "VK2735",
+  "maker": "Viking Therapeutics",
+  "indication": "Obesity",
+  "why": "GLP-1/GIP dual agonist (sc and oral); late entrant without clear differentiation or partner.",
+  "price": "Strongly overpriced",
+  "conf": "Low",
+  "early": "Ph3 · data 2027"
+ },
+ {
+  "rank": 93,
+  "name": "Wainua (eplontersen)",
+  "maker": "Ionis / AstraZeneca",
+  "indication": "ATTR polyneuropathy; ATTR-CM trial",
+  "why": "CARDIO-TTRansform, the largest ATTR-CM outcomes trial, decides the cardiac label.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CVOT data ~2026–27"
+ },
+ {
+  "rank": 94,
+  "name": "Ekterly (sebetralstat)",
+  "maker": "KalVista",
+  "indication": "HAE on-demand",
+  "why": "First oral on-demand HAE therapy (2025); replaces injections for attacks.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Launch"
+ },
+ {
+  "rank": 95,
+  "name": "Elevidys (delandistrogene moxeparvovec)",
+  "maker": "Sarepta",
+  "indication": "Duchenne muscular dystrophy",
+  "why": "Gene therapy hit by 2025 safety deaths and label limits; demand and policy risk.",
+  "price": "Strongly overpriced",
+  "conf": "Low",
+  "early": "Restricted"
+ },
+ {
+  "rank": 96,
+  "name": "amlitelimab",
+  "maker": "Sanofi",
+  "indication": "Atopic dermatitis; asthma",
+  "why": "Anti-OX40L with infrequent dosing; Ph3 efficacy looked modest against Dupixent's bar.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Ph3 data 2026"
+ },
+ {
+  "rank": 97,
+  "name": "pegozafermin",
+  "maker": "Roche (via 89bio)",
+  "indication": "MASH; severe hypertriglyceridemia",
+  "why": "FGF21 analog for cirrhotic MASH; competes directly with efruxifermin.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Ph3"
+ },
+ {
+  "rank": 98,
+  "name": "Inluriyo (imlunestrant)",
+  "maker": "Eli Lilly",
+  "indication": "ESR1-mutant ER+ breast cancer",
+  "why": "Oral SERD approved 2025; combos with abemaciclib and adjuvant trial extend it.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Launch"
+ },
+ {
+  "rank": 99,
+  "name": "Tagrisso (osimertinib)",
+  "maker": "AstraZeneca",
+  "indication": "EGFR-mutant NSCLC",
+  "why": "Standard of care across stages; under pressure from amivantamab; LOE early 2030s.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Mature"
+ },
+ {
+  "rank": 100,
+  "name": "nexiguran ziclumeran (nex-z, NTLA-2001)",
+  "maker": "Intellia / Regeneron",
+  "indication": "ATTR cardiomyopathy",
+  "why": "One-time in vivo CRISPR knockout of TTR; MAGNITUDE paused after a 2025 liver safety event; platform bellwether.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Ph3 on hold"
+ }
+]

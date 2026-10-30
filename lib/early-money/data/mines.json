@@ -1,0 +1,1002 @@
+[
+ {
+  "rank": 1,
+  "name": "Escondida",
+  "commodity": "Copper",
+  "where": "Chile (Atacama)",
+  "why": "World's largest Cu mine (~1.1-1.3 Mt/yr); sets global supply pace.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "BHP on Cu dips"
+ },
+ {
+  "rank": 2,
+  "name": "Grasberg",
+  "commodity": "Copper, gold",
+  "where": "Indonesia (Papua)",
+  "why": "Top-3 Cu + top Au mine; ramping back from 2025 mud rush to full by end-2027.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "FCX while ramp discount lasts"
+ },
+ {
+  "rank": 3,
+  "name": "Kamoa-Kakula",
+  "commodity": "Copper",
+  "where": "DR Congo",
+  "why": "Highest-grade large Cu mine; in-country smelter; 2026 ~290-310 kt.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ivanhoe Mines (IVN)"
+ },
+ {
+  "rank": 4,
+  "name": "Spruce Pine",
+  "commodity": "High-purity quartz",
+  "where": "North Carolina, USA",
+  "why": "Near-sole source of crucible quartz for semiconductor/solar silicon.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Sibelco / The Quartz Corp suppliers; quartz substitutes"
+ },
+ {
+  "rank": 5,
+  "name": "Greenbushes",
+  "commodity": "Lithium (spodumene)",
+  "where": "Western Australia",
+  "why": "Largest, lowest-cost hard-rock Li mine; record 435 kt quarter (Q3 2026).",
+  "price": "Modestly underpriced",
+  "conf": "High",
+  "early": "IGO / Tianqi after 2026 Li selloff"
+ },
+ {
+  "rank": 6,
+  "name": "Collahuasi",
+  "commodity": "Copper",
+  "where": "Chile (Tarapacá)",
+  "why": "Tier-1 high-grade Cu district with long life and expansion.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Anglo American / Glencore"
+ },
+ {
+  "rank": 7,
+  "name": "Oyu Tolgoi",
+  "commodity": "Copper, gold",
+  "where": "Mongolia",
+  "why": "Block cave ramp to ~500 kt Cu; ~450 kt run-rate Q3 2026.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Rio Tinto"
+ },
+ {
+  "rank": 8,
+  "name": "Simandou",
+  "commodity": "Iron ore (high-grade)",
+  "where": "Guinea",
+  "why": "Largest new high-grade ore; 60 Mtpa by H2 2028 feeds green steel.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Rio Tinto; Guinea rail/port services"
+ },
+ {
+  "rank": 9,
+  "name": "Olympic Dam",
+  "commodity": "Copper, uranium, gold, silver",
+  "where": "South Australia",
+  "why": "Giant polymetallic orebody; Cu + U leverage to grid and nuclear.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "BHP (Copper SA growth)"
+ },
+ {
+  "rank": 10,
+  "name": "Bayan Obo",
+  "commodity": "Rare earths (light)",
+  "where": "Inner Mongolia, China",
+  "why": "Largest REE deposit; anchors China's magnet supply dominance.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "China Northern Rare Earth"
+ },
+ {
+  "rank": 11,
+  "name": "El Teniente",
+  "commodity": "Copper",
+  "where": "Chile",
+  "why": "World's largest underground Cu mine; New Mine Level critical for Codelco.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Codelco bonds; Chile mining services"
+ },
+ {
+  "rank": 12,
+  "name": "Cigar Lake",
+  "commodity": "Uranium",
+  "where": "Saskatchewan, Canada",
+  "why": "Highest-grade operating U mine; reactor-restart and SMR supply.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Cameco on pullbacks"
+ },
+ {
+  "rank": 13,
+  "name": "McArthur River / Key Lake",
+  "commodity": "Uranium",
+  "where": "Saskatchewan, Canada",
+  "why": "Largest high-grade U mine; Western fuel-security pillar.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Cameco"
+ },
+ {
+  "rank": 14,
+  "name": "Pilgangoora",
+  "commodity": "Lithium (spodumene)",
+  "where": "Western Australia",
+  "why": "Top-3 spodumene asset; P2000 FID to ~2 Mtpa (first prod CY29).",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "PLS Group after ~50% drawdown"
+ },
+ {
+  "rank": 15,
+  "name": "Cerro Verde",
+  "commodity": "Copper, molybdenum",
+  "where": "Peru (Arequipa)",
+  "why": "Large low-cost Cu concentrator with long reserve life.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "FCX / Buenaventura"
+ },
+ {
+  "rank": 16,
+  "name": "Antamina",
+  "commodity": "Copper, zinc",
+  "where": "Peru (Ancash)",
+  "why": "Top Cu-Zn mine; life extension to 2036+.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Teck / BHP / Glencore"
+ },
+ {
+  "rank": 17,
+  "name": "Resolution Copper",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "Largest undeveloped US Cu deposit (~25% of US demand); land swap done Mar 2026.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Rio Tinto / BHP (option value unpriced)"
+ },
+ {
+  "rank": 18,
+  "name": "Chuquicamata",
+  "commodity": "Copper",
+  "where": "Chile",
+  "why": "Underground conversion of historic giant; Codelco volume pillar.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Codelco bonds"
+ },
+ {
+  "rank": 19,
+  "name": "Mountain Pass",
+  "commodity": "Rare earths (NdPr)",
+  "where": "California, USA",
+  "why": "Only scaled US REE mine; DoD-backed mine-to-magnet chain.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "MP Materials on sector selloffs"
+ },
+ {
+  "rank": 20,
+  "name": "Mount Weld",
+  "commodity": "Rare earths",
+  "where": "Western Australia",
+  "why": "Highest-grade REE mine outside China; heavy-RE separation in Malaysia/US.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Lynas"
+ },
+ {
+  "rank": 21,
+  "name": "Salar de Atacama",
+  "commodity": "Lithium (brine)",
+  "where": "Chile",
+  "why": "Lowest-cost Li brine; Codelco-SQM NovaAndino JV to 2060.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "SQM"
+ },
+ {
+  "rank": 22,
+  "name": "Kazatomprom ISR fields (Inkai, Budenovskoye)",
+  "commodity": "Uranium",
+  "where": "Kazakhstan",
+  "why": "~40% of world U supply; acid constraints cap growth.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Kazatomprom (KAP) GDRs"
+ },
+ {
+  "rank": 23,
+  "name": "Tenke Fungurume",
+  "commodity": "Copper, cobalt",
+  "where": "DR Congo",
+  "why": "Mega Cu-Co mine; world's #1 cobalt producer group.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "CMOC"
+ },
+ {
+  "rank": 24,
+  "name": "Kisanfu",
+  "commodity": "Cobalt, copper",
+  "where": "DR Congo",
+  "why": "Among richest Co deposits; DRC export quotas tighten Co.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "CMOC / CATL"
+ },
+ {
+  "rank": 25,
+  "name": "Los Bronces-Andina district",
+  "commodity": "Copper",
+  "where": "Chile (Central)",
+  "why": "Anglo-Codelco shared-pit plan unlocks ~120 kt/yr extra.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Anglo American"
+ },
+ {
+  "rank": 26,
+  "name": "Quellaveco",
+  "commodity": "Copper",
+  "where": "Peru (Moquegua)",
+  "why": "New tier-1 Cu mine at ~300 kt/yr.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Anglo American"
+ },
+ {
+  "rank": 27,
+  "name": "Vicuña (Josemaría + Filo del Sol)",
+  "commodity": "Copper, gold, silver",
+  "where": "Argentina / Chile",
+  "why": "One of the largest Cu-Au-Ag discoveries in decades.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "BHP / Lundin Mining"
+ },
+ {
+  "rank": 28,
+  "name": "Reko Diq",
+  "commodity": "Copper, gold",
+  "where": "Pakistan (Balochistan)",
+  "why": "Giant porphyry; review extended to mid-2027 on security.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Barrick (after review clarity)"
+ },
+ {
+  "rank": 29,
+  "name": "Carajás / S11D",
+  "commodity": "Iron ore (high-grade)",
+  "where": "Brazil (Pará)",
+  "why": "Highest-grade large iron ore; DR-pellet feed for low-carbon steel.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Vale (~$11.5)"
+ },
+ {
+  "rank": 30,
+  "name": "Pilbara iron ore hubs",
+  "commodity": "Iron ore",
+  "where": "Western Australia",
+  "why": "Backbone of seaborne iron ore; cash engine for majors.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "BHP / Rio / Fortescue"
+ },
+ {
+  "rank": 31,
+  "name": "Kansanshi + S3",
+  "commodity": "Copper, gold",
+  "where": "Zambia",
+  "why": "Largest Zambian Cu mine; S3 expansion to 2044.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "First Quantum"
+ },
+ {
+  "rank": 32,
+  "name": "Cobre Panamá",
+  "commodity": "Copper",
+  "where": "Panama",
+  "why": "~1.5% of world Cu idled since 2023; restart talks are a big swing.",
+  "price": "Strongly underpriced",
+  "conf": "Low",
+  "early": "First Quantum (restart option)"
+ },
+ {
+  "rank": 33,
+  "name": "Las Bambas",
+  "commodity": "Copper",
+  "where": "Peru (Apurímac)",
+  "why": "~300+ kt Cu; community road blockades the key risk.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "MMG"
+ },
+ {
+  "rank": 34,
+  "name": "Los Pelambres",
+  "commodity": "Copper",
+  "where": "Chile (Coquimbo)",
+  "why": "Antofagasta flagship; desal-powered expansion.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Antofagasta"
+ },
+ {
+  "rank": 35,
+  "name": "Buenavista del Cobre",
+  "commodity": "Copper",
+  "where": "Mexico (Sonora)",
+  "why": "Large low-cost Cu; Southern Copper growth base.",
+  "price": "Modestly overpriced",
+  "conf": "High",
+  "early": "Southern Copper (premium P/E)"
+ },
+ {
+  "rank": 36,
+  "name": "Tía María / Toquepala",
+  "commodity": "Copper",
+  "where": "Peru",
+  "why": "SCCO pipeline adds ~120 kt; Tía María start ~2027.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Southern Copper"
+ },
+ {
+  "rank": 37,
+  "name": "Kibali",
+  "commodity": "Gold",
+  "where": "DR Congo",
+  "why": "Africa's largest gold mine; strong reserves.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Barrick"
+ },
+ {
+  "rank": 38,
+  "name": "Nevada Gold Mines (Carlin/Cortez)",
+  "commodity": "Gold",
+  "where": "Nevada, USA",
+  "why": "World's largest gold complex; Fourmile upside.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Barrick / Newmont"
+ },
+ {
+  "rank": 39,
+  "name": "Muruntau",
+  "commodity": "Gold",
+  "where": "Uzbekistan",
+  "why": "Largest open-pit gold mine (~3 Moz/yr).",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Navoi Mining IPO (if listed)"
+ },
+ {
+  "rank": 40,
+  "name": "Boddington",
+  "commodity": "Gold, copper",
+  "where": "Western Australia",
+  "why": "Long-life Au-Cu in tier-1 jurisdiction.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Newmont"
+ },
+ {
+  "rank": 41,
+  "name": "Cadia",
+  "commodity": "Gold, copper",
+  "where": "New South Wales, Australia",
+  "why": "Block cave Au-Cu; low cost.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Newmont"
+ },
+ {
+  "rank": 42,
+  "name": "Lihir",
+  "commodity": "Gold",
+  "where": "Papua New Guinea",
+  "why": "Multi-decade gold reserve.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Newmont"
+ },
+ {
+  "rank": 43,
+  "name": "Pueblo Viejo",
+  "commodity": "Gold",
+  "where": "Dominican Republic",
+  "why": "Tier-1 Au; tailings expansion to 2040s.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Barrick / Newmont"
+ },
+ {
+  "rank": 44,
+  "name": "Kalgoorlie Super Pit (KCGM)",
+  "commodity": "Gold",
+  "where": "Western Australia",
+  "why": "Iconic Au mine; Fimiston expansion.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Northern Star"
+ },
+ {
+  "rank": 45,
+  "name": "Thacker Pass",
+  "commodity": "Lithium (clay)",
+  "where": "Nevada, USA",
+  "why": "Largest US Li project; GM + DOE backing; Phase 1 ~2028.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Lithium Americas (LAC)"
+ },
+ {
+  "rank": 46,
+  "name": "Kathleen Valley",
+  "commodity": "Lithium (spodumene)",
+  "where": "Western Australia",
+  "why": "New underground Li mine; expansion FID 2026.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Liontown"
+ },
+ {
+  "rank": 47,
+  "name": "Mt Holland (Covalent)",
+  "commodity": "Lithium (spodumene)",
+  "where": "Western Australia",
+  "why": "Integrated mine + Kwinana hydroxide refinery.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Wesfarmers / SQM"
+ },
+ {
+  "rank": 48,
+  "name": "Hombre Muerto (Fénix / Sal de Vida)",
+  "commodity": "Lithium (brine)",
+  "where": "Argentina (Catamarca)",
+  "why": "Rio Tinto's Li growth hub; Fénix 1B ramping.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Rio Tinto"
+ },
+ {
+  "rank": 49,
+  "name": "Cauchari-Olaroz",
+  "commodity": "Lithium (brine)",
+  "where": "Argentina (Jujuy)",
+  "why": "40 ktpa LCE brine in ramp.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ganfeng / Lithium Argentina"
+ },
+ {
+  "rank": 50,
+  "name": "Goulamina",
+  "commodity": "Lithium (spodumene)",
+  "where": "Mali",
+  "why": "Large new African spodumene; Mali policy risk.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Ganfeng"
+ },
+ {
+  "rank": 51,
+  "name": "Arcadia / Bikita",
+  "commodity": "Lithium (spodumene)",
+  "where": "Zimbabwe",
+  "why": "Chinese-owned growth hub; export-ban risk.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Huayou / Sinomine"
+ },
+ {
+  "rank": 52,
+  "name": "Jianxiawo (Yichun)",
+  "commodity": "Lithium (lepidolite)",
+  "where": "Jiangxi, China",
+  "why": "CATL swing mine (~4-5% supply) under re-permitting.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CATL"
+ },
+ {
+  "rank": 53,
+  "name": "Grota do Cirilo",
+  "commodity": "Lithium (spodumene)",
+  "where": "Brazil (Minas Gerais)",
+  "why": "Low-cost Lithium Valley spodumene.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Sigma Lithium"
+ },
+ {
+  "rank": 54,
+  "name": "Shaakichiuwaanaan (Corvette)",
+  "commodity": "Lithium (spodumene)",
+  "where": "Québec, Canada",
+  "why": "Largest pegmatite Li resource in the Americas.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "PMET Resources"
+ },
+ {
+  "rank": 55,
+  "name": "Manono",
+  "commodity": "Lithium (spodumene)",
+  "where": "DR Congo",
+  "why": "Giant hard-rock Li; ownership dispute settling with Zijin.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Zijin Mining"
+ },
+ {
+  "rank": 56,
+  "name": "Jadar",
+  "commodity": "Lithium, boron",
+  "where": "Serbia",
+  "why": "Europe's biggest Li deposit; politically stalled.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Rio Tinto (free option)"
+ },
+ {
+  "rank": 57,
+  "name": "Smackover brine (Arkansas)",
+  "commodity": "Lithium (brine/DLE)",
+  "where": "Arkansas, USA",
+  "why": "US DLE hub; Exxon, Equinor-Standard Lithium.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Standard Lithium (SLI)"
+ },
+ {
+  "rank": 58,
+  "name": "Salton Sea geothermal brine",
+  "commodity": "Lithium (brine/DLE)",
+  "where": "California, USA",
+  "why": "Geothermal Li; tech-risk, huge resource.",
+  "price": "Modestly overpriced",
+  "conf": "Low",
+  "early": "Watch only until DLE proves out"
+ },
+ {
+  "rank": 59,
+  "name": "Rhyolite Ridge",
+  "commodity": "Lithium, boron",
+  "where": "Nevada, USA",
+  "why": "Permitted US Li-B project with DOE loan.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "ioneer"
+ },
+ {
+  "rank": 60,
+  "name": "Platreef",
+  "commodity": "PGMs, nickel, copper",
+  "where": "South Africa (Limpopo)",
+  "why": "Thickest PGM deposit; Phase 2 scale-up.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ivanhoe Mines"
+ },
+ {
+  "rank": 61,
+  "name": "Mogalakwena",
+  "commodity": "PGMs",
+  "where": "South Africa (Limpopo)",
+  "why": "Low-cost open-pit PGM flagship.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Valterra Platinum"
+ },
+ {
+  "rank": 62,
+  "name": "Great Dyke (Zimplats)",
+  "commodity": "PGMs",
+  "where": "Zimbabwe",
+  "why": "Long-life PGM belt outside SA.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Impala Platinum"
+ },
+ {
+  "rank": 63,
+  "name": "Stillwater",
+  "commodity": "PGMs",
+  "where": "Montana, USA",
+  "why": "Only US primary PGM mine; restructured at low prices.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Sibanye-Stillwater"
+ },
+ {
+  "rank": 64,
+  "name": "Norilsk",
+  "commodity": "Nickel, palladium, copper",
+  "where": "Russia (Taimyr)",
+  "why": "~40% of world Pd; sanctions trap value.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Uninvestable for most; watch"
+ },
+ {
+  "rank": 65,
+  "name": "Weda Bay / IWIP",
+  "commodity": "Nickel",
+  "where": "Indonesia (Halmahera)",
+  "why": "World's largest Ni mine; drives Ni oversupply.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Eramet; Indonesian Ni smelters"
+ },
+ {
+  "rank": 66,
+  "name": "Sorowako / Pomalaa",
+  "commodity": "Nickel",
+  "where": "Indonesia (Sulawesi)",
+  "why": "HPAL-backed Ni for batteries.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Vale Indonesia (INCO)"
+ },
+ {
+  "rank": 67,
+  "name": "Sudbury Basin",
+  "commodity": "Nickel, copper, PGMs",
+  "where": "Ontario, Canada",
+  "why": "Western Ni-Cu-PGM district; allied supply.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Vale Base Metals / Glencore"
+ },
+ {
+  "rank": 68,
+  "name": "Voisey's Bay",
+  "commodity": "Nickel, cobalt",
+  "where": "Labrador, Canada",
+  "why": "Underground extension; low-carbon Ni.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Vale"
+ },
+ {
+  "rank": 69,
+  "name": "Kabanga",
+  "commodity": "Nickel, cobalt, copper",
+  "where": "Tanzania",
+  "why": "Largest undeveloped high-grade Ni sulfide.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Lifezone Metals"
+ },
+ {
+  "rank": 70,
+  "name": "Tamarack",
+  "commodity": "Nickel, copper, cobalt",
+  "where": "Minnesota, USA",
+  "why": "US Ni sulfide with Tesla/DoD links.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Talon Metals"
+ },
+ {
+  "rank": 71,
+  "name": "Mutanda / KCC",
+  "commodity": "Copper, cobalt",
+  "where": "DR Congo",
+  "why": "Glencore's DRC Co-Cu engine.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Glencore"
+ },
+ {
+  "rank": 72,
+  "name": "Khoemacau",
+  "commodity": "Copper, silver",
+  "where": "Botswana (Kalahari Belt)",
+  "why": "Kalahari Copper Belt growth hub; expansion to 130 kt.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "MMG"
+ },
+ {
+  "rank": 73,
+  "name": "Lumwana Super Pit",
+  "commodity": "Copper",
+  "where": "Zambia",
+  "why": "Expansion to ~240 kt Cu/yr by 2028.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Barrick"
+ },
+ {
+  "rank": 74,
+  "name": "Kipushi",
+  "commodity": "Zinc, germanium",
+  "where": "DR Congo",
+  "why": "Highest-grade large zinc mine; Ge/Ga upside.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Ivanhoe Mines"
+ },
+ {
+  "rank": 75,
+  "name": "Red Dog",
+  "commodity": "Zinc, lead",
+  "where": "Alaska, USA",
+  "why": "Top global zinc mine; life to ~2031+.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Teck"
+ },
+ {
+  "rank": 76,
+  "name": "Gamsberg",
+  "commodity": "Zinc",
+  "where": "South Africa (Northern Cape)",
+  "why": "Large-scale Zn growth.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Vedanta / Hindustan Zinc"
+ },
+ {
+  "rank": 77,
+  "name": "Bisie",
+  "commodity": "Tin",
+  "where": "DR Congo",
+  "why": "~6% of world tin; tin structurally short.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Alphamin Resources"
+ },
+ {
+  "rank": 78,
+  "name": "Balama",
+  "commodity": "Graphite",
+  "where": "Mozambique",
+  "why": "Largest graphite mine outside China; feeds US anode plant.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Syrah Resources"
+ },
+ {
+  "rank": 79,
+  "name": "Matawinie",
+  "commodity": "Graphite",
+  "where": "Québec, Canada",
+  "why": "North American anode graphite with offtakes.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Nouveau Monde Graphite"
+ },
+ {
+  "rank": 80,
+  "name": "Ganzhou / Longnan ionic clays",
+  "commodity": "Rare earths (heavy)",
+  "where": "Jiangxi, China",
+  "why": "Dy/Tb heartland; China export controls bite.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "China Rare Earth Group"
+ },
+ {
+  "rank": 81,
+  "name": "Serra Verde",
+  "commodity": "Rare earths (heavy, ionic clay)",
+  "where": "Brazil (Goiás)",
+  "why": "Only scaled ionic-clay HREE outside Asia; US price floors.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "USA Rare Earth (USAR)"
+ },
+ {
+  "rank": 82,
+  "name": "Nolans",
+  "commodity": "Rare earths",
+  "where": "Northern Territory, Australia",
+  "why": "Integrated NdPr project with government finance.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Arafura"
+ },
+ {
+  "rank": 83,
+  "name": "Tanbreez",
+  "commodity": "Rare earths (heavy)",
+  "where": "Greenland",
+  "why": "Large HREE deposit; early-stage and speculative.",
+  "price": "Strongly overpriced",
+  "conf": "Low",
+  "early": "Avoid chasing Critical Metals (CRML)"
+ },
+ {
+  "rank": 84,
+  "name": "Arrow (Rook I)",
+  "commodity": "Uranium",
+  "where": "Saskatchewan, Canada",
+  "why": "Largest undeveloped high-grade U; approval granted.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "NexGen (NXE) on dips"
+ },
+ {
+  "rank": 85,
+  "name": "Phoenix (Wheeler River)",
+  "commodity": "Uranium (ISR)",
+  "where": "Saskatchewan, Canada",
+  "why": "First ISR in the Athabasca; low cost.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Denison Mines"
+ },
+ {
+  "rank": 86,
+  "name": "Husab / Rössing",
+  "commodity": "Uranium",
+  "where": "Namibia",
+  "why": "Large open-pit U to Chinese reactors.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "CGN Mining"
+ },
+ {
+  "rank": 87,
+  "name": "Langer Heinrich",
+  "commodity": "Uranium",
+  "where": "Namibia",
+  "why": "Restarted U mine ramping.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Paladin Energy"
+ },
+ {
+  "rank": 88,
+  "name": "Jansen",
+  "commodity": "Potash",
+  "where": "Saskatchewan, Canada",
+  "why": "World's largest potash project (Stage 1 ~2027).",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "BHP"
+ },
+ {
+  "rank": 89,
+  "name": "Khouribga / Ben Guerir",
+  "commodity": "Phosphate",
+  "where": "Morocco",
+  "why": "~70% of global phosphate reserves; LFP batteries + food.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "OCP bonds"
+ },
+ {
+  "rank": 90,
+  "name": "Kalahari Manganese Field",
+  "commodity": "Manganese",
+  "where": "South Africa",
+  "why": "~75% of world Mn resource; steel + LMFP.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "South32"
+ },
+ {
+  "rank": 91,
+  "name": "Boké bauxite",
+  "commodity": "Bauxite (aluminium)",
+  "where": "Guinea",
+  "why": "Largest bauxite export hub feeding China.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Alcoa (CBG stake)"
+ },
+ {
+  "rank": 92,
+  "name": "Weipa / Amrun",
+  "commodity": "Bauxite (aluminium)",
+  "where": "Queensland, Australia",
+  "why": "Tier-1 bauxite for Pacific alumina.",
+  "price": "Fair",
+  "conf": "High",
+  "early": "Rio Tinto"
+ },
+ {
+  "rank": 93,
+  "name": "Sangdong",
+  "commodity": "Tungsten",
+  "where": "South Korea",
+  "why": "Largest non-China tungsten source as China restricts.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Almonty Industries"
+ },
+ {
+  "rank": 94,
+  "name": "Stibnite",
+  "commodity": "Antimony, gold",
+  "where": "Idaho, USA",
+  "why": "Only domestic US antimony reserve; defense-critical.",
+  "price": "Fair",
+  "conf": "Low",
+  "early": "Perpetua Resources"
+ },
+ {
+  "rank": 95,
+  "name": "Maracás Menchen",
+  "commodity": "Vanadium",
+  "where": "Brazil (Bahia)",
+  "why": "Highest-grade V mine; flow-battery optionality.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "Largo"
+ },
+ {
+  "rank": 96,
+  "name": "Fresnillo / Saucito",
+  "commodity": "Silver, gold",
+  "where": "Mexico (Zacatecas)",
+  "why": "Top primary silver producer; solar Ag demand.",
+  "price": "Modestly overpriced",
+  "conf": "Med",
+  "early": "Fresnillo plc (wait for Ag pullback)"
+ },
+ {
+  "rank": 97,
+  "name": "Peñasquito",
+  "commodity": "Gold, silver, zinc, lead",
+  "where": "Mexico (Zacatecas)",
+  "why": "Large polymetallic; top Ag by-product mine.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "Newmont"
+ },
+ {
+  "rank": 98,
+  "name": "Cannington",
+  "commodity": "Silver, lead, zinc",
+  "where": "Queensland, Australia",
+  "why": "One of the largest silver-lead mines.",
+  "price": "Fair",
+  "conf": "Med",
+  "early": "South32"
+ },
+ {
+  "rank": 99,
+  "name": "Los Azules",
+  "commodity": "Copper",
+  "where": "Argentina (San Juan)",
+  "why": "Large low-carbon heap-leach Cu under RIGI.",
+  "price": "Modestly underpriced",
+  "conf": "Low",
+  "early": "McEwen Copper"
+ },
+ {
+  "rank": 100,
+  "name": "Copper World",
+  "commodity": "Copper",
+  "where": "Arizona, USA",
+  "why": "Permitted US Cu with private-land path.",
+  "price": "Modestly underpriced",
+  "conf": "Med",
+  "early": "Hudbay Minerals"
+ }
+]
