@@ -45,10 +45,7 @@ next-env.d.ts
 **/*.rs.bk
 Cargo.lock.bak
 
-# ETH scanner local dry-run + Python
-eth-scanner/work/
-eth-scanner/.runtime/
-eth-scanner/.venv/
+# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/

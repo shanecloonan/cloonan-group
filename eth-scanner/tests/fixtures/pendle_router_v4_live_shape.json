@@ -1,8 +1,0 @@
-{
-  "language": "Solidity",
-  "sources": {
-    "contracts/pendle/contracts/router/PendleRouterV4.sol": {
-      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.17;\n\n/// Live Pendle Router diamond (`0x888888888889758F76e7103c6CbF23ABbF58F946`).\n/// Sourcify compilation.name=PendleRouterV4 — Action* facets are a different address.\n/// Must stay cool via PendleRouter name, not false-keep as custody.\n/// Fixture only — not a finding.\nabstract contract Proxy {\n    fallback() external payable virtual { _delegate(); }\n    function _delegate() internal {\n        address impl = _implementation();\n        assembly { let ok := delegatecall(gas(), impl, 0, calldatasize(), 0, 0) }\n    }\n    function _implementation() internal view virtual returns (address);\n}\n\ncontract PendleRouterV4 is Proxy {\n    mapping(bytes4 => address) public selectorToFacet;\n    function _implementation() internal view override returns (address) {\n        return selectorToFacet[msg.sig];\n    }\n    receive() external payable override {}\n}\n"
-    }
-  }
-}

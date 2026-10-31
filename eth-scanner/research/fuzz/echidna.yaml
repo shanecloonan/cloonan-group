@@ -1,9 +1,0 @@
-# Defensive Echidna campaign — property mode only. No attack corpus.
-testMode: property
-testLimit: 200
-prefix: echidna_
-coverage: false
-format: text
-timeout: 60
-filterFunctions: []
-cryticArgs: []

@@ -22,5 +22,3 @@ jobs:
       - run: npm run smoke:store
       - run: npm run smoke:block-consensus
       - run: npm run smoke:validator-wire
-      - run: npm run test:eth-scanner
-      - run: npm run test:lane-a-runtime

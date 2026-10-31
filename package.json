@@ -4,9 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/bundle-python-runtime.mjs && next build",
+    "build": "next build",
     "start": "next start",
-    "test:lane-a-runtime": "npx tsx --test lib/eth-scanner/capabilities.test.ts lib/eth-scanner/python-runtime.test.ts lib/eth-scanner/run-lane-a.test.ts lib/eth-scanner/run-research.test.ts",
     "lint": "eslint lib/network lib/node scripts/smoke-bond.ts scripts/smoke-block-consensus.ts scripts/smoke-store.ts scripts/smoke-validator-wire.ts --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "smoke:bond": "npx tsx scripts/smoke-bond.ts",
@@ -15,7 +14,6 @@
     "smoke:validator-wire": "npx tsx scripts/smoke-validator-wire.ts",
     "db:migrate": "node scripts/apply-supabase-migration.mjs",
     "db:migrate:all": "node scripts/apply-all-migrations.mjs",
-    "test:eth-scanner": "python3 -m unittest discover -s eth-scanner/tests -v",
     "codebase-stats": "node scripts/codebase-stats.mjs"
   },
   "dependencies": {
