@@ -30,6 +30,7 @@ const SHARE_IMAGE: Record<string, string> = {
   Daeland: "/brands/share/daeland.png",
   SDK: "/brands/share/sdk.png",
   "AX Defense": "/brands/share/axdefense.png",
+  Pennwater: "/brands/share/pennwater.png",
 };
 
 /** Intrinsic size when the live og:image is not 1200×630. */
