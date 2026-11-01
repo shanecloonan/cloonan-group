@@ -91,6 +91,11 @@ export const SUBSIDIARY_SEED: SubsidiarySeed[] = [
     desc: "Water brand.",
     site: "www.pennwater.com",
   },
+  {
+    name: "USD Bill",
+    desc: "USD Bill.",
+    site: "www.usdbill.com",
+  },
 ];
 
 export function subsidiaryUrl(seed: SubsidiarySeed) {
