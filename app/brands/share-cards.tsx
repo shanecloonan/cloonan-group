@@ -30,12 +30,15 @@ const SHARE_IMAGE: Record<string, string> = {
   Daeland: "/brands/share/daeland.png",
   SDK: "/brands/share/sdk.png",
   "AX Defense": "/brands/share/axdefense.png",
-  Pennwater: "/brands/share/pennwater.png",
+  Pennwater: "/brands/share/pennwater.jpg",
+  "USD Bill": "/brands/share/usdbill.jpg",
 };
 
 /** Intrinsic size when the live og:image is not 1200×630. */
 const SHARE_SIZE: Record<string, { width: number; height: number }> = {
   "Antler Gear": { width: 872, height: 516 },
+  Pennwater: { width: 1168, height: 784 },
+  "USD Bill": { width: 1168, height: 784 },
 };
 
 /** Host only: no scheme, no www. */
