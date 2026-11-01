@@ -52,7 +52,7 @@ const SHARE_CARDS = SUBSIDIARY_SEED.flatMap((seed) => {
 
 export default function ShareCards() {
   return (
-    <section id="share-cards" className="relative bg-brand-950 border-t border-brand-800">
+    <section id="share-cards" className="relative bg-brand-950">
       <div className="relative px-5 sm:px-8 pt-12 pb-6 sm:pt-16 sm:pb-8">
         <div className="absolute inset-0 bg-gradient-to-b from-forest/20 to-transparent" />
         <div className="relative z-10 max-w-3xl mx-auto text-center">
