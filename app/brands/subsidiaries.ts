@@ -81,6 +81,11 @@ export const SUBSIDIARY_SEED: SubsidiarySeed[] = [
     desc: "Technology Company.",
     site: "www.sdktechnology.com",
   },
+  {
+    name: "AX Defense",
+    desc: "Defense contractor: tactical drones, firearm parts, advanced engineering, and cybersecurity for the US government.",
+    site: "www.axdefense.com",
+  },
 ];
 
 export function subsidiaryUrl(seed: SubsidiarySeed) {
