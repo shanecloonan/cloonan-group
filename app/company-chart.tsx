@@ -138,7 +138,7 @@ export default function CompanyChart() {
   }, [exporting]);
 
   return (
-    <section className="relative bg-brand-950 overflow-visible">
+    <section className="relative bg-brand-950 overflow-visible border-t border-brand-800">
       {/* Section header */}
       <div className="relative px-5 sm:px-8 pt-14 pb-6 sm:pt-20 sm:pb-10">
         <div className="absolute inset-0 bg-gradient-to-b from-forest/20 to-transparent" />
