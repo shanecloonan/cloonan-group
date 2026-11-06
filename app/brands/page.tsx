@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function BrandsPage() {
   return (
     <div className="min-h-screen bg-brand-950 pt-14">
-      <ShareCards />
+      <ShareCards headingHref="/brands/active" />
       <CompanyChart />
     </div>
   );
