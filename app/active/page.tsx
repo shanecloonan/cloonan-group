@@ -26,6 +26,7 @@ const ACTIVE_LINKS: {
   { label: "Saintholland.com", host: "saintholland.com", image: "/brands/share/saintholland.jpg", width: 1200, height: 630 },
   { label: "RandomPPL.com", host: "randomppl.com", image: "/brands/share/randomppl.png", width: 1200, height: 630 },
   { label: "USDBill.com", host: "usdbill.com", image: "/brands/share/usdbill.jpg", width: 1168, height: 784 },
+  { label: "SteakFarms.com", host: "steakfarms.com", image: "/brands/share/steakfarms.jpg", width: 1200, height: 630 },
 ];
 
 export const metadata: Metadata = {
