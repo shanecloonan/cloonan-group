@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ollama Server
+Comment=Start Ollama in the background on login
+Exec=/bin/bash -lc 'if ! curl -fsS http://127.0.0.1:11434/ >/dev/null 2>&1; then tmux -f /exec-daemon/tmux.portal.conf has-session -t "=ollama-server" 2>/dev/null || tmux -f /exec-daemon/tmux.portal.conf new-session -d -s ollama-server -c /home/ubuntu -- /bin/bash -l; tmux -f /exec-daemon/tmux.portal.conf send-keys -t ollama-server:0.0 "ollama serve" C-m; fi'
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
